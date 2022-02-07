@@ -4,8 +4,8 @@ import (
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/hermeznetwork/hermez-bridge/encoding"
 	"github.com/hermeznetwork/hermez-bridge/log"
+	"github.com/hermeznetwork/hermez-core/encoding"
 )
 
 //NetworkConfig is the configuration struct for the different environments
