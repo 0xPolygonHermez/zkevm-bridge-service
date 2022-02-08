@@ -37,7 +37,6 @@ type ClientEtherMan struct {
 }
 
 type EtherMan interface {
-	GetBridgeInfoByBlock(ctx context.Context, blockNum uint64, blockHash *common.Hash) ([]Block, map[common.Hash][]Order, error)
 	GetBridgeInfoByBlockRange(ctx context.Context, fromBlock uint64, toBlock *uint64) ([]Block, map[common.Hash][]Order, error)
 }
 
@@ -59,26 +58,6 @@ func NewEtherman(cfg Config, bridgeAddr common.Address) (*ClientEtherMan, error)
 	scAddresses = append(scAddresses, bridgeAddr)
 
 	return &ClientEtherMan{EtherClient: ethClient, Bridge: bridge, SCAddresses: scAddresses}, nil
-}
-
-// GetRollupInfoByBlock function retrieves the Rollup information that are included in a specific ethereum block
-func (etherMan *ClientEtherMan) GetBridgeInfoByBlock(ctx context.Context, blockNumber uint64, blockHash *common.Hash) ([]Block, map[common.Hash][]Order, error) {
-	// First filter query
-	var blockNumBigInt *big.Int
-	if blockHash == nil {
-		blockNumBigInt = new(big.Int).SetUint64(blockNumber)
-	}
-	query := ethereum.FilterQuery{
-		BlockHash: blockHash,
-		FromBlock: blockNumBigInt,
-		ToBlock:   blockNumBigInt,
-		Addresses: etherMan.SCAddresses,
-	}
-	blocks, order, err := etherMan.readEvents(ctx, query)
-	if err != nil {
-		return nil, nil, err
-	}
-	return blocks, order, nil
 }
 
 // GetRollupInfoByBlockRange function retrieves the Rollup information that are included in all this ethereum blocks
@@ -247,6 +226,6 @@ func (etherMan *ClientEtherMan) processEvent(ctx context.Context, vLog types.Log
 		block.Claims = append(block.Claims, claimAux)
 		return &block, nil
 	}
-	log.Debug("Event not registered: ", vLog)
+	// log.Debug("Event not registered: ", vLog)
 	return nil, nil
 }
