@@ -16,6 +16,7 @@ import (
 )
 
 var (
+	ownershipTransferredSignatureHash      = crypto.Keccak256Hash([]byte("OwnershipTransferred(address,address)"))
 	depositEventSignatureHash              = crypto.Keccak256Hash([]byte("DepositEvent(address,uint256,uint32,address,uint32)"))
 	updateGlobalExitRootEventSignatureHash = crypto.Keccak256Hash([]byte("UpdateGlobalExitRoot(bytes32,bytes32)"))
 	claimEventSignatureHash                = crypto.Keccak256Hash([]byte("WithdrawEvent(uint64,uint32,address,uint256,address)"))
@@ -60,7 +61,7 @@ func NewEtherman(cfg Config, bridgeAddr common.Address) (*ClientEtherMan, error)
 	return &ClientEtherMan{EtherClient: ethClient, Bridge: bridge, SCAddresses: scAddresses}, nil
 }
 
-// GetRollupInfoByBlockRange function retrieves the Rollup information that are included in all this ethereum blocks
+// GetBridgeInfoByBlockRange function retrieves the Bridge information that are included in all this ethereum blocks
 // from block x to block y
 func (etherMan *ClientEtherMan) GetBridgeInfoByBlockRange(ctx context.Context, fromBlock uint64, toBlock *uint64) ([]Block, map[common.Hash][]Order, error) {
 	// First filter query
@@ -158,6 +159,18 @@ func (etherMan *ClientEtherMan) readEvents(ctx context.Context, query ethereum.F
 
 func (etherMan *ClientEtherMan) processEvent(ctx context.Context, vLog types.Log) (*Block, error) {
 	switch vLog.Topics[0] {
+	case ownershipTransferredSignatureHash:
+		ownership, err := etherMan.Bridge.ParseOwnershipTransferred(vLog)
+		if err != nil {
+			return nil, err
+		}
+		emptyAddr := common.Address{}
+		if ownership.PreviousOwner == emptyAddr {
+			log.Debug("New bridge smc deployment detected. Deployment account: ", ownership.NewOwner)
+		} else {
+			log.Debug("Bridge smc OwnershipTransferred from account ", ownership.PreviousOwner, " to ", ownership.NewOwner)
+		}
+		return nil, nil
 	case depositEventSignatureHash:
 		deposit, err := etherMan.Bridge.ParseDepositEvent(vLog)
 		if err != nil {
@@ -226,6 +239,6 @@ func (etherMan *ClientEtherMan) processEvent(ctx context.Context, vLog types.Log
 		block.Claims = append(block.Claims, claimAux)
 		return &block, nil
 	}
-	// log.Debug("Event not registered: ", vLog)
+	log.Debug("Event not registered: ", vLog)
 	return nil, nil
 }
