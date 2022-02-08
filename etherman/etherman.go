@@ -37,7 +37,7 @@ type ClientEtherMan struct {
 }
 
 type EtherMan interface {
-	GetBridigeInfoByBlock(ctx context.Context, blockNum uint64, blockHash *common.Hash) ([]Block, map[common.Hash][]Order, error)
+	GetBridgeInfoByBlock(ctx context.Context, blockNum uint64, blockHash *common.Hash) ([]Block, map[common.Hash][]Order, error)
 	GetBridgeInfoByBlockRange(ctx context.Context, fromBlock uint64, toBlock *uint64) ([]Block, map[common.Hash][]Order, error)
 }
 
@@ -62,7 +62,7 @@ func NewEtherman(cfg Config, bridgeAddr common.Address) (*ClientEtherMan, error)
 }
 
 // GetRollupInfoByBlock function retrieves the Rollup information that are included in a specific ethereum block
-func (etherMan *ClientEtherMan) GetBridigeInfoByBlock(ctx context.Context, blockNumber uint64, blockHash *common.Hash) ([]Block, map[common.Hash][]Order, error) {
+func (etherMan *ClientEtherMan) GetBridgeInfoByBlock(ctx context.Context, blockNumber uint64, blockHash *common.Hash) ([]Block, map[common.Hash][]Order, error) {
 	// First filter query
 	var blockNumBigInt *big.Int
 	if blockHash == nil {
