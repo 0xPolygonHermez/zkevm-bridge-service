@@ -39,6 +39,7 @@ type ClientEtherMan struct {
 
 type EtherMan interface {
 	GetBridgeInfoByBlockRange(ctx context.Context, fromBlock uint64, toBlock *uint64) ([]Block, map[common.Hash][]Order, error)
+	HeaderByNumber(ctx context.Context, number *big.Int) (*types.Header, error)
 }
 
 // NewEtherman creates a new etherman
@@ -241,4 +242,10 @@ func (etherMan *ClientEtherMan) processEvent(ctx context.Context, vLog types.Log
 	}
 	log.Debug("Event not registered: ", vLog)
 	return nil, nil
+}
+
+// HeaderByNumber returns a block header from the current canonical chain. If number is
+// nil, the latest known header is returned.
+func (etherMan *ClientEtherMan) HeaderByNumber(ctx context.Context, number *big.Int) (*types.Header, error) {
+	return etherMan.EtherClient.HeaderByNumber(ctx, number)
 }
