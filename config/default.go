@@ -7,6 +7,7 @@ Level = "debug"
 Outputs = ["stdout"]
 
 [Database]
+Database = "postgres"
 User = "test_user"
 Password = "test_password"
 Name = "test_db"

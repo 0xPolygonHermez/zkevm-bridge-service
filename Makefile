@@ -19,3 +19,7 @@ build: ## Build the binary locally into ./dist
 .PHONY: lint
 lint: ## runs linter
 	$(LINT)
+
+.PHONY: install-git-hooks
+install-git-hooks: ## Moves hook files to the .git/hooks directory
+	cp .github/hooks/* .git/hooks

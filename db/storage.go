@@ -2,16 +2,22 @@ package db
 
 import (
 	"context"
-	"errors"
 
+	"github.com/hermeznetwork/hermez-bridge/db/pgstorage"
 	"github.com/hermeznetwork/hermez-bridge/etherman"
+	"github.com/hermeznetwork/hermez-bridge/gerror"
 )
 
-var (
-	// ErrNotFound is used when the object is not found
-	ErrNotFound = errors.New("Not found")
-)
-
+// Storage interface
 type Storage interface {
 	GetLastBlock(ctx context.Context) (*etherman.Block, error)
+	AddBlock(ctx context.Context, block *etherman.Block) error
+}
+
+// NewStorage creates a new Storage
+func NewStorage(cfg Config) (Storage, error) {
+	if cfg.Database == "postgres" {
+		return pgstorage.NewPostgresStorage(cfg.User, cfg.Password, cfg.Host, cfg.Port, cfg.Name)
+	}
+	return nil, gerror.ErrStorageNotRegister
 }
