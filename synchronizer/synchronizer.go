@@ -2,21 +2,17 @@ package synchronizer
 
 import (
 	"context"
-	"errors"
 	"math/big"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/hermez-bridge/db"
 	"github.com/hermeznetwork/hermez-bridge/etherman"
+	"github.com/hermeznetwork/hermez-bridge/gerror"
 	"github.com/hermeznetwork/hermez-bridge/log"
 )
 
-var (
-	// ErrNotFound is used when the object is not found
-	ErrNotFound = errors.New("Not found")
-)
-
+// Synchronizer interface
 type Synchronizer interface {
 	Sync() error
 	Stop()
@@ -53,7 +49,7 @@ func (s *ClientSynchronizer) Sync() error {
 		log.Info("Sync started")
 		lastEthBlockSynced, err := s.storage.GetLastBlock(s.ctx)
 		if err != nil {
-			if err == ErrNotFound {
+			if err == gerror.ErrStorageNotFound {
 				log.Warn("error getting the latest ethereum block. No data stored. Setting genesis block. Error: ", err)
 				lastEthBlockSynced = &etherman.Block{
 					BlockNumber: s.genBlockNumber,

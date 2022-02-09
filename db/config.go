@@ -1,5 +1,6 @@
 package db
 
+// Config struct
 type Config struct {
 	// Database type
 	Database string `mapstructure:"Database"`

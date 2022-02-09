@@ -5,13 +5,9 @@ import (
 	"errors"
 
 	"github.com/hermeznetwork/hermez-bridge/etherman"
+	"github.com/hermeznetwork/hermez-bridge/gerror"
 	"github.com/jackc/pgx/v4"
 	"github.com/jackc/pgx/v4/pgxpool"
-)
-
-var (
-	// ErrNotFound is used when the object is not found
-	ErrNotFound = errors.New("Not found")
 )
 
 const (
@@ -39,7 +35,7 @@ func (s *PostgresStorage) GetLastBlock(ctx context.Context) (*etherman.Block, er
 	err := s.db.QueryRow(ctx, getLastBlockSQL).Scan(&block.BlockNumber, &block.BlockHash, &block.ParentHash, &block.ReceivedAt)
 
 	if errors.Is(err, pgx.ErrNoRows) {
-		return nil, ErrNotFound
+		return nil, gerror.ErrStorageNotFound
 	} else if err != nil {
 		return nil, err
 	}

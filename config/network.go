@@ -1,11 +1,8 @@
 package config
 
 import (
-	"math/big"
-
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/hermez-bridge/log"
-	"github.com/hermeznetwork/hermez-core/encoding"
 )
 
 //NetworkConfig is the configuration struct for the different environments
@@ -70,12 +67,4 @@ func (cfg *Config) loadNetworkConfig(network string) {
 		log.Debug("Mainnet network selected")
 		cfg.NetworkConfig = mainnetConfig
 	}
-}
-
-func bigIntFromBase10String(s string) *big.Int {
-	i, ok := big.NewInt(0).SetString(s, encoding.Base10)
-	if !ok {
-		return big.NewInt(0)
-	}
-	return i
 }

@@ -2,7 +2,6 @@ package etherman
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"math/big"
 
@@ -20,9 +19,6 @@ var (
 	depositEventSignatureHash              = crypto.Keccak256Hash([]byte("DepositEvent(address,uint256,uint32,address,uint32)"))
 	updateGlobalExitRootEventSignatureHash = crypto.Keccak256Hash([]byte("UpdateGlobalExitRoot(bytes32,bytes32)"))
 	claimEventSignatureHash                = crypto.Keccak256Hash([]byte("WithdrawEvent(uint64,uint32,address,uint256,address)"))
-
-	// ErrNotFound is used when the object is not found
-	ErrNotFound = errors.New("Not found")
 )
 
 type ethClienter interface {
@@ -31,12 +27,14 @@ type ethClienter interface {
 	ethereum.TransactionReader
 }
 
+// ClientEtherMan struct
 type ClientEtherMan struct {
 	EtherClient ethClienter
 	Bridge      *bridge.Bridge
 	SCAddresses []common.Address
 }
 
+// EtherMan interface
 type EtherMan interface {
 	GetBridgeInfoByBlockRange(ctx context.Context, fromBlock uint64, toBlock *uint64) ([]Block, map[common.Hash][]Order, error)
 	HeaderByNumber(ctx context.Context, number *big.Int) (*types.Header, error)

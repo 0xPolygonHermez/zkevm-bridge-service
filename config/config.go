@@ -14,6 +14,7 @@ import (
 	"github.com/spf13/viper"
 )
 
+// Config struct
 type Config struct {
 	Log          log.Config
 	Database     db.Config
