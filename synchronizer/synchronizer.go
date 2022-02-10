@@ -9,7 +9,7 @@ import (
 	"github.com/hermeznetwork/hermez-bridge/db"
 	"github.com/hermeznetwork/hermez-bridge/etherman"
 	"github.com/hermeznetwork/hermez-bridge/gerror"
-	"github.com/hermeznetwork/hermez-bridge/log"
+	"github.com/hermeznetwork/hermez-core/log"
 )
 
 // Synchronizer interface

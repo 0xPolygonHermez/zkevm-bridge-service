@@ -8,8 +8,8 @@ import (
 
 	"github.com/hermeznetwork/hermez-bridge/db"
 	"github.com/hermeznetwork/hermez-bridge/etherman"
-	"github.com/hermeznetwork/hermez-bridge/log"
 	"github.com/hermeznetwork/hermez-bridge/synchronizer"
+	"github.com/hermeznetwork/hermez-core/log"
 	"github.com/mitchellh/mapstructure"
 	"github.com/spf13/viper"
 )
