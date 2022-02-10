@@ -2,7 +2,7 @@ package config
 
 import (
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/hermeznetwork/hermez-bridge/log"
+	"github.com/hermeznetwork/hermez-core/log"
 )
 
 //NetworkConfig is the configuration struct for the different environments

@@ -3,8 +3,8 @@ package main
 import (
 	"github.com/hermeznetwork/hermez-bridge/config"
 	"github.com/hermeznetwork/hermez-bridge/etherman"
-	"github.com/hermeznetwork/hermez-bridge/log"
 	"github.com/hermeznetwork/hermez-bridge/synchronizer"
+	"github.com/hermeznetwork/hermez-core/log"
 	"github.com/urfave/cli/v2"
 )
 

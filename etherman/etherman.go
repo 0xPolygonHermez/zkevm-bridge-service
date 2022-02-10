@@ -10,8 +10,8 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/hermeznetwork/hermez-bridge/etherman/smartcontracts/bridge"
-	"github.com/hermeznetwork/hermez-bridge/log"
+	"github.com/hermeznetwork/hermez-core/etherman/smartcontracts/bridge"
+	"github.com/hermeznetwork/hermez-core/log"
 )
 
 var (
@@ -171,6 +171,7 @@ func (etherMan *ClientEtherMan) processEvent(ctx context.Context, vLog types.Log
 		}
 		return nil, nil
 	case depositEventSignatureHash:
+		log.Debug("Deposit event detected")
 		deposit, err := etherMan.Bridge.ParseDepositEvent(vLog)
 		if err != nil {
 			return nil, err
@@ -194,6 +195,7 @@ func (etherMan *ClientEtherMan) processEvent(ctx context.Context, vLog types.Log
 		block.Deposits = append(block.Deposits, depositAux)
 		return &block, nil
 	case updateGlobalExitRootEventSignatureHash:
+		log.Debug("UpdateGlobalExitRoot event detected")
 		globalExitRoot, err := etherMan.Bridge.ParseUpdateGlobalExitRoot(vLog)
 		if err != nil {
 			return nil, err
@@ -214,6 +216,7 @@ func (etherMan *ClientEtherMan) processEvent(ctx context.Context, vLog types.Log
 		block.GlobalExitRoots = append(block.GlobalExitRoots, gExitRoot)
 		return &block, nil
 	case claimEventSignatureHash:
+		log.Debug("Claim event detected")
 		claim, err := etherMan.Bridge.ParseWithdrawEvent(vLog)
 		if err != nil {
 			return nil, err
