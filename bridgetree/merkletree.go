@@ -7,9 +7,13 @@ import (
 
 // MerkleTree struct
 type MerkleTree struct {
-	store      Store
-	height     uint8
-	counts     []uint64
+	// store is the database storage to store all node data
+	store Store
+	// height is the depth of the merkle tree
+	height uint8
+	// counts is the array to track the number of existing nodes in each layer
+	counts []uint64
+	// zeroHashes is the pre-calculated zero hash array
 	zeroHashes [][KeyLen]byte
 }
 
@@ -90,7 +94,7 @@ func (mt *MerkleTree) getValueByIndex(ctx context.Context, height int, index uin
 }
 
 func getByteKey(height int, index uint64) []byte {
-	key := make([]byte, 9)
+	key := make([]byte, 9) //nolint:gomnd
 	key = append(key, byte(height))
 	binary.LittleEndian.PutUint64(key[1:], index)
 	return key
