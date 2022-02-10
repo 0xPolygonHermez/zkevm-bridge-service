@@ -58,9 +58,9 @@ func (s *PostgresStorage) AddBlock(ctx context.Context, block *etherman.Block) e
 }
 
 // Get gets value of key from the merkle tree
-func (p *PostgresStorage) Get(ctx context.Context, key []byte) ([]byte, error) {
+func (s *PostgresStorage) Get(ctx context.Context, key []byte) ([]byte, error) {
 	var data []byte
-	err := p.db.QueryRow(ctx, fmt.Sprintf(getNodeByKeySQL, ctx.Value(contextKeyTableName).(string)), key).Scan(&data)
+	err := s.db.QueryRow(ctx, fmt.Sprintf(getNodeByKeySQL, ctx.Value(contextKeyTableName).(string)), key).Scan(&data)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, gerror.ErrStorageNotFound
@@ -73,8 +73,8 @@ func (p *PostgresStorage) Get(ctx context.Context, key []byte) ([]byte, error) {
 // Set inserts a key-value pair into the db.
 // If record with such a key already exists its assumed that the value is correct,
 // because it's a reverse hash table, and the key is a hash of the value
-func (p *PostgresStorage) Set(ctx context.Context, key []byte, value []byte) error {
-	_, err := p.db.Exec(ctx, fmt.Sprintf(setNodeByKeySQL, ctx.Value(contextKeyTableName).(string)), key, value)
+func (s *PostgresStorage) Set(ctx context.Context, key []byte, value []byte) error {
+	_, err := s.db.Exec(ctx, fmt.Sprintf(setNodeByKeySQL, ctx.Value(contextKeyTableName).(string)), key, value)
 	if err != nil {
 		if strings.Contains(err.Error(), "duplicate key value violates unique constraint") {
 			return nil

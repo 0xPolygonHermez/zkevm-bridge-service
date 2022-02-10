@@ -14,9 +14,12 @@ func hash(data ...[KeyLen]byte) [KeyLen]byte {
 	return res
 }
 
+// HashZero is an empty hash
+var HashZero = [32]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+
 func generateZeroHashes(height uint8) [][KeyLen]byte {
 	var zeroHashes = [][KeyLen]byte{
-		[KeyLen]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+		HashZero,
 	}
 	for i := 1; i <= int(height); i++ {
 		zeroHashes = append(zeroHashes, hash(zeroHashes[i-1], zeroHashes[i-1]))
