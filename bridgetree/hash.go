@@ -1,6 +1,10 @@
 package bridgetree
 
 import (
+	"encoding/binary"
+
+	"github.com/hermeznetwork/hermez-bridge/etherman"
+	"github.com/iden3/go-iden3-crypto/keccak256"
 	"golang.org/x/crypto/sha3"
 )
 
@@ -25,4 +29,15 @@ func generateZeroHashes(height uint8) [][KeyLen]byte {
 		zeroHashes = append(zeroHashes, hash(zeroHashes[i-1], zeroHashes[i-1]))
 	}
 	return zeroHashes
+}
+
+func hashDeposit(deposit *etherman.Deposit) [KeyLen]byte {
+	var res [KeyLen]byte
+	origNet := make([]byte, 4)
+	binary.LittleEndian.PutUint32(origNet, uint32(deposit.OriginalNetwork))
+	destNet := make([]byte, 4)
+	binary.LittleEndian.PutUint32(destNet, uint32(deposit.DestinationNetwork))
+	var buf [32]byte
+	copy(res[:], keccak256.Hash(origNet, deposit.TokenAddress[:], deposit.Amount.FillBytes(buf[:]), destNet, deposit.DestinationAddress[:]))
+	return res
 }
