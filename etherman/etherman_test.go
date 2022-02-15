@@ -59,15 +59,13 @@ func TestBridgeEvents(t *testing.T) {
 
 	block, order, err := etherman.GetBridgeInfoByBlockRange(ctx, initBlock.NumberU64(), nil)
 	require.NoError(t, err)
-	assert.Equal(t, DepositsOrder, order[block[1].BlockHash][0].Name)
-	assert.Equal(t, GlobalExitRootsOrder, order[block[0].BlockHash][0].Name)
-	assert.Equal(t, GlobalExitRootsOrder, order[block[1].BlockHash][1].Name)
-	assert.Equal(t, uint64(2), block[1].BlockNumber)
-	assert.Equal(t, big.NewInt(9000000000000000000), block[1].Deposits[0].Amount)
-	assert.Equal(t, uint(1), block[1].Deposits[0].DestinationNetwork)
-	assert.Equal(t, destinationAddr, block[1].Deposits[0].DestinationAddress)
+	assert.Equal(t, DepositsOrder, order[block[0].BlockHash][0].Name)
+	assert.Equal(t, GlobalExitRootsOrder, order[block[0].BlockHash][1].Name)
+	assert.Equal(t, uint64(2), block[0].BlockNumber)
+	assert.Equal(t, big.NewInt(9000000000000000000), block[0].Deposits[0].Amount)
+	assert.Equal(t, uint(destNetwork), block[0].Deposits[0].DestinationNetwork)
+	assert.Equal(t, destinationAddr, block[0].Deposits[0].DestinationAddress)
 	assert.Equal(t, 1, len(block[0].GlobalExitRoots))
-	assert.Equal(t, 1, len(block[1].GlobalExitRoots))
 
 	//Claim funds
 	var (
@@ -75,11 +73,13 @@ func TestBridgeEvents(t *testing.T) {
 		smtProof [][32]byte
 		index    uint64
 	)
-	mainnetExitRoot := block[1].GlobalExitRoots[0].MainnetExitRoot
-	rollupExitRoot := block[1].GlobalExitRoots[0].RollupExitRoot
+	mainnetExitRoot := block[0].GlobalExitRoots[0].MainnetExitRoot
+	rollupExitRoot := block[0].GlobalExitRoots[0].RollupExitRoot
+	globalExitRootNum := block[0].GlobalExitRoots[0].GlobalExitRootNum
 
-	_, err = etherman.Bridge.Claim(auth, maticAddr, big.NewInt(1000000000000000000), network,
-		network, auth.From, smtProof, index, big.NewInt(2), mainnetExitRoot, rollupExitRoot)
+	destNetwork = 1
+	_, err = etherman.Bridge.Claim(auth, maticAddr, big.NewInt(1000000000000000000), destNetwork,
+		network, auth.From, smtProof, index, globalExitRootNum, mainnetExitRoot, rollupExitRoot)
 	require.NoError(t, err)
 
 	// Mine the tx in a block
@@ -96,6 +96,6 @@ func TestBridgeEvents(t *testing.T) {
 	assert.NotEqual(t, common.Address{}, block[0].Claims[0].Token)
 	assert.Equal(t, auth.From, block[0].Claims[0].DestinationAddress)
 	assert.Equal(t, uint64(0), block[0].Claims[0].Index)
-	assert.Equal(t, uint(0), block[0].Claims[0].OriginalNetwork)
+	assert.Equal(t, uint(1), block[0].Claims[0].OriginalNetwork)
 	assert.Equal(t, uint64(3), block[0].Claims[0].BlockNumber)
 }

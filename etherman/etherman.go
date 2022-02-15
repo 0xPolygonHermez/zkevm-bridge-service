@@ -11,14 +11,16 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/hermeznetwork/hermez-core/etherman/smartcontracts/bridge"
+	"github.com/hermeznetwork/hermez-core/etherman/smartcontracts/globalexitrootmanager"
 	"github.com/hermeznetwork/hermez-core/log"
 )
 
 var (
 	ownershipTransferredSignatureHash      = crypto.Keccak256Hash([]byte("OwnershipTransferred(address,address)"))
-	depositEventSignatureHash              = crypto.Keccak256Hash([]byte("DepositEvent(address,uint256,uint32,address,uint32)"))
-	updateGlobalExitRootEventSignatureHash = crypto.Keccak256Hash([]byte("UpdateGlobalExitRoot(bytes32,bytes32)"))
-	claimEventSignatureHash                = crypto.Keccak256Hash([]byte("WithdrawEvent(uint64,uint32,address,uint256,address)"))
+	depositEventSignatureHash              = crypto.Keccak256Hash([]byte("BridgeEvent(address,uint256,uint32,uint32,address,uint32)"))
+	updateGlobalExitRootEventSignatureHash = crypto.Keccak256Hash([]byte("UpdateGlobalExitRoot(uint256,bytes32,bytes32)"))
+	claimEventSignatureHash                = crypto.Keccak256Hash([]byte("ClaimEvent(uint64,uint32,address,uint256,address)"))
+	newWrappedTokenEventSignatureHash      = crypto.Keccak256Hash([]byte("NewWrappedToken(uint32,address,address)"))
 )
 
 type ethClienter interface {
@@ -29,9 +31,10 @@ type ethClienter interface {
 
 // ClientEtherMan struct
 type ClientEtherMan struct {
-	EtherClient ethClienter
-	Bridge      *bridge.Bridge
-	SCAddresses []common.Address
+	EtherClient           ethClienter
+	Bridge                *bridge.Bridge
+	GlobalExitRootManager *globalexitrootmanager.Globalexitrootmanager
+	SCAddresses           []common.Address
 }
 
 // EtherMan interface
@@ -41,8 +44,8 @@ type EtherMan interface {
 }
 
 // NewEtherman creates a new etherman
-func NewEtherman(cfg Config, bridgeAddr common.Address) (*ClientEtherMan, error) {
-	// TODO: PoEAddr can be got from bridge smc. Son only bridge smc is required
+func NewEtherman(cfg Config, bridgeAddr common.Address, globalExitRootManAddr common.Address) (*ClientEtherMan, error) {
+	// TODO: PoEAddr can be got from bridge smc. So only bridge smc is required
 	// Connect to ethereum node
 	ethClient, err := ethclient.Dial(cfg.URL)
 	if err != nil {
@@ -54,10 +57,14 @@ func NewEtherman(cfg Config, bridgeAddr common.Address) (*ClientEtherMan, error)
 	if err != nil {
 		return nil, err
 	}
+	globalExitRoot, err := globalexitrootmanager.NewGlobalexitrootmanager(globalExitRootManAddr, ethClient)
+	if err != nil {
+		return nil, err
+	}
 	var scAddresses []common.Address
-	scAddresses = append(scAddresses, bridgeAddr)
+	scAddresses = append(scAddresses, bridgeAddr, globalExitRootManAddr)
 
-	return &ClientEtherMan{EtherClient: ethClient, Bridge: bridge, SCAddresses: scAddresses}, nil
+	return &ClientEtherMan{EtherClient: ethClient, Bridge: bridge, GlobalExitRootManager: globalExitRoot, SCAddresses: scAddresses}, nil
 }
 
 // GetBridgeInfoByBlockRange function retrieves the Bridge information that are included in all this ethereum blocks
@@ -122,6 +129,14 @@ func (etherMan *ClientEtherMan) readEvents(ctx context.Context, query ethereum.F
 				}
 				blockOrder[b.BlockHash] = append(blockOrder[b.BlockHash], or)
 			}
+			if len(block.Tokens) != 0 {
+				b.Tokens = append(blocks[block.BlockHash].Tokens, block.Tokens...)
+				or := Order{
+					Name: TokensOrder,
+					Pos:  len(b.Tokens) - 1,
+				}
+				blockOrder[b.BlockHash] = append(blockOrder[b.BlockHash], or)
+			}
 			blocks[block.BlockHash] = b
 		} else {
 			if len(block.Deposits) != 0 {
@@ -142,6 +157,13 @@ func (etherMan *ClientEtherMan) readEvents(ctx context.Context, query ethereum.F
 				or := Order{
 					Name: ClaimsOrder,
 					Pos:  len(block.Claims) - 1,
+				}
+				blockOrder[block.BlockHash] = append(blockOrder[block.BlockHash], or)
+			}
+			if len(block.Tokens) != 0 {
+				or := Order{
+					Name: TokensOrder,
+					Pos:  len(block.Tokens) - 1,
 				}
 				blockOrder[block.BlockHash] = append(blockOrder[block.BlockHash], or)
 			}
@@ -172,7 +194,7 @@ func (etherMan *ClientEtherMan) processEvent(ctx context.Context, vLog types.Log
 		return nil, nil
 	case depositEventSignatureHash:
 		log.Debug("Deposit event detected")
-		deposit, err := etherMan.Bridge.ParseDepositEvent(vLog)
+		deposit, err := etherMan.Bridge.ParseBridgeEvent(vLog)
 		if err != nil {
 			return nil, err
 		}
@@ -182,9 +204,11 @@ func (etherMan *ClientEtherMan) processEvent(ctx context.Context, vLog types.Log
 		)
 		depositAux.Amount = deposit.Amount
 		depositAux.BlockNumber = vLog.BlockNumber
+		depositAux.OriginNetwork = uint(deposit.OriginNetwork)
 		depositAux.DestinationAddress = deposit.DestinationAddress
 		depositAux.DestinationNetwork = uint(deposit.DestinationNetwork)
 		depositAux.TokenAddres = deposit.TokenAddres
+		depositAux.DepositCount = uint(deposit.DepositCount)
 		block.BlockHash = vLog.BlockHash
 		block.BlockNumber = vLog.BlockNumber
 		fullBlock, err := etherMan.EtherClient.BlockByHash(ctx, vLog.BlockHash)
@@ -192,11 +216,12 @@ func (etherMan *ClientEtherMan) processEvent(ctx context.Context, vLog types.Log
 			return nil, fmt.Errorf("error getting hashParent. BlockNumber: %d. Error: %w", block.BlockNumber, err)
 		}
 		block.ParentHash = fullBlock.ParentHash()
+		block.ReceivedAt = fullBlock.ReceivedAt
 		block.Deposits = append(block.Deposits, depositAux)
 		return &block, nil
 	case updateGlobalExitRootEventSignatureHash:
 		log.Debug("UpdateGlobalExitRoot event detected")
-		globalExitRoot, err := etherMan.Bridge.ParseUpdateGlobalExitRoot(vLog)
+		globalExitRoot, err := etherMan.GlobalExitRootManager.ParseUpdateGlobalExitRoot(vLog)
 		if err != nil {
 			return nil, err
 		}
@@ -206,6 +231,7 @@ func (etherMan *ClientEtherMan) processEvent(ctx context.Context, vLog types.Log
 		)
 		gExitRoot.MainnetExitRoot = globalExitRoot.MainnetExitRoot
 		gExitRoot.RollupExitRoot = globalExitRoot.RollupExitRoot
+		gExitRoot.GlobalExitRootNum = globalExitRoot.GlobalExitRootNum
 		block.BlockHash = vLog.BlockHash
 		block.BlockNumber = vLog.BlockNumber
 		fullBlock, err := etherMan.EtherClient.BlockByHash(ctx, vLog.BlockHash)
@@ -213,11 +239,12 @@ func (etherMan *ClientEtherMan) processEvent(ctx context.Context, vLog types.Log
 			return nil, fmt.Errorf("error getting hashParent. BlockNumber: %d. Error: %w", block.BlockNumber, err)
 		}
 		block.ParentHash = fullBlock.ParentHash()
+		block.ReceivedAt = fullBlock.ReceivedAt
 		block.GlobalExitRoots = append(block.GlobalExitRoots, gExitRoot)
 		return &block, nil
 	case claimEventSignatureHash:
 		log.Debug("Claim event detected")
-		claim, err := etherMan.Bridge.ParseWithdrawEvent(vLog)
+		claim, err := etherMan.Bridge.ParseClaimEvent(vLog)
 		if err != nil {
 			return nil, err
 		}
@@ -238,10 +265,33 @@ func (etherMan *ClientEtherMan) processEvent(ctx context.Context, vLog types.Log
 			return nil, fmt.Errorf("error getting hashParent. BlockNumber: %d. Error: %w", block.BlockNumber, err)
 		}
 		block.ParentHash = fullBlock.ParentHash()
+		block.ReceivedAt = fullBlock.ReceivedAt
 		block.Claims = append(block.Claims, claimAux)
 		return &block, nil
+	case newWrappedTokenEventSignatureHash:
+		tokenWrapped, err := etherMan.Bridge.ParseNewWrappedToken(vLog)
+		if err != nil {
+			return nil, err
+		}
+		var (
+			block    Block
+			newToken TokenWrapped
+		)
+		newToken.OriginalNetwork = uint(tokenWrapped.OriginalNetwork)
+		newToken.OriginalTokenAddress = tokenWrapped.OriginalTokenAddress
+		newToken.WrappedTokenAddress = tokenWrapped.WrappedTokenAddress
+		block.BlockHash = vLog.BlockHash
+		block.BlockNumber = vLog.BlockNumber
+		fullBlock, err := etherMan.EtherClient.BlockByHash(ctx, vLog.BlockHash)
+		if err != nil {
+			return nil, fmt.Errorf("error getting hashParent. BlockNumber: %d. Error: %w", block.BlockNumber, err)
+		}
+		block.ParentHash = fullBlock.ParentHash()
+		block.ReceivedAt = fullBlock.ReceivedAt
+		block.Tokens = append(block.Tokens, newToken)
+		return &block, nil
 	}
-	log.Debug("Event not registered: ", vLog)
+	log.Warn("Event not registered: ", vLog)
 	return nil, nil
 }
 

@@ -14,6 +14,8 @@ const (
 	GlobalExitRootsOrder EventOrder = "GlobalExitRoots"
 	//ClaimsOrder identifies a claim event
 	ClaimsOrder EventOrder = "Claims"
+	//TokensOrder identifies a TokenWrapped event
+	TokensOrder EventOrder = "Tokens"
 )
 
 // EventOrder is the the type used to identify the events order
@@ -33,6 +35,7 @@ type Block struct {
 	Deposits        []Deposit
 	GlobalExitRoots []GlobalExitRoot
 	Claims          []Claim
+	Tokens          []TokenWrapped
 
 	ReceivedAt time.Time
 }
@@ -42,14 +45,17 @@ type Deposit struct {
 	TokenAddres        common.Address
 	Amount             *big.Int
 	DestinationNetwork uint
+	OriginNetwork      uint
 	DestinationAddress common.Address
+	DepositCount       uint
 	BlockNumber        uint64
 }
 
 // GlobalExitRoot struct
 type GlobalExitRoot struct {
-	MainnetExitRoot [32]byte
-	RollupExitRoot  [32]byte
+	GlobalExitRootNum *big.Int
+	MainnetExitRoot   common.Hash
+	RollupExitRoot    common.Hash
 }
 
 // Claim struct
@@ -60,4 +66,11 @@ type Claim struct {
 	Amount             *big.Int
 	DestinationAddress common.Address
 	BlockNumber        uint64
+}
+
+// TokenWrapped struct
+type TokenWrapped struct {
+	OriginalNetwork      uint
+	OriginalTokenAddress common.Address
+	WrappedTokenAddress  common.Address
 }

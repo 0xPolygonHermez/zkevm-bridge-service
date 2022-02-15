@@ -11,6 +11,7 @@ import (
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/hermeznetwork/hermez-core/etherman/smartcontracts/bridge"
+	"github.com/hermeznetwork/hermez-core/etherman/smartcontracts/globalexitrootmanager"
 	"github.com/hermeznetwork/hermez-core/etherman/smartcontracts/matic"
 	"github.com/hermeznetwork/hermez-core/etherman/smartcontracts/proofofefficiency"
 )
@@ -41,18 +42,29 @@ func NewSimulatedEtherman(cfg Config, auth *bind.TransactOpts) (etherman *Client
 		return nil, nil, common.Address{}, err
 	}
 	calculatedBridgeAddr := crypto.CreateAddress(auth.From, nonce+1)
+	const pos = 2
+	calculatedPoEAddr := crypto.CreateAddress(auth.From, nonce+pos)
 	var genesis [32]byte
-	poeAddr, _, _, err := proofofefficiency.DeployProofofefficiency(auth, client, calculatedBridgeAddr, maticAddr, rollupVerifierAddr, genesis)
+	exitManagerAddr, _, exitManager, err := globalexitrootmanager.DeployGlobalexitrootmanager(auth, client, calculatedPoEAddr, calculatedBridgeAddr)
 	if err != nil {
 		return nil, nil, common.Address{}, err
 	}
-	bridgeAddr, _, bridge, err := bridge.DeployBridge(auth, client, poeAddr)
+	bridgeAddr, _, bridge, err := bridge.DeployBridge(auth, client, 0, exitManagerAddr)
 	if err != nil {
 		return nil, nil, common.Address{}, err
 	}
+	poeAddr, _, _, err := proofofefficiency.DeployProofofefficiency(auth, client, exitManagerAddr, maticAddr, rollupVerifierAddr, genesis)
+	if err != nil {
+		return nil, nil, common.Address{}, err
+	}
+
 	if calculatedBridgeAddr != bridgeAddr {
 		return nil, nil, common.Address{}, fmt.Errorf("bridgeAddr (" + bridgeAddr.String() +
 			") is different from the expected contract address (" + calculatedBridgeAddr.String() + ")")
+	}
+	if calculatedPoEAddr != poeAddr {
+		return nil, nil, common.Address{}, fmt.Errorf("poeAddr (" + poeAddr.String() +
+			") is different from the expected contract address (" + calculatedPoEAddr.String() + ")")
 	}
 
 	// Approve the bridge and poe to spend 10000 matic tokens
@@ -67,5 +79,5 @@ func NewSimulatedEtherman(cfg Config, auth *bind.TransactOpts) (etherman *Client
 	}
 
 	client.Commit()
-	return &ClientEtherMan{EtherClient: client, Bridge: bridge, SCAddresses: []common.Address{bridgeAddr}}, client.Commit, maticAddr, nil
+	return &ClientEtherMan{EtherClient: client, Bridge: bridge, GlobalExitRootManager: exitManager, SCAddresses: []common.Address{bridgeAddr, exitManagerAddr}}, client.Commit, maticAddr, nil
 }
