@@ -19,8 +19,8 @@ type MerkleTree struct {
 
 // NewMerkleTree creates new MerkleTree
 func NewMerkleTree(store Store, height uint8) *MerkleTree {
-	counts := make([]uint64, height)
-	for i := 0; i < int(height); i++ {
+	counts := make([]uint64, 0)
+	for i := 0; i <= int(height); i++ {
 		counts = append(counts, 0)
 	}
 	return &MerkleTree{
@@ -56,8 +56,10 @@ func (mt *MerkleTree) addLeaf(ctx context.Context, leaf [KeyLen]byte) error {
 		}
 		index /= 2
 	}
-
-	return nil
+	// Set the root
+	mt.counts[mt.height] = 1
+	err := mt.store.Set(ctx, getByteKey(int(mt.height), index), cur[:])
+	return err
 }
 
 func (mt *MerkleTree) getProofTreeByIndex(ctx context.Context, index uint64) ([][KeyLen]byte, error) {
@@ -65,16 +67,13 @@ func (mt *MerkleTree) getProofTreeByIndex(ctx context.Context, index uint64) ([]
 	currentIndex := index
 	for height := 0; height < int(mt.height); height++ {
 		currentIndex = currentIndex ^ 1
-		if currentIndex < mt.counts[height] {
-			sibling, err := mt.getValueByIndex(ctx, height, currentIndex)
-			if err != nil {
-				return proof, err
-			}
 
-			proof = append(proof, sibling)
-		} else {
-			proof = append(proof, mt.zeroHashes[height])
+		sibling, err := mt.getValueByIndex(ctx, height, currentIndex)
+		if err != nil {
+			return proof, err
 		}
+
+		proof = append(proof, sibling)
 		currentIndex = currentIndex / 2 //nolint:gomnd
 	}
 	return proof, nil
@@ -89,13 +88,19 @@ func (mt *MerkleTree) getRoot(ctx context.Context) ([KeyLen]byte, error) {
 }
 
 func (mt *MerkleTree) getValueByIndex(ctx context.Context, height int, index uint64) ([KeyLen]byte, error) {
+	if index >= mt.counts[height] {
+		return mt.zeroHashes[height], nil
+	}
+
 	var res [KeyLen]byte
-	return res, nil
+	value, err := mt.store.Get(ctx, getByteKey(height, index))
+	copy(res[:], value)
+	return res, err
 }
 
 func getByteKey(height int, index uint64) []byte {
-	key := make([]byte, 9) //nolint:gomnd
+	key := make([]byte, 8) //nolint:gomnd
 	key = append(key, byte(height))
-	binary.LittleEndian.PutUint64(key[1:], index)
+	binary.LittleEndian.PutUint64(key, index)
 	return key
 }

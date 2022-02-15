@@ -15,8 +15,8 @@ import (
 const (
 	getLastBlockSQL = "SELECT * FROM state.block ORDER BY block_num DESC LIMIT 1"
 	addBlockSQL     = "INSERT INTO state.block (block_num, block_hash, parent_hash, received_at) VALUES ($1, $2, $3, $4)"
-	getNodeByKeySQL = "SELECT data FROM %s WHERE hash = $1"
-	setNodeByKeySQL = "INSERT INTO %s (hash, data) VALUES ($1, $2)"
+	getNodeByKeySQL = "SELECT value FROM %s WHERE key = $1"
+	setNodeByKeySQL = "INSERT INTO %s (key, value) VALUES ($1, $2) ON CONFLICT(key) DO UPDATE SET value = $2"
 )
 
 var (
@@ -29,8 +29,8 @@ type PostgresStorage struct {
 }
 
 // NewPostgresStorage creates a new Storage DB
-func NewPostgresStorage(user string, password string, host string, port string, name string) (*PostgresStorage, error) {
-	db, err := pgxpool.Connect(context.Background(), "postgres://"+user+":"+password+"@"+host+":"+port+"/"+name)
+func NewPostgresStorage(cfg Config) (*PostgresStorage, error) {
+	db, err := pgxpool.Connect(context.Background(), "postgres://"+cfg.User+":"+cfg.Password+"@"+cfg.Host+":"+cfg.Port+"/"+cfg.Name)
 	if err != nil {
 		return nil, err
 	}
