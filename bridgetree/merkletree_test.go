@@ -64,7 +64,7 @@ func TestMerkleTree(t *testing.T) {
 	store, err := pgstorage.NewPostgresStorage(dbCfg)
 	require.NoError(t, err)
 
-	ctx := context.WithValue(context.Background(), contextKeyTableName, contextValueTableName) //nolint:gomnd
+	ctx := context.WithValue(context.Background(), contextKeyTableName, contextValueTableName) // nolint
 
 	for ti, testVector := range testVectors {
 		t.Run(fmt.Sprintf("Test vector %d", ti), func(t *testing.T) {

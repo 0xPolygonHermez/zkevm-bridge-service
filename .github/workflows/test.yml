@@ -22,5 +22,12 @@ jobs:
         go-version: ${{ matrix.go-version }}
       env:
         GOARCH: ${{ matrix.goarch }}
+    - name: Inject github insteadOf configuration
+      env:
+        PRIVATE_GITHUB_TOKEN: ${{ secrets.GIT_TOKEN }}
+      run: |
+        git config --global url."https://${PRIVATE_GITHUB_TOKEN}:x-oauth-basic@github.com/".insteadOf "https://github.com/"
+    - name: download dependencies
+      run: go mod vendor
     - name: Test
       run: make test
