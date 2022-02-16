@@ -3,6 +3,8 @@ package pgstorage
 import (
 	"context"
 	"errors"
+	"fmt"
+	"strings"
 
 	"github.com/hermeznetwork/hermez-bridge/etherman"
 	"github.com/hermeznetwork/hermez-bridge/gerror"
@@ -13,6 +15,12 @@ import (
 const (
 	getLastBlockSQL = "SELECT * FROM state.block ORDER BY block_num DESC LIMIT 1"
 	addBlockSQL     = "INSERT INTO state.block (block_num, block_hash, parent_hash, received_at) VALUES ($1, $2, $3, $4)"
+	getNodeByKeySQL = "SELECT value FROM %s WHERE key = $1"
+	setNodeByKeySQL = "INSERT INTO %s (key, value) VALUES ($1, $2) ON CONFLICT(key) DO UPDATE SET value = $2"
+)
+
+var (
+	contextKeyTableName = "postgres-table-name"
 )
 
 // PostgresStorage implements the Storage interface
@@ -20,9 +28,9 @@ type PostgresStorage struct {
 	db *pgxpool.Pool
 }
 
-// NewPostgresStorage creates a new StateDB
-func NewPostgresStorage(user string, password string, host string, port string, name string) (*PostgresStorage, error) {
-	db, err := pgxpool.Connect(context.Background(), "postgres://"+user+":"+password+"@"+host+":"+port+"/"+name)
+// NewPostgresStorage creates a new Storage DB
+func NewPostgresStorage(cfg Config) (*PostgresStorage, error) {
+	db, err := pgxpool.Connect(context.Background(), "postgres://"+cfg.User+":"+cfg.Password+"@"+cfg.Host+":"+cfg.Port+"/"+cfg.Name)
 	if err != nil {
 		return nil, err
 	}
@@ -47,4 +55,31 @@ func (s *PostgresStorage) GetLastBlock(ctx context.Context) (*etherman.Block, er
 func (s *PostgresStorage) AddBlock(ctx context.Context, block *etherman.Block) error {
 	_, err := s.db.Exec(ctx, addBlockSQL, block.BlockNumber, block.BlockHash.Bytes(), block.ParentHash.Bytes(), block.ReceivedAt)
 	return err
+}
+
+// Get gets value of key from the merkle tree
+func (s *PostgresStorage) Get(ctx context.Context, key []byte) ([]byte, error) {
+	var data []byte
+	err := s.db.QueryRow(ctx, fmt.Sprintf(getNodeByKeySQL, ctx.Value(contextKeyTableName).(string)), key).Scan(&data)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, gerror.ErrStorageNotFound
+		}
+		return nil, err
+	}
+	return data, nil
+}
+
+// Set inserts a key-value pair into the db.
+// If record with such a key already exists its assumed that the value is correct,
+// because it's a reverse hash table, and the key is a hash of the value
+func (s *PostgresStorage) Set(ctx context.Context, key []byte, value []byte) error {
+	_, err := s.db.Exec(ctx, fmt.Sprintf(setNodeByKeySQL, ctx.Value(contextKeyTableName).(string)), key, value)
+	if err != nil {
+		if strings.Contains(err.Error(), "duplicate key value violates unique constraint") {
+			return nil
+		}
+		return err
+	}
+	return nil
 }
