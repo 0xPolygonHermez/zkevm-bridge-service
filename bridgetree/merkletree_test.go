@@ -64,11 +64,10 @@ func TestMerkleTree(t *testing.T) {
 	store, err := pgstorage.NewPostgresStorage(dbCfg)
 	require.NoError(t, err)
 
-	ctx := context.WithValue(context.Background(), contextKeyTableName, contextValueTableName)
+	ctx := context.WithValue(context.Background(), contextKeyTableName, contextValueTableName) //nolint:gomnd
 
 	for ti, testVector := range testVectors {
 		t.Run(fmt.Sprintf("Test vector %d", ti), func(t *testing.T) {
-
 			mt := NewMerkleTree(store, uint8(height))
 			root, err := mt.getRoot(ctx)
 			require.NoError(t, err)
@@ -96,7 +95,6 @@ func TestMerkleTree(t *testing.T) {
 				assert.Equal(t, proofStrings, testVector.Prooves[i])
 			}
 			assert.Equal(t, mt.counts, testVector.ExpectedCounts)
-
 		})
 	}
 }
