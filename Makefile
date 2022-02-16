@@ -36,3 +36,7 @@ test: ## Runs only short tests without checking race conditions
 	$(STOPDB) || true
 	$(RUNDB); sleep 5
 	trap '$(STOPDB)' EXIT; go test -short -p 1 ./...
+
+.PHONY: install-linter
+install-linter: ## Installs the linter
+	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $$(go env GOPATH)/bin v1.39.0
