@@ -10,10 +10,11 @@ import (
 	"github.com/hermeznetwork/hermez-bridge/gerror"
 )
 
-// KeyLen is the length of key and value in the Merkle Tree
 const (
-	MAIN_NETWORK_ID = 0
-	KeyLen          = 32
+	// MAIN_NETWORK_ID is the default is of the main net
+	MAIN_NETWORK_ID = 0 //nolint
+	// KeyLen is the length of key and value in the Merkle Tree
+	KeyLen = 32
 )
 
 // BridgeTree struct
@@ -33,15 +34,19 @@ var (
 		"postgres-rollup":  "merkletree.rollup",
 	}
 	mainnetKey = "mainnet"
-	rollupKey  = "rollupu"
+	rollupKey  = "rollup"
 )
-
-type favContextKey string
 
 // NewBridgeTree creates new BridgeTree
 func NewBridgeTree(cfg Config, dbConfig db.Config) (*BridgeTree, error) {
 	if cfg.Store == "postgres" {
-		storage, err := pgstorage.NewPostgresStorage(dbConfig.User, dbConfig.Password, dbConfig.Host, dbConfig.Port, dbConfig.Name)
+		storage, err := pgstorage.NewPostgresStorage(pgstorage.Config{
+			User:     dbConfig.User,
+			Password: dbConfig.Password,
+			Host:     dbConfig.Host,
+			Port:     dbConfig.Port,
+			Name:     dbConfig.Name,
+		})
 		if err != nil {
 			return nil, err
 		}
@@ -57,25 +62,26 @@ func NewBridgeTree(cfg Config, dbConfig db.Config) (*BridgeTree, error) {
 	return nil, gerror.ErrStorageNotRegister
 }
 
+// AddDeposit adds deposit information to the bridge tree
 func (bt *BridgeTree) AddDeposit(deposit *etherman.Deposit) error {
 	var key string
 	leaf := hashDeposit(deposit)
 	var ctx context.Context
 	if deposit.OriginalNetwork == MAIN_NETWORK_ID {
 		key = fmt.Sprintf("%s-%s", bt.database, mainnetKey)
-		ctx = context.WithValue(context.TODO(), favContextKey(contextKeyTableName), contextValueMap[key])
+		ctx = context.WithValue(context.TODO(), contextKeyTableName, contextValueMap[key]) //nolint
 		err := bt.mainnetTree.addLeaf(ctx, leaf)
 		if err != nil {
 			return err
 		}
 	} else {
 		key = fmt.Sprintf("%s-%s", bt.database, rollupKey)
-		ctx = context.WithValue(context.TODO(), favContextKey(contextKeyTableName), contextValueMap[key])
+		ctx = context.WithValue(context.TODO(), contextKeyTableName, contextValueMap[key]) //nolint
 		err := bt.mainnetTree.addLeaf(ctx, leaf)
 		if err != nil {
 			return err
 		}
 	}
-	bt.storage.AddDeposit(ctx, deposit)
-	return nil
+	err := bt.storage.AddDeposit(ctx, deposit)
+	return err
 }

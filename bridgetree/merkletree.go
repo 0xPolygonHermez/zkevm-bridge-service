@@ -60,15 +60,10 @@ func (mt *MerkleTree) addLeaf(ctx context.Context, leaf [KeyLen]byte) error {
 		}
 		index /= 2
 	}
-<<<<<<< HEAD
-	// Set the root
-	mt.counts[mt.height] = 1
-	err := mt.store.Set(ctx, getByteKey(int(mt.height), index), cur[:])
-	return err
-=======
+	// Set the root value
 	mt.root = cur
+	mt.counts[mt.height] = 1
 	return nil
->>>>>>> add the bridge tree interface
 }
 
 func (mt *MerkleTree) getProofTreeByIndex(ctx context.Context, index uint64) ([][KeyLen]byte, error) {

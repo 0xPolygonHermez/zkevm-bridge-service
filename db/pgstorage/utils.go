@@ -44,7 +44,7 @@ func InitOrReset(cfg Config) error {
 	if _, err := pgStorage.db.Exec(context.Background(), "DROP TABLE IF EXISTS gorp_migrations CASCADE;"); err != nil {
 		return err
 	}
-	if _, err := pgStorage.db.Exec(context.Background(), "DROP SCHEMA IF EXISTS state CASCADE;"); err != nil {
+	if _, err := pgStorage.db.Exec(context.Background(), "DROP SCHEMA IF EXISTS sync CASCADE;"); err != nil {
 		return err
 	}
 	if _, err := pgStorage.db.Exec(context.Background(), "DROP SCHEMA IF EXISTS merkletree CASCADE;"); err != nil {

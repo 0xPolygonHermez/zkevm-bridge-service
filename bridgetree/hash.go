@@ -33,9 +33,9 @@ func generateZeroHashes(height uint8) [][KeyLen]byte {
 
 func hashDeposit(deposit *etherman.Deposit) [KeyLen]byte {
 	var res [KeyLen]byte
-	origNet := make([]byte, 4)
+	origNet := make([]byte, 4) //nolint:gomnd
 	binary.LittleEndian.PutUint32(origNet, uint32(deposit.OriginalNetwork))
-	destNet := make([]byte, 4)
+	destNet := make([]byte, 4) //nolint:gomnd
 	binary.LittleEndian.PutUint32(destNet, uint32(deposit.DestinationNetwork))
 	var buf [32]byte
 	copy(res[:], keccak256.Hash(origNet, deposit.TokenAddress[:], deposit.Amount.FillBytes(buf[:]), destNet, deposit.DestinationAddress[:]))
