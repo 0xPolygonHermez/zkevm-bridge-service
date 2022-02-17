@@ -82,6 +82,5 @@ func (bt *BridgeTree) AddDeposit(deposit *etherman.Deposit) error {
 			return err
 		}
 	}
-	err := bt.storage.AddDeposit(ctx, deposit)
-	return err
+	return bt.storage.AddDeposit(ctx, deposit)
 }
