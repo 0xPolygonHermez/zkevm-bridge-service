@@ -8,7 +8,7 @@ import (
 // MerkleTree struct
 type MerkleTree struct {
 	// store is the database storage to store all node data
-	store Store
+	store merkleTreeStore
 	// height is the depth of the merkle tree
 	height uint8
 	// counts is the array to track the number of existing nodes in each layer
@@ -20,7 +20,7 @@ type MerkleTree struct {
 }
 
 // NewMerkleTree creates new MerkleTree.
-func NewMerkleTree(store Store, height uint8) *MerkleTree {
+func NewMerkleTree(store merkleTreeStore, height uint8) *MerkleTree {
 	counts := make([]uint64, 0)
 	for i := 0; i <= int(height); i++ {
 		counts = append(counts, 0)

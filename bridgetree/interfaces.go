@@ -6,8 +6,8 @@ import (
 	"github.com/hermeznetwork/hermez-bridge/etherman"
 )
 
-// Store interface for the Merkle Tree
-type Store interface {
+// store interface for the Merkle Tree
+type merkleTreeStore interface {
 	Get(ctx context.Context, key []byte) ([]byte, error)
 	Set(ctx context.Context, key []byte, value []byte) error
 }
