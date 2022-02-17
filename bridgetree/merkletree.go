@@ -39,7 +39,7 @@ func (mt *MerkleTree) addLeaf(ctx context.Context, leaf [KeyLen]byte) error {
 	index := mt.counts[0]
 	cur := leaf
 	for height := 0; height < int(mt.height); height++ {
-		// set the current value in the specific height
+		// Set the current value in the specific height
 		err := mt.store.Set(ctx, getByteKey(height, index), cur[:])
 		if err != nil {
 			return err
@@ -60,7 +60,7 @@ func (mt *MerkleTree) addLeaf(ctx context.Context, leaf [KeyLen]byte) error {
 		}
 		index /= 2
 	}
-	// set the root value
+	// Set the root value
 	mt.root = cur
 	mt.counts[mt.height] = 1
 	return nil
