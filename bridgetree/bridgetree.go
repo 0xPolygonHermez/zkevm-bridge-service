@@ -11,8 +11,8 @@ import (
 )
 
 const (
-	// MAIN_NETWORK_ID is the default is of the main net
-	MAIN_NETWORK_ID = 0 //nolint
+	// mainNetworkID  is the default is of the main net
+	mainNetworkID = 0 //nolint
 	// KeyLen is the length of key and value in the Merkle Tree
 	KeyLen = 32
 )
@@ -37,7 +37,7 @@ var (
 	rollupKey  = "rollup"
 )
 
-// NewBridgeTree creates new BridgeTree
+// NewBridgeTree creates new BridgeTree.
 func NewBridgeTree(cfg Config, dbConfig db.Config) (*BridgeTree, error) {
 	if cfg.Store == "postgres" {
 		storage, err := pgstorage.NewPostgresStorage(pgstorage.Config{
@@ -62,12 +62,12 @@ func NewBridgeTree(cfg Config, dbConfig db.Config) (*BridgeTree, error) {
 	return nil, gerror.ErrStorageNotRegister
 }
 
-// AddDeposit adds deposit information to the bridge tree
+// AddDeposit adds deposit information to the bridge tree.
 func (bt *BridgeTree) AddDeposit(deposit *etherman.Deposit) error {
 	var key string
 	leaf := hashDeposit(deposit)
 	var ctx context.Context
-	if deposit.OriginalNetwork == MAIN_NETWORK_ID {
+	if deposit.OriginalNetwork == mainNetworkID {
 		key = fmt.Sprintf("%s-%s", bt.database, mainnetKey)
 		ctx = context.WithValue(context.TODO(), contextKeyTableName, contextValueMap[key]) //nolint
 		err := bt.mainnetTree.addLeaf(ctx, leaf)

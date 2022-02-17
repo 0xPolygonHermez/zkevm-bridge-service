@@ -19,7 +19,7 @@ type MerkleTree struct {
 	root [KeyLen]byte
 }
 
-// NewMerkleTree creates new MerkleTree
+// NewMerkleTree creates new MerkleTree.
 func NewMerkleTree(store Store, height uint8) *MerkleTree {
 	counts := make([]uint64, 0)
 	for i := 0; i <= int(height); i++ {
@@ -39,7 +39,7 @@ func (mt *MerkleTree) addLeaf(ctx context.Context, leaf [KeyLen]byte) error {
 	index := mt.counts[0]
 	cur := leaf
 	for height := 0; height < int(mt.height); height++ {
-		// Set the current value in the specific height
+		// set the current value in the specific height
 		err := mt.store.Set(ctx, getByteKey(height, index), cur[:])
 		if err != nil {
 			return err
@@ -60,7 +60,7 @@ func (mt *MerkleTree) addLeaf(ctx context.Context, leaf [KeyLen]byte) error {
 		}
 		index /= 2
 	}
-	// Set the root value
+	// set the root value
 	mt.root = cur
 	mt.counts[mt.height] = 1
 	return nil
