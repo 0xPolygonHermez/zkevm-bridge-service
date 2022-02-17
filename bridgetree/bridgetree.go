@@ -12,7 +12,7 @@ import (
 
 const (
 	// mainNetworkID  is the default is of the main net
-	mainNetworkID = 0 //nolint
+	mainNetworkID = 0
 	// KeyLen is the length of key and value in the Merkle Tree
 	KeyLen = 32
 )
