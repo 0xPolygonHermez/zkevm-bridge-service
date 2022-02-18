@@ -368,6 +368,10 @@ github.com/hashicorp/serf v0.8.2/go.mod h1:6hOLApaqBFA1NXqRQAsxw9QxuDEvNxSQRwA/J
 github.com/hashicorp/serf v0.9.5/go.mod h1:UWDWwZeL5cuWDJdl0C6wrvrUwEqtQ4ZKBKKENpqIUyk=
 github.com/hermeznetwork/hermez-core v0.0.0-20220207123519-38273b079c43 h1:4y4aUuPGkkwxUn95G3mq9JNy3XrxI8TuL+svhw7Dhu0=
 github.com/hermeznetwork/hermez-core v0.0.0-20220207123519-38273b079c43/go.mod h1:CZwmzH9U2VBwGEe6FQbiMtv+ETzHfA6FuBDkrsXZfXE=
+github.com/hermeznetwork/hermez-core v0.0.0-20220217140959-b914c703450a h1:hN/8mHoyTcQfh1mjtjUy/IVsi5iN/y9uO4kvmIxU6xc=
+github.com/hermeznetwork/hermez-core v0.0.0-20220217140959-b914c703450a/go.mod h1:ZdLa60w0xR3wFYu866NbC/3zRvKVON69tbA9K0qJfss=
+github.com/hermeznetwork/hermez-core v0.0.0-20220218094012-d7509596d7fa h1:s7o4hJHd2AG3UYCUF/+pACEjJNkgUlEwm+rbUbQqBIk=
+github.com/hermeznetwork/hermez-core v0.0.0-20220218094012-d7509596d7fa/go.mod h1:ZdLa60w0xR3wFYu866NbC/3zRvKVON69tbA9K0qJfss=
 github.com/hermeznetwork/tracerr v0.3.2 h1:QB3TlQxO/4XHyixsg+nRZPuoel/FFQlQ7oAoHDD5l1c=
 github.com/hermeznetwork/tracerr v0.3.2/go.mod h1:nsWC1+tc4qUEbUGRv4DcPJJTjLsedlPajlFmpJoohK4=
 github.com/holiman/bloomfilter/v2 v2.0.3 h1:73e0e/V0tCydx14a0SCYS/EWCxgwLZ18CZcZKVu0fao=
