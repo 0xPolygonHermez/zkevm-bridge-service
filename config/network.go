@@ -51,7 +51,7 @@ var (
 		Arity:                 4,
 		GenBlockNumber:        1,
 		BridgeAddr:            common.HexToAddress("0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9"),
-		GlobalExitRootManAddr: common.HexToAddress("0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"),
+		GlobalExitRootManAddr: common.HexToAddress("0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0"),
 		L1ChainID:             1337,
 		L2DefaultChainID:      1000,
 	}
