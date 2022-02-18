@@ -13,14 +13,15 @@ import (
 )
 
 const (
-	getLastBlockSQL = "SELECT * FROM state.block ORDER BY block_num DESC LIMIT 1"
-	addBlockSQL     = "INSERT INTO state.block (block_num, block_hash, parent_hash, received_at) VALUES ($1, $2, $3, $4)"
+	getLastBlockSQL = "SELECT * FROM sync.block ORDER BY block_num DESC LIMIT 1"
+	addBlockSQL     = "INSERT INTO sync.block (block_num, block_hash, parent_hash, received_at) VALUES ($1, $2, $3, $4)"
+	addDepositSQL   = "INSERT INTO sync.deposit (orig_net, token_addr, amount, dest_net, dest_addr, block_num, deposit_cnt) VALUES ($1, $2, $3, $4, $5, $6, $7)"
 	getNodeByKeySQL = "SELECT value FROM %s WHERE key = $1"
 	setNodeByKeySQL = "INSERT INTO %s (key, value) VALUES ($1, $2) ON CONFLICT(key) DO UPDATE SET value = $2"
 )
 
 var (
-	contextKeyTableName = "postgres-table-name"
+	contextKeyTableName = "merkle-tree-table-name"
 )
 
 // PostgresStorage implements the Storage interface
@@ -54,6 +55,12 @@ func (s *PostgresStorage) GetLastBlock(ctx context.Context) (*etherman.Block, er
 // AddBlock adds a new block to the State Store
 func (s *PostgresStorage) AddBlock(ctx context.Context, block *etherman.Block) error {
 	_, err := s.db.Exec(ctx, addBlockSQL, block.BlockNumber, block.BlockHash.Bytes(), block.ParentHash.Bytes(), block.ReceivedAt)
+	return err
+}
+
+// AddDeposit adds a new block to the State Store
+func (s *PostgresStorage) AddDeposit(ctx context.Context, deposit *etherman.Deposit) error {
+	_, err := s.db.Exec(ctx, addDepositSQL, deposit.OriginalNetwork, deposit.TokenAddress, deposit.Amount.String(), deposit.DestinationNetwork, deposit.DestinationAddress, deposit.BlockNumber, deposit.DepositCount)
 	return err
 }
 

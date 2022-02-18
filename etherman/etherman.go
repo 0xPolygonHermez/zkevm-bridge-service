@@ -184,7 +184,7 @@ func (etherMan *ClientEtherMan) processEvent(ctx context.Context, vLog types.Log
 		depositAux.BlockNumber = vLog.BlockNumber
 		depositAux.DestinationAddress = deposit.DestinationAddress
 		depositAux.DestinationNetwork = uint(deposit.DestinationNetwork)
-		depositAux.TokenAddres = deposit.TokenAddres
+		depositAux.TokenAddress = deposit.TokenAddres
 		block.BlockHash = vLog.BlockHash
 		block.BlockNumber = vLog.BlockNumber
 		fullBlock, err := etherMan.EtherClient.BlockByHash(ctx, vLog.BlockHash)

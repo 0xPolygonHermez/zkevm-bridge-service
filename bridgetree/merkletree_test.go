@@ -16,12 +16,11 @@ import (
 )
 
 var (
-	contextKeyTableName   = "postgres-table-name"
-	contextValueTableName = "merkletree.mainnet"
-	height                = 32
+	contextValueMainnetTableName = "merkletree.mainnet"
+	testHeight                   = 32
 )
 
-type testVectorRaw struct {
+type leafVectorRaw struct {
 	Leaves         []string   `json:"leaves"`
 	ExpectedRoots  []string   `json:"expectedRoots"`
 	ExpectedCounts []uint64   `json:"expectedCounts"`
@@ -53,7 +52,7 @@ func TestMerkleTree(t *testing.T) {
 	data, err := os.ReadFile("test/vectors/mt-raw.json")
 	require.NoError(t, err)
 
-	var testVectors []testVectorRaw
+	var testVectors []leafVectorRaw
 	err = json.Unmarshal(data, &testVectors)
 	require.NoError(t, err)
 
@@ -64,14 +63,12 @@ func TestMerkleTree(t *testing.T) {
 	store, err := pgstorage.NewPostgresStorage(dbCfg)
 	require.NoError(t, err)
 
-	ctx := context.WithValue(context.Background(), contextKeyTableName, contextValueTableName) // nolint
+	ctx := context.WithValue(context.Background(), contextKeyTableName, contextValueMainnetTableName) //nolint
 
 	for ti, testVector := range testVectors {
 		t.Run(fmt.Sprintf("Test vector %d", ti), func(t *testing.T) {
-			mt := NewMerkleTree(store, uint8(height))
-			root, err := mt.getRoot(ctx)
-			require.NoError(t, err)
-			assert.Equal(t, hex.EncodeToString(root[:]), testVector.ExpectedRoots[0])
+			mt := NewMerkleTree(store, uint8(testHeight))
+			assert.Equal(t, hex.EncodeToString(mt.root[:]), testVector.ExpectedRoots[0])
 
 			for i := 0; i < len(testVector.Leaves); i++ {
 				// convert string to byte array
@@ -81,9 +78,7 @@ func TestMerkleTree(t *testing.T) {
 				err = mt.addLeaf(ctx, leafValue)
 				require.NoError(t, err)
 
-				root, err := mt.getRoot(ctx)
-				require.NoError(t, err)
-				assert.Equal(t, hex.EncodeToString(root[:]), testVector.ExpectedRoots[i+1])
+				assert.Equal(t, hex.EncodeToString(mt.root[:]), testVector.ExpectedRoots[i+1])
 
 				prooves, err := mt.getProofTreeByIndex(ctx, uint64(i))
 				require.NoError(t, err)

@@ -8,26 +8,30 @@ import (
 // MerkleTree struct
 type MerkleTree struct {
 	// store is the database storage to store all node data
-	store Store
+	store merkleTreeStore
 	// height is the depth of the merkle tree
 	height uint8
 	// counts is the array to track the number of existing nodes in each layer
 	counts []uint64
 	// zeroHashes is the pre-calculated zero hash array
 	zeroHashes [][KeyLen]byte
+	// root is the value of the root node
+	root [KeyLen]byte
 }
 
-// NewMerkleTree creates new MerkleTree
-func NewMerkleTree(store Store, height uint8) *MerkleTree {
+// NewMerkleTree creates new MerkleTree.
+func NewMerkleTree(store merkleTreeStore, height uint8) *MerkleTree {
 	counts := make([]uint64, 0)
 	for i := 0; i <= int(height); i++ {
 		counts = append(counts, 0)
 	}
+	zeroHashes := generateZeroHashes(height)
 	return &MerkleTree{
 		store:      store,
 		height:     height,
 		counts:     counts,
-		zeroHashes: generateZeroHashes(height),
+		zeroHashes: zeroHashes,
+		root:       zeroHashes[height],
 	}
 }
 
@@ -56,10 +60,10 @@ func (mt *MerkleTree) addLeaf(ctx context.Context, leaf [KeyLen]byte) error {
 		}
 		index /= 2
 	}
-	// Set the root
+	// Set the root value
+	mt.root = cur
 	mt.counts[mt.height] = 1
-	err := mt.store.Set(ctx, getByteKey(int(mt.height), index), cur[:])
-	return err
+	return nil
 }
 
 func (mt *MerkleTree) getProofTreeByIndex(ctx context.Context, index uint64) ([][KeyLen]byte, error) {
@@ -77,14 +81,6 @@ func (mt *MerkleTree) getProofTreeByIndex(ctx context.Context, index uint64) ([]
 		currentIndex = currentIndex / 2 //nolint:gomnd
 	}
 	return proof, nil
-}
-
-func (mt *MerkleTree) getRoot(ctx context.Context) ([KeyLen]byte, error) {
-	if mt.counts[0] == 0 {
-		return mt.zeroHashes[mt.height], nil
-	}
-
-	return mt.getValueByIndex(ctx, int(mt.height), 0)
 }
 
 func (mt *MerkleTree) getValueByIndex(ctx context.Context, height int, index uint64) ([KeyLen]byte, error) {
