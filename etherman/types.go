@@ -42,13 +42,15 @@ type Block struct {
 
 // Deposit struct
 type Deposit struct {
-	TokenAddres        common.Address
+	OriginalNetwork    uint
+	TokenAddress       common.Address
 	Amount             *big.Int
 	DestinationNetwork uint
 	OriginNetwork      uint
 	DestinationAddress common.Address
 	DepositCount       uint
 	BlockNumber        uint64
+	DepositCount       uint64
 }
 
 // GlobalExitRoot struct
