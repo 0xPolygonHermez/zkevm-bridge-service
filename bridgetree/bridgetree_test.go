@@ -24,7 +24,7 @@ type depositVectorRaw struct {
 	DestinationNetwork uint   `json:"destNetwork"`
 	DestinationAddress string `json:"destAddress"`
 	BlockNumber        uint64 `json:"blockNumber"`
-	DepositCount       uint64 `json:"depositCount"`
+	DepositCount       uint   `json:"depositCount"`
 	ExpectedHash       string `json:"expectedHash"`
 	ExpectedRoot       string `json:"expectedRoot"`
 }

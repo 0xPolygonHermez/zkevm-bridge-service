@@ -50,7 +50,6 @@ type Deposit struct {
 	DestinationAddress common.Address
 	DepositCount       uint
 	BlockNumber        uint64
-	DepositCount       uint64
 }
 
 // GlobalExitRoot struct
