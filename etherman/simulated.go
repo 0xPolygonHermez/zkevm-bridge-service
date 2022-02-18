@@ -31,8 +31,8 @@ func NewSimulatedEtherman(cfg Config, auth *bind.TransactOpts) (etherman *Client
 	client := backends.NewSimulatedBackend(genesisAlloc, blockGasLimit)
 
 	// Deploy contracts
-	totalSupply, _ := new(big.Int).SetString("10000000000000000000000000000", 10) //nolint:gomnd
-	maticAddr, _, maticContract, err := matic.DeployMatic(auth, client, "Matic Token", "MATIC", 18, totalSupply)
+	totalSupply, _ := new(big.Int).SetString("10000000000000000000000000000", 10)                                //nolint:gomnd
+	maticAddr, _, maticContract, err := matic.DeployMatic(auth, client, "Matic Token", "MATIC", 18, totalSupply) //nolint:gomnd
 	if err != nil {
 		return nil, nil, common.Address{}, err
 	}
