@@ -15,4 +15,5 @@ type merkleTreeStore interface {
 // bridgeTreeStorage interface for the Bridge Tree
 type bridgeTreeStorage interface {
 	AddDeposit(ctx context.Context, deposit *etherman.Deposit) error
+	GetDeposit(ctx context.Context, networkID uint, index uint64) (*etherman.Deposit, error)
 }

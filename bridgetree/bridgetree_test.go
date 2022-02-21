@@ -3,6 +3,7 @@ package bridgetree
 import (
 	"encoding/hex"
 	"encoding/json"
+	"log"
 	"math/big"
 	"os"
 	"path"
@@ -40,7 +41,7 @@ func init() {
 	}
 }
 
-func TestBridgeTreeForMainnet(t *testing.T) {
+func TestBridgeTree(t *testing.T) {
 	data, err := os.ReadFile("test/vectors/mainnet-raw.json")
 	require.NoError(t, err)
 
@@ -67,7 +68,7 @@ func TestBridgeTreeForMainnet(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	t.Run("Test adding deposit for mainnet", func(t *testing.T) {
+	t.Run("Test adding deposit for the bridge tree", func(t *testing.T) {
 		for _, testVector := range testVectors {
 			amount, _ := new(big.Int).SetString(testVector.Amount, 10)
 			deposit := &etherman.Deposit{
@@ -85,7 +86,19 @@ func TestBridgeTreeForMainnet(t *testing.T) {
 			err := bt.AddDeposit(deposit)
 			require.NoError(t, err)
 
-			assert.Equal(t, testVector.ExpectedRoot, hex.EncodeToString(bt.mainnetTree.root[:]))
+			assert.Equal(t, testVector.ExpectedRoot, hex.EncodeToString(bt.rollupTree.root[:]))
+		}
+	})
+
+	t.Run("Test getting claims", func(t *testing.T) {
+		for _, testVector := range testVectors {
+			prooves := make([][KeyLen]byte, testHeight)
+			deposit, globalExitRoot, err := bt.GetClaim(testVector.DestinationNetwork, testVector.DepositCount, prooves)
+			require.NoError(t, err)
+
+			log.Println(deposit)
+			log.Println(globalExitRoot)
+			log.Println(prooves)
 		}
 	})
 }

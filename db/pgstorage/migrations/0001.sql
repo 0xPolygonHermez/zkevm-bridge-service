@@ -16,8 +16,9 @@ CREATE TABLE sync.deposit
     orig_net   integer,
     token_addr BYTEA NOT NULL,
     amount DECIMAL(78, 0),
-    dest_net integer,
+    dest_net integer NOT NULL,
     dest_addr BYTEA NOT NULL,
     block_num BIGINT,
-    deposit_cnt BIGINT PRIMARY KEY
+    deposit_cnt BIGINT,
+    CONSTRAINT deposit_pk PRIMARY KEY (dest_net, deposit_cnt)
 );
