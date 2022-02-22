@@ -5,9 +5,12 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
 )
 
 const (
+	// BatchesOrder identifies a batch event
+	BatchesOrder EventOrder = "Batches"
 	//DepositsOrder identifies a deposit event
 	DepositsOrder EventOrder = "Deposits"
 	//GlobalExitRootsOrder identifies a gloalExitRoot event
@@ -32,6 +35,7 @@ type Block struct {
 	BlockNumber     uint64
 	BlockHash       common.Hash
 	ParentHash      common.Hash
+	Batches         []Batch
 	Deposits        []Deposit
 	GlobalExitRoots []GlobalExitRoot
 	Claims          []Claim
@@ -74,4 +78,21 @@ type TokenWrapped struct {
 	OriginalNetwork      uint
 	OriginalTokenAddress common.Address
 	WrappedTokenAddress  common.Address
+}
+
+// Batch represents a batch
+type Batch struct {
+	BlockNumber    uint64
+	Sequencer      common.Address
+	Aggregator     common.Address
+	ChainID        *big.Int
+	GlobalExitRoot common.Hash
+	Header         *types.Header
+	Uncles         []*types.Header
+	ReceivedAt     time.Time
+}
+
+// Number is a helper function to get the batch number from the header
+func (b *Batch) Number() *big.Int {
+	return b.Header.Number
 }

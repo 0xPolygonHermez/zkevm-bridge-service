@@ -12,10 +12,14 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/hermeznetwork/hermez-core/etherman/smartcontracts/bridge"
 	"github.com/hermeznetwork/hermez-core/etherman/smartcontracts/globalexitrootmanager"
+	"github.com/hermeznetwork/hermez-core/etherman/smartcontracts/proofofefficiency"
 	"github.com/hermeznetwork/hermez-core/log"
 )
 
 var (
+	newBatchEventSignatureHash             = crypto.Keccak256Hash([]byte("SendBatch(uint32,address,uint32,bytes32)"))
+	consolidateBatchSignatureHash          = crypto.Keccak256Hash([]byte("VerifyBatch(uint32,address)"))
+	newSequencerSignatureHash              = crypto.Keccak256Hash([]byte("RegisterSequencer(address,string,uint32)"))
 	ownershipTransferredSignatureHash      = crypto.Keccak256Hash([]byte("OwnershipTransferred(address,address)"))
 	depositEventSignatureHash              = crypto.Keccak256Hash([]byte("BridgeEvent(address,uint256,uint32,uint32,address,uint32)"))
 	updateGlobalExitRootEventSignatureHash = crypto.Keccak256Hash([]byte("UpdateGlobalExitRoot(uint256,bytes32,bytes32)"))
@@ -32,6 +36,7 @@ type ethClienter interface {
 // ClientEtherMan struct
 type ClientEtherMan struct {
 	EtherClient           ethClienter
+	PoE                   *proofofefficiency.Proofofefficiency
 	Bridge                *bridge.Bridge
 	GlobalExitRootManager *globalexitrootmanager.Globalexitrootmanager
 	SCAddresses           []common.Address
@@ -44,7 +49,7 @@ type EtherMan interface {
 }
 
 // NewEtherman creates a new etherman
-func NewEtherman(cfg Config, bridgeAddr common.Address, globalExitRootManAddr common.Address) (*ClientEtherMan, error) {
+func NewEtherman(cfg Config, poeAddr common.Address, bridgeAddr common.Address, globalExitRootManAddr common.Address) (*ClientEtherMan, error) {
 	// TODO: PoEAddr can be got from bridge smc. So only bridge smc is required
 	// Connect to ethereum node
 	ethClient, err := ethclient.Dial(cfg.URL)
@@ -61,10 +66,14 @@ func NewEtherman(cfg Config, bridgeAddr common.Address, globalExitRootManAddr co
 	if err != nil {
 		return nil, err
 	}
+	poe, err := proofofefficiency.NewProofofefficiency(poeAddr, ethClient)
+	if err != nil {
+		return nil, err
+	}
 	var scAddresses []common.Address
-	scAddresses = append(scAddresses, bridgeAddr, globalExitRootManAddr)
+	scAddresses = append(scAddresses, poeAddr, bridgeAddr, globalExitRootManAddr)
 
-	return &ClientEtherMan{EtherClient: ethClient, Bridge: bridge, GlobalExitRootManager: globalExitRoot, SCAddresses: scAddresses}, nil
+	return &ClientEtherMan{EtherClient: ethClient, PoE: poe, Bridge: bridge, GlobalExitRootManager: globalExitRoot, SCAddresses: scAddresses}, nil
 }
 
 // GetBridgeInfoByBlockRange function retrieves the Bridge information that are included in all this ethereum blocks
@@ -105,6 +114,14 @@ func (etherMan *ClientEtherMan) readEvents(ctx context.Context, query ethereum.F
 			continue
 		}
 		if b, exists := blocks[block.BlockHash]; exists {
+			if len(block.Batches) != 0 {
+				b.Batches = append(blocks[block.BlockHash].Batches, block.Batches...)
+				or := Order{
+					Name: BatchesOrder,
+					Pos:  len(b.Batches) - 1,
+				}
+				blockOrder[b.BlockHash] = append(blockOrder[b.BlockHash], or)
+			}
 			if len(block.Deposits) != 0 {
 				b.Deposits = append(blocks[block.BlockHash].Deposits, block.Deposits...)
 				or := Order{
@@ -139,6 +156,13 @@ func (etherMan *ClientEtherMan) readEvents(ctx context.Context, query ethereum.F
 			}
 			blocks[block.BlockHash] = b
 		} else {
+			if len(block.Batches) != 0 {
+				or := Order{
+					Name: BatchesOrder,
+					Pos:  len(block.Batches) - 1,
+				}
+				blockOrder[block.BlockHash] = append(blockOrder[block.BlockHash], or)
+			}
 			if len(block.Deposits) != 0 {
 				or := Order{
 					Name: DepositsOrder,
@@ -180,6 +204,40 @@ func (etherMan *ClientEtherMan) readEvents(ctx context.Context, query ethereum.F
 
 func (etherMan *ClientEtherMan) processEvent(ctx context.Context, vLog types.Log) (*Block, error) {
 	switch vLog.Topics[0] {
+	case newBatchEventSignatureHash:
+		batchEvent, err := etherMan.PoE.ParseSendBatch(vLog)
+		if err != nil {
+			return nil, err
+		}
+		// Indexed parameters using topics
+		var head types.Header
+		head.TxHash = vLog.TxHash
+		head.Difficulty = big.NewInt(0)
+		head.Number = new(big.Int).SetUint64(uint64(batchEvent.NumBatch))
+
+		var batch Batch
+		batch.Sequencer = batchEvent.Sequencer
+		batch.ChainID = new(big.Int).SetUint64(uint64(batchEvent.BatchChainID))
+		batch.GlobalExitRoot = batchEvent.LastGlobalExitRoot
+		batch.Header = &head
+		batch.BlockNumber = vLog.BlockNumber
+		fullBlock, err := etherMan.EtherClient.BlockByHash(ctx, vLog.BlockHash)
+		if err != nil {
+			return nil, fmt.Errorf("error getting hashParent. BlockNumber: %d. Error: %w", vLog.BlockNumber, err)
+		}
+		batch.ReceivedAt = fullBlock.ReceivedAt
+
+		var block Block
+		block.BlockNumber = vLog.BlockNumber
+		block.BlockHash = vLog.BlockHash
+		block.ParentHash = fullBlock.ParentHash()
+		block.ReceivedAt = fullBlock.ReceivedAt
+		block.Batches = append(block.Batches, batch)
+		return &block, nil
+	case consolidateBatchSignatureHash:
+		return nil, nil
+	case newSequencerSignatureHash:
+		return nil, nil
 	case ownershipTransferredSignatureHash:
 		ownership, err := etherMan.Bridge.ParseOwnershipTransferred(vLog)
 		if err != nil {

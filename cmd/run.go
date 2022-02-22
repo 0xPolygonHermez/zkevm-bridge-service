@@ -33,7 +33,7 @@ func setupLog(c log.Config) {
 }
 
 func newEtherman(c config.Config) (*etherman.ClientEtherMan, error) {
-	etherman, err := etherman.NewEtherman(c.Etherman, c.NetworkConfig.BridgeAddr, c.NetworkConfig.GlobalExitRootManAddr)
+	etherman, err := etherman.NewEtherman(c.Etherman, c.NetworkConfig.PoEAddr, c.NetworkConfig.BridgeAddr, c.NetworkConfig.GlobalExitRootManAddr)
 	if err != nil {
 		return nil, err
 	}

@@ -53,7 +53,7 @@ func NewSimulatedEtherman(cfg Config, auth *bind.TransactOpts) (etherman *Client
 	if err != nil {
 		return nil, nil, common.Address{}, err
 	}
-	poeAddr, _, _, err := proofofefficiency.DeployProofofefficiency(auth, client, exitManagerAddr, maticAddr, rollupVerifierAddr, genesis)
+	poeAddr, _, poe, err := proofofefficiency.DeployProofofefficiency(auth, client, exitManagerAddr, maticAddr, rollupVerifierAddr, genesis)
 	if err != nil {
 		return nil, nil, common.Address{}, err
 	}
@@ -79,5 +79,5 @@ func NewSimulatedEtherman(cfg Config, auth *bind.TransactOpts) (etherman *Client
 	}
 
 	client.Commit()
-	return &ClientEtherMan{EtherClient: client, Bridge: bridge, GlobalExitRootManager: exitManager, SCAddresses: []common.Address{bridgeAddr, exitManagerAddr}}, client.Commit, maticAddr, nil
+	return &ClientEtherMan{EtherClient: client, PoE: poe, Bridge: bridge, GlobalExitRootManager: exitManager, SCAddresses: []common.Address{poeAddr, bridgeAddr, exitManagerAddr}}, client.Commit, maticAddr, nil
 }
