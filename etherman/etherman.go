@@ -2,6 +2,7 @@ package etherman
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math/big"
 
@@ -25,6 +26,9 @@ var (
 	updateGlobalExitRootEventSignatureHash = crypto.Keccak256Hash([]byte("UpdateGlobalExitRoot(uint256,bytes32,bytes32)"))
 	claimEventSignatureHash                = crypto.Keccak256Hash([]byte("ClaimEvent(uint64,uint32,address,uint256,address)"))
 	newWrappedTokenEventSignatureHash      = crypto.Keccak256Hash([]byte("NewWrappedToken(uint32,address,address)"))
+
+	// ErrNotFound is used when the object is not found
+	ErrNotFound = errors.New("Not found")
 )
 
 type ethClienter interface {
@@ -46,15 +50,15 @@ type ClientEtherMan struct {
 type EtherMan interface {
 	GetBridgeInfoByBlockRange(ctx context.Context, fromBlock uint64, toBlock *uint64) ([]Block, map[common.Hash][]Order, error)
 	HeaderByNumber(ctx context.Context, number *big.Int) (*types.Header, error)
+	BlockByNumber(ctx context.Context, blockNumber uint64) (*types.Block, error)
 }
 
-// NewEtherman creates a new etherman
+// NewEtherman creates a new etherman.
 func NewEtherman(cfg Config, poeAddr common.Address, bridgeAddr common.Address, globalExitRootManAddr common.Address) (*ClientEtherMan, error) {
-	// TODO: PoEAddr can be got from bridge smc. So only bridge smc is required
 	// Connect to ethereum node
-	ethClient, err := ethclient.Dial(cfg.URL)
+	ethClient, err := ethclient.Dial(cfg.L1URL)
 	if err != nil {
-		log.Errorf("error connecting to %s: %+v", cfg.URL, err)
+		log.Errorf("error connecting to %s: %+v", cfg.L1URL, err)
 		return nil, err
 	}
 	// Create smc clients
@@ -74,6 +78,25 @@ func NewEtherman(cfg Config, poeAddr common.Address, bridgeAddr common.Address, 
 	scAddresses = append(scAddresses, poeAddr, bridgeAddr, globalExitRootManAddr)
 
 	return &ClientEtherMan{EtherClient: ethClient, PoE: poe, Bridge: bridge, GlobalExitRootManager: globalExitRoot, SCAddresses: scAddresses}, nil
+}
+
+// NewL2Etherman creates a new etherman.
+func NewL2Etherman(cfg Config, bridgeAddr common.Address) (*ClientEtherMan, error) {
+	// Connect to ethereum node
+	ethClient, err := ethclient.Dial(cfg.L2URL)
+	if err != nil {
+		log.Errorf("error connecting to %s: %+v", cfg.L2URL, err)
+		return nil, err
+	}
+	// Create smc clients
+	bridge, err := bridge.NewBridge(bridgeAddr, ethClient)
+	if err != nil {
+		return nil, err
+	}
+	var scAddresses []common.Address
+	scAddresses = append(scAddresses, bridgeAddr)
+
+	return &ClientEtherMan{EtherClient: ethClient, Bridge: bridge, SCAddresses: scAddresses}, nil
 }
 
 // GetBridgeInfoByBlockRange function retrieves the Bridge information that are included in all this ethereum blocks
@@ -357,4 +380,16 @@ func (etherMan *ClientEtherMan) processEvent(ctx context.Context, vLog types.Log
 // nil, the latest known header is returned.
 func (etherMan *ClientEtherMan) HeaderByNumber(ctx context.Context, number *big.Int) (*types.Header, error) {
 	return etherMan.EtherClient.HeaderByNumber(ctx, number)
+}
+
+// BlockByNumber function retrieves the ethereum block information by ethereum block number.
+func (etherMan *ClientEtherMan) BlockByNumber(ctx context.Context, blockNumber uint64) (*types.Block, error) {
+	block, err := etherMan.EtherClient.BlockByNumber(ctx, new(big.Int).SetUint64(blockNumber))
+	if err != nil {
+		if errors.Is(err, ethereum.NotFound) || err.Error() == "block does not exist in blockchain" {
+			return nil, ErrNotFound
+		}
+		return nil, err
+	}
+	return block, nil
 }
