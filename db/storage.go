@@ -2,16 +2,36 @@ package db
 
 import (
 	"context"
+	"time"
 
 	"github.com/hermeznetwork/hermez-bridge/db/pgstorage"
 	"github.com/hermeznetwork/hermez-bridge/etherman"
 	"github.com/hermeznetwork/hermez-bridge/gerror"
+	"github.com/ethereum/go-ethereum/common"
 )
 
 // Storage interface
 type Storage interface {
 	GetLastBlock(ctx context.Context) (*etherman.Block, error)
+	GetLastL2Block(ctx context.Context) (*etherman.Block, error)
 	AddBlock(ctx context.Context, block *etherman.Block) error
+	AddL2Block(ctx context.Context, block *etherman.Block) error
+	GetPreviousBlock(ctx context.Context, offset uint64) (*etherman.Block, error)
+	GetPreviousL2Block(ctx context.Context, offset uint64) (*etherman.Block, error)
+	Reset(ctx context.Context, blockNumber uint64) error
+	ResetL2(ctx context.Context, blockNumber uint64) error
+	AddDeposit(ctx context.Context, deposit *etherman.Deposit) error
+	AddL2Deposit(ctx context.Context, deposit *etherman.Deposit) error
+	Rollback(ctx context.Context) error
+	BeginDBTransaction(ctx context.Context) error
+	AddExitRoot(ctx context.Context, exitRoot *etherman.GlobalExitRoot) error
+	GetLatestExitRoot(ctx context.Context) (*etherman.GlobalExitRoot, error)
+	AddClaim(ctx context.Context, claim *etherman.Claim) error
+	AddL2Claim(ctx context.Context, claim *etherman.Claim) error
+	AddTokenWrapped(ctx context.Context, tokeWrapped *etherman.TokenWrapped) error
+	AddL2TokenWrapped(ctx context.Context, tokeWrapped *etherman.TokenWrapped) error
+	ConsolidateBatch(ctx context.Context, batchNumber uint64, consolidatedTxHash common.Hash, consolidatedAt time.Time, aggregator common.Address) error
+	AddBatch(ctx context.Context, batch *etherman.Batch) error
 }
 
 // NewStorage creates a new Storage

@@ -51,7 +51,15 @@ func (s *ClientSynchronizer) Sync() error {
 		// If there is no lastBlock means that sync from the beginning is necessary. If not, it continues from the retrieved block
 		// Get the latest synced block. If there is no block on db, use genesis block
 		log.Info("Sync started")
-		lastBlockSynced, err := s.storage.GetLastBlock(s.ctx)
+		var (
+			err             error
+			lastBlockSynced *etherman.Block
+		)
+		if s.l2 {
+			lastBlockSynced, err = s.storage.GetLastL2Block(s.ctx)
+		} else {
+			lastBlockSynced, err = s.storage.GetLastBlock(s.ctx)
+		}
 		if err != nil {
 			if err == gerror.ErrStorageNotFound {
 				log.Warn("error getting the latest block. No data stored. Setting genesis block. Error: ", err)
@@ -157,24 +165,77 @@ func (s *ClientSynchronizer) syncBlocks(lastBlockSynced *etherman.Block) (*ether
 func (s *ClientSynchronizer) processBlockRange(blocks []etherman.Block, order map[common.Hash][]etherman.Order) {
 	// New info has to be included into the db using the state
 	for i := range blocks {
+		ctx := context.Background()
+		// Begin db transaction
+		err := s.storage.BeginDBTransaction(ctx)
+		if err != nil {
+			log.Fatal("error createing db transaction to store block. BlockNumber: ", blocks[i].BlockNumber)
+		}
 		// Add block information
-		err := s.storage.AddBlock(context.Background(), &blocks[i])
+		err = s.storage.AddBlock(ctx, &blocks[i])
 		if err != nil {
 			log.Fatal("error storing block. BlockNumber: ", blocks[i].BlockNumber)
 		}
 		for _, element := range order[blocks[i].BlockHash] {
-			if element.Name == etherman.DepositsOrder {
-				//TODO Store info into db
-				log.Warn("Deposit functionality is not implemented in synchronizer yet")
+			if element.Name == etherman.BatchesOrder {
+				batch := &blocks[i].Batches[element.Pos]
+				emptyHash := common.Hash{}
+				log.Debug("consolidatedTxHash received: ", batch.ConsolidatedTxHash)
+				if batch.ConsolidatedTxHash.String() != emptyHash.String() {
+					err = s.storage.ConsolidateBatch(ctx, batch.Number().Uint64(), batch.ConsolidatedTxHash, *batch.ConsolidatedAt, batch.Aggregator)
+					if err != nil {
+						err = s.storage.Rollback(ctx)
+						if err != nil {
+							log.Fatal("error rolling back state to store block. BlockNumber: ", blocks[i].BlockNumber)
+						}
+						log.Fatal("failed to consolidate batch locally, batch number: %d, err: %v", batch.Number().Uint64(), err)
+					}
+				} else {
+					err = s.storage.AddBatch(ctx, batch)
+					if err != nil {
+						err = s.storage.Rollback(ctx)
+						if err != nil {
+							log.Fatal("error rolling back state to store block. BlockNumber: ", blocks[i].BlockNumber)
+						}
+						log.Fatal("failed to add batch locally, batch number: %d, err: %v", batch.Number().Uint64(), err)
+					}
+				}
+			} else if element.Name == etherman.DepositsOrder {
+				err := s.storage.AddDeposit(ctx, &blocks[i].Deposits[element.Pos])
+				if err != nil {
+					err = s.storage.Rollback(ctx)
+					if err != nil {
+						log.Fatal("error rolling back state to store block. BlockNumber: ", blocks[i].BlockNumber)
+					}
+					log.Fatal("failed to store new L1 deposit locally, block: %d, err: %v", &blocks[i].BlockNumber, err)
+				}
 			} else if element.Name == etherman.GlobalExitRootsOrder {
-				//TODO Store info into db
-				log.Warn("Consolidate globalExitRoot functionality is not implemented in synchronizer yet")
+				err := s.storage.AddExitRoot(ctx, &blocks[i].GlobalExitRoots[element.Pos])
+				if err != nil {
+					err = s.storage.Rollback(ctx)
+					if err != nil {
+						log.Fatal("error rolling back state to store block. BlockNumber: ", blocks[i].BlockNumber)
+					}
+					log.Fatal("error storing new globalExitRoot in Block: ", blocks[i].BlockNumber, " GlobalExitRoot: ", blocks[i].GlobalExitRoots[element.Pos], " err: ", err)
+				}
 			} else if element.Name == etherman.ClaimsOrder {
-				//TODO Store info into db
-				log.Warn("Claim functionality is not implemented in synchronizer yet")
+				err := s.storage.AddClaim(ctx, &blocks[i].Claims[element.Pos])
+				if err != nil {
+					err = s.storage.Rollback(ctx)
+					if err != nil {
+						log.Fatal("error rolling back state to store block. BlockNumber: ", blocks[i].BlockNumber)
+					}
+					log.Fatal("error storing new L1 Claim in Block: ", blocks[i].BlockNumber, " Claim: ", blocks[i].Claims[element.Pos], " err: ", err)
+				}
 			} else if element.Name == etherman.TokensOrder {
-				//TODO Store info into db
-				log.Warn("Tokens functionality is not implemented in synchronizer yet")
+				err := s.storage.AddTokenWrapped(ctx, &blocks[i].Tokens[element.Pos])
+				if err != nil {
+					err = s.storage.Rollback(ctx)
+					if err != nil {
+						log.Fatal("error rolling back state to store block. BlockNumber: ", blocks[i].BlockNumber)
+					}
+					log.Fatal("error storing new L1 TokenWrapped in Block: ", blocks[i].BlockNumber, " TokenWrapped: ", blocks[i].Tokens[element.Pos], " err: ", err)
+				}
 			} else {
 				log.Fatal("error: invalid order element")
 			}
@@ -185,21 +246,45 @@ func (s *ClientSynchronizer) processBlockRange(blocks []etherman.Block, order ma
 func (s *ClientSynchronizer) processL2BlockRange(blocks []etherman.Block, order map[common.Hash][]etherman.Order) {
 	// New info has to be included into the db using the state
 	for i := range blocks {
+		ctx := context.Background()
+		// Begin db transaction
+		err := s.storage.BeginDBTransaction(ctx)
+		if err != nil {
+			log.Fatal("error createing db transaction to store block. BlockNumber: ", blocks[i].BlockNumber)
+		}
 		// Add block information
-		err := s.storage.AddBlock(context.Background(), &blocks[i])
+		err = s.storage.AddL2Block(context.Background(), &blocks[i])
 		if err != nil {
 			log.Fatal("error storing block. BlockNumber: ", blocks[i].BlockNumber)
 		}
 		for _, element := range order[blocks[i].BlockHash] {
 			if element.Name == etherman.DepositsOrder {
-				//TODO Store l2 info into db
-				log.Warn("Deposit functionality is not implemented in synchronizer yet")
+				err := s.storage.AddL2Deposit(ctx, &blocks[i].Deposits[element.Pos])
+				if err != nil {
+					err = s.storage.Rollback(ctx)
+					if err != nil {
+						log.Fatal("error rolling back state to store block. BlockNumber: ", blocks[i].BlockNumber)
+					}
+					log.Fatal("failed to store new L2 deposit locally, L2block (batch): %d, err: %v", &blocks[i].BlockNumber, err)
+				}
 			} else if element.Name == etherman.ClaimsOrder {
-				//TODO Store l2 info into db
-				log.Warn("Claim functionality is not implemented in synchronizer yet")
+				err := s.storage.AddL2Claim(ctx, &blocks[i].Claims[element.Pos])
+				if err != nil {
+					err = s.storage.Rollback(ctx)
+					if err != nil {
+						log.Fatal("error rolling back state to store block. BlockNumber: ", blocks[i].BlockNumber)
+					}
+					log.Fatal("error storing new L2 Claim in Block: ", blocks[i].BlockNumber, " Claim: ", blocks[i].Claims[element.Pos], " err: ", err)
+				}
 			} else if element.Name == etherman.TokensOrder {
-				//TODO Store l2 info into db
-				log.Warn("Tokens functionality is not implemented in synchronizer yet")
+				err := s.storage.AddL2TokenWrapped(ctx, &blocks[i].Tokens[element.Pos])
+				if err != nil {
+					err = s.storage.Rollback(ctx)
+					if err != nil {
+						log.Fatal("error rolling back state to store block. BlockNumber: ", blocks[i].BlockNumber)
+					}
+					log.Fatal("error storing new L2 TokenWrapped in Block: ", blocks[i].BlockNumber, " TokenWrapped: ", blocks[i].Tokens[element.Pos], " err: ", err)
+				}
 			} else {
 				log.Fatal("error: invalid order element")
 			}
@@ -209,9 +294,19 @@ func (s *ClientSynchronizer) processL2BlockRange(blocks []etherman.Block, order 
 
 // This function allows reset the state until an specific block
 func (s *ClientSynchronizer) resetState(blockNum uint64) error {
-	log.Debug("Reverting synchronization to block: ", blockNum)
-	// TODO Reset state
-	log.Warn("ResetState not implemented yet")
+	if s.l2 {
+		log.Debug("Reverting synchronization to batch: ", blockNum)
+		err := s.storage.ResetL2(s.ctx, blockNum)
+		if err != nil {
+			return err
+		}
+	} else {
+		log.Debug("Reverting synchronization to block: ", blockNum)
+		err := s.storage.Reset(s.ctx, blockNum)
+		if err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
@@ -252,15 +347,17 @@ func (s *ClientSynchronizer) checkReorg(latestBlock *etherman.Block) (*etherman.
 			depth++
 			log.Debug("REORG: Looking for the latest correct block. Depth: ", depth)
 			// Reorg detected. Getting previous block
-			log.Warn("getprevious block not implemented yet")
-			//TODO
-			// latestBlock, err = s.state.GetPreviousBlock(s.ctx, depth)
-			// if errors.Is(err, state.ErrNotFound) {
-			// 	log.Warn("error checking reorg: previous block not found in db: ", err)
-			// 	return nil, nil
-			// } else if err != nil {
-			// 	return nil, err
-			// }
+			if s.l2 {
+				latestBlock, err = s.storage.GetPreviousL2Block(s.ctx, depth)
+			} else {
+				latestBlock, err = s.storage.GetPreviousBlock(s.ctx, depth)
+			}
+			if errors.Is(err, gerror.ErrStorageNotFound) {
+				log.Warn("error checking reorg: previous block not found in db: ", err)
+				return nil, nil
+			} else if err != nil {
+				return nil, err
+			}
 		} else {
 			break
 		}

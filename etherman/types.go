@@ -58,6 +58,7 @@ type Deposit struct {
 
 // GlobalExitRoot struct
 type GlobalExitRoot struct {
+	BlockNumber       uint64
 	GlobalExitRootNum *big.Int
 	MainnetExitRoot   common.Hash
 	RollupExitRoot    common.Hash
@@ -78,21 +79,30 @@ type TokenWrapped struct {
 	OriginalNetwork      uint
 	OriginalTokenAddress common.Address
 	WrappedTokenAddress  common.Address
+	BlockNum             uint64
 }
 
 // Batch represents a batch
 type Batch struct {
-	BlockNumber    uint64
-	Sequencer      common.Address
-	Aggregator     common.Address
-	ChainID        *big.Int
-	GlobalExitRoot common.Hash
-	Header         *types.Header
-	Uncles         []*types.Header
-	ReceivedAt     time.Time
+	BlockNumber        uint64
+	Sequencer          common.Address
+	Aggregator         common.Address
+	ConsolidatedTxHash common.Hash
+	ChainID            *big.Int
+	GlobalExitRoot     common.Hash
+	Header             *types.Header
+	Uncles             []*types.Header
+	ReceivedAt         time.Time
+	ConsolidatedAt     *time.Time
 }
 
 // Number is a helper function to get the batch number from the header
 func (b *Batch) Number() *big.Int {
 	return b.Header.Number
+}
+
+// Hash returns the batch hash of the header, which is simply the keccak256 hash of its
+// RLP encoding.
+func (b *Batch) Hash() common.Hash {
+	return b.Header.Hash()
 }
