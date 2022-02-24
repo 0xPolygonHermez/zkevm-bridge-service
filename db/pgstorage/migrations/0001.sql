@@ -69,38 +69,38 @@ CREATE TABLE sync.l2_deposit
 
 CREATE TABLE sync.claim
 (
-    index       BIGINT PRIMARY KEY
+    index       BIGINT PRIMARY KEY,
     orig_net    integer,
     token_addr  BYTEA NOT NULL,
     amount      DECIMAL(78, 0),
     dest_addr   BYTEA NOT NULL,
-    block_num   BIGINT NOT NULL REFERENCES sync.block (block_num) ON DELETE CASCADE,
+    block_num   BIGINT NOT NULL REFERENCES sync.block (block_num) ON DELETE CASCADE
 );
 
 CREATE TABLE sync.l2_claim
 (
-    index       BIGINT PRIMARY KEY
+    index       BIGINT PRIMARY KEY,
     orig_net    integer,
     token_addr  BYTEA NOT NULL,
     amount      DECIMAL(78, 0),
     dest_addr   BYTEA NOT NULL,
-    l2_block_num   BIGINT NOT NULL REFERENCES sync.l2_block (block_num) ON DELETE CASCADE,
+    l2_block_num   BIGINT NOT NULL REFERENCES sync.l2_block (block_num) ON DELETE CASCADE
 );
 
 CREATE TABLE sync.token_wrapped
 (
-    item_id            SERIAL PRIMARY KEY
+    item_id            SERIAL PRIMARY KEY,
     orig_net           integer,
     orig_token_addr    BYTEA NOT NULL,
     wrapped_token_addr BYTEA NOT NULL,
-    block_num          BIGINT NOT NULL REFERENCES sync.block (block_num) ON DELETE CASCADE,
+    block_num          BIGINT NOT NULL REFERENCES sync.block (block_num) ON DELETE CASCADE
 );
 
 CREATE TABLE sync.l2_token_wrapped
 (
-    item_id            SERIAL PRIMARY KEY
+    item_id            SERIAL PRIMARY KEY,
     orig_net           integer,
     orig_token_addr    BYTEA NOT NULL,
     wrapped_token_addr BYTEA NOT NULL,
-    l2_block_num          BIGINT NOT NULL REFERENCES sync.l2_block (block_num) ON DELETE CASCADE,
+    l2_block_num          BIGINT NOT NULL REFERENCES sync.l2_block (block_num) ON DELETE CASCADE
 );

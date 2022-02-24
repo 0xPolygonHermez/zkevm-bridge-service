@@ -1,6 +1,7 @@
 package bridgetree
 
 import (
+	"context"
 	"encoding/hex"
 	"encoding/json"
 	"math/big"
@@ -82,7 +83,13 @@ func TestBridgeTreeForMainnet(t *testing.T) {
 			leafHash := hashDeposit(deposit)
 			assert.Equal(t, testVector.ExpectedHash, hex.EncodeToString(leafHash[:]))
 
-			err := bt.AddDeposit(deposit)
+			block := &etherman.Block{
+				BlockNumber: testVector.BlockNumber,
+				BlockHash:   common.Hash{},
+			}
+			err := bt.storage.AddBlock(context.Background(), block)
+			require.NoError(t, err)
+			err = bt.AddDeposit(deposit)
 			require.NoError(t, err)
 
 			assert.Equal(t, testVector.ExpectedRoot, hex.EncodeToString(bt.mainnetTree.root[:]))
