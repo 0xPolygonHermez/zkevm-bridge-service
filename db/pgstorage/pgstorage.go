@@ -4,13 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
 	"math/big"
+	"strings"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/hermez-bridge/etherman"
 	"github.com/hermeznetwork/hermez-bridge/gerror"
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/jackc/pgx/v4"
 	"github.com/jackc/pgx/v4/pgxpool"
 )
