@@ -21,7 +21,9 @@ const (
 	addBlockSQL           = "INSERT INTO sync.block (block_num, block_hash, parent_hash, received_at) VALUES ($1, $2, $3, $4)"
 	addL2BlockSQL         = "INSERT INTO sync.l2_block (block_num, block_hash, parent_hash, received_at) VALUES ($1, $2, $3, $4)"
 	addDepositSQL         = "INSERT INTO sync.deposit (orig_net, token_addr, amount, dest_net, dest_addr, block_num, deposit_cnt) VALUES ($1, $2, $3, $4, $5, $6, $7)"
+	getDepositSQL         = "SELECT orig_net, token_addr, amount, dest_net, dest_addr, block_num, deposit_cnt FROM sync.deposit WHERE orig_net = $1 AND deposit_cnt = $2"
 	addL2DepositSQL       = "INSERT INTO sync.l2_deposit (orig_net, token_addr, amount, dest_net, dest_addr, l2_block_num, deposit_cnt) VALUES ($1, $2, $3, $4, $5, $6, $7)"
+	getL2DepositSQL         = "SELECT orig_net, token_addr, amount, dest_net, dest_addr, block_num, deposit_cnt FROM sync.deposit WHERE orig_net = $1 AND deposit_cnt = $2"
 	getNodeByKeySQL       = "SELECT value FROM %s WHERE key = $1"
 	setNodeByKeySQL       = "INSERT INTO %s (key, value) VALUES ($1, $2) ON CONFLICT(key) DO UPDATE SET value = $2"
 	getPreviousBlockSQL   = "SELECT * FROM sync.block ORDER BY block_num DESC LIMIT 1 OFFSET $1"
@@ -104,10 +106,42 @@ func (s *PostgresStorage) AddDeposit(ctx context.Context, deposit *etherman.Depo
 	return err
 }
 
+// GetDeposit gets a specific L1 deposit
+func (s *PostgresStorage) GetDeposit(ctx context.Context, depositCounterUser uint, originalNetwork uint) (*etherman.Deposit, error) {
+	var (
+		deposit etherman.Deposit
+		amount string
+	)
+	err := s.db.QueryRow(ctx, getDepositSQL, depositCounterUser, originalNetwork).Scan(&deposit.OriginalNetwork, &deposit.TokenAddress, &amount, &deposit.DestinationNetwork, &deposit.DestinationAddress, &deposit.BlockNumber, &deposit.DepositCount)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, gerror.ErrStorageNotFound
+	} else if err != nil {
+		return nil, err
+	}
+	deposit.Amount, _ = new(big.Int).SetString(amount, 10)
+	return &deposit, nil
+}
+
 // AddL2Deposit adds a new block to the db
 func (s *PostgresStorage) AddL2Deposit(ctx context.Context, deposit *etherman.Deposit) error {
 	_, err := s.db.Exec(ctx, addL2DepositSQL, deposit.OriginalNetwork, deposit.TokenAddress, deposit.Amount.String(), deposit.DestinationNetwork, deposit.DestinationAddress, deposit.BlockNumber, deposit.DepositCount)
 	return err
+}
+
+// GetL2Deposit gets a specific L1 deposit
+func (s *PostgresStorage) GetL2Deposit(ctx context.Context, depositCounterUser uint, originalNetwork uint) (*etherman.Deposit, error) {
+	var (
+		deposit etherman.Deposit
+		amount string
+	)
+	err := s.db.QueryRow(ctx, getL2DepositSQL, depositCounterUser, originalNetwork).Scan(&deposit.OriginalNetwork, &deposit.TokenAddress, &amount, &deposit.DestinationNetwork, &deposit.DestinationAddress, &deposit.BlockNumber, &deposit.DepositCount)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, gerror.ErrStorageNotFound
+	} else if err != nil {
+		return nil, err
+	}
+	deposit.Amount, _ = new(big.Int).SetString(amount, 10)
+	return &deposit, nil
 }
 
 // Get gets value of key from the merkle tree

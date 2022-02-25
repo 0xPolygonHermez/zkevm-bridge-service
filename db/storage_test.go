@@ -97,4 +97,47 @@ func TestExitRootStore(t *testing.T) {
 	assert.Equal(t, l2Claim.OriginalNetwork, l2ClaimStored.OriginalNetwork)
 	assert.Equal(t, l2Claim.Token, l2ClaimStored.Token)
 
+	// Deposit
+	deposit := etherman.Deposit {
+		DepositCount: 1, 
+		OriginalNetwork: 1,
+		TokenAddress: common.HexToAddress("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9fc"),
+		Amount: amount,
+		DestinationAddress: common.HexToAddress("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9fc"),
+		DestinationNetwork: 1,
+		BlockNumber: 1,
+	}
+	err = storage.AddDeposit(ctx, &deposit)
+	require.NoError(t, err)
+
+	depositStored, err := storage.GetDeposit(ctx, deposit.DepositCount, deposit.OriginalNetwork)
+	require.NoError(t, err)
+	assert.Equal(t, deposit.Amount, depositStored.Amount)
+	assert.Equal(t, deposit.BlockNumber, depositStored.BlockNumber)
+	assert.Equal(t, deposit.DestinationAddress, depositStored.DestinationAddress)
+	assert.Equal(t, deposit.DepositCount, depositStored.DepositCount)
+	assert.Equal(t, deposit.OriginalNetwork, depositStored.OriginalNetwork)
+	assert.Equal(t, deposit.TokenAddress, depositStored.TokenAddress)
+
+	// L2Deposit
+	l2Deposit := etherman.Deposit {
+		DepositCount: 1, 
+		OriginalNetwork: 1,
+		TokenAddress: common.HexToAddress("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9fc"),
+		Amount: amount,
+		DestinationAddress: common.HexToAddress("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9fc"),
+		DestinationNetwork: 1,
+		BlockNumber: 1,
+	}
+	err = storage.AddL2Deposit(ctx, &l2Deposit)
+	require.NoError(t, err)
+
+	l2DepositStored, err := storage.GetL2Deposit(ctx, l2Deposit.DepositCount, l2Deposit.OriginalNetwork)
+	require.NoError(t, err)
+	assert.Equal(t, l2Deposit.Amount, l2DepositStored.Amount)
+	assert.Equal(t, l2Deposit.BlockNumber, l2DepositStored.BlockNumber)
+	assert.Equal(t, l2Deposit.DestinationAddress, l2DepositStored.DestinationAddress)
+	assert.Equal(t, l2Deposit.DepositCount, l2DepositStored.DepositCount)
+	assert.Equal(t, l2Deposit.OriginalNetwork, l2DepositStored.OriginalNetwork)
+	assert.Equal(t, l2Deposit.TokenAddress, l2DepositStored.TokenAddress)
 }
