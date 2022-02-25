@@ -31,7 +31,9 @@ type Storage interface {
 	AddClaim(ctx context.Context, claim *etherman.Claim) error
 	AddL2Claim(ctx context.Context, claim *etherman.Claim) error
 	AddTokenWrapped(ctx context.Context, tokeWrapped *etherman.TokenWrapped) error
+	GetTokenWrapped(ctx context.Context, originalNetwork uint, originalTokenAddress common.Address) (*etherman.TokenWrapped, error)
 	AddL2TokenWrapped(ctx context.Context, tokeWrapped *etherman.TokenWrapped) error
+	GetL2TokenWrapped(ctx context.Context, originalNetwork uint, originalTokenAddress common.Address) (*etherman.TokenWrapped, error)
 	ConsolidateBatch(ctx context.Context, batchNumber uint64, consolidatedTxHash common.Hash, consolidatedAt time.Time, aggregator common.Address) error
 	AddBatch(ctx context.Context, batch *etherman.Batch) error
 	GetClaim(ctx context.Context, depositCounterUser uint64, originalNetwork uint) (*etherman.Claim, error)

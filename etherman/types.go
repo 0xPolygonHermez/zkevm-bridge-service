@@ -79,7 +79,7 @@ type TokenWrapped struct {
 	OriginalNetwork      uint
 	OriginalTokenAddress common.Address
 	WrappedTokenAddress  common.Address
-	BlockNum             uint64
+	BlockNumber          uint64
 }
 
 // Batch represents a batch

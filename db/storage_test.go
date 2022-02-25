@@ -140,4 +140,21 @@ func TestExitRootStore(t *testing.T) {
 	assert.Equal(t, l2Deposit.DepositCount, l2DepositStored.DepositCount)
 	assert.Equal(t, l2Deposit.OriginalNetwork, l2DepositStored.OriginalNetwork)
 	assert.Equal(t, l2Deposit.TokenAddress, l2DepositStored.TokenAddress)
+
+	// TokenWrapped
+	tokenWrapped := etherman.TokenWrapped {
+		OriginalNetwork: 1,
+		OriginalTokenAddress: common.HexToAddress("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9fe"),
+		WrappedTokenAddress: common.HexToAddress("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9fc"),
+		BlockNumber: 1,
+	}
+	err = storage.AddTokenWrapped(ctx, &tokenWrapped)
+	require.NoError(t, err)
+
+	tokenWrappedStored, err := storage.GetTokenWrapped(ctx, tokenWrapped.OriginalNetwork, tokenWrapped.OriginalTokenAddress)
+	require.NoError(t, err)
+	assert.Equal(t, tokenWrapped.BlockNumber, tokenWrappedStored.BlockNumber)
+	assert.Equal(t, tokenWrapped.OriginalNetwork, tokenWrappedStored.OriginalNetwork)
+	assert.Equal(t, tokenWrapped.OriginalTokenAddress, tokenWrappedStored.OriginalTokenAddress)
+	assert.Equal(t, tokenWrapped.WrappedTokenAddress, tokenWrappedStored.WrappedTokenAddress)
 }

@@ -36,8 +36,10 @@ const (
 	getClaimSQL           = "SELECT index, orig_net, token_addr, amount, dest_addr, block_num FROM sync.claim WHERE index = $1 AND orig_net = $2"
 	addL2ClaimSQL         = "INSERT INTO sync.l2_claim (index, orig_net, token_addr, amount, dest_addr, l2_block_num) VALUES ($1, $2, $3, $4, $5, $6)"
 	getL2ClaimSQL         = "SELECT index, orig_net, token_addr, amount, dest_addr, block_num FROM sync.l2_claim WHERE index = $1 AND orig_net = $2"
-	addTokenWrappedSQL    = "INSERT INTO sync.token_wrapped (orig_net, orig_token_addr, wrapped_token_addr, block_num) ($1, $2, $3, $4)"
-	addL2TokenWrappedSQL  = "INSERT INTO sync.l2_token_wrapped (orig_net, orig_token_addr, wrapped_token_addr, l2_block_num) ($1, $2, $3, $4)"
+	addTokenWrappedSQL    = "INSERT INTO sync.token_wrapped (orig_net, orig_token_addr, wrapped_token_addr, block_num) VALUES ($1, $2, $3, $4)"
+	getTokenWrappedSQL    = "SELECT orig_net, orig_token_addr, wrapped_token_addr, block_num FROM sync.token_wrapped WHERE orig_net = $1 AND orig_token_addr = $2"
+	addL2TokenWrappedSQL  = "INSERT INTO sync.l2_token_wrapped (orig_net, orig_token_addr, wrapped_token_addr, l2_block_num) VALUES ($1, $2, $3, $4)"
+	getL2TokenWrappedSQL  = "SELECT orig_net, orig_token_addr, wrapped_token_addr, block_num FROM sync.l2_token_wrapped WHERE orig_net = $1 AND orig_token_addr = $2"
 	consolidateBatchSQL   = "UPDATE sync.batch SET consolidated_tx_hash = $1, consolidated_at = $3, aggregator = $4 WHERE batch_num = $2"
 	addBatchSQL           = "INSERT INTO sync.batch (batch_num, batch_hash, block_num, sequencer, aggregator, consolidated_tx_hash, header, uncles, received_at, chain_id, global_exit_root) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)"
 )
@@ -302,14 +304,38 @@ func (s *PostgresStorage) GetL2Claim(ctx context.Context, depositCounterUser uin
 
 // AddTokenWrapped adds a new claim to the db
 func (s *PostgresStorage) AddTokenWrapped(ctx context.Context, tokeWrapped *etherman.TokenWrapped) error {
-	_, err := s.db.Exec(ctx, addTokenWrappedSQL, tokeWrapped.OriginalNetwork, tokeWrapped.OriginalTokenAddress, tokeWrapped.WrappedTokenAddress, tokeWrapped.BlockNum)
+	_, err := s.db.Exec(ctx, addTokenWrappedSQL, tokeWrapped.OriginalNetwork, tokeWrapped.OriginalTokenAddress, tokeWrapped.WrappedTokenAddress, tokeWrapped.BlockNumber)
 	return err
+}
+
+// GetTokenWrapped gets a specific L1 tokenWrapped
+func (s *PostgresStorage) GetTokenWrapped(ctx context.Context, originalNetwork uint, originalTokenAddress common.Address) (*etherman.TokenWrapped, error) {
+	var token etherman.TokenWrapped
+	err := s.db.QueryRow(ctx, getTokenWrappedSQL, originalNetwork, originalTokenAddress).Scan(&token.OriginalNetwork, &token.OriginalTokenAddress, &token.WrappedTokenAddress, &token.BlockNumber)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, gerror.ErrStorageNotFound
+	} else if err != nil {
+		return nil, err
+	}
+	return &token, nil
 }
 
 // AddL2TokenWrapped adds a new claim to the db
 func (s *PostgresStorage) AddL2TokenWrapped(ctx context.Context, tokeWrapped *etherman.TokenWrapped) error {
-	_, err := s.db.Exec(ctx, addL2TokenWrappedSQL, tokeWrapped.OriginalNetwork, tokeWrapped.OriginalTokenAddress, tokeWrapped.WrappedTokenAddress, tokeWrapped.BlockNum)
+	_, err := s.db.Exec(ctx, addL2TokenWrappedSQL, tokeWrapped.OriginalNetwork, tokeWrapped.OriginalTokenAddress, tokeWrapped.WrappedTokenAddress, tokeWrapped.BlockNumber)
 	return err
+}
+
+// GetL2TokenWrapped gets a specific L1 tokenWrapped
+func (s *PostgresStorage) GetL2TokenWrapped(ctx context.Context, originalNetwork uint, originalTokenAddress common.Address) (*etherman.TokenWrapped, error) {
+	var token etherman.TokenWrapped
+	err := s.db.QueryRow(ctx, getL2TokenWrappedSQL, originalNetwork, originalTokenAddress).Scan(&token.OriginalNetwork, &token.OriginalTokenAddress, &token.WrappedTokenAddress, &token.BlockNumber)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, gerror.ErrStorageNotFound
+	} else if err != nil {
+		return nil, err
+	}
+	return &token, nil
 }
 
 // ConsolidateBatch changes the virtual status of a batch
