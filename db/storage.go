@@ -32,6 +32,8 @@ type Storage interface {
 	AddL2TokenWrapped(ctx context.Context, tokeWrapped *etherman.TokenWrapped) error
 	ConsolidateBatch(ctx context.Context, batchNumber uint64, consolidatedTxHash common.Hash, consolidatedAt time.Time, aggregator common.Address) error
 	AddBatch(ctx context.Context, batch *etherman.Batch) error
+	GetClaim(ctx context.Context, depositCounterUser uint64, originalNetwork uint) (*etherman.Claim, error)
+	GetL2Claim(ctx context.Context, depositCounterUser uint64, originalNetwork uint) (*etherman.Claim, error)
 }
 
 // NewStorage creates a new Storage

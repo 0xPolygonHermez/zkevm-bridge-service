@@ -49,7 +49,7 @@ CREATE TABLE sync.deposit
 (
     orig_net    integer,
     token_addr  BYTEA NOT NULL,
-    amount      DECIMAL(78, 0),
+    amount      VARCHAR,
     dest_net    integer,
     dest_addr   BYTEA NOT NULL,
     block_num   BIGINT NOT NULL REFERENCES sync.block (block_num) ON DELETE CASCADE,
@@ -60,7 +60,7 @@ CREATE TABLE sync.l2_deposit
 (
     orig_net    integer,
     token_addr  BYTEA NOT NULL,
-    amount      DECIMAL(78, 0),
+    amount      VARCHAR,
     dest_net    integer,
     dest_addr   BYTEA NOT NULL,
     l2_block_num   BIGINT NOT NULL REFERENCES sync.l2_block (block_num) ON DELETE CASCADE,
@@ -72,7 +72,7 @@ CREATE TABLE sync.claim
     index       BIGINT PRIMARY KEY,
     orig_net    integer,
     token_addr  BYTEA NOT NULL,
-    amount      DECIMAL(78, 0),
+    amount      VARCHAR,
     dest_addr   BYTEA NOT NULL,
     block_num   BIGINT NOT NULL REFERENCES sync.block (block_num) ON DELETE CASCADE
 );
@@ -82,7 +82,7 @@ CREATE TABLE sync.l2_claim
     index       BIGINT PRIMARY KEY,
     orig_net    integer,
     token_addr  BYTEA NOT NULL,
-    amount      DECIMAL(78, 0),
+    amount      VARCHAR,
     dest_addr   BYTEA NOT NULL,
     l2_block_num   BIGINT NOT NULL REFERENCES sync.l2_block (block_num) ON DELETE CASCADE
 );

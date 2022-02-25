@@ -31,7 +31,9 @@ const (
 	addGlobalExitRootSQL  = "INSERT INTO sync.exit_root (block_num, global_exit_root_num, mainnet_exit_root, rollup_exit_root) VALUES ($1, $2, $3, $4)"
 	getExitRootSQL        = "SELECT block_num, global_exit_root_num, mainnet_exit_root, rollup_exit_root FROM sync.exit_root ORDER BY global_exit_root_num DESC LIMIT 1"
 	addClaimSQL           = "INSERT INTO sync.claim (index, orig_net, token_addr, amount, dest_addr, block_num) VALUES ($1, $2, $3, $4, $5, $6)"
+	getClaimSQL           = "SELECT index, orig_net, token_addr, amount, dest_addr, block_num FROM sync.claim WHERE index = $1 AND orig_net = $2"
 	addL2ClaimSQL         = "INSERT INTO sync.l2_claim (index, orig_net, token_addr, amount, dest_addr, l2_block_num) VALUES ($1, $2, $3, $4, $5, $6)"
+	getL2ClaimSQL         = "SELECT index, orig_net, token_addr, amount, dest_addr, block_num FROM sync.l2_claim WHERE index = $1 AND orig_net = $2"
 	addTokenWrappedSQL    = "INSERT INTO sync.token_wrapped (orig_net, orig_token_addr, wrapped_token_addr, block_num) ($1, $2, $3, $4)"
 	addL2TokenWrappedSQL  = "INSERT INTO sync.l2_token_wrapped (orig_net, orig_token_addr, wrapped_token_addr, l2_block_num) ($1, $2, $3, $4)"
 	consolidateBatchSQL   = "UPDATE sync.batch SET consolidated_tx_hash = $1, consolidated_at = $3, aggregator = $4 WHERE batch_num = $2"
@@ -222,14 +224,46 @@ func (s *PostgresStorage) GetLatestExitRoot(ctx context.Context) (*etherman.Glob
 
 // AddClaim adds a new claim to the db
 func (s *PostgresStorage) AddClaim(ctx context.Context, claim *etherman.Claim) error {
-	_, err := s.db.Exec(ctx, addClaimSQL, claim.Index, claim.OriginalNetwork, claim.Token, claim.Amount, claim.DestinationAddress, claim.BlockNumber)
+	_, err := s.db.Exec(ctx, addClaimSQL, claim.Index, claim.OriginalNetwork, claim.Token, claim.Amount.String(), claim.DestinationAddress, claim.BlockNumber)
 	return err
+}
+
+// GetClaim gets a specific L1 claim
+func (s *PostgresStorage) GetClaim(ctx context.Context, depositCounterUser uint64, originalNetwork uint) (*etherman.Claim, error) {
+	var (
+		claim etherman.Claim
+		amount string
+	)
+	err := s.db.QueryRow(ctx, getClaimSQL, depositCounterUser, originalNetwork).Scan(&claim.Index, &claim.OriginalNetwork, &claim.Token, &amount, &claim.DestinationAddress, &claim.BlockNumber)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, gerror.ErrStorageNotFound
+	} else if err != nil {
+		return nil, err
+	}
+	claim.Amount, _ = new(big.Int).SetString(amount, 10)
+	return &claim, nil
 }
 
 // AddL2Claim adds a new claim to the db
 func (s *PostgresStorage) AddL2Claim(ctx context.Context, claim *etherman.Claim) error {
-	_, err := s.db.Exec(ctx, addL2ClaimSQL, claim.Index, claim.OriginalNetwork, claim.Token, claim.Amount, claim.DestinationAddress, claim.BlockNumber)
+	_, err := s.db.Exec(ctx, addL2ClaimSQL, claim.Index, claim.OriginalNetwork, claim.Token, claim.Amount.String(), claim.DestinationAddress, claim.BlockNumber)
 	return err
+}
+
+// GetClaim gets a specific L2 claim
+func (s *PostgresStorage) GetL2Claim(ctx context.Context, depositCounterUser uint64, originalNetwork uint) (*etherman.Claim, error) {
+	var (
+		claim etherman.Claim
+		amount string
+	)
+	err := s.db.QueryRow(ctx, getL2ClaimSQL, depositCounterUser, originalNetwork).Scan(&claim.Index, &claim.OriginalNetwork, &claim.Token, &amount, &claim.DestinationAddress, &claim.BlockNumber)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, gerror.ErrStorageNotFound
+	} else if err != nil {
+		return nil, err
+	}
+	claim.Amount, _ = new(big.Int).SetString(amount, 10)
+	return &claim, nil
 }
 
 // AddTokenWrapped adds a new claim to the db
