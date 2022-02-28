@@ -330,7 +330,7 @@ func (s *ClientSynchronizer) checkReorg(latestBlock *etherman.Block) (*etherman.
 		if err != nil {
 			if errors.Is(err, etherman.ErrNotFound) {
 				return nil, nil
-			} else if strings.Contains(err.Error(), "connection refused"){
+			} else if strings.Contains(err.Error(), "connection refused") {
 				log.Fatal("Connection refused: ", err)
 			}
 			return nil, err

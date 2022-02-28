@@ -58,11 +58,11 @@ func NewStorage(cfg Config) (Storage, error) {
 // RunMigrations will execute pending migrations if needed to keep
 // the database updated with the latest changes
 func RunMigrations(cfg Config) error {
-	config := pgstorage.Config {
-		Name: cfg.Name,
-		User: cfg.User,
+	config := pgstorage.Config{
+		Name:     cfg.Name,
+		User:     cfg.User,
 		Password: cfg.Password,
-		Host: cfg.Host,
+		Host:     cfg.Host,
 	}
 	return pgstorage.RunMigrations(config)
 }
