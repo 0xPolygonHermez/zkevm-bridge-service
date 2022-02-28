@@ -131,7 +131,7 @@ func (bt *BridgeTree) GetClaim(networkID uint, index uint64, mtProoves [][KeyLen
 			return deposit, nil, err
 		}
 	}
-	
+
 	bt.lock.RUnlock()
 	copy(mtProoves, prooves)
 
