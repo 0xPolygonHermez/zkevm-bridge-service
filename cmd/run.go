@@ -1,7 +1,11 @@
 package main
 
 import (
+	"os"
+	"os/signal"
+
 	"github.com/hermeznetwork/hermez-bridge/config"
+	"github.com/hermeznetwork/hermez-bridge/db"
 	"github.com/hermeznetwork/hermez-bridge/etherman"
 	"github.com/hermeznetwork/hermez-bridge/synchronizer"
 	"github.com/hermeznetwork/hermez-core/log"
@@ -16,15 +20,30 @@ func start(ctx *cli.Context) error {
 		return err
 	}
 	setupLog(c.Log)
-
-	etherman, l2Etherman, err := newEtherman(*c)
+	err = db.RunMigrations(c.Database)
 	if err != nil {
-		log.Fatal(err)
+		log.Error(err)
 		return err
 	}
 
-	go runL1Synchronizer(c.NetworkConfig, etherman, c.Synchronizer)
-	go runL2Synchronizer(c.NetworkConfig, l2Etherman, c.Synchronizer)
+	etherman, l2Etherman, err := newEtherman(*c)
+	if err != nil {
+		log.Error(err)
+		return err
+	}
+	storage, err := db.NewStorage(c.Database)
+	if err != nil {
+		log.Error(err)
+		return err
+	}
+
+	go runL1Synchronizer(c.NetworkConfig, etherman, c.Synchronizer, storage)
+	go runL2Synchronizer(c.NetworkConfig, l2Etherman, c.Synchronizer, storage)
+
+	// Wait for an in interrupt.
+	ch := make(chan os.Signal, 1)
+	signal.Notify(ch, os.Interrupt)
+	<-ch
 
 	return nil
 }
@@ -45,8 +64,8 @@ func newEtherman(c config.Config) (*etherman.ClientEtherMan, *etherman.ClientEth
 	return l1Etherman, l2Etherman, nil
 }
 
-func runL1Synchronizer(networkConfig config.NetworkConfig, etherman *etherman.ClientEtherMan, cfg synchronizer.Config) {
-	sy, err := synchronizer.NewSynchronizer(etherman, networkConfig.GenBlockNumber, cfg, false)
+func runL1Synchronizer(networkConfig config.NetworkConfig, etherman *etherman.ClientEtherMan, cfg synchronizer.Config, storage db.Storage) {
+	sy, err := synchronizer.NewSynchronizer(storage, etherman, networkConfig.GenBlockNumber, cfg, false)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -55,8 +74,8 @@ func runL1Synchronizer(networkConfig config.NetworkConfig, etherman *etherman.Cl
 	}
 }
 
-func runL2Synchronizer(networkConfig config.NetworkConfig, etherman *etherman.ClientEtherMan, cfg synchronizer.Config) {
-	sy, err := synchronizer.NewSynchronizer(etherman, 0, cfg, true)
+func runL2Synchronizer(networkConfig config.NetworkConfig, etherman *etherman.ClientEtherMan, cfg synchronizer.Config, storage db.Storage) {
+	sy, err := synchronizer.NewSynchronizer(storage, etherman, 0, cfg, true)
 	if err != nil {
 		log.Fatal(err)
 	}
