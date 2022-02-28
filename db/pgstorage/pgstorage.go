@@ -23,7 +23,7 @@ const (
 	addDepositSQL         = "INSERT INTO sync.deposit (orig_net, token_addr, amount, dest_net, dest_addr, block_num, deposit_cnt) VALUES ($1, $2, $3, $4, $5, $6, $7)"
 	getDepositSQL         = "SELECT orig_net, token_addr, amount, dest_net, dest_addr, block_num, deposit_cnt FROM sync.deposit WHERE orig_net = $1 AND deposit_cnt = $2"
 	addL2DepositSQL       = "INSERT INTO sync.l2_deposit (orig_net, token_addr, amount, dest_net, dest_addr, l2_block_num, deposit_cnt) VALUES ($1, $2, $3, $4, $5, $6, $7)"
-	getL2DepositSQL         = "SELECT orig_net, token_addr, amount, dest_net, dest_addr, block_num, deposit_cnt FROM sync.deposit WHERE orig_net = $1 AND deposit_cnt = $2"
+	getL2DepositSQL       = "SELECT orig_net, token_addr, amount, dest_net, dest_addr, block_num, deposit_cnt FROM sync.deposit WHERE orig_net = $1 AND deposit_cnt = $2"
 	getNodeByKeySQL       = "SELECT value FROM %s WHERE key = $1"
 	setNodeByKeySQL       = "INSERT INTO %s (key, value) VALUES ($1, $2) ON CONFLICT(key) DO UPDATE SET value = $2"
 	getPreviousBlockSQL   = "SELECT * FROM sync.block ORDER BY block_num DESC LIMIT 1 OFFSET $1"
@@ -37,9 +37,9 @@ const (
 	addL2ClaimSQL         = "INSERT INTO sync.l2_claim (index, orig_net, token_addr, amount, dest_addr, l2_block_num) VALUES ($1, $2, $3, $4, $5, $6)"
 	getL2ClaimSQL         = "SELECT index, orig_net, token_addr, amount, dest_addr, block_num FROM sync.l2_claim WHERE index = $1 AND orig_net = $2"
 	addTokenWrappedSQL    = "INSERT INTO sync.token_wrapped (orig_net, orig_token_addr, wrapped_token_addr, block_num) VALUES ($1, $2, $3, $4)"
-	getTokenWrappedSQL    = "SELECT orig_net, orig_token_addr, wrapped_token_addr, block_num FROM sync.token_wrapped WHERE orig_net = $1 AND orig_token_addr = $2"
+	getTokenWrappedSQL    = "SELECT orig_net, orig_token_addr, wrapped_token_addr, block_num FROM sync.token_wrapped WHERE orig_net = $1 AND orig_token_addr = $2" // nolint
 	addL2TokenWrappedSQL  = "INSERT INTO sync.l2_token_wrapped (orig_net, orig_token_addr, wrapped_token_addr, l2_block_num) VALUES ($1, $2, $3, $4)"
-	getL2TokenWrappedSQL  = "SELECT orig_net, orig_token_addr, wrapped_token_addr, block_num FROM sync.l2_token_wrapped WHERE orig_net = $1 AND orig_token_addr = $2"
+	getL2TokenWrappedSQL  = "SELECT orig_net, orig_token_addr, wrapped_token_addr, block_num FROM sync.l2_token_wrapped WHERE orig_net = $1 AND orig_token_addr = $2" // nolint
 	consolidateBatchSQL   = "UPDATE sync.batch SET consolidated_tx_hash = $1, consolidated_at = $3, aggregator = $4 WHERE batch_num = $2"
 	addBatchSQL           = "INSERT INTO sync.batch (batch_num, batch_hash, block_num, sequencer, aggregator, consolidated_tx_hash, header, uncles, received_at, chain_id, global_exit_root) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)"
 	getBatchByNumberSQL   = "SELECT block_num, sequencer, aggregator, consolidated_tx_hash, header, uncles, chain_id, global_exit_root, received_at, consolidated_at FROM sync.batch WHERE batch_num = $1"
@@ -113,7 +113,7 @@ func (s *PostgresStorage) AddDeposit(ctx context.Context, deposit *etherman.Depo
 func (s *PostgresStorage) GetDeposit(ctx context.Context, depositCounterUser uint, originalNetwork uint) (*etherman.Deposit, error) {
 	var (
 		deposit etherman.Deposit
-		amount string
+		amount  string
 	)
 	err := s.db.QueryRow(ctx, getDepositSQL, depositCounterUser, originalNetwork).Scan(&deposit.OriginalNetwork, &deposit.TokenAddress, &amount, &deposit.DestinationNetwork, &deposit.DestinationAddress, &deposit.BlockNumber, &deposit.DepositCount)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -135,7 +135,7 @@ func (s *PostgresStorage) AddL2Deposit(ctx context.Context, deposit *etherman.De
 func (s *PostgresStorage) GetL2Deposit(ctx context.Context, depositCounterUser uint, originalNetwork uint) (*etherman.Deposit, error) {
 	var (
 		deposit etherman.Deposit
-		amount string
+		amount  string
 	)
 	err := s.db.QueryRow(ctx, getL2DepositSQL, depositCounterUser, originalNetwork).Scan(&deposit.OriginalNetwork, &deposit.TokenAddress, &amount, &deposit.DestinationNetwork, &deposit.DestinationAddress, &deposit.BlockNumber, &deposit.DepositCount)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -268,7 +268,7 @@ func (s *PostgresStorage) AddClaim(ctx context.Context, claim *etherman.Claim) e
 // GetClaim gets a specific L1 claim
 func (s *PostgresStorage) GetClaim(ctx context.Context, depositCounterUser uint64, originalNetwork uint) (*etherman.Claim, error) {
 	var (
-		claim etherman.Claim
+		claim  etherman.Claim
 		amount string
 	)
 	err := s.db.QueryRow(ctx, getClaimSQL, depositCounterUser, originalNetwork).Scan(&claim.Index, &claim.OriginalNetwork, &claim.Token, &amount, &claim.DestinationAddress, &claim.BlockNumber)
@@ -287,10 +287,10 @@ func (s *PostgresStorage) AddL2Claim(ctx context.Context, claim *etherman.Claim)
 	return err
 }
 
-// GetClaim gets a specific L2 claim
+// GetL2Claim gets a specific L2 claim
 func (s *PostgresStorage) GetL2Claim(ctx context.Context, depositCounterUser uint64, originalNetwork uint) (*etherman.Claim, error) {
 	var (
-		claim etherman.Claim
+		claim  etherman.Claim
 		amount string
 	)
 	err := s.db.QueryRow(ctx, getL2ClaimSQL, depositCounterUser, originalNetwork).Scan(&claim.Index, &claim.OriginalNetwork, &claim.Token, &amount, &claim.DestinationAddress, &claim.BlockNumber)
@@ -321,13 +321,13 @@ func (s *PostgresStorage) GetTokenWrapped(ctx context.Context, originalNetwork u
 	return &token, nil
 }
 
-// AddL2TokenWrapped adds a new claim to the db
+// AddL2TokenWrapped adds a new L2 claim to the db
 func (s *PostgresStorage) AddL2TokenWrapped(ctx context.Context, tokeWrapped *etherman.TokenWrapped) error {
 	_, err := s.db.Exec(ctx, addL2TokenWrappedSQL, tokeWrapped.OriginalNetwork, tokeWrapped.OriginalTokenAddress, tokeWrapped.WrappedTokenAddress, tokeWrapped.BlockNumber)
 	return err
 }
 
-// GetL2TokenWrapped gets a specific L1 tokenWrapped
+// GetL2TokenWrapped gets a specific L2 tokenWrapped
 func (s *PostgresStorage) GetL2TokenWrapped(ctx context.Context, originalNetwork uint, originalTokenAddress common.Address) (*etherman.TokenWrapped, error) {
 	var token etherman.TokenWrapped
 	err := s.db.QueryRow(ctx, getL2TokenWrappedSQL, originalNetwork, originalTokenAddress).Scan(&token.OriginalNetwork, &token.OriginalTokenAddress, &token.WrappedTokenAddress, &token.BlockNumber)
@@ -357,8 +357,8 @@ func (s *PostgresStorage) AddBatch(ctx context.Context, batch *etherman.Batch) e
 // GetBatchByNumber gets the batch with the required number
 func (s *PostgresStorage) GetBatchByNumber(ctx context.Context, batchNumber uint64) (*etherman.Batch, error) {
 	var (
-		batch           etherman.Batch
-		chain           uint64
+		batch etherman.Batch
+		chain uint64
 	)
 	err := s.db.QueryRow(ctx, getBatchByNumberSQL, batchNumber).Scan(
 		&batch.BlockNumber, &batch.Sequencer, &batch.Aggregator, &batch.ConsolidatedTxHash,

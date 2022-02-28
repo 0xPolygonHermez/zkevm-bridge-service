@@ -7,9 +7,9 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/hermeznetwork/hermez-bridge/db/pgstorage"
 	"github.com/hermeznetwork/hermez-bridge/etherman"
-	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -21,14 +21,14 @@ func TestExitRootStore(t *testing.T) {
 	err := pgstorage.InitOrReset(cfg)
 	require.NoError(t, err)
 
- storageCfg := Config {
-	Database: "postgres",
-	Name: cfg.Name,
-	User: cfg.User,
-	Password: cfg.Password,
-	Host: cfg.Host,
-	Port: cfg.Port,
-}
+	storageCfg := Config{
+		Database: "postgres",
+		Name:     cfg.Name,
+		User:     cfg.User,
+		Password: cfg.Password,
+		Host:     cfg.Host,
+		Port:     cfg.Port,
+	}
 	storage, err := NewStorage(storageCfg)
 	require.NoError(t, err)
 
@@ -58,13 +58,13 @@ func TestExitRootStore(t *testing.T) {
 
 	// Claim
 	amount, _ := new(big.Int).SetString("100000000000000000000000000000000000000000000000", 10)
-	claim := etherman.Claim {
-		Index: 1, 
-		OriginalNetwork: 1,
-		Token: common.HexToAddress("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9fc"),
-		Amount: amount,
+	claim := etherman.Claim{
+		Index:              1,
+		OriginalNetwork:    1,
+		Token:              common.HexToAddress("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9fc"),
+		Amount:             amount,
 		DestinationAddress: common.HexToAddress("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9fc"),
-		BlockNumber: 1,
+		BlockNumber:        1,
 	}
 	err = storage.AddClaim(ctx, &claim)
 	require.NoError(t, err)
@@ -79,13 +79,13 @@ func TestExitRootStore(t *testing.T) {
 	assert.Equal(t, claim.Token, claimStored.Token)
 
 	// L2Claim
-	l2Claim := etherman.Claim {
-		Index: 1, 
-		OriginalNetwork: 1,
-		Token: common.HexToAddress("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9fc"),
-		Amount: amount,
+	l2Claim := etherman.Claim{
+		Index:              1,
+		OriginalNetwork:    1,
+		Token:              common.HexToAddress("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9fc"),
+		Amount:             amount,
 		DestinationAddress: common.HexToAddress("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9fc"),
-		BlockNumber: 1,
+		BlockNumber:        1,
 	}
 	err = storage.AddL2Claim(ctx, &l2Claim)
 	require.NoError(t, err)
@@ -100,14 +100,14 @@ func TestExitRootStore(t *testing.T) {
 	assert.Equal(t, l2Claim.Token, l2ClaimStored.Token)
 
 	// Deposit
-	deposit := etherman.Deposit {
-		DepositCount: 1, 
-		OriginalNetwork: 1,
-		TokenAddress: common.HexToAddress("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9fc"),
-		Amount: amount,
+	deposit := etherman.Deposit{
+		DepositCount:       1,
+		OriginalNetwork:    1,
+		TokenAddress:       common.HexToAddress("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9fc"),
+		Amount:             amount,
 		DestinationAddress: common.HexToAddress("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9fc"),
 		DestinationNetwork: 1,
-		BlockNumber: 1,
+		BlockNumber:        1,
 	}
 	err = storage.AddDeposit(ctx, &deposit)
 	require.NoError(t, err)
@@ -122,14 +122,14 @@ func TestExitRootStore(t *testing.T) {
 	assert.Equal(t, deposit.TokenAddress, depositStored.TokenAddress)
 
 	// L2Deposit
-	l2Deposit := etherman.Deposit {
-		DepositCount: 1, 
-		OriginalNetwork: 1,
-		TokenAddress: common.HexToAddress("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9fc"),
-		Amount: amount,
+	l2Deposit := etherman.Deposit{
+		DepositCount:       1,
+		OriginalNetwork:    1,
+		TokenAddress:       common.HexToAddress("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9fc"),
+		Amount:             amount,
 		DestinationAddress: common.HexToAddress("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9fc"),
 		DestinationNetwork: 1,
-		BlockNumber: 1,
+		BlockNumber:        1,
 	}
 	err = storage.AddL2Deposit(ctx, &l2Deposit)
 	require.NoError(t, err)
@@ -144,11 +144,11 @@ func TestExitRootStore(t *testing.T) {
 	assert.Equal(t, l2Deposit.TokenAddress, l2DepositStored.TokenAddress)
 
 	// TokenWrapped
-	tokenWrapped := etherman.TokenWrapped {
-		OriginalNetwork: 1,
+	tokenWrapped := etherman.TokenWrapped{
+		OriginalNetwork:      1,
 		OriginalTokenAddress: common.HexToAddress("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9fe"),
-		WrappedTokenAddress: common.HexToAddress("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9fc"),
-		BlockNumber: 1,
+		WrappedTokenAddress:  common.HexToAddress("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9fc"),
+		BlockNumber:          1,
 	}
 	err = storage.AddTokenWrapped(ctx, &tokenWrapped)
 	require.NoError(t, err)
@@ -161,18 +161,18 @@ func TestExitRootStore(t *testing.T) {
 	assert.Equal(t, tokenWrapped.WrappedTokenAddress, tokenWrappedStored.WrappedTokenAddress)
 
 	// Batch
-	head := types.Header {
-		TxHash: common.Hash{},
+	head := types.Header{
+		TxHash:     common.Hash{},
 		Difficulty: big.NewInt(0),
-		Number: new(big.Int).SetUint64(1),
+		Number:     new(big.Int).SetUint64(1),
 	}
-	batch := etherman.Batch {
-		BlockNumber: 1,
-		Sequencer: common.HexToAddress("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9fe"),
-		ChainID: big.NewInt(100),
+	batch := etherman.Batch{
+		BlockNumber:    1,
+		Sequencer:      common.HexToAddress("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9fe"),
+		ChainID:        big.NewInt(100),
 		GlobalExitRoot: common.HexToHash("0x30e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9fe"),
-		Header: &head,
-		ReceivedAt: time.Now(),
+		Header:         &head,
+		ReceivedAt:     time.Now(),
 	}
 	err = storage.AddBatch(ctx, &batch)
 	require.NoError(t, err)
