@@ -74,8 +74,7 @@ func NewEtherman(cfg Config, poeAddr common.Address, bridgeAddr common.Address, 
 	if err != nil {
 		return nil, err
 	}
-	var scAddresses []common.Address
-	scAddresses = append(scAddresses, poeAddr, bridgeAddr, globalExitRootManAddr)
+	scAddresses := []common.Address{poeAddr, bridgeAddr, globalExitRootManAddr}
 
 	return &ClientEtherMan{EtherClient: ethClient, PoE: poe, Bridge: bridge, GlobalExitRootManager: globalExitRoot, SCAddresses: scAddresses}, nil
 }
@@ -93,8 +92,7 @@ func NewL2Etherman(cfg Config, bridgeAddr common.Address) (*ClientEtherMan, erro
 	if err != nil {
 		return nil, err
 	}
-	var scAddresses []common.Address
-	scAddresses = append(scAddresses, bridgeAddr)
+	scAddresses := []common.Address{bridgeAddr}
 
 	return &ClientEtherMan{EtherClient: ethClient, Bridge: bridge, SCAddresses: scAddresses}, nil
 }

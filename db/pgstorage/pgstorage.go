@@ -202,18 +202,14 @@ func (s *PostgresStorage) GetPreviousL2Block(ctx context.Context, offset uint64)
 
 // ResetL2 resets the state to a specific L2 block (batch)
 func (s *PostgresStorage) ResetL2(ctx context.Context, blockNumber uint64) error {
-	if _, err := s.db.Exec(ctx, resetL2SQL, blockNumber); err != nil {
-		return err
-	}
-	return nil
+	_, err := s.db.Exec(ctx, resetL2SQL, blockNumber)
+	return err
 }
 
 // Reset resets the state to a specific block
 func (s *PostgresStorage) Reset(ctx context.Context, blockNumber uint64) error {
-	if _, err := s.db.Exec(ctx, resetSQL, blockNumber); err != nil {
-		return err
-	}
-	return nil
+	_, err := s.db.Exec(ctx, resetSQL, blockNumber)
+	return err
 }
 
 // Rollback rollbacks a db transaction
@@ -341,10 +337,8 @@ func (s *PostgresStorage) GetL2TokenWrapped(ctx context.Context, originalNetwork
 
 // ConsolidateBatch changes the virtual status of a batch
 func (s *PostgresStorage) ConsolidateBatch(ctx context.Context, batchNumber uint64, consolidatedTxHash common.Hash, consolidatedAt time.Time, aggregator common.Address) error {
-	if _, err := s.db.Exec(ctx, consolidateBatchSQL, consolidatedTxHash, batchNumber, consolidatedAt, aggregator); err != nil {
-		return err
-	}
-	return nil
+	_, err := s.db.Exec(ctx, consolidateBatchSQL, consolidatedTxHash, batchNumber, consolidatedAt, aggregator)
+	return err
 }
 
 // AddBatch adds a new batch to the db
