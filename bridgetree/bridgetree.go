@@ -115,7 +115,6 @@ func (bt *BridgeTree) GetClaim(networkID uint, index uint64, mtProoves [][KeyLen
 	)
 
 	bt.lock.RLock()
-	defer bt.lock.RUnlock()
 
 	if networkID == mainNetworkID {
 		key = fmt.Sprintf("%s-%s", bt.database, mainnetKey)
@@ -132,7 +131,8 @@ func (bt *BridgeTree) GetClaim(networkID uint, index uint64, mtProoves [][KeyLen
 			return deposit, nil, err
 		}
 	}
-
+	
+	bt.lock.RUnlock()
 	copy(mtProoves, prooves)
 
 	return deposit, &etherman.GlobalExitRoot{MainnetExitRoot: bt.mainnetTree.root, RollupExitRoot: bt.rollupTree.root}, err
