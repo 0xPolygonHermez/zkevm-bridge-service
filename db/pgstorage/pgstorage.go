@@ -42,6 +42,7 @@ const (
 	getL2TokenWrappedSQL  = "SELECT orig_net, orig_token_addr, wrapped_token_addr, block_num FROM sync.l2_token_wrapped WHERE orig_net = $1 AND orig_token_addr = $2"
 	consolidateBatchSQL   = "UPDATE sync.batch SET consolidated_tx_hash = $1, consolidated_at = $3, aggregator = $4 WHERE batch_num = $2"
 	addBatchSQL           = "INSERT INTO sync.batch (batch_num, batch_hash, block_num, sequencer, aggregator, consolidated_tx_hash, header, uncles, received_at, chain_id, global_exit_root) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)"
+	getBatchByNumberSQL   = "SELECT block_num, sequencer, aggregator, consolidated_tx_hash, header, uncles, chain_id, global_exit_root, received_at, consolidated_at FROM sync.batch WHERE batch_num = $1"
 )
 
 var (
@@ -351,4 +352,24 @@ func (s *PostgresStorage) AddBatch(ctx context.Context, batch *etherman.Batch) e
 	_, err := s.db.Exec(ctx, addBatchSQL, batch.Number().Uint64(), batch.Hash(), batch.BlockNumber, batch.Sequencer, batch.Aggregator,
 		batch.ConsolidatedTxHash, batch.Header, batch.Uncles, batch.ReceivedAt, batch.ChainID.String(), batch.GlobalExitRoot)
 	return err
+}
+
+// GetBatchByNumber gets the batch with the required number
+func (s *PostgresStorage) GetBatchByNumber(ctx context.Context, batchNumber uint64) (*etherman.Batch, error) {
+	var (
+		batch           etherman.Batch
+		chain           uint64
+	)
+	err := s.db.QueryRow(ctx, getBatchByNumberSQL, batchNumber).Scan(
+		&batch.BlockNumber, &batch.Sequencer, &batch.Aggregator, &batch.ConsolidatedTxHash,
+		&batch.Header, &batch.Uncles,
+		&chain, &batch.GlobalExitRoot, &batch.ReceivedAt, &batch.ConsolidatedAt)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, gerror.ErrStorageNotFound
+	} else if err != nil {
+		return nil, err
+	}
+	batch.ChainID = new(big.Int).SetUint64(chain)
+
+	return &batch, nil
 }

@@ -38,6 +38,7 @@ type Storage interface {
 	AddBatch(ctx context.Context, batch *etherman.Batch) error
 	GetClaim(ctx context.Context, depositCounterUser uint64, originalNetwork uint) (*etherman.Claim, error)
 	GetL2Claim(ctx context.Context, depositCounterUser uint64, originalNetwork uint) (*etherman.Claim, error)
+	GetBatchByNumber(ctx context.Context, batchNumber uint64) (*etherman.Batch, error)
 }
 
 // NewStorage creates a new Storage

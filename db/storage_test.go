@@ -4,10 +4,12 @@ import (
 	"context"
 	"math/big"
 	"testing"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/hermez-bridge/db/pgstorage"
 	"github.com/hermeznetwork/hermez-bridge/etherman"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -157,4 +159,43 @@ func TestExitRootStore(t *testing.T) {
 	assert.Equal(t, tokenWrapped.OriginalNetwork, tokenWrappedStored.OriginalNetwork)
 	assert.Equal(t, tokenWrapped.OriginalTokenAddress, tokenWrappedStored.OriginalTokenAddress)
 	assert.Equal(t, tokenWrapped.WrappedTokenAddress, tokenWrappedStored.WrappedTokenAddress)
+
+	// Batch
+	head := types.Header {
+		TxHash: common.Hash{},
+		Difficulty: big.NewInt(0),
+		Number: new(big.Int).SetUint64(1),
+	}
+	batch := etherman.Batch {
+		BlockNumber: 1,
+		Sequencer: common.HexToAddress("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9fe"),
+		ChainID: big.NewInt(100),
+		GlobalExitRoot: common.HexToHash("0x30e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9fe"),
+		Header: &head,
+		ReceivedAt: time.Now(),
+	}
+	err = storage.AddBatch(ctx, &batch)
+	require.NoError(t, err)
+
+	batchStored, err := storage.GetBatchByNumber(ctx, batch.Number().Uint64())
+	require.NoError(t, err)
+	assert.Equal(t, batch.BlockNumber, batchStored.BlockNumber)
+	assert.Equal(t, batch.Sequencer, batchStored.Sequencer)
+	assert.Equal(t, batch.ChainID, batchStored.ChainID)
+	assert.Equal(t, batch.GlobalExitRoot, batchStored.GlobalExitRoot)
+	assert.Equal(t, batch.Number(), batchStored.Number())
+	assert.Equal(t, common.Hash{}, batchStored.ConsolidatedTxHash)
+
+	err = storage.ConsolidateBatch(ctx, 1, common.HexToHash("0x31e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9fe"),
+		time.Now(), common.HexToAddress("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9fc"))
+	require.NoError(t, err)
+	batchStored2, err := storage.GetBatchByNumber(ctx, batch.Number().Uint64())
+	require.NoError(t, err)
+	assert.Equal(t, batch.BlockNumber, batchStored2.BlockNumber)
+	assert.Equal(t, batch.Sequencer, batchStored2.Sequencer)
+	assert.Equal(t, batch.ChainID, batchStored2.ChainID)
+	assert.Equal(t, batch.GlobalExitRoot, batchStored2.GlobalExitRoot)
+	assert.Equal(t, batch.Number(), batchStored2.Number())
+	assert.Equal(t, common.HexToHash("0x31e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9fe"), batchStored2.ConsolidatedTxHash)
+	assert.Equal(t, common.HexToAddress("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9fc"), batchStored2.Aggregator)
 }
