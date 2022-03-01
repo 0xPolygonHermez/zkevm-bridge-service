@@ -8,6 +8,7 @@ import (
 
 	"github.com/hermeznetwork/hermez-bridge/etherman"
 	"github.com/hermeznetwork/hermez-bridge/gerror"
+	"github.com/jackc/pgtype"
 	"github.com/jackc/pgx/v4"
 	"github.com/jackc/pgx/v4/pgxpool"
 )
@@ -16,6 +17,7 @@ const (
 	getLastBlockSQL = "SELECT * FROM sync.block ORDER BY block_num DESC LIMIT 1"
 	addBlockSQL     = "INSERT INTO sync.block (block_num, block_hash, parent_hash, received_at) VALUES ($1, $2, $3, $4)"
 	addDepositSQL   = "INSERT INTO sync.deposit (orig_net, token_addr, amount, dest_net, dest_addr, block_num, deposit_cnt) VALUES ($1, $2, $3, $4, $5, $6, $7)"
+	getDepositSQL   = "SELECT * FROM sync.deposit WHERE dest_net = $1 AND deposit_cnt = $2"
 	getNodeByKeySQL = "SELECT value FROM %s WHERE key = $1"
 	setNodeByKeySQL = "INSERT INTO %s (key, value) VALUES ($1, $2) ON CONFLICT(key) DO UPDATE SET value = $2"
 )
@@ -62,6 +64,17 @@ func (s *PostgresStorage) AddBlock(ctx context.Context, block *etherman.Block) e
 func (s *PostgresStorage) AddDeposit(ctx context.Context, deposit *etherman.Deposit) error {
 	_, err := s.db.Exec(ctx, addDepositSQL, deposit.OriginalNetwork, deposit.TokenAddress, deposit.Amount.String(), deposit.DestinationNetwork, deposit.DestinationAddress, deposit.BlockNumber, deposit.DepositCount)
 	return err
+}
+
+// GetDeposit returns a deposit from the storage
+func (s *PostgresStorage) GetDeposit(ctx context.Context, networkID uint, index uint64) (*etherman.Deposit, error) {
+	var (
+		deposit etherman.Deposit
+		amount  pgtype.Numeric
+	)
+	err := s.db.QueryRow(ctx, getDepositSQL, networkID, index).Scan(&deposit.OriginalNetwork, &deposit.TokenAddress, &amount, &deposit.DestinationNetwork, &deposit.DestinationAddress, &deposit.BlockNumber, &deposit.DepositCount)
+	deposit.Amount = amount.Int
+	return &deposit, err
 }
 
 // Get gets value of key from the merkle tree
