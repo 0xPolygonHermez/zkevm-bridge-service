@@ -50,10 +50,11 @@ CREATE TABLE sync.deposit
     orig_net    integer,
     token_addr  BYTEA NOT NULL,
     amount      VARCHAR,
-    dest_net    integer,
+    dest_net integer NOT NULL,
     dest_addr   BYTEA NOT NULL,
     block_num   BIGINT NOT NULL REFERENCES sync.block (block_num) ON DELETE CASCADE,
-    deposit_cnt BIGINT PRIMARY KEY
+    deposit_cnt BIGINT,
+    CONSTRAINT deposit_pk PRIMARY KEY (dest_net, deposit_cnt)
 );
 
 CREATE TABLE sync.l2_deposit

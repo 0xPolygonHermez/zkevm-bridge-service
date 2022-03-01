@@ -112,7 +112,7 @@ func TestExitRootStore(t *testing.T) {
 	err = storage.AddDeposit(ctx, &deposit)
 	require.NoError(t, err)
 
-	depositStored, err := storage.GetDeposit(ctx, deposit.DepositCount, deposit.OriginalNetwork)
+	depositStored, err := storage.GetDeposit(ctx, uint64(deposit.DepositCount), deposit.OriginalNetwork)
 	require.NoError(t, err)
 	assert.Equal(t, deposit.Amount, depositStored.Amount)
 	assert.Equal(t, deposit.BlockNumber, depositStored.BlockNumber)
@@ -134,7 +134,7 @@ func TestExitRootStore(t *testing.T) {
 	err = storage.AddL2Deposit(ctx, &l2Deposit)
 	require.NoError(t, err)
 
-	l2DepositStored, err := storage.GetL2Deposit(ctx, l2Deposit.DepositCount, l2Deposit.OriginalNetwork)
+	l2DepositStored, err := storage.GetL2Deposit(ctx, uint64(l2Deposit.DepositCount), l2Deposit.OriginalNetwork)
 	require.NoError(t, err)
 	assert.Equal(t, l2Deposit.Amount, l2DepositStored.Amount)
 	assert.Equal(t, l2Deposit.BlockNumber, l2DepositStored.BlockNumber)

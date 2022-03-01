@@ -21,9 +21,9 @@ type Storage interface {
 	Reset(ctx context.Context, blockNumber uint64) error
 	ResetL2(ctx context.Context, blockNumber uint64) error
 	AddDeposit(ctx context.Context, deposit *etherman.Deposit) error
-	GetDeposit(ctx context.Context, depositCounterUser uint, originalNetwork uint) (*etherman.Deposit, error)
+	GetDeposit(ctx context.Context, depositCounterUser uint64, destNetwork uint) (*etherman.Deposit, error)
 	AddL2Deposit(ctx context.Context, deposit *etherman.Deposit) error
-	GetL2Deposit(ctx context.Context, depositCounterUser uint, originalNetwork uint) (*etherman.Deposit, error)
+	GetL2Deposit(ctx context.Context, depositCounterUser uint64, destNetwork uint) (*etherman.Deposit, error)
 	Rollback(ctx context.Context) error
 	BeginDBTransaction(ctx context.Context) error
 	AddExitRoot(ctx context.Context, exitRoot *etherman.GlobalExitRoot) error
