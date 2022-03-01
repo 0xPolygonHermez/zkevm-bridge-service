@@ -17,13 +17,14 @@ func start(ctx *cli.Context) error {
 	}
 	setupLog(c.Log)
 
-	etherman, err := newEtherman(*c)
+	etherman, l2Etherman, err := newEtherman(*c)
 	if err != nil {
 		log.Fatal(err)
 		return err
 	}
 
-	go runSynchronizer(c.NetworkConfig, etherman, c.Synchronizer)
+	go runL1Synchronizer(c.NetworkConfig, etherman, c.Synchronizer)
+	go runL2Synchronizer(c.NetworkConfig, l2Etherman, c.Synchronizer)
 
 	return nil
 }
@@ -32,16 +33,30 @@ func setupLog(c log.Config) {
 	log.Init(c)
 }
 
-func newEtherman(c config.Config) (*etherman.ClientEtherMan, error) {
-	etherman, err := etherman.NewEtherman(c.Etherman, c.NetworkConfig.BridgeAddr)
+func newEtherman(c config.Config) (*etherman.ClientEtherMan, *etherman.ClientEtherMan, error) {
+	l1Etherman, err := etherman.NewEtherman(c.Etherman, c.NetworkConfig.PoEAddr, c.NetworkConfig.BridgeAddr, c.NetworkConfig.GlobalExitRootManAddr)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	return etherman, nil
+	l2Etherman, err := etherman.NewL2Etherman(c.Etherman, c.NetworkConfig.L2BridgeAddr)
+	if err != nil {
+		return l1Etherman, nil, err
+	}
+	return l1Etherman, l2Etherman, nil
 }
 
-func runSynchronizer(networkConfig config.NetworkConfig, etherman *etherman.ClientEtherMan, cfg synchronizer.Config) {
-	sy, err := synchronizer.NewSynchronizer(etherman, networkConfig.GenBlockNumber, cfg)
+func runL1Synchronizer(networkConfig config.NetworkConfig, etherman *etherman.ClientEtherMan, cfg synchronizer.Config) {
+	sy, err := synchronizer.NewSynchronizer(etherman, networkConfig.GenBlockNumber, cfg, false)
+	if err != nil {
+		log.Fatal(err)
+	}
+	if err := sy.Sync(); err != nil {
+		log.Fatal(err)
+	}
+}
+
+func runL2Synchronizer(networkConfig config.NetworkConfig, etherman *etherman.ClientEtherMan, cfg synchronizer.Config) {
+	sy, err := synchronizer.NewSynchronizer(etherman, 0, cfg, true)
 	if err != nil {
 		log.Fatal(err)
 	}

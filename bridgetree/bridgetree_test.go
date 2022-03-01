@@ -1,6 +1,7 @@
 package bridgetree
 
 import (
+	"context"
 	"encoding/hex"
 	"encoding/json"
 	"log"
@@ -25,7 +26,7 @@ type depositVectorRaw struct {
 	DestinationNetwork uint   `json:"destNetwork"`
 	DestinationAddress string `json:"destAddress"`
 	BlockNumber        uint64 `json:"blockNumber"`
-	DepositCount       uint64 `json:"depositCount"`
+	DepositCount       uint   `json:"depositCount"`
 	ExpectedHash       string `json:"expectedHash"`
 	ExpectedRoot       string `json:"expectedRoot"`
 }
@@ -83,7 +84,13 @@ func TestBridgeTree(t *testing.T) {
 			leafHash := hashDeposit(deposit)
 			assert.Equal(t, testVector.ExpectedHash, hex.EncodeToString(leafHash[:]))
 
-			err := bt.AddDeposit(deposit)
+			block := &etherman.Block{
+				BlockNumber: testVector.BlockNumber,
+				BlockHash:   common.Hash{},
+			}
+			err := bt.storage.AddBlock(context.Background(), block)
+			require.NoError(t, err)
+			err = bt.AddDeposit(deposit)
 			require.NoError(t, err)
 
 			assert.Equal(t, testVector.ExpectedRoot, hex.EncodeToString(bt.rollupTree.root[:]))
@@ -93,7 +100,7 @@ func TestBridgeTree(t *testing.T) {
 	t.Run("Test getting claims", func(t *testing.T) {
 		for _, testVector := range testVectors {
 			prooves := make([][KeyLen]byte, testHeight)
-			deposit, globalExitRoot, err := bt.GetClaim(testVector.DestinationNetwork, testVector.DepositCount, prooves)
+			deposit, globalExitRoot, err := bt.GetClaim(testVector.DestinationNetwork, uint64(testVector.DepositCount), prooves)
 			require.NoError(t, err)
 
 			log.Println(deposit)

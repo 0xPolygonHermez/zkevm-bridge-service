@@ -103,7 +103,7 @@ func (bt *BridgeTree) AddDeposit(deposit *etherman.Deposit) error {
 
 // GetClaim returns claim information to the user.
 func (bt *BridgeTree) GetClaim(networkID uint, index uint64, mtProoves [][KeyLen]byte) (*etherman.Deposit, *etherman.GlobalExitRoot, error) {
-	deposit, err := bt.storage.GetDeposit(context.TODO(), networkID, index)
+	deposit, err := bt.storage.GetDeposit(context.TODO(), index, networkID)
 	if err != nil {
 		return nil, nil, err
 	}
