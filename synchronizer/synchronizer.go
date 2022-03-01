@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"strings"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -32,10 +33,11 @@ type ClientSynchronizer struct {
 }
 
 // NewSynchronizer creates and initializes an instance of Synchronizer
-func NewSynchronizer(ethMan etherman.EtherMan, genBlockNumber uint64, cfg Config, l2 bool) (Synchronizer, error) {
+func NewSynchronizer(storage db.Storage, ethMan etherman.EtherMan, genBlockNumber uint64, cfg Config, l2 bool) (Synchronizer, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &ClientSynchronizer{
 		etherMan:       ethMan,
+		storage:        storage,
 		ctx:            ctx,
 		cancelCtx:      cancel,
 		genBlockNumber: genBlockNumber,
@@ -50,14 +52,15 @@ func (s *ClientSynchronizer) Sync() error {
 	go func() {
 		// If there is no lastBlock means that sync from the beginning is necessary. If not, it continues from the retrieved block
 		// Get the latest synced block. If there is no block on db, use genesis block
-		log.Info("Sync started")
 		var (
 			err             error
 			lastBlockSynced *etherman.Block
 		)
 		if s.l2 {
+			log.Info("Sync L2 started")
 			lastBlockSynced, err = s.storage.GetLastL2Block(s.ctx)
 		} else {
+			log.Info("Sync L1 started")
 			lastBlockSynced, err = s.storage.GetLastBlock(s.ctx)
 		}
 		if err != nil {
@@ -109,7 +112,7 @@ func (s *ClientSynchronizer) syncBlocks(lastBlockSynced *etherman.Block) (*ether
 	// This function will read events fromBlockNum to latestBlock. Check reorg to be sure that everything is ok.
 	block, err := s.checkReorg(lastBlockSynced)
 	if err != nil {
-		log.Errorf("error checking reorgs. Retrying... Err: %v", err)
+		log.Errorf("error checking reorgs. Retrying... Err: %s", err.Error())
 		return lastBlockSynced, fmt.Errorf("error checking reorgs")
 	} else if block != nil {
 		err = s.resetState(block.BlockNumber)
@@ -327,6 +330,8 @@ func (s *ClientSynchronizer) checkReorg(latestBlock *etherman.Block) (*etherman.
 		if err != nil {
 			if errors.Is(err, etherman.ErrNotFound) {
 				return nil, nil
+			} else if strings.Contains(err.Error(), "connection refused") {
+				log.Fatal("Connection refused: ", err)
 			}
 			return nil, err
 		}

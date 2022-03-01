@@ -1,7 +1,3 @@
-package config
-
-// DefaultValues is the default configuration
-const DefaultValues = `
 [Log]
 Level = "debug"
 Outputs = ["stdout"]
@@ -23,5 +19,3 @@ PrivateKeyPassword = "testonly"
 [Synchronizer]
 SyncInterval = "0s"
 SyncChunkSize = 100
-
-`

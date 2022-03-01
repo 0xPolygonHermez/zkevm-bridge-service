@@ -256,7 +256,29 @@ func (etherMan *ClientEtherMan) processEvent(ctx context.Context, vLog types.Log
 		block.Batches = append(block.Batches, batch)
 		return &block, nil
 	case consolidateBatchSignatureHash:
-		return nil, nil
+		var head types.Header
+		head.Number = new(big.Int).SetBytes(vLog.Topics[1][:])
+
+		var batch Batch
+		batch.Header = &head
+		batch.BlockNumber = vLog.BlockNumber
+		batch.Aggregator = common.BytesToAddress(vLog.Topics[2].Bytes())
+		batch.ConsolidatedTxHash = vLog.TxHash
+		fullBlock, err := etherMan.EtherClient.BlockByHash(ctx, vLog.BlockHash)
+		if err != nil {
+			return nil, fmt.Errorf("error getting hashParent. BlockNumber: %d. Error: %w", vLog.BlockNumber, err)
+		}
+		batch.ConsolidatedAt = &fullBlock.ReceivedAt
+
+		var block Block
+		block.BlockNumber = vLog.BlockNumber
+		block.BlockHash = vLog.BlockHash
+		block.ParentHash = fullBlock.ParentHash()
+		block.ReceivedAt = fullBlock.ReceivedAt
+		block.Batches = append(block.Batches, batch)
+
+		log.Debug("Consolidated tx hash: ", vLog.TxHash, batch.ConsolidatedTxHash)
+		return &block, nil
 	case newSequencerSignatureHash:
 		return nil, nil
 	case ownershipTransferredSignatureHash:
