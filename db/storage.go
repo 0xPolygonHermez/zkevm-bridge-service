@@ -36,8 +36,8 @@ type Storage interface {
 	GetL2TokenWrapped(ctx context.Context, originalNetwork uint, originalTokenAddress common.Address) (*etherman.TokenWrapped, error)
 	ConsolidateBatch(ctx context.Context, batchNumber uint64, consolidatedTxHash common.Hash, consolidatedAt time.Time, aggregator common.Address) error
 	AddBatch(ctx context.Context, batch *etherman.Batch) error
-	GetClaim(ctx context.Context, depositCounterUser uint64, originalNetwork uint) (*etherman.Claim, error)
-	GetL2Claim(ctx context.Context, depositCounterUser uint64, originalNetwork uint) (*etherman.Claim, error)
+	GetClaim(ctx context.Context, depositCounterUser uint, originalNetwork uint) (*etherman.Claim, error)
+	GetL2Claim(ctx context.Context, depositCounterUser uint, originalNetwork uint) (*etherman.Claim, error)
 	GetBatchByNumber(ctx context.Context, batchNumber uint64) (*etherman.Batch, error)
 }
 

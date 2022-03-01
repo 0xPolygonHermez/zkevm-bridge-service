@@ -262,7 +262,7 @@ func (s *PostgresStorage) AddClaim(ctx context.Context, claim *etherman.Claim) e
 }
 
 // GetClaim gets a specific L1 claim
-func (s *PostgresStorage) GetClaim(ctx context.Context, depositCounterUser uint64, originalNetwork uint) (*etherman.Claim, error) {
+func (s *PostgresStorage) GetClaim(ctx context.Context, depositCounterUser uint, originalNetwork uint) (*etherman.Claim, error) {
 	var (
 		claim  etherman.Claim
 		amount string
@@ -284,7 +284,7 @@ func (s *PostgresStorage) AddL2Claim(ctx context.Context, claim *etherman.Claim)
 }
 
 // GetL2Claim gets a specific L2 claim
-func (s *PostgresStorage) GetL2Claim(ctx context.Context, depositCounterUser uint64, originalNetwork uint) (*etherman.Claim, error) {
+func (s *PostgresStorage) GetL2Claim(ctx context.Context, depositCounterUser uint, originalNetwork uint) (*etherman.Claim, error) {
 	var (
 		claim  etherman.Claim
 		amount string

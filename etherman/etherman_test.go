@@ -74,7 +74,7 @@ func TestBridgeEvents(t *testing.T) {
 	var (
 		network  uint32
 		smtProof [][32]byte
-		index    uint64
+		index    uint32
 	)
 	mainnetExitRoot := block[0].GlobalExitRoots[0].MainnetExitRoot
 	rollupExitRoot := block[0].GlobalExitRoots[0].RollupExitRoot
@@ -99,7 +99,7 @@ func TestBridgeEvents(t *testing.T) {
 	assert.Equal(t, uint64(3), block[0].BlockNumber)
 	assert.NotEqual(t, common.Address{}, block[0].Claims[0].Token)
 	assert.Equal(t, auth.From, block[0].Claims[0].DestinationAddress)
-	assert.Equal(t, uint64(0), block[0].Claims[0].Index)
+	assert.Equal(t, uint(0), block[0].Claims[0].Index)
 	assert.Equal(t, uint(1), block[0].Claims[0].OriginalNetwork)
 	assert.Equal(t, uint64(3), block[0].Claims[0].BlockNumber)
 }

@@ -66,7 +66,7 @@ type GlobalExitRoot struct {
 
 // Claim struct
 type Claim struct {
-	Index              uint64
+	Index              uint
 	OriginalNetwork    uint
 	Token              common.Address
 	Amount             *big.Int

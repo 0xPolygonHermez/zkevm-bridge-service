@@ -3,9 +3,9 @@ module github.com/hermeznetwork/hermez-bridge
 go 1.17
 
 require (
-	github.com/ethereum/go-ethereum v1.10.12
+	github.com/ethereum/go-ethereum v1.10.16
 	github.com/gobuffalo/packr/v2 v2.8.3
-	github.com/hermeznetwork/hermez-core v0.0.0-20220218094012-d7509596d7fa
+	github.com/hermeznetwork/hermez-core v0.0.0-20220301144649-e47a4167f581
 	github.com/iden3/go-iden3-crypto v0.0.13
 	github.com/jackc/pgx/v4 v4.13.0
 	github.com/mitchellh/mapstructure v1.4.3
@@ -23,7 +23,7 @@ require (
 	github.com/cespare/xxhash/v2 v2.1.1 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
-	github.com/deckarep/golang-set v0.0.0-20180603214616-504e848d77ea // indirect
+	github.com/deckarep/golang-set v1.8.0 // indirect
 	github.com/edsrzf/mmap-go v1.0.0 // indirect
 	github.com/fsnotify/fsnotify v1.5.1 // indirect
 	github.com/go-ole/go-ole v1.2.1 // indirect
