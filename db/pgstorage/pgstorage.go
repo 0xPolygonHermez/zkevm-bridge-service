@@ -383,9 +383,9 @@ func (s *PostgresStorage) GetNumberL1Deposits(ctx context.Context) (uint64, erro
 }
 
 // GetNumberL2Deposits gets the number of L2 deposits
-func (s *PostgresStorage) GetNumberL2Deposits(ctx context.Context, networkId uint) (uint64, error) {
+func (s *PostgresStorage) GetNumberL2Deposits(ctx context.Context, networkID uint) (uint64, error) {
 	var nDeposits uint64
-	err := s.db.QueryRow(ctx, getNumL2DepositsSQL, networkId).Scan(&nDeposits)
+	err := s.db.QueryRow(ctx, getNumL2DepositsSQL, networkID).Scan(&nDeposits)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return 0, gerror.ErrStorageNotFound
 	} else if err != nil {
