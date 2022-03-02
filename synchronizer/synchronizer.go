@@ -23,7 +23,7 @@ type Synchronizer interface {
 
 // ClientSynchronizer connects L1 and L2
 type ClientSynchronizer struct {
-	etherMan       etherman.EtherMan
+	etherMan       localEtherMan
 	storage        db.Storage
 	ctx            context.Context
 	cancelCtx      context.CancelFunc
@@ -33,7 +33,7 @@ type ClientSynchronizer struct {
 }
 
 // NewSynchronizer creates and initializes an instance of Synchronizer
-func NewSynchronizer(storage db.Storage, ethMan etherman.EtherMan, genBlockNumber uint64, cfg Config, l2 bool) (Synchronizer, error) {
+func NewSynchronizer(storage db.Storage, ethMan localEtherMan, genBlockNumber uint64, cfg Config, l2 bool) (Synchronizer, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &ClientSynchronizer{
 		etherMan:       ethMan,

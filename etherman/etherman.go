@@ -46,13 +46,6 @@ type ClientEtherMan struct {
 	SCAddresses           []common.Address
 }
 
-// EtherMan interface
-type EtherMan interface {
-	GetBridgeInfoByBlockRange(ctx context.Context, fromBlock uint64, toBlock *uint64) ([]Block, map[common.Hash][]Order, error)
-	HeaderByNumber(ctx context.Context, number *big.Int) (*types.Header, error)
-	BlockByNumber(ctx context.Context, blockNumber uint64) (*types.Block, error)
-}
-
 // NewEtherman creates a new etherman.
 func NewEtherman(cfg Config, poeAddr common.Address, bridgeAddr common.Address, globalExitRootManAddr common.Address) (*ClientEtherMan, error) {
 	// Connect to ethereum node
