@@ -18,13 +18,13 @@ import (
 )
 
 var (
-	newBatchEventSignatureHash             = crypto.Keccak256Hash([]byte("SendBatch(uint32,address,uint32,bytes32)"))
-	consolidateBatchSignatureHash          = crypto.Keccak256Hash([]byte("VerifyBatch(uint32,address)"))
-	newSequencerSignatureHash              = crypto.Keccak256Hash([]byte("RegisterSequencer(address,string,uint32)"))
+	newBatchEventSignatureHash             = crypto.Keccak256Hash([]byte("SendBatch(uint64,address,uint64,bytes32)"))
+	consolidateBatchSignatureHash          = crypto.Keccak256Hash([]byte("VerifyBatch(uint64,address)"))
+	newSequencerSignatureHash              = crypto.Keccak256Hash([]byte("RegisterSequencer(address,string,uint64)"))
 	ownershipTransferredSignatureHash      = crypto.Keccak256Hash([]byte("OwnershipTransferred(address,address)"))
 	depositEventSignatureHash              = crypto.Keccak256Hash([]byte("BridgeEvent(address,uint256,uint32,uint32,address,uint32)"))
 	updateGlobalExitRootEventSignatureHash = crypto.Keccak256Hash([]byte("UpdateGlobalExitRoot(uint256,bytes32,bytes32)"))
-	claimEventSignatureHash                = crypto.Keccak256Hash([]byte("ClaimEvent(uint64,uint32,address,uint256,address)"))
+	claimEventSignatureHash                = crypto.Keccak256Hash([]byte("ClaimEvent(uint32,uint32,address,uint256,address)"))
 	newWrappedTokenEventSignatureHash      = crypto.Keccak256Hash([]byte("NewWrappedToken(uint32,address,address)"))
 
 	// ErrNotFound is used when the object is not found
@@ -348,7 +348,7 @@ func (etherMan *ClientEtherMan) processEvent(ctx context.Context, vLog types.Log
 		)
 		claimAux.Amount = claim.Amount
 		claimAux.DestinationAddress = claim.DestinationAddress
-		claimAux.Index = claim.Index
+		claimAux.Index = uint(claim.Index)
 		claimAux.OriginalNetwork = uint(claim.OriginalNetwork)
 		claimAux.Token = claim.Token
 		claimAux.BlockNumber = vLog.BlockNumber
