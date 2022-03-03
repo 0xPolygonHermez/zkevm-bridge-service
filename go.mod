@@ -8,6 +8,7 @@ require (
 	github.com/hermeznetwork/hermez-core v0.0.0-20220301144649-e47a4167f581
 	github.com/iden3/go-iden3-crypto v0.0.13
 	github.com/jackc/pgx/v4 v4.13.0
+	github.com/lib/pq v1.10.2
 	github.com/mitchellh/mapstructure v1.4.3
 	github.com/rubenv/sql-migrate v0.0.0-20211023115951-9f02b1e13857
 	github.com/spf13/viper v1.9.0
