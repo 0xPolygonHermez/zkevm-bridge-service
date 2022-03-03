@@ -12,7 +12,6 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/hermeznetwork/hermez-bridge/db"
 	"github.com/hermeznetwork/hermez-bridge/db/pgstorage"
 	"github.com/hermeznetwork/hermez-bridge/etherman"
 	"github.com/stretchr/testify/assert"
@@ -55,18 +54,14 @@ func TestBridgeTree(t *testing.T) {
 	require.NoError(t, err)
 
 	cfg := Config{
-		DefaultChainID: 1000,
-		Height:         uint8(testHeight),
-		Store:          "postgres",
+		Height: uint8(testHeight),
+		Store:  "postgres",
 	}
-	bt, err := NewBridgeTree(cfg, db.Config{
-		Database: "postgres",
-		Name:     dbCfg.Name,
-		User:     dbCfg.User,
-		Password: dbCfg.Password,
-		Host:     dbCfg.Host,
-		Port:     dbCfg.Port,
-	})
+
+	store, err := pgstorage.NewPostgresStorage(dbCfg)
+	require.NoError(t, err)
+
+	bt, err := NewBridgeTree(cfg, []uint64{0, 1000}, store, store)
 	require.NoError(t, err)
 
 	t.Run("Test adding deposit for the bridge tree", func(t *testing.T) {
@@ -93,14 +88,14 @@ func TestBridgeTree(t *testing.T) {
 			err = bt.AddDeposit(deposit)
 			require.NoError(t, err)
 
-			assert.Equal(t, testVector.ExpectedRoot, hex.EncodeToString(bt.rollupTree.root[:]))
+			assert.Equal(t, testVector.ExpectedRoot, hex.EncodeToString(bt.exitRootTrees[0].root[:]))
 		}
 	})
 
 	t.Run("Test getting claims", func(t *testing.T) {
 		for _, testVector := range testVectors {
 			prooves := make([][KeyLen]byte, testHeight)
-			deposit, globalExitRoot, err := bt.GetClaim(testVector.DestinationNetwork, uint64(testVector.DepositCount), prooves)
+			deposit, globalExitRoot, err := bt.GetClaim(testVector.OriginalNetwork, testVector.DepositCount, prooves)
 			require.NoError(t, err)
 
 			log.Println(deposit)

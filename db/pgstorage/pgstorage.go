@@ -3,7 +3,6 @@ package pgstorage
 import (
 	"context"
 	"errors"
-	"fmt"
 	"math/big"
 	"strings"
 	"time"
@@ -13,6 +12,7 @@ import (
 	"github.com/hermeznetwork/hermez-bridge/gerror"
 	"github.com/jackc/pgx/v4"
 	"github.com/jackc/pgx/v4/pgxpool"
+	"github.com/lib/pq"
 )
 
 const (
@@ -21,11 +21,15 @@ const (
 	addBlockSQL           = "INSERT INTO sync.block (block_num, block_hash, parent_hash, received_at) VALUES ($1, $2, $3, $4)"
 	addL2BlockSQL         = "INSERT INTO sync.l2_block (block_num, block_hash, parent_hash, received_at) VALUES ($1, $2, $3, $4)"
 	addDepositSQL         = "INSERT INTO sync.deposit (orig_net, token_addr, amount, dest_net, dest_addr, block_num, deposit_cnt) VALUES ($1, $2, $3, $4, $5, $6, $7)"
-	getDepositSQL         = "SELECT orig_net, token_addr, amount, dest_net, dest_addr, block_num, deposit_cnt FROM sync.deposit WHERE dest_net = $1 AND deposit_cnt = $2"
+	getDepositSQL         = "SELECT orig_net, token_addr, amount, dest_net, dest_addr, block_num, deposit_cnt FROM sync.deposit WHERE orig_net = $1 AND deposit_cnt = $2"
 	addL2DepositSQL       = "INSERT INTO sync.l2_deposit (orig_net, token_addr, amount, dest_net, dest_addr, l2_block_num, deposit_cnt) VALUES ($1, $2, $3, $4, $5, $6, $7)"
 	getL2DepositSQL       = "SELECT orig_net, token_addr, amount, dest_net, dest_addr, block_num, deposit_cnt FROM sync.deposit WHERE dest_net = $1 AND deposit_cnt = $2"
-	getNodeByKeySQL       = "SELECT value FROM %s WHERE key = $1"
-	setNodeByKeySQL       = "INSERT INTO %s (key, value) VALUES ($1, $2) ON CONFLICT(key) DO UPDATE SET value = $2"
+	getNodeByKeySQL       = "SELECT value FROM merkletree.rht WHERE key = $1 AND network = $2"
+	setNodeByKeySQL       = "INSERT INTO merkletree.rht (key, value, network) VALUES ($1, $2, $3)"
+	getMTRootSQL          = "SELECT index FROM merkletree.root_track WHERE root = $1 AND network = $2"
+	setMTRootSQL          = "INSERT INTO merkletree.root_track (index, root, network) VALUES($1, $2, $3)"
+	getLastGlobalRootSQL  = "SELECT index, global_root, roots FROM bridgetree.root_track ORDER BY index DESC LIMIT 1"
+	setLastGlobalRootSQL  = "INSERT INTO bridgetree.root_track (index, global_root, roots) VALUES($1, $2, $3)"
 	getPreviousBlockSQL   = "SELECT * FROM sync.block ORDER BY block_num DESC LIMIT 1 OFFSET $1"
 	getPreviousL2BlockSQL = "SELECT * FROM sync.l2_block ORDER BY block_num DESC LIMIT 1 OFFSET $1"
 	resetSQL              = "DELETE FROM sync.block WHERE block_num > $1"
@@ -46,7 +50,7 @@ const (
 )
 
 var (
-	contextKeyTableName = "merkle-tree-table-name"
+	contextKeyNetwork = "merkle-tree-network"
 )
 
 // PostgresStorage implements the Storage interface
@@ -110,7 +114,7 @@ func (s *PostgresStorage) AddDeposit(ctx context.Context, deposit *etherman.Depo
 }
 
 // GetDeposit gets a specific L1 deposit
-func (s *PostgresStorage) GetDeposit(ctx context.Context, depositCounterUser uint64, destNetwork uint) (*etherman.Deposit, error) {
+func (s *PostgresStorage) GetDeposit(ctx context.Context, depositCounterUser uint, destNetwork uint) (*etherman.Deposit, error) {
 	var (
 		deposit etherman.Deposit
 		amount  string
@@ -121,7 +125,7 @@ func (s *PostgresStorage) GetDeposit(ctx context.Context, depositCounterUser uin
 	} else if err != nil {
 		return nil, err
 	}
-	deposit.Amount, _ = new(big.Int).SetString(amount, 10)
+	deposit.Amount, _ = new(big.Int).SetString(amount, 10) // nolint
 	return &deposit, nil
 }
 
@@ -143,14 +147,14 @@ func (s *PostgresStorage) GetL2Deposit(ctx context.Context, depositCounterUser u
 	} else if err != nil {
 		return nil, err
 	}
-	deposit.Amount, _ = new(big.Int).SetString(amount, 10)
+	deposit.Amount, _ = new(big.Int).SetString(amount, 10) // nolint
 	return &deposit, nil
 }
 
 // Get gets value of key from the merkle tree
-func (s *PostgresStorage) Get(ctx context.Context, key []byte) ([]byte, error) {
-	var data []byte
-	err := s.db.QueryRow(ctx, fmt.Sprintf(getNodeByKeySQL, ctx.Value(contextKeyTableName).(string)), key).Scan(&data)
+func (s *PostgresStorage) Get(ctx context.Context, key []byte) ([][]byte, error) {
+	var data [][]byte
+	err := s.db.QueryRow(ctx, getNodeByKeySQL, key, string(ctx.Value(contextKeyNetwork).(uint8))).Scan(pq.Array(&data))
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, gerror.ErrStorageNotFound
@@ -163,8 +167,8 @@ func (s *PostgresStorage) Get(ctx context.Context, key []byte) ([]byte, error) {
 // Set inserts a key-value pair into the db.
 // If record with such a key already exists its assumed that the value is correct,
 // because it's a reverse hash table, and the key is a hash of the value
-func (s *PostgresStorage) Set(ctx context.Context, key []byte, value []byte) error {
-	_, err := s.db.Exec(ctx, fmt.Sprintf(setNodeByKeySQL, ctx.Value(contextKeyTableName).(string)), key, value)
+func (s *PostgresStorage) Set(ctx context.Context, key []byte, value [][]byte) error {
+	_, err := s.db.Exec(ctx, setNodeByKeySQL, key, pq.Array(value), string(ctx.Value(contextKeyNetwork).(uint8)))
 	if err != nil {
 		if strings.Contains(err.Error(), "duplicate key value violates unique constraint") {
 			return nil
@@ -172,6 +176,43 @@ func (s *PostgresStorage) Set(ctx context.Context, key []byte, value []byte) err
 		return err
 	}
 	return nil
+}
+
+// GetMTRoot returns deposit count for the specific root in the merkle tree
+func (s *PostgresStorage) GetMTRoot(ctx context.Context, root []byte) (uint, error) {
+	var index uint
+	err := s.db.QueryRow(ctx, getMTRootSQL, root, string(ctx.Value(contextKeyNetwork).(uint8))).Scan(&index)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return 0, gerror.ErrStorageNotFound
+		}
+		return 0, err
+	}
+	return index, nil
+}
+
+// SetMTRoot inserts a track of root to the merkle tree
+func (s *PostgresStorage) SetMTRoot(ctx context.Context, index uint, root []byte) error {
+	_, err := s.db.Exec(ctx, setMTRootSQL, index, root, string(ctx.Value(contextKeyNetwork).(uint8)))
+	return err
+}
+
+// GetLastGlobalExitRoot returns the last global exit root
+func (s *PostgresStorage) GetLastGlobalExitRoot(ctx context.Context) (index uint64, globalExitRoot []byte, roots [][]byte, err error) {
+	err = s.db.QueryRow(ctx, getLastGlobalRootSQL).Scan(&index, &globalExitRoot, pq.Array(&roots))
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return 0, nil, nil, gerror.ErrStorageNotFound
+		}
+		return 0, nil, nil, err
+	}
+	return index, globalExitRoot, roots, nil
+}
+
+// SetGlobalExitRoot adds the global exit root
+func (s *PostgresStorage) SetGlobalExitRoot(ctx context.Context, index uint64, globalRoot []byte, roots [][]byte) error {
+	_, err := s.db.Exec(ctx, setLastGlobalRootSQL, index, globalRoot, pq.Array(roots))
+	return err
 }
 
 // GetPreviousBlock gets the offset previous block respect to latest
@@ -273,7 +314,7 @@ func (s *PostgresStorage) GetClaim(ctx context.Context, depositCounterUser uint6
 	} else if err != nil {
 		return nil, err
 	}
-	claim.Amount, _ = new(big.Int).SetString(amount, 10)
+	claim.Amount, _ = new(big.Int).SetString(amount, 10) // nolint
 	return &claim, nil
 }
 
@@ -295,7 +336,7 @@ func (s *PostgresStorage) GetL2Claim(ctx context.Context, depositCounterUser uin
 	} else if err != nil {
 		return nil, err
 	}
-	claim.Amount, _ = new(big.Int).SetString(amount, 10)
+	claim.Amount, _ = new(big.Int).SetString(amount, 10) // nolint
 	return &claim, nil
 }
 

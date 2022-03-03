@@ -1,12 +1,12 @@
 [
     {
-        "expectedCounts": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        "expectedCount": 0,
         "leaves": [],
         "expectedRoots": ["27ae5ba08d7291c96c8cbddcc148bf48a6d68c7974b94356f53754ef6171d757"],
         "prooves": []
     },
     {
-        "expectedCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+        "expectedCount": 1,
         "leaves": ["123"],
         "expectedRoots": ["27ae5ba08d7291c96c8cbddcc148bf48a6d68c7974b94356f53754ef6171d757", "413f0936195da8c24ee159c80f1b8363ca6aa13ab22288e72a9212c6ae213a61"],
         "prooves": [
@@ -45,7 +45,7 @@
         ]
     },
     {
-        "expectedCounts": [3, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+        "expectedCount": 3,
         "leaves": ["12", "23", "34"],
         "expectedRoots": ["27ae5ba08d7291c96c8cbddcc148bf48a6d68c7974b94356f53754ef6171d757", "1760f09b9871b79d9c4cdcaed40e535fe92ac50b53b9385de52485207f14219f", "93e2642d62838a0a141cf1047ce7cf2fb73aa932ce77a9168358534f329bb153", "631b95e6c64b383addf0f851e52ad33015c7514ec36a6f9024540afec05c8eef"],
         "prooves": [

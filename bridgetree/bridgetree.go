@@ -2,138 +2,117 @@ package bridgetree
 
 import (
 	"context"
-	"fmt"
 	"math/big"
-	"sync"
 
-	"github.com/hermeznetwork/hermez-bridge/db"
-	"github.com/hermeznetwork/hermez-bridge/db/pgstorage"
 	"github.com/hermeznetwork/hermez-bridge/etherman"
-	"github.com/hermeznetwork/hermez-bridge/gerror"
+	"golang.org/x/crypto/sha3"
 )
 
 const (
-	// mainNetworkID  is the default is of the main net
-	mainNetworkID = 0
 	// KeyLen is the length of key and value in the Merkle Tree
 	KeyLen = 32
 )
 
 // BridgeTree struct
 type BridgeTree struct {
-	mainnetTree       *MerkleTree
-	rollupTree        *MerkleTree
+	exitRootTrees     []*MerkleTree
 	globalExitRoot    [KeyLen]byte
-	globalExitRootNum *big.Int
+	globalExitRootNum uint64
+	networkIDs        map[uint64]uint8
 	storage           bridgeTreeStorage
-	// database is the kind of database
-	database string
-	lock     sync.RWMutex
 }
 
 var (
-	contextKeyTableName                   = "merkle-tree-table-name"
-	contextValueMap     map[string]string = map[string]string{
-		"postgres-mainnet": "merkletree.mainnet",
-		"postgres-rollup":  "merkletree.rollup",
-	}
-	mainnetKey = "mainnet"
-	rollupKey  = "rollup"
+	contextKeyNetwork = "merkle-tree-network"
 )
 
 // NewBridgeTree creates new BridgeTree.
-func NewBridgeTree(cfg Config, dbConfig db.Config) (*BridgeTree, error) {
-	if cfg.Store == "postgres" {
-		storage, err := pgstorage.NewPostgresStorage(pgstorage.Config{
-			User:     dbConfig.User,
-			Password: dbConfig.Password,
-			Host:     dbConfig.Host,
-			Port:     dbConfig.Port,
-			Name:     dbConfig.Name,
-		})
+func NewBridgeTree(cfg Config, networks []uint64, storage bridgeTreeStorage, store merkleTreeStore) (*BridgeTree, error) {
+	var (
+		networkIDs    = make(map[uint64]uint8)
+		exitRootTrees []*MerkleTree
+	)
+
+	for i, network := range networks {
+		networkIDs[network] = uint8(i + 1)
+		ctx := context.WithValue(context.TODO(), contextKeyNetwork, uint8(i+1)) //nolint
+		mt, err := NewMerkleTree(ctx, store, cfg.Height)
 		if err != nil {
 			return nil, err
 		}
-		zeroHashes := generateZeroHashes(cfg.Height + 1)
-		return &BridgeTree{
-			mainnetTree:       NewMerkleTree(storage, cfg.Height),
-			rollupTree:        NewMerkleTree(storage, cfg.Height),
-			globalExitRoot:    zeroHashes[cfg.Height+1],
-			globalExitRootNum: big.NewInt(0),
-			storage:           storage,
-			database:          cfg.Store,
-		}, nil
+		exitRootTrees = append(exitRootTrees, mt)
 	}
-	return nil, gerror.ErrStorageNotRegister
+
+	return &BridgeTree{
+		exitRootTrees:     exitRootTrees,
+		globalExitRoot:    zeroHashes[cfg.Height+1],
+		globalExitRootNum: 0,
+		networkIDs:        networkIDs,
+		storage:           storage,
+	}, nil
 }
 
 // AddDeposit adds deposit information to the bridge tree.
 func (bt *BridgeTree) AddDeposit(deposit *etherman.Deposit) error {
 	var (
-		key string
-		ctx context.Context
+		ctx   context.Context
+		roots [][]byte
 	)
 
 	leaf := hashDeposit(deposit)
 
-	bt.lock.Lock()
-	defer bt.lock.Unlock()
-
-	if deposit.DestinationNetwork == mainNetworkID {
-		key = fmt.Sprintf("%s-%s", bt.database, mainnetKey)
-		ctx = context.WithValue(context.TODO(), contextKeyTableName, contextValueMap[key]) //nolint
-		err := bt.mainnetTree.addLeaf(ctx, leaf)
-		if err != nil {
-			return err
-		}
-	} else {
-		key = fmt.Sprintf("%s-%s", bt.database, rollupKey)
-		ctx = context.WithValue(context.TODO(), contextKeyTableName, contextValueMap[key]) //nolint
-		err := bt.rollupTree.addLeaf(ctx, leaf)
-		if err != nil {
-			return err
-		}
+	tID := bt.networkIDs[uint64(deposit.OriginNetwork)]
+	ctx = context.WithValue(context.TODO(), contextKeyNetwork, tID) //nolint
+	err := bt.exitRootTrees[tID-1].addLeaf(ctx, leaf)
+	if err != nil {
+		return err
 	}
 
-	bt.globalExitRootNum.Add(bt.globalExitRootNum, big.NewInt(1))
-	bt.globalExitRoot = hash(bt.mainnetTree.root, bt.rollupTree.root)
+	for _, mt := range bt.exitRootTrees {
+		roots = append(roots, mt.root[:])
+	}
+	bt.globalExitRootNum++
+	hash := sha3.NewLegacyKeccak256()
+	for _, d := range roots {
+		hash.Write(d[:]) //nolint:errcheck,gosec
+	}
+	copy(bt.globalExitRoot[:], hash.Sum(nil))
+	err = bt.storage.SetGlobalExitRoot(context.TODO(), bt.globalExitRootNum, bt.globalExitRoot[:], roots)
+	if err != nil {
+		return err
+	}
 
 	return bt.storage.AddDeposit(ctx, deposit)
 }
 
 // GetClaim returns claim information to the user.
-func (bt *BridgeTree) GetClaim(networkID uint, index uint64, mtProoves [][KeyLen]byte) (*etherman.Deposit, *etherman.GlobalExitRoot, error) {
+func (bt *BridgeTree) GetClaim(networkID uint, index uint, mtProoves [][KeyLen]byte) (*etherman.Deposit, *etherman.GlobalExitRoot, error) {
 	deposit, err := bt.storage.GetDeposit(context.TODO(), index, networkID)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	var (
-		key     string
-		ctx     context.Context
-		prooves [][KeyLen]byte
+		ctx         context.Context
+		prooves     [][KeyLen]byte
+		networkRoot [KeyLen]byte
 	)
 
-	bt.lock.RLock()
-
-	if networkID == mainNetworkID {
-		key = fmt.Sprintf("%s-%s", bt.database, mainnetKey)
-		ctx = context.WithValue(context.TODO(), contextKeyTableName, contextValueMap[key]) //nolint
-		prooves, err = bt.mainnetTree.getProofTreeByIndex(ctx, index)
-		if err != nil {
-			return deposit, nil, err
-		}
-	} else {
-		key = fmt.Sprintf("%s-%s", bt.database, rollupKey)
-		ctx = context.WithValue(context.TODO(), contextKeyTableName, contextValueMap[key]) //nolint
-		prooves, err = bt.rollupTree.getProofTreeByIndex(ctx, index)
-		if err != nil {
-			return deposit, nil, err
-		}
+	tID := bt.networkIDs[uint64(networkID)]
+	ctx = context.WithValue(context.TODO(), contextKeyNetwork, tID) //nolint
+	globalExitRootNum, _, roots, err := bt.storage.GetLastGlobalExitRoot(context.TODO())
+	if err != nil {
+		return nil, nil, err
 	}
-
-	bt.lock.RUnlock()
+	copy(networkRoot[:], roots[tID])
+	prooves, err = bt.exitRootTrees[tID].getSiblings(ctx, index-1, networkRoot)
+	if err != nil {
+		return nil, nil, err
+	}
 	copy(mtProoves, prooves)
 
-	return deposit, &etherman.GlobalExitRoot{MainnetExitRoot: bt.mainnetTree.root, RollupExitRoot: bt.rollupTree.root}, err
+	return deposit, &etherman.GlobalExitRoot{
+		GlobalExitRootNum: big.NewInt(int64(globalExitRootNum)),
+		MainnetExitRoot:   bt.exitRootTrees[0].root,
+		RollupExitRoot:    bt.exitRootTrees[1].root}, err
 }
