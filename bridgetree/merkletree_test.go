@@ -86,7 +86,7 @@ func TestMerkleTree(t *testing.T) {
 				proofStrings := make([]string, 0)
 
 				for i := 0; i < len(prooves); i++ {
-					proofStrings = append(proofStrings, hex.EncodeToString(prooves[len(prooves)-i-1][:]))
+					proofStrings = append(proofStrings, hex.EncodeToString(prooves[i][:]))
 				}
 				assert.Equal(t, proofStrings, testVector.Prooves[i])
 			}
