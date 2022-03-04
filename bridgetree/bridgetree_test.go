@@ -94,13 +94,13 @@ func TestBridgeTree(t *testing.T) {
 
 	t.Run("Test getting claims", func(t *testing.T) {
 		for _, testVector := range testVectors {
-			prooves := make([][KeyLen]byte, testHeight)
-			deposit, globalExitRoot, err := bt.GetClaim(testVector.OriginalNetwork, testVector.DepositCount, prooves)
+			merkleProof := make([][KeyLen]byte, testHeight)
+			deposit, globalExitRoot, err := bt.GetClaim(testVector.OriginalNetwork, testVector.DepositCount, merkleProof)
 			require.NoError(t, err)
 
 			log.Println(deposit)
 			log.Println(globalExitRoot)
-			log.Println(prooves)
+			log.Println(merkleProof)
 		}
 	})
 }
