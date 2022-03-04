@@ -1,7 +1,6 @@
 package bridgetree
 
 import (
-	"context"
 	"encoding/hex"
 	"encoding/json"
 	"log"
@@ -79,12 +78,6 @@ func TestBridgeTree(t *testing.T) {
 			leafHash := hashDeposit(deposit)
 			assert.Equal(t, testVector.ExpectedHash, hex.EncodeToString(leafHash[:]))
 
-			block := &etherman.Block{
-				BlockNumber: testVector.BlockNumber,
-				BlockHash:   common.Hash{},
-			}
-			err := bt.storage.AddBlock(context.Background(), block)
-			require.NoError(t, err)
 			err = bt.AddDeposit(deposit)
 			require.NoError(t, err)
 
@@ -95,10 +88,9 @@ func TestBridgeTree(t *testing.T) {
 	t.Run("Test getting claims", func(t *testing.T) {
 		for _, testVector := range testVectors {
 			merkleProof := make([][KeyLen]byte, testHeight)
-			deposit, globalExitRoot, err := bt.GetClaim(testVector.OriginalNetwork, testVector.DepositCount, merkleProof)
+			globalExitRoot, err := bt.GetClaim(testVector.OriginalNetwork, testVector.DepositCount, merkleProof)
 			require.NoError(t, err)
 
-			log.Println(deposit)
 			log.Println(globalExitRoot)
 			log.Println(merkleProof)
 		}

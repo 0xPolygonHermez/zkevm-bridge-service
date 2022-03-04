@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/hermeznetwork/hermez-bridge/bridgetree"
 	"github.com/hermeznetwork/hermez-bridge/db"
 	"github.com/hermeznetwork/hermez-bridge/etherman"
 	"github.com/hermeznetwork/hermez-bridge/gerror"
@@ -27,19 +28,21 @@ type ClientSynchronizer struct {
 	storage        db.Storage
 	ctx            context.Context
 	cancelCtx      context.CancelFunc
+	bridgeTree     *bridgetree.BridgeTree
 	genBlockNumber uint64
 	cfg            Config
 	l2             bool
 }
 
 // NewSynchronizer creates and initializes an instance of Synchronizer
-func NewSynchronizer(storage db.Storage, ethMan localEtherMan, genBlockNumber uint64, cfg Config, l2 bool) (Synchronizer, error) {
+func NewSynchronizer(storage db.Storage, bridge *bridgetree.BridgeTree, ethMan localEtherMan, genBlockNumber uint64, cfg Config, l2 bool) (Synchronizer, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &ClientSynchronizer{
 		etherMan:       ethMan,
 		storage:        storage,
 		ctx:            ctx,
 		cancelCtx:      cancel,
+		bridgeTree:     bridge,
 		genBlockNumber: genBlockNumber,
 		cfg:            cfg,
 		l2:             l2,
@@ -212,6 +215,11 @@ func (s *ClientSynchronizer) processBlockRange(blocks []etherman.Block, order ma
 					}
 					log.Fatal("failed to store new L1 deposit locally, block: %d, err: %v", &blocks[i].BlockNumber, err)
 				}
+
+				err = s.bridgeTree.AddDeposit(&blocks[i].Deposits[element.Pos])
+				if err != nil {
+					log.Fatal("failed to store new deposit in the bridge tree, block: %d, err: %v", &blocks[i].BlockNumber, err)
+				}
 			} else if element.Name == etherman.GlobalExitRootsOrder {
 				err := s.storage.AddExitRoot(ctx, &blocks[i].GlobalExitRoots[element.Pos])
 				if err != nil {
@@ -269,6 +277,11 @@ func (s *ClientSynchronizer) processL2BlockRange(blocks []etherman.Block, order 
 						log.Fatal("error rolling back state to store block. BlockNumber: ", blocks[i].BlockNumber)
 					}
 					log.Fatal("failed to store new L2 deposit locally, L2block (batch): %d, err: %v", &blocks[i].BlockNumber, err)
+				}
+
+				err = s.bridgeTree.AddDeposit(&blocks[i].Deposits[element.Pos])
+				if err != nil {
+					log.Fatal("failed to store new deposit in the bridge tree, block: %d, err: %v", &blocks[i].BlockNumber, err)
 				}
 			} else if element.Name == etherman.ClaimsOrder {
 				err := s.storage.AddL2Claim(ctx, &blocks[i].Claims[element.Pos])

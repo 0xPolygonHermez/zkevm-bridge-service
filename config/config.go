@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/hermeznetwork/hermez-bridge/bridgetree"
 	"github.com/hermeznetwork/hermez-bridge/db"
 	"github.com/hermeznetwork/hermez-bridge/etherman"
 	"github.com/hermeznetwork/hermez-bridge/synchronizer"
@@ -20,6 +21,7 @@ type Config struct {
 	Database     db.Config
 	Etherman     etherman.Config
 	Synchronizer synchronizer.Config
+	BridgeTree   bridgetree.Config
 	NetworkConfig
 }
 

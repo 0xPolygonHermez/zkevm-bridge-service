@@ -2,8 +2,6 @@ package bridgetree
 
 import (
 	"context"
-
-	"github.com/hermeznetwork/hermez-bridge/etherman"
 )
 
 // merkleTreeStore interface for the Merkle Tree
@@ -16,9 +14,6 @@ type merkleTreeStore interface {
 
 // bridgeTreeStorage interface for the Bridge Tree
 type bridgeTreeStorage interface {
-	AddDeposit(ctx context.Context, deposit *etherman.Deposit) error
-	AddBlock(ctx context.Context, block *etherman.Block) error
-	GetDeposit(ctx context.Context, index uint, networkID uint) (*etherman.Deposit, error)
 	GetLastGlobalExitRoot(ctx context.Context) (uint64, []byte, [][]byte, error)
 	SetGlobalExitRoot(ctx context.Context, index uint64, globalRoot []byte, roots [][]byte) error
 }
