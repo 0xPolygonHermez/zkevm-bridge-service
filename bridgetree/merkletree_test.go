@@ -16,15 +16,14 @@ import (
 )
 
 var (
-	contextValueMainnetTableName = "merkletree.mainnet"
-	testHeight                   = 32
+	testHeight = 32
 )
 
 type leafVectorRaw struct {
-	Leaves         []string   `json:"leaves"`
-	ExpectedRoots  []string   `json:"expectedRoots"`
-	ExpectedCounts []uint64   `json:"expectedCounts"`
-	Prooves        [][]string `json:"prooves"`
+	Leaves        []string   `json:"leaves"`
+	ExpectedRoots []string   `json:"expectedRoots"`
+	ExpectedCount uint       `json:"expectedCount"`
+	Prooves       [][]string `json:"prooves"`
 }
 
 func init() {
@@ -57,17 +56,19 @@ func TestMerkleTree(t *testing.T) {
 	require.NoError(t, err)
 
 	dbCfg := pgstorage.NewConfigFromEnv()
-	err = pgstorage.InitOrReset(dbCfg)
-	require.NoError(t, err)
 
-	store, err := pgstorage.NewPostgresStorage(dbCfg)
-	require.NoError(t, err)
-
-	ctx := context.WithValue(context.Background(), contextKeyTableName, contextValueMainnetTableName) //nolint
+	ctx := context.WithValue(context.Background(), contextKeyNetwork, uint8(1)) //nolint
 
 	for ti, testVector := range testVectors {
 		t.Run(fmt.Sprintf("Test vector %d", ti), func(t *testing.T) {
-			mt := NewMerkleTree(store, uint8(testHeight))
+			err = pgstorage.InitOrReset(dbCfg)
+			require.NoError(t, err)
+
+			store, err := pgstorage.NewPostgresStorage(dbCfg)
+			require.NoError(t, err)
+
+			mt, err := NewMerkleTree(ctx, store, uint8(testHeight))
+			require.NoError(t, err)
 			assert.Equal(t, hex.EncodeToString(mt.root[:]), testVector.ExpectedRoots[0])
 
 			for i := 0; i < len(testVector.Leaves); i++ {
@@ -80,16 +81,21 @@ func TestMerkleTree(t *testing.T) {
 
 				assert.Equal(t, hex.EncodeToString(mt.root[:]), testVector.ExpectedRoots[i+1])
 
-				prooves, err := mt.getProofTreeByIndex(ctx, uint64(i))
+				index, err := mt.store.GetMTRoot(ctx, mt.root[:])
+				require.NoError(t, err)
+
+				assert.Equal(t, uint(i+1), index)
+
+				prooves, err := mt.getSiblings(ctx, uint(i), mt.root)
 				require.NoError(t, err)
 				proofStrings := make([]string, 0)
 
-				for _, proof := range prooves {
-					proofStrings = append(proofStrings, hex.EncodeToString(proof[:]))
+				for i := 0; i < len(prooves); i++ {
+					proofStrings = append(proofStrings, hex.EncodeToString(prooves[i][:]))
 				}
 				assert.Equal(t, proofStrings, testVector.Prooves[i])
 			}
-			assert.Equal(t, mt.counts, testVector.ExpectedCounts)
+			assert.Equal(t, mt.count, testVector.ExpectedCount)
 		})
 	}
 }
