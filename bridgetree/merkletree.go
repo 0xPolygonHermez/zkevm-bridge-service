@@ -43,6 +43,7 @@ func (mt *MerkleTree) getSiblings(ctx context.Context, index uint, root [KeyLen]
 	var (
 		left, right [KeyLen]byte
 		siblings    [][KeyLen]byte
+		_siblings   [][KeyLen]byte
 	)
 
 	cur := root
@@ -68,7 +69,10 @@ func (mt *MerkleTree) getSiblings(ctx context.Context, index uint, root [KeyLen]
 		}
 	}
 
-	return siblings, nil
+	for i := len(siblings) - 1; i >= 0; i-- {
+		_siblings = append(_siblings, siblings[i])
+	}
+	return _siblings, nil
 }
 
 func (mt *MerkleTree) addLeaf(ctx context.Context, leaf [KeyLen]byte) error {
@@ -84,14 +88,14 @@ func (mt *MerkleTree) addLeaf(ctx context.Context, leaf [KeyLen]byte) error {
 
 	for h := uint8(0); h < mt.height; h++ {
 		if index&(1<<h) > 0 {
-			parent = hash(siblings[mt.height-h-1], cur)
-			err := mt.store.Set(ctx, parent[:], [][]byte{siblings[mt.height-h-1][:], cur[:]})
+			parent = hash(siblings[h], cur)
+			err := mt.store.Set(ctx, parent[:], [][]byte{siblings[h][:], cur[:]})
 			if err != nil {
 				return err
 			}
 		} else {
-			parent = hash(cur, siblings[mt.height-h-1])
-			err := mt.store.Set(ctx, parent[:], [][]byte{cur[:], siblings[mt.height-h-1][:]})
+			parent = hash(cur, siblings[h])
+			err := mt.store.Set(ctx, parent[:], [][]byte{cur[:], siblings[h][:]})
 			if err != nil {
 				return err
 			}
