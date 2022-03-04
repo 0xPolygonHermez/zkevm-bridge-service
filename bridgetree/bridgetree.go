@@ -74,7 +74,7 @@ func (bt *BridgeTree) AddDeposit(deposit *etherman.Deposit) error {
 	bt.globalExitRootNum++
 	hash := sha3.NewLegacyKeccak256()
 	for _, d := range roots {
-		hash.Write(d[:])
+		hash.Write(d[:]) //nolint:errcheck,gosec
 	}
 	copy(bt.globalExitRoot[:], hash.Sum(nil))
 	err = bt.storage.SetGlobalExitRoot(context.TODO(), bt.globalExitRootNum, bt.globalExitRoot[:], roots)
