@@ -77,21 +77,12 @@ func (bt *BridgeTree) AddDeposit(deposit *etherman.Deposit) error {
 		hash.Write(d[:]) //nolint:errcheck,gosec
 	}
 	copy(bt.globalExitRoot[:], hash.Sum(nil))
-	err = bt.storage.SetGlobalExitRoot(context.TODO(), bt.globalExitRootNum, bt.globalExitRoot[:], roots)
-	if err != nil {
-		return err
-	}
 
-	return bt.storage.AddDeposit(ctx, deposit)
+	return bt.storage.SetGlobalExitRoot(context.TODO(), bt.globalExitRootNum, bt.globalExitRoot[:], roots)
 }
 
 // GetClaim returns claim information to the user.
-func (bt *BridgeTree) GetClaim(networkID uint, index uint, merkleProof [][KeyLen]byte) (*etherman.Deposit, *etherman.GlobalExitRoot, error) {
-	deposit, err := bt.storage.GetDeposit(context.TODO(), index, networkID)
-	if err != nil {
-		return nil, nil, err
-	}
-
+func (bt *BridgeTree) GetClaim(networkID uint, index uint, merkleProof [][KeyLen]byte) (*etherman.GlobalExitRoot, error) {
 	var (
 		ctx         context.Context
 		proof       [][KeyLen]byte
@@ -102,17 +93,18 @@ func (bt *BridgeTree) GetClaim(networkID uint, index uint, merkleProof [][KeyLen
 	ctx = context.WithValue(context.TODO(), contextKeyNetwork, tID) //nolint
 	globalExitRootNum, _, roots, err := bt.storage.GetLastGlobalExitRoot(context.TODO())
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	copy(networkRoot[:], roots[tID])
 	proof, err = bt.exitRootTrees[tID].getSiblings(ctx, index-1, networkRoot)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	copy(merkleProof, proof)
 
-	return deposit, &etherman.GlobalExitRoot{
+	return &etherman.GlobalExitRoot{
 		GlobalExitRootNum: big.NewInt(int64(globalExitRootNum)),
 		MainnetExitRoot:   bt.exitRootTrees[0].root,
-		RollupExitRoot:    bt.exitRootTrees[1].root}, err
+		RollupExitRoot:    bt.exitRootTrees[1].root,
+	}, err
 }
