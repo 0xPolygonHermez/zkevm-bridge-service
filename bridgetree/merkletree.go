@@ -72,9 +72,8 @@ func (mt *MerkleTree) getSiblings(ctx context.Context, index uint, root [KeyLen]
 	for i := len(siblings) - 1; i >= 0; i-- {
 		_siblings = append(_siblings, siblings[i])
 	}
-	return _siblings, nil
 
-	return siblings, nil
+	return _siblings, nil
 }
 
 func (mt *MerkleTree) addLeaf(ctx context.Context, leaf [KeyLen]byte) error {
