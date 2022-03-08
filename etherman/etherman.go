@@ -323,8 +323,7 @@ func (etherMan *ClientEtherMan) processEvent(ctx context.Context, vLog types.Log
 			block     Block
 			gExitRoot GlobalExitRoot
 		)
-		gExitRoot.MainnetExitRoot = globalExitRoot.MainnetExitRoot
-		gExitRoot.RollupExitRoot = globalExitRoot.RollupExitRoot
+		gExitRoot.ExitRoots = []common.Hash{globalExitRoot.MainnetExitRoot, globalExitRoot.RollupExitRoot}
 		gExitRoot.GlobalExitRootNum = globalExitRoot.GlobalExitRootNum
 		block.BlockHash = vLog.BlockHash
 		block.BlockNumber = vLog.BlockNumber

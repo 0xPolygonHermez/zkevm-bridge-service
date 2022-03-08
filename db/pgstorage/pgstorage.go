@@ -278,23 +278,26 @@ func (s *PostgresStorage) BeginDBTransaction(ctx context.Context) error {
 
 // AddExitRoot adds a new ExitRoot to the db
 func (s *PostgresStorage) AddExitRoot(ctx context.Context, exitRoot *etherman.GlobalExitRoot) error {
-	_, err := s.db.Exec(ctx, addGlobalExitRootSQL, exitRoot.BlockNumber, exitRoot.GlobalExitRootNum.String(), exitRoot.MainnetExitRoot, exitRoot.RollupExitRoot)
+	_, err := s.db.Exec(ctx, addGlobalExitRootSQL, exitRoot.BlockNumber, exitRoot.GlobalExitRootNum.String(), exitRoot.ExitRoots[0], exitRoot.ExitRoots[1])
 	return err
 }
 
 // GetLatestExitRoot get the latest ExitRoot stored
 func (s *PostgresStorage) GetLatestExitRoot(ctx context.Context) (*etherman.GlobalExitRoot, error) {
 	var (
-		exitRoot  etherman.GlobalExitRoot
-		globalNum uint64
+		exitRoot        etherman.GlobalExitRoot
+		globalNum       uint64
+		mainnetExitRoot common.Hash
+		rollupExitRoot  common.Hash
 	)
-	err := s.db.QueryRow(ctx, getExitRootSQL).Scan(&exitRoot.BlockNumber, &globalNum, &exitRoot.MainnetExitRoot, &exitRoot.RollupExitRoot)
+	err := s.db.QueryRow(ctx, getExitRootSQL).Scan(&exitRoot.BlockNumber, &globalNum, &mainnetExitRoot, &rollupExitRoot)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, gerror.ErrStorageNotFound
 	} else if err != nil {
 		return nil, err
 	}
 	exitRoot.GlobalExitRootNum = new(big.Int).SetUint64(globalNum)
+	exitRoot.ExitRoots = []common.Hash{mainnetExitRoot, rollupExitRoot}
 	return &exitRoot, nil
 }
 

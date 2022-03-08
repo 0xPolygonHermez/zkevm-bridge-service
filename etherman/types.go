@@ -60,8 +60,7 @@ type Deposit struct {
 type GlobalExitRoot struct {
 	BlockNumber       uint64
 	GlobalExitRootNum *big.Int
-	MainnetExitRoot   common.Hash
-	RollupExitRoot    common.Hash
+	ExitRoots         []common.Hash
 }
 
 // Claim struct

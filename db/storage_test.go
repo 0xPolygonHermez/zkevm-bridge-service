@@ -38,8 +38,7 @@ func TestExitRootStore(t *testing.T) {
 	var exitRoot etherman.GlobalExitRoot
 	exitRoot.BlockNumber = 1
 	exitRoot.GlobalExitRootNum = big.NewInt(1)
-	exitRoot.MainnetExitRoot = common.HexToHash("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9fc")
-	exitRoot.RollupExitRoot = common.HexToHash("0x30e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9ed")
+	exitRoot.ExitRoots = []common.Hash{common.HexToHash("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9fc"), common.HexToHash("0x30e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9ed")}
 
 	var block etherman.Block
 	block.BlockNumber = 1
@@ -53,8 +52,8 @@ func TestExitRootStore(t *testing.T) {
 	exit, err := storage.GetLatestExitRoot(ctx)
 	require.NoError(t, err)
 	assert.Equal(t, exitRoot.GlobalExitRootNum, exit.GlobalExitRootNum)
-	assert.Equal(t, exitRoot.MainnetExitRoot, exit.MainnetExitRoot)
-	assert.Equal(t, exitRoot.RollupExitRoot, exit.RollupExitRoot)
+	assert.Equal(t, exitRoot.ExitRoots[0], exit.ExitRoots[0])
+	assert.Equal(t, exitRoot.ExitRoots[1], exit.ExitRoots[1])
 
 	// Claim
 	amount, _ := new(big.Int).SetString("100000000000000000000000000000000000000000000000", 10)
