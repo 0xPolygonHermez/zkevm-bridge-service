@@ -81,12 +81,17 @@ func TestMerkleTree(t *testing.T) {
 
 				assert.Equal(t, hex.EncodeToString(mt.root[:]), testVector.ExpectedRoots[i+1])
 
+				index, err := mt.store.GetMTRoot(ctx, mt.root[:])
+				require.NoError(t, err)
+
+				assert.Equal(t, uint(i+1), index)
+
 				prooves, err := mt.getSiblings(ctx, uint(i), mt.root)
 				require.NoError(t, err)
 				proofStrings := make([]string, 0)
 
 				for i := 0; i < len(prooves); i++ {
-					proofStrings = append(proofStrings, hex.EncodeToString(prooves[len(prooves)-i-1][:]))
+					proofStrings = append(proofStrings, hex.EncodeToString(prooves[i][:]))
 				}
 				assert.Equal(t, proofStrings, testVector.Prooves[i])
 			}
