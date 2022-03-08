@@ -1,6 +1,7 @@
 package bridgetree
 
 import (
+	"context"
 	"encoding/hex"
 	"encoding/json"
 	"log"
@@ -60,11 +61,23 @@ func TestBridgeTree(t *testing.T) {
 	store, err := pgstorage.NewPostgresStorage(dbCfg)
 	require.NoError(t, err)
 
+	err = store.AddBlock(context.TODO(), &etherman.Block{
+		BlockNumber:     0,
+		BlockHash:       common.HexToHash("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9fc"),
+		ParentHash:      common.Hash{},
+		Batches:         []etherman.Batch{},
+		Deposits:        []etherman.Deposit{},
+		GlobalExitRoots: []etherman.GlobalExitRoot{},
+		Claims:          []etherman.Claim{},
+		Tokens:          []etherman.TokenWrapped{},
+	})
+	require.NoError(t, err)
+
 	bt, err := NewBridgeTree(cfg, []uint64{0, 1000}, store, store)
 	require.NoError(t, err)
 
 	t.Run("Test adding deposit for the bridge tree", func(t *testing.T) {
-		for _, testVector := range testVectors {
+		for i, testVector := range testVectors {
 			amount, _ := new(big.Int).SetString(testVector.Amount, 10)
 			deposit := &etherman.Deposit{
 				OriginalNetwork:    testVector.OriginalNetwork,
@@ -81,11 +94,16 @@ func TestBridgeTree(t *testing.T) {
 			err = bt.AddDeposit(deposit)
 			require.NoError(t, err)
 
+			err = store.AddExitRoot(context.TODO(), &etherman.GlobalExitRoot{
+				BlockNumber:       0,
+				GlobalExitRootNum: big.NewInt(int64(i)),
+				ExitRoots:         []common.Hash{common.BytesToHash(bt.exitRootTrees[0].root[:]), common.BytesToHash(bt.exitRootTrees[1].root[:])},
+			})
+			require.NoError(t, err)
+
 			assert.Equal(t, testVector.ExpectedRoot, hex.EncodeToString(bt.exitRootTrees[0].root[:]))
 		}
-	})
 
-	t.Run("Test getting claims", func(t *testing.T) {
 		for _, testVector := range testVectors {
 			merkleProof := make([][KeyLen]byte, testHeight)
 			globalExitRoot, err := bt.GetClaim(testVector.OriginalNetwork, testVector.DepositCount, merkleProof)

@@ -1,7 +1,6 @@
 -- +migrate Up
 
 CREATE SCHEMA merkletree;
-CREATE SCHEMA bridgetree;
 
 CREATE TABLE merkletree.rht 
 (
@@ -15,11 +14,4 @@ CREATE TABLE merkletree.root_track
     index BIGINT PRIMARY KEY,
     root BYTEA NOT NULL,
     network CHAR NOT NULL
-);
-
-CREATE TABLE bridgetree.root_track 
-(
-    index BIGINT PRIMARY KEY,
-    global_root BYTEA NOT NULL,
-    roots BYTEA[]
 );

@@ -28,8 +28,6 @@ const (
 	setNodeByKeySQL       = "INSERT INTO merkletree.rht (key, value, network) VALUES ($1, $2, $3)"
 	getMTRootSQL          = "SELECT index FROM merkletree.root_track WHERE root = $1 AND network = $2"
 	setMTRootSQL          = "INSERT INTO merkletree.root_track (index, root, network) VALUES($1, $2, $3)"
-	getLastGlobalRootSQL  = "SELECT index, global_root, roots FROM bridgetree.root_track ORDER BY index DESC LIMIT 1"
-	setLastGlobalRootSQL  = "INSERT INTO bridgetree.root_track (index, global_root, roots) VALUES($1, $2, $3)"
 	getPreviousBlockSQL   = "SELECT * FROM sync.block ORDER BY block_num DESC LIMIT 1 OFFSET $1"
 	getPreviousL2BlockSQL = "SELECT * FROM sync.l2_block ORDER BY block_num DESC LIMIT 1 OFFSET $1"
 	resetSQL              = "DELETE FROM sync.block WHERE block_num > $1"
@@ -196,24 +194,6 @@ func (s *PostgresStorage) GetMTRoot(ctx context.Context, root []byte) (uint, err
 // SetMTRoot inserts a track of root to the merkle tree
 func (s *PostgresStorage) SetMTRoot(ctx context.Context, index uint, root []byte) error {
 	_, err := s.db.Exec(ctx, setMTRootSQL, index, root, string(ctx.Value(contextKeyNetwork).(uint8)))
-	return err
-}
-
-// GetLastGlobalExitRoot returns the last global exit root
-func (s *PostgresStorage) GetLastGlobalExitRoot(ctx context.Context) (index uint64, globalExitRoot []byte, roots [][]byte, err error) {
-	err = s.db.QueryRow(ctx, getLastGlobalRootSQL).Scan(&index, &globalExitRoot, pq.Array(&roots))
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return 0, nil, nil, gerror.ErrStorageNotFound
-		}
-		return 0, nil, nil, err
-	}
-	return index, globalExitRoot, roots, nil
-}
-
-// SetGlobalExitRoot adds the global exit root
-func (s *PostgresStorage) SetGlobalExitRoot(ctx context.Context, index uint64, globalRoot []byte, roots [][]byte) error {
-	_, err := s.db.Exec(ctx, setLastGlobalRootSQL, index, globalRoot, pq.Array(roots))
 	return err
 }
 
