@@ -2,10 +2,9 @@ package bridgetree
 
 import (
 	"context"
-	"math/big"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/hermez-bridge/etherman"
-	"golang.org/x/crypto/sha3"
 )
 
 const (
@@ -15,11 +14,9 @@ const (
 
 // BridgeTree struct
 type BridgeTree struct {
-	exitRootTrees     []*MerkleTree
-	globalExitRoot    [KeyLen]byte
-	globalExitRootNum uint64
-	networkIDs        map[uint64]uint8
-	storage           bridgeTreeStorage
+	exitRootTrees []*MerkleTree
+	networkIDs    map[uint64]uint8
+	storage       bridgeTreeStorage
 }
 
 var (
@@ -44,67 +41,45 @@ func NewBridgeTree(cfg Config, networks []uint64, storage bridgeTreeStorage, sto
 	}
 
 	return &BridgeTree{
-		exitRootTrees:     exitRootTrees,
-		globalExitRoot:    zeroHashes[cfg.Height+1],
-		globalExitRootNum: 0,
-		networkIDs:        networkIDs,
-		storage:           storage,
+		exitRootTrees: exitRootTrees,
+		networkIDs:    networkIDs,
+		storage:       storage,
 	}, nil
 }
 
 // AddDeposit adds deposit information to the bridge tree.
 func (bt *BridgeTree) AddDeposit(deposit *etherman.Deposit) error {
-	var (
-		ctx   context.Context
-		roots [][]byte
-	)
+	var ctx context.Context
 
 	leaf := hashDeposit(deposit)
 
 	tID := bt.networkIDs[uint64(deposit.OriginNetwork)]
 	ctx = context.WithValue(context.TODO(), contextKeyNetwork, tID) //nolint
-	err := bt.exitRootTrees[tID-1].addLeaf(ctx, leaf)
-	if err != nil {
-		return err
-	}
-
-	for _, mt := range bt.exitRootTrees {
-		roots = append(roots, mt.root[:])
-	}
-	bt.globalExitRootNum++
-	hash := sha3.NewLegacyKeccak256()
-	for _, d := range roots {
-		hash.Write(d[:]) //nolint:errcheck,gosec
-	}
-	copy(bt.globalExitRoot[:], hash.Sum(nil))
-
-	return bt.storage.SetGlobalExitRoot(context.TODO(), bt.globalExitRootNum, bt.globalExitRoot[:], roots)
+	return bt.exitRootTrees[tID-1].addLeaf(ctx, leaf)
 }
 
 // GetClaim returns claim information to the user.
 func (bt *BridgeTree) GetClaim(networkID uint, index uint, merkleProof [][KeyLen]byte) (*etherman.GlobalExitRoot, error) {
 	var (
-		ctx         context.Context
-		proof       [][KeyLen]byte
-		networkRoot [KeyLen]byte
+		ctx   context.Context
+		proof [][KeyLen]byte
 	)
 
 	tID := bt.networkIDs[uint64(networkID)]
 	ctx = context.WithValue(context.TODO(), contextKeyNetwork, tID) //nolint
-	globalExitRootNum, _, roots, err := bt.storage.GetLastGlobalExitRoot(context.TODO())
+	globalExitRoot, err := bt.storage.GetLatestExitRoot(context.TODO())
 	if err != nil {
 		return nil, err
 	}
-	copy(networkRoot[:], roots[tID])
-	proof, err = bt.exitRootTrees[tID].getSiblings(ctx, index-1, networkRoot)
+
+	proof, err = bt.exitRootTrees[tID].getSiblings(ctx, index-1, globalExitRoot.ExitRoots[tID])
 	if err != nil {
 		return nil, err
 	}
 	copy(merkleProof, proof)
 
 	return &etherman.GlobalExitRoot{
-		GlobalExitRootNum: big.NewInt(int64(globalExitRootNum)),
-		MainnetExitRoot:   bt.exitRootTrees[0].root,
-		RollupExitRoot:    bt.exitRootTrees[1].root,
+		GlobalExitRootNum: globalExitRoot.GlobalExitRootNum,
+		ExitRoots:         []common.Hash{bt.exitRootTrees[0].root, bt.exitRootTrees[1].root},
 	}, err
 }

@@ -50,9 +50,6 @@ func InitOrReset(cfg Config) error {
 	if _, err := pgStorage.db.Exec(context.Background(), "DROP SCHEMA IF EXISTS merkletree CASCADE;"); err != nil {
 		return err
 	}
-	if _, err := pgStorage.db.Exec(context.Background(), "DROP SCHEMA IF EXISTS bridgetree CASCADE;"); err != nil {
-		return err
-	}
 
 	// run migrations
 	if err := RunMigrations(cfg); err != nil {
