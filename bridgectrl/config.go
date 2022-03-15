@@ -1,4 +1,4 @@
-package bridgetree
+package bridgectrl
 
 // Config is state config
 type Config struct {

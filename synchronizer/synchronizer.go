@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/hermeznetwork/hermez-bridge/bridgetree"
+	"github.com/hermeznetwork/hermez-bridge/bridgectrl"
 	"github.com/hermeznetwork/hermez-bridge/db"
 	"github.com/hermeznetwork/hermez-bridge/etherman"
 	"github.com/hermeznetwork/hermez-bridge/gerror"
@@ -28,14 +28,14 @@ type ClientSynchronizer struct {
 	storage        db.Storage
 	ctx            context.Context
 	cancelCtx      context.CancelFunc
-	bridgeTree     *bridgetree.BridgeTree
+	bridgeTree     *bridgectrl.BridgeController
 	genBlockNumber uint64
 	cfg            Config
 	l2             bool
 }
 
 // NewSynchronizer creates and initializes an instance of Synchronizer
-func NewSynchronizer(storage db.Storage, bridge *bridgetree.BridgeTree, ethMan localEtherMan, genBlockNumber uint64, cfg Config, l2 bool) (Synchronizer, error) {
+func NewSynchronizer(storage db.Storage, bridge *bridgectrl.BridgeController, ethMan localEtherMan, genBlockNumber uint64, cfg Config, l2 bool) (Synchronizer, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &ClientSynchronizer{
 		etherMan:       ethMan,
@@ -311,7 +311,7 @@ func (s *ClientSynchronizer) processL2BlockRange(blocks []etherman.Block, order 
 // This function allows reset the state until an specific block
 func (s *ClientSynchronizer) resetState(blockNum uint64) error {
 	var (
-		networkID  uint = 0 // WIP, need to parse networkID
+		networkID  uint = 0 // issue #42
 		depositCnt uint64
 	)
 

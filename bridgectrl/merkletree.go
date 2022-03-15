@@ -1,4 +1,4 @@
-package bridgetree
+package bridgectrl
 
 import (
 	"context"
@@ -117,7 +117,7 @@ func (mt *MerkleTree) resetLeaf(ctx context.Context, depositCount uint) error {
 	}
 
 	mt.count = depositCount
-	root, err := mt.store.GetRoot(ctx, depositCount, mt.height-1) // To parse uint8 to char in database, we are using one-index in the database
+	root, err := mt.store.GetRoot(ctx, depositCount, mt.height-1)
 	if err != nil {
 		return err
 	}

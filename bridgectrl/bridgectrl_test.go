@@ -1,4 +1,4 @@
-package bridgetree
+package bridgectrl
 
 import (
 	"context"
@@ -73,7 +73,7 @@ func TestBridgeTree(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	bt, err := NewBridgeTree(cfg, []uint{0, 1000}, store, store)
+	bt, err := NewBridgeController(cfg, []uint{0, 1000}, store, store)
 	require.NoError(t, err)
 
 	t.Run("Test adding deposit for the bridge tree", func(t *testing.T) {
@@ -97,11 +97,11 @@ func TestBridgeTree(t *testing.T) {
 			err = store.AddExitRoot(context.TODO(), &etherman.GlobalExitRoot{
 				BlockNumber:       0,
 				GlobalExitRootNum: big.NewInt(int64(i)),
-				ExitRoots:         []common.Hash{common.BytesToHash(bt.exitRootTrees[0].root[:]), common.BytesToHash(bt.exitRootTrees[1].root[:])},
+				ExitRoots:         []common.Hash{common.BytesToHash(bt.exitTrees[0].root[:]), common.BytesToHash(bt.exitTrees[1].root[:])},
 			})
 			require.NoError(t, err)
 
-			assert.Equal(t, testVector.ExpectedRoot, hex.EncodeToString(bt.exitRootTrees[0].root[:]))
+			assert.Equal(t, testVector.ExpectedRoot, hex.EncodeToString(bt.exitTrees[0].root[:]))
 		}
 
 		for _, testVector := range testVectors {

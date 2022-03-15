@@ -4,7 +4,7 @@ import (
 	"os"
 	"os/signal"
 
-	"github.com/hermeznetwork/hermez-bridge/bridgetree"
+	"github.com/hermeznetwork/hermez-bridge/bridgectrl"
 	"github.com/hermeznetwork/hermez-bridge/config"
 	"github.com/hermeznetwork/hermez-bridge/db"
 	"github.com/hermeznetwork/hermez-bridge/db/pgstorage"
@@ -39,9 +39,9 @@ func start(ctx *cli.Context) error {
 		return err
 	}
 
-	var brdigeTree *bridgetree.BridgeTree
+	var bridgeController *bridgectrl.BridgeController
 
-	if c.BridgeTree.Store == "postgres" {
+	if c.BridgeController.Store == "postgres" {
 		pgStorage, err := pgstorage.NewPostgresStorage(pgstorage.Config{
 			User:     c.Database.User,
 			Password: c.Database.Password,
@@ -54,15 +54,15 @@ func start(ctx *cli.Context) error {
 			return err
 		}
 
-		brdigeTree, err = bridgetree.NewBridgeTree(c.BridgeTree, []uint{0, 1000}, pgStorage, pgStorage) // need to update the config to init networkIDs
+		bridgeController, err = bridgectrl.NewBridgeController(c.BridgeController, []uint{0, 1000}, pgStorage, pgStorage) // issue #42
 		if err != nil {
 			log.Error(err)
 			return err
 		}
 	}
 
-	go runL1Synchronizer(c.NetworkConfig, brdigeTree, etherman, c.Synchronizer, storage)
-	go runL2Synchronizer(c.NetworkConfig, brdigeTree, l2Etherman, c.Synchronizer, storage)
+	go runL1Synchronizer(c.NetworkConfig, bridgeController, etherman, c.Synchronizer, storage)
+	go runL2Synchronizer(c.NetworkConfig, bridgeController, l2Etherman, c.Synchronizer, storage)
 
 	// Wait for an in interrupt.
 	ch := make(chan os.Signal, 1)
@@ -88,8 +88,8 @@ func newEtherman(c config.Config) (*etherman.ClientEtherMan, *etherman.ClientEth
 	return l1Etherman, l2Etherman, nil
 }
 
-func runL1Synchronizer(networkConfig config.NetworkConfig, brdigeTree *bridgetree.BridgeTree, etherman *etherman.ClientEtherMan, cfg synchronizer.Config, storage db.Storage) {
-	sy, err := synchronizer.NewSynchronizer(storage, brdigeTree, etherman, networkConfig.GenBlockNumber, cfg, false)
+func runL1Synchronizer(networkConfig config.NetworkConfig, bridgeController *bridgectrl.BridgeController, etherman *etherman.ClientEtherMan, cfg synchronizer.Config, storage db.Storage) {
+	sy, err := synchronizer.NewSynchronizer(storage, bridgeController, etherman, networkConfig.GenBlockNumber, cfg, false)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -98,8 +98,8 @@ func runL1Synchronizer(networkConfig config.NetworkConfig, brdigeTree *bridgetre
 	}
 }
 
-func runL2Synchronizer(networkConfig config.NetworkConfig, brdigeTree *bridgetree.BridgeTree, etherman *etherman.ClientEtherMan, cfg synchronizer.Config, storage db.Storage) {
-	sy, err := synchronizer.NewSynchronizer(storage, brdigeTree, etherman, 0, cfg, true)
+func runL2Synchronizer(networkConfig config.NetworkConfig, bridgeController *bridgectrl.BridgeController, etherman *etherman.ClientEtherMan, cfg synchronizer.Config, storage db.Storage) {
+	sy, err := synchronizer.NewSynchronizer(storage, bridgeController, etherman, 0, cfg, true)
 	if err != nil {
 		log.Fatal(err)
 	}

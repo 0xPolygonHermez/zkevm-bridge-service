@@ -1,4 +1,4 @@
-package bridgetree
+package bridgectrl
 
 import (
 	"context"
@@ -12,22 +12,22 @@ const (
 	KeyLen = 32
 )
 
-// BridgeTree struct
-type BridgeTree struct {
-	exitRootTrees []*MerkleTree
-	networkIDs    map[uint]uint8
-	storage       bridgeTreeStorage
+// BridgeController struct
+type BridgeController struct {
+	exitTrees  []*MerkleTree
+	networkIDs map[uint]uint8
+	storage    bridgeStorage
 }
 
 var (
 	contextKeyNetwork = "merkle-tree-network"
 )
 
-// NewBridgeTree creates new BridgeTree.
-func NewBridgeTree(cfg Config, networks []uint, storage bridgeTreeStorage, store merkleTreeStore) (*BridgeTree, error) {
+// NewBridgeController creates new BridgeController.
+func NewBridgeController(cfg Config, networks []uint, storage bridgeStorage, store merkleTreeStore) (*BridgeController, error) {
 	var (
-		networkIDs    = make(map[uint]uint8)
-		exitRootTrees []*MerkleTree
+		networkIDs = make(map[uint]uint8)
+		exitTrees  []*MerkleTree
 	)
 
 	for i, network := range networks {
@@ -37,29 +37,29 @@ func NewBridgeTree(cfg Config, networks []uint, storage bridgeTreeStorage, store
 		if err != nil {
 			return nil, err
 		}
-		exitRootTrees = append(exitRootTrees, mt)
+		exitTrees = append(exitTrees, mt)
 	}
 
-	return &BridgeTree{
-		exitRootTrees: exitRootTrees,
-		networkIDs:    networkIDs,
-		storage:       storage,
+	return &BridgeController{
+		exitTrees:  exitTrees,
+		networkIDs: networkIDs,
+		storage:    storage,
 	}, nil
 }
 
 // AddDeposit adds deposit information to the bridge tree.
-func (bt *BridgeTree) AddDeposit(deposit *etherman.Deposit) error {
+func (bt *BridgeController) AddDeposit(deposit *etherman.Deposit) error {
 	var ctx context.Context
 
 	leaf := hashDeposit(deposit)
 
 	tID := bt.networkIDs[deposit.OriginNetwork]
 	ctx = context.WithValue(context.TODO(), contextKeyNetwork, tID) //nolint
-	return bt.exitRootTrees[tID-1].addLeaf(ctx, leaf)
+	return bt.exitTrees[tID-1].addLeaf(ctx, leaf)
 }
 
 // GetClaim returns claim information to the user.
-func (bt *BridgeTree) GetClaim(networkID uint, index uint, merkleProof [][KeyLen]byte) (*etherman.GlobalExitRoot, error) {
+func (bt *BridgeController) GetClaim(networkID uint, index uint, merkleProof [][KeyLen]byte) (*etherman.GlobalExitRoot, error) {
 	var (
 		ctx   context.Context
 		proof [][KeyLen]byte
@@ -72,7 +72,7 @@ func (bt *BridgeTree) GetClaim(networkID uint, index uint, merkleProof [][KeyLen
 		return nil, err
 	}
 
-	proof, err = bt.exitRootTrees[tID].getSiblings(ctx, index-1, globalExitRoot.ExitRoots[tID])
+	proof, err = bt.exitTrees[tID].getSiblings(ctx, index-1, globalExitRoot.ExitRoots[tID])
 	if err != nil {
 		return nil, err
 	}
@@ -80,14 +80,14 @@ func (bt *BridgeTree) GetClaim(networkID uint, index uint, merkleProof [][KeyLen
 
 	return &etherman.GlobalExitRoot{
 		GlobalExitRootNum: globalExitRoot.GlobalExitRootNum,
-		ExitRoots:         []common.Hash{bt.exitRootTrees[0].root, bt.exitRootTrees[1].root},
+		ExitRoots:         []common.Hash{bt.exitTrees[0].root, bt.exitTrees[1].root},
 	}, err
 }
 
 // ReorgMT reorg the specific merkle tree.
-func (bt *BridgeTree) ReorgMT(depositCount uint, networkID uint) error {
+func (bt *BridgeController) ReorgMT(depositCount uint, networkID uint) error {
 	var ctx context.Context
 	tID := bt.networkIDs[networkID]
 	ctx = context.WithValue(context.TODO(), contextKeyNetwork, tID) //nolint
-	return bt.exitRootTrees[tID-1].resetLeaf(ctx, depositCount)
+	return bt.exitTrees[tID-1].resetLeaf(ctx, depositCount)
 }

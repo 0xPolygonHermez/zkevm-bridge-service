@@ -1,4 +1,4 @@
-package bridgetree
+package bridgectrl
 
 import (
 	"context"
@@ -15,6 +15,6 @@ type merkleTreeStore interface {
 }
 
 // bridgeTreeStorage interface for the Bridge Tree
-type bridgeTreeStorage interface {
+type bridgeStorage interface {
 	GetLatestExitRoot(ctx context.Context) (*etherman.GlobalExitRoot, error)
 }

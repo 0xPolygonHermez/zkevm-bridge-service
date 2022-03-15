@@ -8,5 +8,6 @@ CREATE TABLE merkletree.rht
     value BYTEA[],
     depth CHAR NOT NULL,
     network CHAR NOT NULL,
+    -- To parse uint8 to char in database, we are using one-index in the database
     deposit_cnt BIGINT NOT NULL
 );
