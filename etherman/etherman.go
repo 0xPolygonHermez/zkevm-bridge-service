@@ -74,11 +74,11 @@ func NewEtherman(cfg Config, poeAddr common.Address, bridgeAddr common.Address, 
 }
 
 // NewL2Etherman creates a new etherman.
-func NewL2Etherman(cfg Config, bridgeAddr common.Address) (*ClientEtherMan, error) {
+func NewL2Etherman(url string, bridgeAddr common.Address) (*ClientEtherMan, error) {
 	// Connect to ethereum node
-	ethClient, err := ethclient.Dial(cfg.L2URL)
+	ethClient, err := ethclient.Dial(url)
 	if err != nil {
-		log.Errorf("error connecting to %s: %+v", cfg.L2URL, err)
+		log.Errorf("error connecting to %s: %+v", url, err)
 		return nil, err
 	}
 	// Create smc clients
