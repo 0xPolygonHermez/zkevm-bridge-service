@@ -11,6 +11,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/hermeznetwork/hermez-core/etherman/smartcontracts/bridge"
 	"github.com/hermeznetwork/hermez-core/etherman/smartcontracts/globalexitrootmanager"
 	"github.com/hermeznetwork/hermez-core/etherman/smartcontracts/proofofefficiency"
@@ -404,4 +405,13 @@ func (etherMan *ClientEtherMan) BlockByNumber(ctx context.Context, blockNumber u
 		return nil, err
 	}
 	return block, nil
+}
+
+// GetNetworkID function retrieves the networkID.
+func (etherMan *ClientEtherMan) GetNetworkID(ctx context.Context) (uint, error) {
+	networkID, err := etherMan.Bridge.NetworkID(&bind.CallOpts{Pending: false})
+	if err != nil {
+		return 0, err
+	}
+	return uint(networkID), nil
 }
