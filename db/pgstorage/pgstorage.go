@@ -16,37 +16,37 @@ import (
 )
 
 const (
-	getLastBlockSQL       = "SELECT * FROM sync.block ORDER BY block_num DESC LIMIT 1"
-	getLastL2BlockSQL     = "SELECT * FROM sync.l2_block ORDER BY block_num DESC LIMIT 1"
-	addBlockSQL           = "INSERT INTO sync.block (block_num, block_hash, parent_hash, received_at) VALUES ($1, $2, $3, $4)"
-	addL2BlockSQL         = "INSERT INTO sync.l2_block (block_num, block_hash, parent_hash, received_at) VALUES ($1, $2, $3, $4)"
-	addDepositSQL         = "INSERT INTO sync.deposit (orig_net, token_addr, amount, dest_net, dest_addr, block_num, deposit_cnt) VALUES ($1, $2, $3, $4, $5, $6, $7)"
-	getDepositSQL         = "SELECT orig_net, token_addr, amount, dest_net, dest_addr, block_num, deposit_cnt FROM sync.deposit WHERE orig_net = $1 AND deposit_cnt = $2"
-	addL2DepositSQL       = "INSERT INTO sync.l2_deposit (orig_net, token_addr, amount, dest_net, dest_addr, l2_block_num, deposit_cnt) VALUES ($1, $2, $3, $4, $5, $6, $7)"
-	getL2DepositSQL       = "SELECT orig_net, token_addr, amount, dest_net, dest_addr, block_num, deposit_cnt FROM sync.deposit WHERE dest_net = $1 AND deposit_cnt = $2"
-	getNodeByKeySQL       = "SELECT value FROM merkletree.rht WHERE key = $1 AND network = $2"
-	setNodeByKeySQL       = "INSERT INTO merkletree.rht (key, value, network) VALUES ($1, $2, $3)"
-	getMTRootSQL          = "SELECT index FROM merkletree.root_track WHERE root = $1 AND network = $2"
-	setMTRootSQL          = "INSERT INTO merkletree.root_track (index, root, network) VALUES($1, $2, $3)"
-	getPreviousBlockSQL   = "SELECT * FROM sync.block ORDER BY block_num DESC LIMIT 1 OFFSET $1"
-	getPreviousL2BlockSQL = "SELECT * FROM sync.l2_block ORDER BY block_num DESC LIMIT 1 OFFSET $1"
-	resetSQL              = "DELETE FROM sync.block WHERE block_num > $1"
-	resetL2SQL            = "DELETE FROM sync.l2_block WHERE block_num > $1"
-	addGlobalExitRootSQL  = "INSERT INTO sync.exit_root (block_num, global_exit_root_num, mainnet_exit_root, rollup_exit_root) VALUES ($1, $2, $3, $4)"
-	getExitRootSQL        = "SELECT block_num, global_exit_root_num, mainnet_exit_root, rollup_exit_root FROM sync.exit_root ORDER BY global_exit_root_num DESC LIMIT 1"
-	addClaimSQL           = "INSERT INTO sync.claim (index, orig_net, token_addr, amount, dest_addr, block_num) VALUES ($1, $2, $3, $4, $5, $6)"
-	getClaimSQL           = "SELECT index, orig_net, token_addr, amount, dest_addr, block_num FROM sync.claim WHERE index = $1 AND orig_net = $2"
-	addL2ClaimSQL         = "INSERT INTO sync.l2_claim (index, orig_net, token_addr, amount, dest_addr, l2_block_num) VALUES ($1, $2, $3, $4, $5, $6)"
-	getL2ClaimSQL         = "SELECT index, orig_net, token_addr, amount, dest_addr, block_num FROM sync.l2_claim WHERE index = $1 AND orig_net = $2"
-	addTokenWrappedSQL    = "INSERT INTO sync.token_wrapped (orig_net, orig_token_addr, wrapped_token_addr, block_num) VALUES ($1, $2, $3, $4)"
-	getTokenWrappedSQL    = "SELECT orig_net, orig_token_addr, wrapped_token_addr, block_num FROM sync.token_wrapped WHERE orig_net = $1 AND orig_token_addr = $2" // nolint
-	addL2TokenWrappedSQL  = "INSERT INTO sync.l2_token_wrapped (orig_net, orig_token_addr, wrapped_token_addr, l2_block_num) VALUES ($1, $2, $3, $4)"
-	getL2TokenWrappedSQL  = "SELECT orig_net, orig_token_addr, wrapped_token_addr, block_num FROM sync.l2_token_wrapped WHERE orig_net = $1 AND orig_token_addr = $2" // nolint
-	consolidateBatchSQL   = "UPDATE sync.batch SET consolidated_tx_hash = $1, consolidated_at = $3, aggregator = $4 WHERE batch_num = $2"
-	addBatchSQL           = "INSERT INTO sync.batch (batch_num, batch_hash, block_num, sequencer, aggregator, consolidated_tx_hash, header, uncles, received_at, chain_id, global_exit_root) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)"
-	getBatchByNumberSQL   = "SELECT block_num, sequencer, aggregator, consolidated_tx_hash, header, uncles, chain_id, global_exit_root, received_at, consolidated_at FROM sync.batch WHERE batch_num = $1"
-	getNumL1DepositsSQL   = "SELECT MAX(deposit_cnt) FROM sync.deposit"
-	getNumL2DepositsSQL   = "SELECT MAX(deposit_cnt) FROM sync.l2_deposit WHERE orig_net = $1"
+	getLastBlockSQL        = "SELECT * FROM sync.block ORDER BY block_num DESC LIMIT 1"
+	getLastL2BlockSQL      = "SELECT * FROM sync.l2_block ORDER BY block_num DESC LIMIT 1"
+	addBlockSQL            = "INSERT INTO sync.block (block_num, block_hash, parent_hash, received_at) VALUES ($1, $2, $3, $4)"
+	addL2BlockSQL          = "INSERT INTO sync.l2_block (block_num, block_hash, parent_hash, received_at) VALUES ($1, $2, $3, $4)"
+	addDepositSQL          = "INSERT INTO sync.deposit (orig_net, token_addr, amount, dest_net, dest_addr, block_num, deposit_cnt) VALUES ($1, $2, $3, $4, $5, $6, $7)"
+	getDepositSQL          = "SELECT orig_net, token_addr, amount, dest_net, dest_addr, block_num, deposit_cnt FROM sync.deposit WHERE orig_net = $1 AND deposit_cnt = $2"
+	addL2DepositSQL        = "INSERT INTO sync.l2_deposit (orig_net, token_addr, amount, dest_net, dest_addr, l2_block_num, deposit_cnt) VALUES ($1, $2, $3, $4, $5, $6, $7)"
+	getL2DepositSQL        = "SELECT orig_net, token_addr, amount, dest_net, dest_addr, block_num, deposit_cnt FROM sync.deposit WHERE dest_net = $1 AND deposit_cnt = $2"
+	getNodeByKeySQL        = "SELECT value, deposit_cnt FROM merkletree.rht WHERE key = $1 AND network = $2"
+	getRootByDepositCntSQL = "SELECT key FROM merkletree.rht WHERE deposit_cnt = $1 AND network = $2"
+	setNodeByKeySQL        = "INSERT INTO merkletree.rht (key, value, network, deposit_cnt) VALUES ($1, $2, $3, $4)"
+	resetNodeByKeySQL      = "DELETE FROM merkletree.rht WHERE deposit_cnt > $1 AND network = $2"
+	getPreviousBlockSQL    = "SELECT * FROM sync.block ORDER BY block_num DESC LIMIT 1 OFFSET $1"
+	getPreviousL2BlockSQL  = "SELECT * FROM sync.l2_block ORDER BY block_num DESC LIMIT 1 OFFSET $1"
+	resetSQL               = "DELETE FROM sync.block WHERE block_num > $1"
+	resetL2SQL             = "DELETE FROM sync.l2_block WHERE block_num > $1"
+	addGlobalExitRootSQL   = "INSERT INTO sync.exit_root (block_num, global_exit_root_num, mainnet_exit_root, rollup_exit_root) VALUES ($1, $2, $3, $4)"
+	getExitRootSQL         = "SELECT block_num, global_exit_root_num, mainnet_exit_root, rollup_exit_root FROM sync.exit_root ORDER BY global_exit_root_num DESC LIMIT 1"
+	addClaimSQL            = "INSERT INTO sync.claim (index, orig_net, token_addr, amount, dest_addr, block_num) VALUES ($1, $2, $3, $4, $5, $6)"
+	getClaimSQL            = "SELECT index, orig_net, token_addr, amount, dest_addr, block_num FROM sync.claim WHERE index = $1 AND orig_net = $2"
+	addL2ClaimSQL          = "INSERT INTO sync.l2_claim (index, orig_net, token_addr, amount, dest_addr, l2_block_num) VALUES ($1, $2, $3, $4, $5, $6)"
+	getL2ClaimSQL          = "SELECT index, orig_net, token_addr, amount, dest_addr, block_num FROM sync.l2_claim WHERE index = $1 AND orig_net = $2"
+	addTokenWrappedSQL     = "INSERT INTO sync.token_wrapped (orig_net, orig_token_addr, wrapped_token_addr, block_num) VALUES ($1, $2, $3, $4)"
+	getTokenWrappedSQL     = "SELECT orig_net, orig_token_addr, wrapped_token_addr, block_num FROM sync.token_wrapped WHERE orig_net = $1 AND orig_token_addr = $2" // nolint
+	addL2TokenWrappedSQL   = "INSERT INTO sync.l2_token_wrapped (orig_net, orig_token_addr, wrapped_token_addr, l2_block_num) VALUES ($1, $2, $3, $4)"
+	getL2TokenWrappedSQL   = "SELECT orig_net, orig_token_addr, wrapped_token_addr, block_num FROM sync.l2_token_wrapped WHERE orig_net = $1 AND orig_token_addr = $2" // nolint
+	consolidateBatchSQL    = "UPDATE sync.batch SET consolidated_tx_hash = $1, consolidated_at = $3, aggregator = $4 WHERE batch_num = $2"
+	addBatchSQL            = "INSERT INTO sync.batch (batch_num, batch_hash, block_num, sequencer, aggregator, consolidated_tx_hash, header, uncles, received_at, chain_id, global_exit_root) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)"
+	getBatchByNumberSQL    = "SELECT block_num, sequencer, aggregator, consolidated_tx_hash, header, uncles, chain_id, global_exit_root, received_at, consolidated_at FROM sync.batch WHERE batch_num = $1"
+	getNumL1DepositsSQL    = "SELECT MAX(deposit_cnt) FROM sync.deposit"
+	getNumL2DepositsSQL    = "SELECT MAX(deposit_cnt) FROM sync.l2_deposit WHERE orig_net = $1"
 )
 
 var (
@@ -152,23 +152,41 @@ func (s *PostgresStorage) GetL2Deposit(ctx context.Context, depositCounterUser u
 }
 
 // Get gets value of key from the merkle tree
-func (s *PostgresStorage) Get(ctx context.Context, key []byte) ([][]byte, error) {
-	var data [][]byte
-	err := s.db.QueryRow(ctx, getNodeByKeySQL, key, string(ctx.Value(contextKeyNetwork).(uint8))).Scan(pq.Array(&data))
+func (s *PostgresStorage) Get(ctx context.Context, key []byte) ([][]byte, uint, error) {
+	var (
+		data       [][]byte
+		depositCnt uint
+	)
+
+	err := s.db.QueryRow(ctx, getNodeByKeySQL, key, string(ctx.Value(contextKeyNetwork).(uint8))).Scan(pq.Array(&data), &depositCnt)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, 0, gerror.ErrStorageNotFound
+		}
+		return nil, 0, err
+	}
+	return data, depositCnt, nil
+}
+
+// Get gets root by the deposit count from the merkle tree
+func (s *PostgresStorage) GetRoot(ctx context.Context, depositCnt uint) ([]byte, error) {
+	var root []byte
+
+	err := s.db.QueryRow(ctx, getRootByDepositCntSQL, depositCnt, string(ctx.Value(contextKeyNetwork).(uint8))).Scan(&root)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, gerror.ErrStorageNotFound
 		}
 		return nil, err
 	}
-	return data, nil
+	return root, nil
 }
 
 // Set inserts a key-value pair into the db.
 // If record with such a key already exists its assumed that the value is correct,
 // because it's a reverse hash table, and the key is a hash of the value
-func (s *PostgresStorage) Set(ctx context.Context, key []byte, value [][]byte) error {
-	_, err := s.db.Exec(ctx, setNodeByKeySQL, key, pq.Array(value), string(ctx.Value(contextKeyNetwork).(uint8)))
+func (s *PostgresStorage) Set(ctx context.Context, key []byte, value [][]byte, depositCnt uint) error {
+	_, err := s.db.Exec(ctx, setNodeByKeySQL, key, pq.Array(value), string(ctx.Value(contextKeyNetwork).(uint8)), depositCnt)
 	if err != nil {
 		if strings.Contains(err.Error(), "duplicate key value violates unique constraint") {
 			return nil
@@ -178,26 +196,13 @@ func (s *PostgresStorage) Set(ctx context.Context, key []byte, value [][]byte) e
 	return nil
 }
 
-// GetMTRoot returns deposit count for the specific root in the merkle tree
-func (s *PostgresStorage) GetMTRoot(ctx context.Context, root []byte) (uint, error) {
-	var index uint
-	err := s.db.QueryRow(ctx, getMTRootSQL, root, string(ctx.Value(contextKeyNetwork).(uint8))).Scan(&index)
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return 0, gerror.ErrStorageNotFound
-		}
-		return 0, err
-	}
-	return index, nil
-}
-
-// SetMTRoot inserts a track of root to the merkle tree
-func (s *PostgresStorage) SetMTRoot(ctx context.Context, index uint, root []byte) error {
-	_, err := s.db.Exec(ctx, setMTRootSQL, index, root, string(ctx.Value(contextKeyNetwork).(uint8)))
+// ResetMT resets nodes of the Merkle Tree.
+func (s *PostgresStorage) ResetMT(ctx context.Context, depositCnt uint) error {
+	_, err := s.db.Exec(ctx, resetNodeByKeySQL, depositCnt, string(ctx.Value(contextKeyNetwork).(uint8)))
 	return err
 }
 
-// GetPreviousBlock gets the offset previous block respect to latest
+// GetPreviousBlock gets the offset previous block respect to latest.
 func (s *PostgresStorage) GetPreviousBlock(ctx context.Context, offset uint64) (*etherman.Block, error) {
 	var block etherman.Block
 	err := s.db.QueryRow(ctx, getPreviousBlockSQL, offset).Scan(&block.BlockNumber, &block.BlockHash, &block.ParentHash, &block.ReceivedAt)
@@ -210,7 +215,7 @@ func (s *PostgresStorage) GetPreviousBlock(ctx context.Context, offset uint64) (
 	return &block, nil
 }
 
-// GetPreviousL2Block gets the offset previous block respect to latest
+// GetPreviousL2Block gets the offset previous block respect to latest.
 func (s *PostgresStorage) GetPreviousL2Block(ctx context.Context, offset uint64) (*etherman.Block, error) {
 	var block etherman.Block
 	err := s.db.QueryRow(ctx, getPreviousL2BlockSQL, offset).Scan(&block.BlockNumber, &block.BlockHash, &block.ParentHash, &block.ReceivedAt)

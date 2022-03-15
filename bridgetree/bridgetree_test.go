@@ -73,7 +73,7 @@ func TestBridgeTree(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	bt, err := NewBridgeTree(cfg, []uint64{0, 1000}, store, store)
+	bt, err := NewBridgeTree(cfg, []uint{0, 1000}, store, store)
 	require.NoError(t, err)
 
 	t.Run("Test adding deposit for the bridge tree", func(t *testing.T) {
@@ -111,6 +111,11 @@ func TestBridgeTree(t *testing.T) {
 
 			log.Println(globalExitRoot)
 			log.Println(merkleProof)
+		}
+
+		for i := len(testVectors) - 1; i >= 0; i-- {
+			err := bt.ReorgMT(testVectors[i].DepositCount, testVectors[i].OriginalNetwork)
+			require.NoError(t, err)
 		}
 	})
 }

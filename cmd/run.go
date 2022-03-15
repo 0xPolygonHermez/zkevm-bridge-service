@@ -54,7 +54,7 @@ func start(ctx *cli.Context) error {
 			return err
 		}
 
-		brdigeTree, err = bridgetree.NewBridgeTree(c.BridgeTree, []uint64{0, 1000}, pgStorage, pgStorage)
+		brdigeTree, err = bridgetree.NewBridgeTree(c.BridgeTree, []uint{0, 1000}, pgStorage, pgStorage) // need to update the config to init networkIDs
 		if err != nil {
 			log.Error(err)
 			return err

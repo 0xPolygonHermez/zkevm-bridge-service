@@ -15,7 +15,7 @@ const (
 // BridgeTree struct
 type BridgeTree struct {
 	exitRootTrees []*MerkleTree
-	networkIDs    map[uint64]uint8
+	networkIDs    map[uint]uint8
 	storage       bridgeTreeStorage
 }
 
@@ -24,9 +24,9 @@ var (
 )
 
 // NewBridgeTree creates new BridgeTree.
-func NewBridgeTree(cfg Config, networks []uint64, storage bridgeTreeStorage, store merkleTreeStore) (*BridgeTree, error) {
+func NewBridgeTree(cfg Config, networks []uint, storage bridgeTreeStorage, store merkleTreeStore) (*BridgeTree, error) {
 	var (
-		networkIDs    = make(map[uint64]uint8)
+		networkIDs    = make(map[uint]uint8)
 		exitRootTrees []*MerkleTree
 	)
 
@@ -53,19 +53,19 @@ func (bt *BridgeTree) AddDeposit(deposit *etherman.Deposit) error {
 
 	leaf := hashDeposit(deposit)
 
-	tID := bt.networkIDs[uint64(deposit.OriginNetwork)]
+	tID := bt.networkIDs[deposit.OriginNetwork]
 	ctx = context.WithValue(context.TODO(), contextKeyNetwork, tID) //nolint
 	return bt.exitRootTrees[tID-1].addLeaf(ctx, leaf)
 }
 
 // GetClaim returns claim information to the user.
-func (bt *BridgeTree) GetClaim(networkID uint, index uint, merkleProof [][KeyLen]byte) (*etherman.GlobalExitRoot, error) {
+func (bt *BridgeTree) GetClaim(networkID uint, index uint, merkleProof [][bridgetree.KeyLen]byte) (*etherman.GlobalExitRoot, error) {
 	var (
 		ctx   context.Context
 		proof [][KeyLen]byte
 	)
 
-	tID := bt.networkIDs[uint64(networkID)]
+	tID := bt.networkIDs[networkID]
 	ctx = context.WithValue(context.TODO(), contextKeyNetwork, tID) //nolint
 	globalExitRoot, err := bt.storage.GetLatestExitRoot(context.TODO())
 	if err != nil {
@@ -82,4 +82,11 @@ func (bt *BridgeTree) GetClaim(networkID uint, index uint, merkleProof [][KeyLen
 		GlobalExitRootNum: globalExitRoot.GlobalExitRootNum,
 		ExitRoots:         []common.Hash{bt.exitRootTrees[0].root, bt.exitRootTrees[1].root},
 	}, err
+}
+
+func (bt *BridgeTree) ReorgMT(depositCount uint, networkID uint) error {
+	var ctx context.Context
+	tID := bt.networkIDs[networkID]
+	ctx = context.WithValue(context.TODO(), contextKeyNetwork, tID) //nolint
+	return bt.exitRootTrees[tID-1].resetLeaf(ctx, depositCount)
 }

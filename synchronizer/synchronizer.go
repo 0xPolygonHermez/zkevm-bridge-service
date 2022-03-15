@@ -310,9 +310,19 @@ func (s *ClientSynchronizer) processL2BlockRange(blocks []etherman.Block, order 
 
 // This function allows reset the state until an specific block
 func (s *ClientSynchronizer) resetState(blockNum uint64) error {
+	var (
+		networkID  uint = 0 // WIP, need to parse networkID
+		depositCnt uint64
+	)
+
 	if s.l2 {
 		log.Debug("Reverting synchronization to batch: ", blockNum)
 		err := s.storage.ResetL2(s.ctx, blockNum)
+		if err != nil {
+			return err
+		}
+
+		depositCnt, err = s.storage.GetNumberL2Deposits(s.ctx, networkID)
 		if err != nil {
 			return err
 		}
@@ -322,8 +332,14 @@ func (s *ClientSynchronizer) resetState(blockNum uint64) error {
 		if err != nil {
 			return err
 		}
+
+		depositCnt, err = s.storage.GetNumberL1Deposits(s.ctx)
+		if err != nil {
+			return err
+		}
 	}
-	return nil
+
+	return s.bridgeTree.ReorgMT(uint(depositCnt), networkID)
 }
 
 /*

@@ -8,10 +8,10 @@ import (
 
 // merkleTreeStore interface for the Merkle Tree
 type merkleTreeStore interface {
-	Get(ctx context.Context, key []byte) ([][]byte, error)
-	Set(ctx context.Context, key []byte, value [][]byte) error
-	GetMTRoot(ctx context.Context, root []byte) (uint, error)
-	SetMTRoot(ctx context.Context, index uint, root []byte) error
+	Get(ctx context.Context, key []byte) ([][]byte, uint, error)
+	Set(ctx context.Context, key []byte, value [][]byte, depositCount uint) error
+	ResetMT(ctx context.Context, depositCount uint) error
+	GetRoot(ctx context.Context, depositCount uint) ([]byte, error)
 }
 
 // bridgeTreeStorage interface for the Bridge Tree
