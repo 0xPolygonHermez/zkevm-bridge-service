@@ -92,10 +92,12 @@ func TestMerkleTree(t *testing.T) {
 			}
 			assert.Equal(t, mt.count, testVector.ExpectedCount)
 
-			err = mt.resetLeaf(ctx, 1)
-			require.NoError(t, err)
-			assert.Equal(t, hex.EncodeToString(mt.root[:]), testVector.ExpectedRoots[1])
-			assert.Equal(t, mt.count, 1)
+			for i := len(testVector.Leaves) - 1; i >= 0; i-- {
+				err := mt.resetLeaf(ctx, uint(i))
+				require.NoError(t, err)
+				assert.Equal(t, hex.EncodeToString(mt.root[:]), testVector.ExpectedRoots[i])
+				assert.Equal(t, mt.count, uint(i))
+			}
 		})
 	}
 }

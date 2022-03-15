@@ -25,8 +25,8 @@ const (
 	addL2DepositSQL        = "INSERT INTO sync.l2_deposit (orig_net, token_addr, amount, dest_net, dest_addr, l2_block_num, deposit_cnt) VALUES ($1, $2, $3, $4, $5, $6, $7)"
 	getL2DepositSQL        = "SELECT orig_net, token_addr, amount, dest_net, dest_addr, block_num, deposit_cnt FROM sync.deposit WHERE dest_net = $1 AND deposit_cnt = $2"
 	getNodeByKeySQL        = "SELECT value, deposit_cnt FROM merkletree.rht WHERE key = $1 AND network = $2"
-	getRootByDepositCntSQL = "SELECT key FROM merkletree.rht WHERE deposit_cnt = $1 AND network = $2"
-	setNodeByKeySQL        = "INSERT INTO merkletree.rht (key, value, network, deposit_cnt) VALUES ($1, $2, $3, $4)"
+	getRootByDepositCntSQL = "SELECT key FROM merkletree.rht WHERE deposit_cnt = $1 AND depth = $2 AND network = $3"
+	setNodeByKeySQL        = "INSERT INTO merkletree.rht (key, value, network, deposit_cnt, depth) VALUES ($1, $2, $3, $4, $5)"
 	resetNodeByKeySQL      = "DELETE FROM merkletree.rht WHERE deposit_cnt > $1 AND network = $2"
 	getPreviousBlockSQL    = "SELECT * FROM sync.block ORDER BY block_num DESC LIMIT 1 OFFSET $1"
 	getPreviousL2BlockSQL  = "SELECT * FROM sync.l2_block ORDER BY block_num DESC LIMIT 1 OFFSET $1"
@@ -168,11 +168,11 @@ func (s *PostgresStorage) Get(ctx context.Context, key []byte) ([][]byte, uint, 
 	return data, depositCnt, nil
 }
 
-// Get gets root by the deposit count from the merkle tree
-func (s *PostgresStorage) GetRoot(ctx context.Context, depositCnt uint) ([]byte, error) {
+// GetRoot gets root by the deposit count from the merkle tree
+func (s *PostgresStorage) GetRoot(ctx context.Context, depositCnt uint, depth uint8) ([]byte, error) {
 	var root []byte
 
-	err := s.db.QueryRow(ctx, getRootByDepositCntSQL, depositCnt, string(ctx.Value(contextKeyNetwork).(uint8))).Scan(&root)
+	err := s.db.QueryRow(ctx, getRootByDepositCntSQL, depositCnt, string(depth+1), string(ctx.Value(contextKeyNetwork).(uint8))).Scan(&root)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, gerror.ErrStorageNotFound
@@ -185,8 +185,8 @@ func (s *PostgresStorage) GetRoot(ctx context.Context, depositCnt uint) ([]byte,
 // Set inserts a key-value pair into the db.
 // If record with such a key already exists its assumed that the value is correct,
 // because it's a reverse hash table, and the key is a hash of the value
-func (s *PostgresStorage) Set(ctx context.Context, key []byte, value [][]byte, depositCnt uint) error {
-	_, err := s.db.Exec(ctx, setNodeByKeySQL, key, pq.Array(value), string(ctx.Value(contextKeyNetwork).(uint8)), depositCnt)
+func (s *PostgresStorage) Set(ctx context.Context, key []byte, value [][]byte, depositCnt uint, depth uint8) error {
+	_, err := s.db.Exec(ctx, setNodeByKeySQL, key, pq.Array(value), string(ctx.Value(contextKeyNetwork).(uint8)), depositCnt, string(depth+1))
 	if err != nil {
 		if strings.Contains(err.Error(), "duplicate key value violates unique constraint") {
 			return nil

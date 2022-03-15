@@ -59,7 +59,7 @@ func (bt *BridgeTree) AddDeposit(deposit *etherman.Deposit) error {
 }
 
 // GetClaim returns claim information to the user.
-func (bt *BridgeTree) GetClaim(networkID uint, index uint, merkleProof [][bridgetree.KeyLen]byte) (*etherman.GlobalExitRoot, error) {
+func (bt *BridgeTree) GetClaim(networkID uint, index uint, merkleProof [][KeyLen]byte) (*etherman.GlobalExitRoot, error) {
 	var (
 		ctx   context.Context
 		proof [][KeyLen]byte
@@ -84,6 +84,7 @@ func (bt *BridgeTree) GetClaim(networkID uint, index uint, merkleProof [][bridge
 	}, err
 }
 
+// ReorgMT reorg the specific merkle tree.
 func (bt *BridgeTree) ReorgMT(depositCount uint, networkID uint) error {
 	var ctx context.Context
 	tID := bt.networkIDs[networkID]

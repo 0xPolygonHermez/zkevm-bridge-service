@@ -26,7 +26,7 @@ func init() {
 // NewMerkleTree creates new MerkleTree.
 func NewMerkleTree(ctx context.Context, store merkleTreeStore, height uint8) (*MerkleTree, error) {
 	for h := uint8(0); h < height; h++ {
-		err := store.Set(ctx, zeroHashes[h+1][:], [][]byte{zeroHashes[h][:], zeroHashes[h][:]}, 0)
+		err := store.Set(ctx, zeroHashes[h+1][:], [][]byte{zeroHashes[h][:], zeroHashes[h][:]}, 0, h)
 		if err != nil {
 			return nil, err
 		}
@@ -90,13 +90,13 @@ func (mt *MerkleTree) addLeaf(ctx context.Context, leaf [KeyLen]byte) error {
 	for h := uint8(0); h < mt.height; h++ {
 		if index&(1<<h) > 0 {
 			parent = hash(siblings[h], cur)
-			err := mt.store.Set(ctx, parent[:], [][]byte{siblings[h][:], cur[:]}, index+1)
+			err := mt.store.Set(ctx, parent[:], [][]byte{siblings[h][:], cur[:]}, index+1, h)
 			if err != nil {
 				return err
 			}
 		} else {
 			parent = hash(cur, siblings[h])
-			err := mt.store.Set(ctx, parent[:], [][]byte{cur[:], siblings[h][:]}, index+1)
+			err := mt.store.Set(ctx, parent[:], [][]byte{cur[:], siblings[h][:]}, index+1, h)
 			if err != nil {
 				return err
 			}
@@ -117,7 +117,7 @@ func (mt *MerkleTree) resetLeaf(ctx context.Context, depositCount uint) error {
 	}
 
 	mt.count = depositCount
-	root, err := mt.store.GetRoot(ctx, depositCount)
+	root, err := mt.store.GetRoot(ctx, depositCount, mt.height-1) // To parse uint8 to char in database, we are using one-index in the database
 	if err != nil {
 		return err
 	}
