@@ -298,7 +298,7 @@ func (etherMan *ClientEtherMan) processEvent(ctx context.Context, vLog types.Log
 		)
 		depositAux.Amount = deposit.Amount
 		depositAux.BlockNumber = vLog.BlockNumber
-		depositAux.OriginNetwork = uint(deposit.OriginNetwork)
+		depositAux.OriginalNetwork = uint(deposit.OriginNetwork)
 		depositAux.DestinationAddress = deposit.DestinationAddress
 		depositAux.DestinationNetwork = uint(deposit.DestinationNetwork)
 		depositAux.TokenAddress = deposit.TokenAddres
