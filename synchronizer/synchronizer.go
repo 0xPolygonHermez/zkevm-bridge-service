@@ -22,7 +22,7 @@ type Synchronizer interface {
 	Stop()
 }
 
-// ClientSynchronizer
+// ClientSynchronizer struct
 type ClientSynchronizer struct {
 	etherMan       localEtherMan
 	storage        db.Storage
@@ -68,9 +68,9 @@ func (s *ClientSynchronizer) Sync() error {
 		if err != nil {
 			if err == gerror.ErrStorageNotFound {
 				log.Warn("error getting the latest block. No data stored. Setting genesis block. Error: ", err)
-				lastBlockSynced = &etherman.Block {
+				lastBlockSynced = &etherman.Block{
 					BlockNumber: s.genBlockNumber,
-					NetworkID: s.networkID,
+					NetworkID:   s.networkID,
 				}
 			} else {
 				log.Fatal("unexpected error getting the latest block. Error: ", err)

@@ -98,7 +98,7 @@ func TestBridgeTree(t *testing.T) {
 				BlockNumber:       0,
 				GlobalExitRootNum: big.NewInt(int64(i)),
 				ExitRoots:         []common.Hash{common.BytesToHash(bt.exitRootTrees[0].root[:]), common.BytesToHash(bt.exitRootTrees[1].root[:])},
-				BlockID: id,
+				BlockID:           id,
 			})
 			require.NoError(t, err)
 

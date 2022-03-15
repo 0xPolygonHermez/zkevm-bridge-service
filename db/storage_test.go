@@ -66,7 +66,7 @@ func TestExitRootStore(t *testing.T) {
 		Amount:             amount,
 		DestinationAddress: common.HexToAddress("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9fc"),
 		BlockNumber:        1,
-		BlockID: id,
+		BlockID:            id,
 		DestinationNetwork: 2,
 	}
 	err = storage.AddClaim(ctx, &claim)
@@ -90,7 +90,7 @@ func TestExitRootStore(t *testing.T) {
 		DestinationAddress: common.HexToAddress("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9fc"),
 		DestinationNetwork: 2,
 		BlockNumber:        1,
-		BlockID: id,
+		BlockID:            id,
 	}
 	err = storage.AddDeposit(ctx, &deposit)
 	require.NoError(t, err)
@@ -110,8 +110,8 @@ func TestExitRootStore(t *testing.T) {
 		OriginalTokenAddress: common.HexToAddress("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9fe"),
 		WrappedTokenAddress:  common.HexToAddress("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9fc"),
 		BlockNumber:          1,
-		BlockID: id,
-		DestinationNetwork: 2,
+		BlockID:              id,
+		DestinationNetwork:   2,
 	}
 	err = storage.AddTokenWrapped(ctx, &tokenWrapped)
 	require.NoError(t, err)
@@ -136,8 +136,8 @@ func TestExitRootStore(t *testing.T) {
 		GlobalExitRoot: common.HexToHash("0x30e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9fe"),
 		Header:         &head,
 		ReceivedAt:     time.Now(),
-		BlockID: id,
-		NetworkID: networkID,
+		BlockID:        id,
+		NetworkID:      networkID,
 	}
 	err = storage.AddBatch(ctx, &batch)
 	require.NoError(t, err)

@@ -15,26 +15,26 @@ import (
 )
 
 const (
-	getLastBlockSQL       = "SELECT * FROM sync.block where network_id = $1 ORDER BY block_num DESC LIMIT 1"
-	addBlockSQL           = "INSERT INTO sync.block (block_num, block_hash, parent_hash, received_at, network_id) VALUES ($1, $2, $3, $4, $5) RETURNING id;"
-	addDepositSQL         = "INSERT INTO sync.deposit (orig_net, token_addr, amount, dest_net, dest_addr, block_num, deposit_cnt, block_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"
-	getDepositSQL         = "SELECT orig_net, token_addr, amount, dest_net, dest_addr, block_num, deposit_cnt, block_id FROM sync.deposit WHERE orig_net = $1 AND deposit_cnt = $2"
-	getNodeByKeySQL       = "SELECT value FROM merkletree.rht WHERE key = $1 AND network = $2"
-	setNodeByKeySQL       = "INSERT INTO merkletree.rht (key, value, network) VALUES ($1, $2, $3)"
-	getMTRootSQL          = "SELECT index FROM merkletree.root_track WHERE root = $1 AND network = $2"
-	setMTRootSQL          = "INSERT INTO merkletree.root_track (index, root, network) VALUES($1, $2, $3)"
-	getPreviousBlockSQL   = "SELECT id, block_num, block_hash, parent_hash, network_id, received_at FROM sync.block WHERE network_id = $1 ORDER BY block_num DESC LIMIT 1 OFFSET $2"
-	resetSQL              = "DELETE FROM sync.block WHERE block_num > $1 AND network_id = $2"
-	addGlobalExitRootSQL  = "INSERT INTO sync.exit_root (block_num, global_exit_root_num, mainnet_exit_root, rollup_exit_root, block_id, network_id) VALUES ($1, $2, $3, $4, $5, $6)"
-	getExitRootSQL        = "SELECT block_id, block_num, global_exit_root_num, mainnet_exit_root, rollup_exit_root, network_id FROM sync.exit_root WHERE network_id = $1 ORDER BY global_exit_root_num DESC LIMIT 1"
-	addClaimSQL           = "INSERT INTO sync.claim (index, orig_net, token_addr, amount, dest_addr, block_num, dest_net, block_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"
-	getClaimSQL           = "SELECT index, orig_net, token_addr, amount, dest_addr, block_num, dest_net, block_id FROM sync.claim WHERE index = $1 AND orig_net = $2"
-	addTokenWrappedSQL    = "INSERT INTO sync.token_wrapped (orig_net, orig_token_addr, wrapped_token_addr, block_num, dest_net, block_id) VALUES ($1, $2, $3, $4, $5, $6)"
-	getTokenWrappedSQL    = "SELECT orig_net, orig_token_addr, wrapped_token_addr, block_num, dest_net, block_id FROM sync.token_wrapped WHERE orig_net = $1 AND orig_token_addr = $2" // nolint
-	consolidateBatchSQL   = "UPDATE sync.batch SET consolidated_tx_hash = $1, consolidated_at = $2, aggregator = $3 WHERE batch_num = $4 AND network_id = $5"
-	addBatchSQL           = "INSERT INTO sync.batch (batch_num, batch_hash, block_num, sequencer, aggregator, consolidated_tx_hash, header, uncles, received_at, chain_id, global_exit_root, block_id, network_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)"
-	getBatchByNumberSQL   = "SELECT block_num, sequencer, aggregator, consolidated_tx_hash, header, uncles, chain_id, global_exit_root, received_at, consolidated_at, block_id, network_id FROM sync.batch WHERE batch_num = $1 AND network_id = $2"
-	getNumDepositsSQL   = "SELECT MAX(deposit_cnt) FROM sync.deposit WHERE orig_net = $1"
+	getLastBlockSQL      = "SELECT * FROM sync.block where network_id = $1 ORDER BY block_num DESC LIMIT 1"
+	addBlockSQL          = "INSERT INTO sync.block (block_num, block_hash, parent_hash, received_at, network_id) VALUES ($1, $2, $3, $4, $5) RETURNING id;"
+	addDepositSQL        = "INSERT INTO sync.deposit (orig_net, token_addr, amount, dest_net, dest_addr, block_num, deposit_cnt, block_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"
+	getDepositSQL        = "SELECT orig_net, token_addr, amount, dest_net, dest_addr, block_num, deposit_cnt, block_id FROM sync.deposit WHERE orig_net = $1 AND deposit_cnt = $2"
+	getNodeByKeySQL      = "SELECT value FROM merkletree.rht WHERE key = $1 AND network = $2"
+	setNodeByKeySQL      = "INSERT INTO merkletree.rht (key, value, network) VALUES ($1, $2, $3)"
+	getMTRootSQL         = "SELECT index FROM merkletree.root_track WHERE root = $1 AND network = $2"
+	setMTRootSQL         = "INSERT INTO merkletree.root_track (index, root, network) VALUES($1, $2, $3)"
+	getPreviousBlockSQL  = "SELECT id, block_num, block_hash, parent_hash, network_id, received_at FROM sync.block WHERE network_id = $1 ORDER BY block_num DESC LIMIT 1 OFFSET $2"
+	resetSQL             = "DELETE FROM sync.block WHERE block_num > $1 AND network_id = $2"
+	addGlobalExitRootSQL = "INSERT INTO sync.exit_root (block_num, global_exit_root_num, mainnet_exit_root, rollup_exit_root, block_id, network_id) VALUES ($1, $2, $3, $4, $5, $6)"
+	getExitRootSQL       = "SELECT block_id, block_num, global_exit_root_num, mainnet_exit_root, rollup_exit_root, network_id FROM sync.exit_root WHERE network_id = $1 ORDER BY global_exit_root_num DESC LIMIT 1"
+	addClaimSQL          = "INSERT INTO sync.claim (index, orig_net, token_addr, amount, dest_addr, block_num, dest_net, block_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"
+	getClaimSQL          = "SELECT index, orig_net, token_addr, amount, dest_addr, block_num, dest_net, block_id FROM sync.claim WHERE index = $1 AND orig_net = $2"
+	addTokenWrappedSQL   = "INSERT INTO sync.token_wrapped (orig_net, orig_token_addr, wrapped_token_addr, block_num, dest_net, block_id) VALUES ($1, $2, $3, $4, $5, $6)"
+	getTokenWrappedSQL   = "SELECT orig_net, orig_token_addr, wrapped_token_addr, block_num, dest_net, block_id FROM sync.token_wrapped WHERE orig_net = $1 AND orig_token_addr = $2" // nolint
+	consolidateBatchSQL  = "UPDATE sync.batch SET consolidated_tx_hash = $1, consolidated_at = $2, aggregator = $3 WHERE batch_num = $4 AND network_id = $5"
+	addBatchSQL          = "INSERT INTO sync.batch (batch_num, batch_hash, block_num, sequencer, aggregator, consolidated_tx_hash, header, uncles, received_at, chain_id, global_exit_root, block_id, network_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)"
+	getBatchByNumberSQL  = "SELECT block_num, sequencer, aggregator, consolidated_tx_hash, header, uncles, chain_id, global_exit_root, received_at, consolidated_at, block_id, network_id FROM sync.batch WHERE batch_num = $1 AND network_id = $2"
+	getNumDepositsSQL    = "SELECT MAX(deposit_cnt) FROM sync.deposit WHERE orig_net = $1"
 )
 
 var (
@@ -74,7 +74,7 @@ func (s *PostgresStorage) GetLastBlock(ctx context.Context, networkID uint) (*et
 func (s *PostgresStorage) AddBlock(ctx context.Context, block *etherman.Block) (uint64, error) {
 	//err := s.db.Exec(ctx, addBlockSQL, block.BlockNumber, block.BlockHash.Bytes(), block.ParentHash.Bytes(), block.ReceivedAt, block.NetworkID).
 	var id uint64
-	err := s.db.QueryRow(ctx, addBlockSQL,  block.BlockNumber, block.BlockHash.Bytes(), block.ParentHash.Bytes(), block.ReceivedAt, block.NetworkID).Scan(&id)
+	err := s.db.QueryRow(ctx, addBlockSQL, block.BlockNumber, block.BlockHash.Bytes(), block.ParentHash.Bytes(), block.ReceivedAt, block.NetworkID).Scan(&id)
 	return id, err
 }
 

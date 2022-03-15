@@ -7,11 +7,11 @@ import (
 	"math/big"
 
 	"github.com/ethereum/go-ethereum"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/hermeznetwork/hermez-core/etherman/smartcontracts/bridge"
 	"github.com/hermeznetwork/hermez-core/etherman/smartcontracts/globalexitrootmanager"
 	"github.com/hermeznetwork/hermez-core/etherman/smartcontracts/proofofefficiency"
