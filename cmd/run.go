@@ -28,7 +28,7 @@ func start(ctx *cli.Context) error {
 		return err
 	}
 
-	etherman, l2Ethermans, err := newEtherman(*c)
+	etherman, l2Ethermans, err := newEthermans(*c)
 	if err != nil {
 		log.Error(err)
 		return err
@@ -78,17 +78,17 @@ func setupLog(c log.Config) {
 	log.Init(c)
 }
 
-func newEtherman(c config.Config) (*etherman.ClientEtherMan, []*etherman.ClientEtherMan, error) {
+func newEthermans(c config.Config) (*etherman.ClientEtherMan, []*etherman.ClientEtherMan, error) {
 	l1Etherman, err := etherman.NewEtherman(c.Etherman, c.NetworkConfig.PoEAddr, c.NetworkConfig.BridgeAddr, c.NetworkConfig.GlobalExitRootManAddr)
 	if err != nil {
 		return nil, nil, err
 	}
-	if len(c.L2BridgeAddr) != len(c.Etherman.L2URL) {
+	if len(c.L2BridgeAddrs) != len(c.Etherman.L2URLs) {
 		log.Fatal("Environment configuration error. L2 bridge addresses and l2 hermezCore urls mismatch")
 	}
 	var l2Ethermans []*etherman.ClientEtherMan
-	for i, addr := range c.L2BridgeAddr {
-		l2Etherman, err := etherman.NewL2Etherman(c.Etherman.L2URL[i], addr)
+	for i, addr := range c.L2BridgeAddrs {
+		l2Etherman, err := etherman.NewL2Etherman(c.Etherman.L2URLs[i], addr)
 		if err != nil {
 			return l1Etherman, nil, err
 		}

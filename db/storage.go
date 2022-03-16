@@ -20,7 +20,7 @@ type Storage interface {
 	Rollback(ctx context.Context) error
 	BeginDBTransaction(ctx context.Context) error
 	AddExitRoot(ctx context.Context, exitRoot *etherman.GlobalExitRoot) error
-	GetLatestExitRoot(ctx context.Context, networkID uint) (*etherman.GlobalExitRoot, error)
+	GetLatestExitRoot(ctx context.Context) (*etherman.GlobalExitRoot, error)
 	AddClaim(ctx context.Context, claim *etherman.Claim) error
 	AddTokenWrapped(ctx context.Context, tokeWrapped *etherman.TokenWrapped) error
 	GetTokenWrapped(ctx context.Context, originalNetwork uint, originalTokenAddress common.Address) (*etherman.TokenWrapped, error)

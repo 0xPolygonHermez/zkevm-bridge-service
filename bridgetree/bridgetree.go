@@ -67,7 +67,7 @@ func (bt *BridgeTree) GetClaim(networkID uint, index uint, merkleProof [][KeyLen
 
 	tID := bt.networkIDs[uint64(networkID)]
 	ctx = context.WithValue(context.TODO(), contextKeyNetwork, tID) //nolint
-	globalExitRoot, err := bt.storage.GetLatestExitRoot(context.TODO(), networkID)
+	globalExitRoot, err := bt.storage.GetLatestExitRoot(context.TODO())
 	if err != nil {
 		return nil, err
 	}

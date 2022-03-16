@@ -32,7 +32,7 @@ func TestExitRootStore(t *testing.T) {
 	storage, err := NewStorage(storageCfg)
 	require.NoError(t, err)
 	var networkID uint = 1
-	_, err = storage.GetLatestExitRoot(ctx, networkID)
+	_, err = storage.GetLatestExitRoot(ctx)
 	require.Error(t, err)
 
 	var exitRoot etherman.GlobalExitRoot
@@ -47,11 +47,10 @@ func TestExitRootStore(t *testing.T) {
 	id, err := storage.AddBlock(ctx, &block)
 	require.NoError(t, err)
 	exitRoot.BlockID = id
-	exitRoot.NetworkID = networkID
 	err = storage.AddExitRoot(ctx, &exitRoot)
 	require.NoError(t, err)
 
-	exit, err := storage.GetLatestExitRoot(ctx, networkID)
+	exit, err := storage.GetLatestExitRoot(ctx)
 	require.NoError(t, err)
 	assert.Equal(t, exitRoot.GlobalExitRootNum, exit.GlobalExitRootNum)
 	assert.Equal(t, exitRoot.ExitRoots[0], exit.ExitRoots[0])

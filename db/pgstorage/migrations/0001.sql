@@ -19,8 +19,7 @@ CREATE TABLE sync.exit_root
     block_num            BIGINT NOT NULL,
     global_exit_root_num BIGINT,
     mainnet_exit_root    BYTEA,
-    rollup_exit_root     BYTEA,
-    network_id           INTEGER
+    rollup_exit_root     BYTEA
 );
 
 CREATE TABLE sync.batch

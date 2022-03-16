@@ -25,8 +25,8 @@ const (
 	setMTRootSQL         = "INSERT INTO merkletree.root_track (index, root, network) VALUES($1, $2, $3)"
 	getPreviousBlockSQL  = "SELECT id, block_num, block_hash, parent_hash, network_id, received_at FROM sync.block WHERE network_id = $1 ORDER BY block_num DESC LIMIT 1 OFFSET $2"
 	resetSQL             = "DELETE FROM sync.block WHERE block_num > $1 AND network_id = $2"
-	addGlobalExitRootSQL = "INSERT INTO sync.exit_root (block_num, global_exit_root_num, mainnet_exit_root, rollup_exit_root, block_id, network_id) VALUES ($1, $2, $3, $4, $5, $6)"
-	getExitRootSQL       = "SELECT block_id, block_num, global_exit_root_num, mainnet_exit_root, rollup_exit_root, network_id FROM sync.exit_root WHERE network_id = $1 ORDER BY global_exit_root_num DESC LIMIT 1"
+	addGlobalExitRootSQL = "INSERT INTO sync.exit_root (block_num, global_exit_root_num, mainnet_exit_root, rollup_exit_root, block_id) VALUES ($1, $2, $3, $4, $5)"
+	getExitRootSQL       = "SELECT block_id, block_num, global_exit_root_num, mainnet_exit_root, rollup_exit_root FROM sync.exit_root ORDER BY global_exit_root_num DESC LIMIT 1"
 	addClaimSQL          = "INSERT INTO sync.claim (index, orig_net, token_addr, amount, dest_addr, block_num, dest_net, block_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"
 	getClaimSQL          = "SELECT index, orig_net, token_addr, amount, dest_addr, block_num, dest_net, block_id FROM sync.claim WHERE index = $1 AND orig_net = $2"
 	addTokenWrappedSQL   = "INSERT INTO sync.token_wrapped (orig_net, orig_token_addr, wrapped_token_addr, block_num, dest_net, block_id) VALUES ($1, $2, $3, $4, $5, $6)"
@@ -72,7 +72,6 @@ func (s *PostgresStorage) GetLastBlock(ctx context.Context, networkID uint) (*et
 
 // AddBlock adds a new block to the db
 func (s *PostgresStorage) AddBlock(ctx context.Context, block *etherman.Block) (uint64, error) {
-	//err := s.db.Exec(ctx, addBlockSQL, block.BlockNumber, block.BlockHash.Bytes(), block.ParentHash.Bytes(), block.ReceivedAt, block.NetworkID).
 	var id uint64
 	err := s.db.QueryRow(ctx, addBlockSQL, block.BlockNumber, block.BlockHash.Bytes(), block.ParentHash.Bytes(), block.ReceivedAt, block.NetworkID).Scan(&id)
 	return id, err
@@ -190,19 +189,19 @@ func (s *PostgresStorage) BeginDBTransaction(ctx context.Context) error {
 
 // AddExitRoot adds a new ExitRoot to the db
 func (s *PostgresStorage) AddExitRoot(ctx context.Context, exitRoot *etherman.GlobalExitRoot) error {
-	_, err := s.db.Exec(ctx, addGlobalExitRootSQL, exitRoot.BlockNumber, exitRoot.GlobalExitRootNum.String(), exitRoot.ExitRoots[0], exitRoot.ExitRoots[1], exitRoot.BlockID, exitRoot.NetworkID)
+	_, err := s.db.Exec(ctx, addGlobalExitRootSQL, exitRoot.BlockNumber, exitRoot.GlobalExitRootNum.String(), exitRoot.ExitRoots[0], exitRoot.ExitRoots[1], exitRoot.BlockID)
 	return err
 }
 
 // GetLatestExitRoot get the latest ExitRoot stored
-func (s *PostgresStorage) GetLatestExitRoot(ctx context.Context, networkID uint) (*etherman.GlobalExitRoot, error) {
+func (s *PostgresStorage) GetLatestExitRoot(ctx context.Context) (*etherman.GlobalExitRoot, error) {
 	var (
 		exitRoot        etherman.GlobalExitRoot
 		globalNum       uint64
 		mainnetExitRoot common.Hash
 		rollupExitRoot  common.Hash
 	)
-	err := s.db.QueryRow(ctx, getExitRootSQL, networkID).Scan(&exitRoot.BlockID, &exitRoot.BlockNumber, &globalNum, &mainnetExitRoot, &rollupExitRoot, &exitRoot.NetworkID)
+	err := s.db.QueryRow(ctx, getExitRootSQL).Scan(&exitRoot.BlockID, &exitRoot.BlockNumber, &globalNum, &mainnetExitRoot, &rollupExitRoot)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, gerror.ErrStorageNotFound
 	} else if err != nil {

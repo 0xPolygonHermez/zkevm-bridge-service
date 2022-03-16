@@ -64,7 +64,6 @@ type GlobalExitRoot struct {
 	BlockNumber       uint64
 	GlobalExitRootNum *big.Int
 	ExitRoots         []common.Hash
-	NetworkID         uint
 }
 
 // Claim struct

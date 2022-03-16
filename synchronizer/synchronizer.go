@@ -224,7 +224,6 @@ func (s *ClientSynchronizer) processBlockRange(blocks []etherman.Block, order ma
 			} else if element.Name == etherman.GlobalExitRootsOrder {
 				exitRoot := blocks[i].GlobalExitRoots[element.Pos]
 				exitRoot.BlockID = blockID
-				exitRoot.NetworkID = s.networkID
 				err := s.storage.AddExitRoot(ctx, &exitRoot)
 				if err != nil {
 					err = s.storage.Rollback(ctx)
