@@ -57,14 +57,15 @@ CREATE TABLE sync.deposit
 
 CREATE TABLE sync.claim
 (
-    index       BIGINT PRIMARY KEY, -- deposit count
+    index       BIGINT, -- deposit count
     orig_net    integer,
     token_addr  BYTEA NOT NULL,
     amount      VARCHAR,
     dest_net    INTEGER NOT NULL,
     dest_addr   BYTEA NOT NULL,
     block_id    BIGINT NOT NULL REFERENCES sync.block (id) ON DELETE CASCADE,
-    block_num   BIGINT NOT NULL
+    block_num   BIGINT NOT NULL,
+    PRIMARY KEY (orig_net, index)
 );
 
 CREATE TABLE sync.token_wrapped
