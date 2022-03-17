@@ -31,7 +31,7 @@ func TestExitRootStore(t *testing.T) {
 	}
 	storage, err := NewStorage(storageCfg)
 	require.NoError(t, err)
-
+	var networkID uint = 1
 	_, err = storage.GetLatestExitRoot(ctx)
 	require.Error(t, err)
 
@@ -42,10 +42,11 @@ func TestExitRootStore(t *testing.T) {
 
 	var block etherman.Block
 	block.BlockNumber = 1
-	err = storage.AddBlock(ctx, &block)
+	block.BlockHash = common.HexToHash("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9fc")
+	block.NetworkID = networkID
+	id, err := storage.AddBlock(ctx, &block)
 	require.NoError(t, err)
-	err = storage.AddL2Block(ctx, &block)
-	require.NoError(t, err)
+	exitRoot.BlockID = id
 	err = storage.AddExitRoot(ctx, &exitRoot)
 	require.NoError(t, err)
 
@@ -64,6 +65,8 @@ func TestExitRootStore(t *testing.T) {
 		Amount:             amount,
 		DestinationAddress: common.HexToAddress("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9fc"),
 		BlockNumber:        1,
+		BlockID:            id,
+		DestinationNetwork: 2,
 	}
 	err = storage.AddClaim(ctx, &claim)
 	require.NoError(t, err)
@@ -77,27 +80,6 @@ func TestExitRootStore(t *testing.T) {
 	assert.Equal(t, claim.OriginalNetwork, claimStored.OriginalNetwork)
 	assert.Equal(t, claim.Token, claimStored.Token)
 
-	// L2Claim
-	l2Claim := etherman.Claim{
-		Index:              1,
-		OriginalNetwork:    1,
-		Token:              common.HexToAddress("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9fc"),
-		Amount:             amount,
-		DestinationAddress: common.HexToAddress("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9fc"),
-		BlockNumber:        1,
-	}
-	err = storage.AddL2Claim(ctx, &l2Claim)
-	require.NoError(t, err)
-
-	l2ClaimStored, err := storage.GetClaim(ctx, l2Claim.Index, l2Claim.OriginalNetwork)
-	require.NoError(t, err)
-	assert.Equal(t, l2Claim.Amount, l2ClaimStored.Amount)
-	assert.Equal(t, l2Claim.BlockNumber, l2ClaimStored.BlockNumber)
-	assert.Equal(t, l2Claim.DestinationAddress, l2ClaimStored.DestinationAddress)
-	assert.Equal(t, l2Claim.Index, l2ClaimStored.Index)
-	assert.Equal(t, l2Claim.OriginalNetwork, l2ClaimStored.OriginalNetwork)
-	assert.Equal(t, l2Claim.Token, l2ClaimStored.Token)
-
 	// Deposit
 	deposit := etherman.Deposit{
 		DepositCount:       1,
@@ -105,8 +87,9 @@ func TestExitRootStore(t *testing.T) {
 		TokenAddress:       common.HexToAddress("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9fc"),
 		Amount:             amount,
 		DestinationAddress: common.HexToAddress("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9fc"),
-		DestinationNetwork: 1,
+		DestinationNetwork: 2,
 		BlockNumber:        1,
+		BlockID:            id,
 	}
 	err = storage.AddDeposit(ctx, &deposit)
 	require.NoError(t, err)
@@ -120,34 +103,14 @@ func TestExitRootStore(t *testing.T) {
 	assert.Equal(t, deposit.OriginalNetwork, depositStored.OriginalNetwork)
 	assert.Equal(t, deposit.TokenAddress, depositStored.TokenAddress)
 
-	// L2Deposit
-	l2Deposit := etherman.Deposit{
-		DepositCount:       1,
-		OriginalNetwork:    1,
-		TokenAddress:       common.HexToAddress("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9fc"),
-		Amount:             amount,
-		DestinationAddress: common.HexToAddress("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9fc"),
-		DestinationNetwork: 1,
-		BlockNumber:        1,
-	}
-	err = storage.AddL2Deposit(ctx, &l2Deposit)
-	require.NoError(t, err)
-
-	l2DepositStored, err := storage.GetL2Deposit(ctx, uint64(l2Deposit.DepositCount), l2Deposit.OriginalNetwork)
-	require.NoError(t, err)
-	assert.Equal(t, l2Deposit.Amount, l2DepositStored.Amount)
-	assert.Equal(t, l2Deposit.BlockNumber, l2DepositStored.BlockNumber)
-	assert.Equal(t, l2Deposit.DestinationAddress, l2DepositStored.DestinationAddress)
-	assert.Equal(t, l2Deposit.DepositCount, l2DepositStored.DepositCount)
-	assert.Equal(t, l2Deposit.OriginalNetwork, l2DepositStored.OriginalNetwork)
-	assert.Equal(t, l2Deposit.TokenAddress, l2DepositStored.TokenAddress)
-
 	// TokenWrapped
 	tokenWrapped := etherman.TokenWrapped{
 		OriginalNetwork:      1,
 		OriginalTokenAddress: common.HexToAddress("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9fe"),
 		WrappedTokenAddress:  common.HexToAddress("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9fc"),
 		BlockNumber:          1,
+		BlockID:              id,
+		DestinationNetwork:   2,
 	}
 	err = storage.AddTokenWrapped(ctx, &tokenWrapped)
 	require.NoError(t, err)
@@ -172,11 +135,13 @@ func TestExitRootStore(t *testing.T) {
 		GlobalExitRoot: common.HexToHash("0x30e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9fe"),
 		Header:         &head,
 		ReceivedAt:     time.Now(),
+		BlockID:        id,
+		NetworkID:      networkID,
 	}
 	err = storage.AddBatch(ctx, &batch)
 	require.NoError(t, err)
 
-	batchStored, err := storage.GetBatchByNumber(ctx, batch.Number().Uint64())
+	batchStored, err := storage.GetBatchByNumber(ctx, batch.Number().Uint64(), networkID)
 	require.NoError(t, err)
 	assert.Equal(t, batch.BlockNumber, batchStored.BlockNumber)
 	assert.Equal(t, batch.Sequencer, batchStored.Sequencer)
@@ -185,10 +150,13 @@ func TestExitRootStore(t *testing.T) {
 	assert.Equal(t, batch.Number(), batchStored.Number())
 	assert.Equal(t, common.Hash{}, batchStored.ConsolidatedTxHash)
 
-	err = storage.ConsolidateBatch(ctx, 1, common.HexToHash("0x31e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9fe"),
-		time.Now(), common.HexToAddress("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9fc"))
+	batch.Aggregator = common.HexToAddress("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9fc")
+	ti := time.Now()
+	batch.ConsolidatedAt = &ti
+	batch.ConsolidatedTxHash = common.HexToHash("0x31e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9fe")
+	err = storage.ConsolidateBatch(ctx, &batch)
 	require.NoError(t, err)
-	batchStored2, err := storage.GetBatchByNumber(ctx, batch.Number().Uint64())
+	batchStored2, err := storage.GetBatchByNumber(ctx, batch.Number().Uint64(), networkID)
 	require.NoError(t, err)
 	assert.Equal(t, batch.BlockNumber, batchStored2.BlockNumber)
 	assert.Equal(t, batch.Sequencer, batchStored2.Sequencer)

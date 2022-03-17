@@ -12,7 +12,7 @@ Port = "5432"
 
 [Etherman]
 L1URL = "http://localhost"
-L2URL = "http://localhost"
+L2URLs = ["http://localhost"]
 PrivateKeyPath = "./test/test.keystore"
 PrivateKeyPassword = "testonly"
 

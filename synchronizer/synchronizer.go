@@ -22,7 +22,7 @@ type Synchronizer interface {
 	Stop()
 }
 
-// ClientSynchronizer connects L1 and L2
+// ClientSynchronizer struct
 type ClientSynchronizer struct {
 	etherMan       localEtherMan
 	storage        db.Storage
@@ -31,12 +31,16 @@ type ClientSynchronizer struct {
 	bridgeTree     *bridgetree.BridgeTree
 	genBlockNumber uint64
 	cfg            Config
-	l2             bool
+	networkID      uint
 }
 
 // NewSynchronizer creates and initializes an instance of Synchronizer
-func NewSynchronizer(storage db.Storage, bridge *bridgetree.BridgeTree, ethMan localEtherMan, genBlockNumber uint64, cfg Config, l2 bool) (Synchronizer, error) {
+func NewSynchronizer(storage db.Storage, bridge *bridgetree.BridgeTree, ethMan localEtherMan, genBlockNumber uint64, cfg Config) (Synchronizer, error) {
 	ctx, cancel := context.WithCancel(context.Background())
+	networkID, err := ethMan.GetNetworkID(ctx)
+	if err != nil {
+		log.Fatal("error getting networkID. Error: ", err)
+	}
 	return &ClientSynchronizer{
 		etherMan:       ethMan,
 		storage:        storage,
@@ -45,7 +49,7 @@ func NewSynchronizer(storage db.Storage, bridge *bridgetree.BridgeTree, ethMan l
 		bridgeTree:     bridge,
 		genBlockNumber: genBlockNumber,
 		cfg:            cfg,
-		l2:             l2,
+		networkID:      networkID,
 	}, nil
 }
 
@@ -59,18 +63,14 @@ func (s *ClientSynchronizer) Sync() error {
 			err             error
 			lastBlockSynced *etherman.Block
 		)
-		if s.l2 {
-			log.Info("Sync L2 started")
-			lastBlockSynced, err = s.storage.GetLastL2Block(s.ctx)
-		} else {
-			log.Info("Sync L1 started")
-			lastBlockSynced, err = s.storage.GetLastBlock(s.ctx)
-		}
+		log.Info("Synchronization started")
+		lastBlockSynced, err = s.storage.GetLastBlock(s.ctx, s.networkID)
 		if err != nil {
 			if err == gerror.ErrStorageNotFound {
 				log.Warn("error getting the latest block. No data stored. Setting genesis block. Error: ", err)
 				lastBlockSynced = &etherman.Block{
 					BlockNumber: s.genBlockNumber,
+					NetworkID:   s.networkID,
 				}
 			} else {
 				log.Fatal("unexpected error getting the latest block. Error: ", err)
@@ -118,7 +118,7 @@ func (s *ClientSynchronizer) syncBlocks(lastBlockSynced *etherman.Block) (*ether
 		log.Errorf("error checking reorgs. Retrying... Err: %s", err.Error())
 		return lastBlockSynced, fmt.Errorf("error checking reorgs")
 	} else if block != nil {
-		err = s.resetState(block.BlockNumber)
+		err = s.resetState(block)
 		if err != nil {
 			log.Error("error resetting the state to a previous block. Retrying...")
 			return lastBlockSynced, fmt.Errorf("error resetting the state to a previous block")
@@ -150,11 +150,7 @@ func (s *ClientSynchronizer) syncBlocks(lastBlockSynced *etherman.Block) (*ether
 		if err != nil {
 			return nil, err
 		}
-		if s.l2 {
-			s.processL2BlockRange(blocks, order)
-		} else {
-			s.processBlockRange(blocks, order)
-		}
+		s.processBlockRange(blocks, order)
 		if len(blocks) > 0 {
 			lastBlockSynced = &blocks[len(blocks)-1]
 		}
@@ -172,23 +168,26 @@ func (s *ClientSynchronizer) processBlockRange(blocks []etherman.Block, order ma
 	// New info has to be included into the db using the state
 	for i := range blocks {
 		ctx := context.Background()
+		blocks[i].NetworkID = s.networkID
 		// Begin db transaction
 		err := s.storage.BeginDBTransaction(ctx)
 		if err != nil {
 			log.Fatal("error createing db transaction to store block. BlockNumber: ", blocks[i].BlockNumber)
 		}
 		// Add block information
-		err = s.storage.AddBlock(ctx, &blocks[i])
+		blockID, err := s.storage.AddBlock(ctx, &blocks[i])
 		if err != nil {
 			log.Fatal("error storing block. BlockNumber: ", blocks[i].BlockNumber)
 		}
 		for _, element := range order[blocks[i].BlockHash] {
 			if element.Name == etherman.BatchesOrder {
 				batch := &blocks[i].Batches[element.Pos]
+				batch.BlockID = blockID
+				batch.NetworkID = s.networkID
 				emptyHash := common.Hash{}
 				log.Debug("consolidatedTxHash received: ", batch.ConsolidatedTxHash)
 				if batch.ConsolidatedTxHash.String() != emptyHash.String() {
-					err = s.storage.ConsolidateBatch(ctx, batch.Number().Uint64(), batch.ConsolidatedTxHash, *batch.ConsolidatedAt, batch.Aggregator)
+					err = s.storage.ConsolidateBatch(ctx, batch)
 					if err != nil {
 						err = s.storage.Rollback(ctx)
 						if err != nil {
@@ -207,99 +206,55 @@ func (s *ClientSynchronizer) processBlockRange(blocks []etherman.Block, order ma
 					}
 				}
 			} else if element.Name == etherman.DepositsOrder {
-				err := s.storage.AddDeposit(ctx, &blocks[i].Deposits[element.Pos])
+				deposit := &blocks[i].Deposits[element.Pos]
+				deposit.BlockID = blockID
+				err := s.storage.AddDeposit(ctx, deposit)
 				if err != nil {
 					err = s.storage.Rollback(ctx)
 					if err != nil {
 						log.Fatal("error rolling back state to store block. BlockNumber: ", blocks[i].BlockNumber)
 					}
-					log.Fatal("failed to store new L1 deposit locally, block: %d, err: %v", &blocks[i].BlockNumber, err)
+					log.Fatal("failed to store new deposit locally, block: %d, Deposit: %+v err: %v", &blocks[i].BlockNumber, deposit, err)
 				}
 
-				err = s.bridgeTree.AddDeposit(&blocks[i].Deposits[element.Pos])
+				err = s.bridgeTree.AddDeposit(deposit)
 				if err != nil {
-					log.Fatal("failed to store new deposit in the bridge tree, block: %d, err: %v", &blocks[i].BlockNumber, err)
+					log.Fatal("failed to store new deposit in the bridge tree, block: %d, Deposit: %+v err: %v", &blocks[i].BlockNumber, deposit, err)
 				}
 			} else if element.Name == etherman.GlobalExitRootsOrder {
-				err := s.storage.AddExitRoot(ctx, &blocks[i].GlobalExitRoots[element.Pos])
+				exitRoot := blocks[i].GlobalExitRoots[element.Pos]
+				exitRoot.BlockID = blockID
+				err := s.storage.AddExitRoot(ctx, &exitRoot)
 				if err != nil {
 					err = s.storage.Rollback(ctx)
 					if err != nil {
 						log.Fatal("error rolling back state to store block. BlockNumber: ", blocks[i].BlockNumber)
 					}
-					log.Fatal("error storing new globalExitRoot in Block: ", blocks[i].BlockNumber, " GlobalExitRoot: ", blocks[i].GlobalExitRoots[element.Pos], " err: ", err)
+					log.Fatal("error storing new globalExitRoot in Block: %d, ExitRoot: %+v, err: %v", blocks[i].BlockNumber, exitRoot, err)
 				}
 			} else if element.Name == etherman.ClaimsOrder {
-				err := s.storage.AddClaim(ctx, &blocks[i].Claims[element.Pos])
+				claim := blocks[i].Claims[element.Pos]
+				claim.BlockID = blockID
+				claim.DestinationNetwork = s.networkID
+				err := s.storage.AddClaim(ctx, &claim)
 				if err != nil {
 					err = s.storage.Rollback(ctx)
 					if err != nil {
 						log.Fatal("error rolling back state to store block. BlockNumber: ", blocks[i].BlockNumber)
 					}
-					log.Fatal("error storing new L1 Claim in Block: ", blocks[i].BlockNumber, " Claim: ", blocks[i].Claims[element.Pos], " err: ", err)
+					log.Fatal("error storing new L1 Claim in Block:  %d, Claim: %+v, err: %v", blocks[i].BlockNumber, claim, err)
 				}
 			} else if element.Name == etherman.TokensOrder {
-				err := s.storage.AddTokenWrapped(ctx, &blocks[i].Tokens[element.Pos])
+				tokenWrapped := blocks[i].Tokens[element.Pos]
+				tokenWrapped.BlockID = blockID
+				tokenWrapped.DestinationNetwork = s.networkID
+				err := s.storage.AddTokenWrapped(ctx, &tokenWrapped)
 				if err != nil {
 					err = s.storage.Rollback(ctx)
 					if err != nil {
 						log.Fatal("error rolling back state to store block. BlockNumber: ", blocks[i].BlockNumber)
 					}
-					log.Fatal("error storing new L1 TokenWrapped in Block: ", blocks[i].BlockNumber, " TokenWrapped: ", blocks[i].Tokens[element.Pos], " err: ", err)
-				}
-			} else {
-				log.Fatal("error: invalid order element")
-			}
-		}
-	}
-}
-
-func (s *ClientSynchronizer) processL2BlockRange(blocks []etherman.Block, order map[common.Hash][]etherman.Order) {
-	// New info has to be included into the db using the state
-	for i := range blocks {
-		ctx := context.Background()
-		// Begin db transaction
-		err := s.storage.BeginDBTransaction(ctx)
-		if err != nil {
-			log.Fatal("error createing db transaction to store block. BlockNumber: ", blocks[i].BlockNumber)
-		}
-		// Add block information
-		err = s.storage.AddL2Block(context.Background(), &blocks[i])
-		if err != nil {
-			log.Fatal("error storing block. BlockNumber: ", blocks[i].BlockNumber)
-		}
-		for _, element := range order[blocks[i].BlockHash] {
-			if element.Name == etherman.DepositsOrder {
-				err := s.storage.AddL2Deposit(ctx, &blocks[i].Deposits[element.Pos])
-				if err != nil {
-					err = s.storage.Rollback(ctx)
-					if err != nil {
-						log.Fatal("error rolling back state to store block. BlockNumber: ", blocks[i].BlockNumber)
-					}
-					log.Fatal("failed to store new L2 deposit locally, L2block (batch): %d, err: %v", &blocks[i].BlockNumber, err)
-				}
-
-				err = s.bridgeTree.AddDeposit(&blocks[i].Deposits[element.Pos])
-				if err != nil {
-					log.Fatal("failed to store new deposit in the bridge tree, block: %d, err: %v", &blocks[i].BlockNumber, err)
-				}
-			} else if element.Name == etherman.ClaimsOrder {
-				err := s.storage.AddL2Claim(ctx, &blocks[i].Claims[element.Pos])
-				if err != nil {
-					err = s.storage.Rollback(ctx)
-					if err != nil {
-						log.Fatal("error rolling back state to store block. BlockNumber: ", blocks[i].BlockNumber)
-					}
-					log.Fatal("error storing new L2 Claim in Block: ", blocks[i].BlockNumber, " Claim: ", blocks[i].Claims[element.Pos], " err: ", err)
-				}
-			} else if element.Name == etherman.TokensOrder {
-				err := s.storage.AddL2TokenWrapped(ctx, &blocks[i].Tokens[element.Pos])
-				if err != nil {
-					err = s.storage.Rollback(ctx)
-					if err != nil {
-						log.Fatal("error rolling back state to store block. BlockNumber: ", blocks[i].BlockNumber)
-					}
-					log.Fatal("error storing new L2 TokenWrapped in Block: ", blocks[i].BlockNumber, " TokenWrapped: ", blocks[i].Tokens[element.Pos], " err: ", err)
+					log.Fatal("error storing new L1 TokenWrapped in Block:  %d, ExitRoot: %+v, err: %v", blocks[i].BlockNumber, tokenWrapped, err)
 				}
 			} else {
 				log.Fatal("error: invalid order element")
@@ -309,19 +264,11 @@ func (s *ClientSynchronizer) processL2BlockRange(blocks []etherman.Block, order 
 }
 
 // This function allows reset the state until an specific block
-func (s *ClientSynchronizer) resetState(blockNum uint64) error {
-	if s.l2 {
-		log.Debug("Reverting synchronization to batch: ", blockNum)
-		err := s.storage.ResetL2(s.ctx, blockNum)
-		if err != nil {
-			return err
-		}
-	} else {
-		log.Debug("Reverting synchronization to block: ", blockNum)
-		err := s.storage.Reset(s.ctx, blockNum)
-		if err != nil {
-			return err
-		}
+func (s *ClientSynchronizer) resetState(block *etherman.Block) error {
+	log.Debug("NetworkID: ", s.networkID, ". Reverting synchronization to block: ", block.BlockNumber)
+	err := s.storage.Reset(s.ctx, block.BlockNumber, s.networkID)
+	if err != nil {
+		return err
 	}
 	return nil
 }
@@ -365,11 +312,7 @@ func (s *ClientSynchronizer) checkReorg(latestBlock *etherman.Block) (*etherman.
 			depth++
 			log.Debug("REORG: Looking for the latest correct block. Depth: ", depth)
 			// Reorg detected. Getting previous block
-			if s.l2 {
-				latestBlock, err = s.storage.GetPreviousL2Block(s.ctx, depth)
-			} else {
-				latestBlock, err = s.storage.GetPreviousBlock(s.ctx, depth)
-			}
+			latestBlock, err = s.storage.GetPreviousBlock(s.ctx, s.networkID, depth)
 			if errors.Is(err, gerror.ErrStorageNotFound) {
 				log.Warn("error checking reorg: previous block not found in db: ", err)
 				return nil, nil
