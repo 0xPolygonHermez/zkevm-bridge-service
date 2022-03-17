@@ -59,7 +59,7 @@ func (bt *BridgeTree) AddDeposit(deposit *etherman.Deposit) error {
 }
 
 // GetClaim returns claim information to the user.
-func (bt *BridgeTree) GetClaim(networkID uint, index uint, merkleProof [][KeyLen]byte) (*etherman.GlobalExitRoot, error) {
+func (bt *BridgeTree) GetClaim(networkID uint, index uint) ([][KeyLen]byte, *etherman.GlobalExitRoot, error) {
 	var (
 		ctx   context.Context
 		proof [][KeyLen]byte
@@ -69,16 +69,15 @@ func (bt *BridgeTree) GetClaim(networkID uint, index uint, merkleProof [][KeyLen
 	ctx = context.WithValue(context.TODO(), contextKeyNetwork, tID) //nolint
 	globalExitRoot, err := bt.storage.GetLatestExitRoot(context.TODO())
 	if err != nil {
-		return nil, err
+		return proof, nil, err
 	}
 
 	proof, err = bt.exitRootTrees[tID].getSiblings(ctx, index-1, globalExitRoot.ExitRoots[tID])
 	if err != nil {
-		return nil, err
+		return proof, nil, err
 	}
-	copy(merkleProof, proof)
 
-	return &etherman.GlobalExitRoot{
+	return proof, &etherman.GlobalExitRoot{
 		GlobalExitRootNum: globalExitRoot.GlobalExitRootNum,
 		ExitRoots:         []common.Hash{bt.exitRootTrees[0].root, bt.exitRootTrees[1].root},
 	}, err

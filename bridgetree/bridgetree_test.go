@@ -106,8 +106,7 @@ func TestBridgeTree(t *testing.T) {
 		}
 
 		for _, testVector := range testVectors {
-			merkleProof := make([][KeyLen]byte, testHeight)
-			globalExitRoot, err := bt.GetClaim(testVector.OriginalNetwork, testVector.DepositCount, merkleProof)
+			merkleProof, globalExitRoot, err := bt.GetClaim(testVector.OriginalNetwork, testVector.DepositCount)
 			require.NoError(t, err)
 
 			log.Println(globalExitRoot)
