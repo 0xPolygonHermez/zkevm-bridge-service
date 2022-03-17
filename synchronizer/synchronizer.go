@@ -265,15 +265,14 @@ func (s *ClientSynchronizer) processBlockRange(blocks []etherman.Block, order ma
 // This function allows reset the state until an specific block
 func (s *ClientSynchronizer) resetState(block *etherman.Block) error {
 	log.Debug("NetworkID: ", s.networkID, ". Reverting synchronization to block: ", block.BlockNumber)
-	ctx := context.Background()
-	err := s.storage.BeginDBTransaction(ctx)
+	err := s.storage.BeginDBTransaction(s.ctx)
 	if err != nil {
 		log.Error("error starting a db transaction to reset the state. Error: ", err)
 		return err
 	}
-	err = s.storage.Reset(ctx, block, s.networkID)
+	err = s.storage.Reset(s.ctx, block, s.networkID)
 	if err != nil {
-		rollbackErr := s.storage.Rollback(ctx)
+		rollbackErr := s.storage.Rollback(s.ctx)
 		if rollbackErr != nil {
 			log.Error("error rolling back state to store block. BlockNumber: %d, rollbackErr: %v, error : %v", block.BlockNumber, rollbackErr, err)
 			return rollbackErr
@@ -281,9 +280,9 @@ func (s *ClientSynchronizer) resetState(block *etherman.Block) error {
 		log.Error("error resetting the state. Error: ", err)
 		return err
 	}
-	err = s.storage.Commit(ctx)
+	err = s.storage.Commit(s.ctx)
 	if err != nil {
-		rollbackErr := s.storage.Rollback(ctx)
+		rollbackErr := s.storage.Rollback(s.ctx)
 		if rollbackErr != nil {
 			log.Error("error rolling back state to store block. BlockNumber: %d, rollbackErr: %v, error : %v", block.BlockNumber, rollbackErr, err)
 			return rollbackErr
