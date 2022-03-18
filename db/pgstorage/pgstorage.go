@@ -118,7 +118,7 @@ func (s *PostgresStorage) GetDeposits(ctx context.Context, depositCount uint, or
 			deposit etherman.Deposit
 			amount  string
 		)
-		err := rows.Scan(&deposit.OriginalNetwork, &deposit.TokenAddress, &amount, &deposit.DestinationAddress, &deposit.DestinationAddress, &deposit.BlockNumber, &deposit.DepositCount, &deposit.BlockID)
+		err := rows.Scan(&deposit.OriginalNetwork, &deposit.TokenAddress, &amount, &deposit.DestinationNetwork, &deposit.DestinationAddress, &deposit.BlockNumber, &deposit.DepositCount, &deposit.BlockID)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, gerror.ErrStorageNotFound
 		} else if err != nil {

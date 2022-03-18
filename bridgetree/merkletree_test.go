@@ -15,9 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var (
-	testHeight = 32
-)
+const testHeight = 32
 
 type leafVectorRaw struct {
 	Leaves        []string   `json:"leaves"`

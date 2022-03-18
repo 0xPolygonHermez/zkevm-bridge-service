@@ -67,6 +67,7 @@ func (bt *BridgeTree) GetClaim(networkID uint, index uint) ([][KeyLen]byte, *eth
 
 	tID := bt.networkIDs[uint64(networkID)]
 	ctx = context.WithValue(context.TODO(), contextKeyNetwork, tID) //nolint
+	tID--
 	globalExitRoot, err := bt.storage.GetLatestExitRoot(context.TODO())
 	if err != nil {
 		return proof, nil, err
@@ -81,4 +82,9 @@ func (bt *BridgeTree) GetClaim(networkID uint, index uint) ([][KeyLen]byte, *eth
 		GlobalExitRootNum: globalExitRoot.GlobalExitRootNum,
 		ExitRoots:         []common.Hash{bt.exitRootTrees[0].root, bt.exitRootTrees[1].root},
 	}, err
+}
+
+// GetMerkleRoot returns claim information to the user.
+func (bt *BridgeTree) GetMerkleRoot(networkID uint) ([][KeyLen]byte, error) {
+	return nil, nil
 }

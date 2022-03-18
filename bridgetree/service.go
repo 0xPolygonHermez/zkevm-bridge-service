@@ -7,15 +7,40 @@ import (
 	"github.com/hermeznetwork/hermez-bridge/bridgetree/pb"
 )
 
-const limit = 25
+const (
+	limit   = 25
+	version = "v1"
+)
 
-type BridgeService struct {
-	storage    bridgeServiceStorage
+type bridgeService struct {
+	storage    BridgeServiceStorage
 	bridgeCtrl *BridgeTree
+	pb.UnimplementedBridgeServiceServer
 }
 
-func (s *BridgeService) GetBridges(ctx context.Context, req *pb.GetBridgesRequest) (*pb.GetBridgesResponse, error) {
-	deposits, err := s.storage.GetDeposits(ctx, uint(req.Offset), uint(0), limit)
+// NewBridgeService creates new bridge service.
+func NewBridgeService(storage BridgeServiceStorage, bridgeCtrl *BridgeTree) pb.BridgeServiceServer {
+	return &bridgeService{
+		storage:    storage,
+		bridgeCtrl: bridgeCtrl,
+	}
+}
+
+// CheckAPI returns api version.
+func (s *bridgeService) CheckAPI(ctx context.Context, req *pb.CheckApiRequest) (*pb.CheckApiResponse, error) {
+	return &pb.CheckApiResponse{
+		Api: version,
+	}, nil
+}
+
+// GetBridges returns bridges for the specific smart contract address both in L1 and L2.
+func (s *bridgeService) GetBridges(ctx context.Context, req *pb.GetBridgesRequest) (*pb.GetBridgesResponse, error) {
+	depositCnt := uint(1<<31 - 1)
+	if req.Offset > 0 {
+		depositCnt = uint(req.Offset)
+	}
+
+	deposits, err := s.storage.GetDeposits(ctx, depositCnt, uint(0), limit)
 	if err != nil {
 		return nil, err
 	}
@@ -38,8 +63,9 @@ func (s *BridgeService) GetBridges(ctx context.Context, req *pb.GetBridgesReques
 	}, nil
 }
 
-func (s *BridgeService) GetClaims(ctx context.Context, req *pb.GetClaimsRequest) (*pb.GetClaimsResponse, error) {
-	claims, err := s.storage.GetClaims(ctx, uint(0), limit, uint(req.Offset))
+// GetClaims returns claims for the specific smart contract address both in L1 and L2.
+func (s *bridgeService) GetClaims(ctx context.Context, req *pb.GetClaimsRequest) (*pb.GetClaimsResponse, error) {
+	claims, err := s.storage.GetClaims(ctx, uint(1000), limit, uint(req.Offset))
 	if err != nil {
 		return nil, err
 	}
@@ -62,7 +88,8 @@ func (s *BridgeService) GetClaims(ctx context.Context, req *pb.GetClaimsRequest)
 	}, nil
 }
 
-func (s *BridgeService) GetProof(ctx context.Context, req *pb.GetProofRequest) (*pb.GetProofResponse, error) {
+// GetProof returns the merkle proof for the specific deposit.
+func (s *bridgeService) GetProof(ctx context.Context, req *pb.GetProofRequest) (*pb.GetProofResponse, error) {
 	merkleProof, exitRoot, err := s.bridgeCtrl.GetClaim(uint(req.OrigNet), uint(req.DepositCnt))
 	if err != nil {
 		return nil, err
@@ -83,7 +110,8 @@ func (s *BridgeService) GetProof(ctx context.Context, req *pb.GetProofRequest) (
 	}, nil
 }
 
-func (s *BridgeService) GetClaimStatus(ctx context.Context, req *pb.GetClaimStatusRequest) (*pb.GetClaimStatusResponse, error) {
+// GetClaimStatus returns the claim status whether it is able to send a claim transaction or not.
+func (s *bridgeService) GetClaimStatus(ctx context.Context, req *pb.GetClaimStatusRequest) (*pb.GetClaimStatusResponse, error) {
 	exitRoot, err := s.bridgeCtrl.storage.GetLatestExitRoot(ctx)
 	if err != nil {
 		return nil, err
@@ -91,14 +119,14 @@ func (s *BridgeService) GetClaimStatus(ctx context.Context, req *pb.GetClaimStat
 
 	tID := s.bridgeCtrl.networkIDs[uint64(req.OrigNet)]
 	ctx = context.WithValue(ctx, contextKeyNetwork, tID) //nolint
-
+	tID--
 	depositCnt, err := s.bridgeCtrl.exitRootTrees[tID].getCntByRoot(ctx, exitRoot.ExitRoots[tID])
 	if err != nil {
 		return nil, err
 	}
 
 	var ready bool
-	if depositCnt <= uint(req.DepositCnt) {
+	if depositCnt >= uint(req.DepositCnt) {
 		ready = true
 	} else {
 		ready = false

@@ -19,13 +19,15 @@ const _ = grpc.SupportPackageIsVersion7
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type BridgeServiceClient interface {
 	// Getters
+	/// Get api version
+	CheckApi(ctx context.Context, in *CheckApiRequest, opts ...grpc.CallOption) (*CheckApiResponse, error)
 	/// Get bridges for the specific smart contract address both in L1 and L2
 	GetBridges(ctx context.Context, in *GetBridgesRequest, opts ...grpc.CallOption) (*GetBridgesResponse, error)
 	/// Get the merkle proof for the specific deposit
 	GetProof(ctx context.Context, in *GetProofRequest, opts ...grpc.CallOption) (*GetProofResponse, error)
 	/// Get the claim status whether it is able to send a claim transation or not
 	GetClaimStatus(ctx context.Context, in *GetClaimStatusRequest, opts ...grpc.CallOption) (*GetClaimStatusResponse, error)
-	/// Get calls for the specific smart contract address both in L1 and L2
+	/// Get claims for the specific smart contract address both in L1 and L2
 	GetClaims(ctx context.Context, in *GetClaimsRequest, opts ...grpc.CallOption) (*GetClaimsResponse, error)
 }
 
@@ -35,6 +37,15 @@ type bridgeServiceClient struct {
 
 func NewBridgeServiceClient(cc grpc.ClientConnInterface) BridgeServiceClient {
 	return &bridgeServiceClient{cc}
+}
+
+func (c *bridgeServiceClient) CheckApi(ctx context.Context, in *CheckApiRequest, opts ...grpc.CallOption) (*CheckApiResponse, error) {
+	out := new(CheckApiResponse)
+	err := c.cc.Invoke(ctx, "/hermez.bridge.v1.BridgeService/CheckApi", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func (c *bridgeServiceClient) GetBridges(ctx context.Context, in *GetBridgesRequest, opts ...grpc.CallOption) (*GetBridgesResponse, error) {
@@ -78,13 +89,15 @@ func (c *bridgeServiceClient) GetClaims(ctx context.Context, in *GetClaimsReques
 // for forward compatibility
 type BridgeServiceServer interface {
 	// Getters
+	/// Get api version
+	CheckApi(context.Context, *CheckApiRequest) (*CheckApiResponse, error)
 	/// Get bridges for the specific smart contract address both in L1 and L2
 	GetBridges(context.Context, *GetBridgesRequest) (*GetBridgesResponse, error)
 	/// Get the merkle proof for the specific deposit
 	GetProof(context.Context, *GetProofRequest) (*GetProofResponse, error)
 	/// Get the claim status whether it is able to send a claim transation or not
 	GetClaimStatus(context.Context, *GetClaimStatusRequest) (*GetClaimStatusResponse, error)
-	/// Get calls for the specific smart contract address both in L1 and L2
+	/// Get claims for the specific smart contract address both in L1 and L2
 	GetClaims(context.Context, *GetClaimsRequest) (*GetClaimsResponse, error)
 	mustEmbedUnimplementedBridgeServiceServer()
 }
@@ -93,6 +106,9 @@ type BridgeServiceServer interface {
 type UnimplementedBridgeServiceServer struct {
 }
 
+func (UnimplementedBridgeServiceServer) CheckApi(context.Context, *CheckApiRequest) (*CheckApiResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CheckApi not implemented")
+}
 func (UnimplementedBridgeServiceServer) GetBridges(context.Context, *GetBridgesRequest) (*GetBridgesResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetBridges not implemented")
 }
@@ -116,6 +132,24 @@ type UnsafeBridgeServiceServer interface {
 
 func RegisterBridgeServiceServer(s grpc.ServiceRegistrar, srv BridgeServiceServer) {
 	s.RegisterService(&BridgeService_ServiceDesc, srv)
+}
+
+func _BridgeService_CheckApi_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CheckApiRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BridgeServiceServer).CheckApi(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/hermez.bridge.v1.BridgeService/CheckApi",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BridgeServiceServer).CheckApi(ctx, req.(*CheckApiRequest))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 func _BridgeService_GetBridges_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -197,6 +231,10 @@ var BridgeService_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "hermez.bridge.v1.BridgeService",
 	HandlerType: (*BridgeServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "CheckApi",
+			Handler:    _BridgeService_CheckApi_Handler,
+		},
 		{
 			MethodName: "GetBridges",
 			Handler:    _BridgeService_GetBridges_Handler,

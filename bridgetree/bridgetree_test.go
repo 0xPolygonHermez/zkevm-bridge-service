@@ -14,21 +14,10 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/hermez-bridge/db/pgstorage"
 	"github.com/hermeznetwork/hermez-bridge/etherman"
+	"github.com/hermeznetwork/hermez-bridge/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
-
-type depositVectorRaw struct {
-	OriginalNetwork    uint   `json:"origNetwork"`
-	TokenAddress       string `json:"tokenAddress"`
-	Amount             string `json:"amount"`
-	DestinationNetwork uint   `json:"destNetwork"`
-	DestinationAddress string `json:"destAddress"`
-	BlockNumber        uint64 `json:"blockNumber"`
-	DepositCount       uint   `json:"depositCount"`
-	ExpectedHash       string `json:"expectedHash"`
-	ExpectedRoot       string `json:"expectedRoot"`
-}
 
 func init() {
 	// Change dir to project root
@@ -42,10 +31,10 @@ func init() {
 }
 
 func TestBridgeTree(t *testing.T) {
-	data, err := os.ReadFile("test/vectors/mainnet-raw.json")
+	data, err := os.ReadFile("test/vectors/deposit-raw.json")
 	require.NoError(t, err)
 
-	var testVectors []depositVectorRaw
+	var testVectors []test.DepositVectorRaw
 	err = json.Unmarshal(data, &testVectors)
 	require.NoError(t, err)
 
