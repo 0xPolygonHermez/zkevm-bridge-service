@@ -14,11 +14,12 @@ type Storage interface {
 	GetLastBlock(ctx context.Context, networkID uint) (*etherman.Block, error)
 	AddBlock(ctx context.Context, block *etherman.Block) (uint64, error)
 	GetPreviousBlock(ctx context.Context, networkID uint, offset uint64) (*etherman.Block, error)
-	Reset(ctx context.Context, blockNumber uint64, networkID uint) error
+	Reset(ctx context.Context, block *etherman.Block, networkID uint) error
 	AddDeposit(ctx context.Context, deposit *etherman.Deposit) error
 	GetDeposit(ctx context.Context, depositCounterUser uint, origNetwork uint) (*etherman.Deposit, error)
 	Rollback(ctx context.Context) error
 	BeginDBTransaction(ctx context.Context) error
+	Commit(ctx context.Context) error
 	AddExitRoot(ctx context.Context, exitRoot *etherman.GlobalExitRoot) error
 	GetLatestExitRoot(ctx context.Context) (*etherman.GlobalExitRoot, error)
 	AddClaim(ctx context.Context, claim *etherman.Claim) error
