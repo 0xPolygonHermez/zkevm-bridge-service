@@ -12,7 +12,7 @@ option go_package = "github.com/hermeznetwork/hermez-bridge/bridgetree/pb";
 service BridgeService {
     // Getters
     /// Get api version
-    rpc CheckApi(CheckApiRequest) returns (CheckApiResponse) {
+    rpc CheckAPI(CheckAPIRequest) returns (CheckAPIResponse) {
         option (google.api.http) = {
             get: "/api"
         };
@@ -79,7 +79,7 @@ message Proof {
 
 // Get requests
 
-message CheckApiRequest {}
+message CheckAPIRequest {}
 
 message GetBridgesRequest {
     string ether_addr = 1;
@@ -103,7 +103,7 @@ message GetClaimsRequest {
 
 // Get responses
 
-message CheckApiResponse {
+message CheckAPIResponse {
     string api = 1;
 }
 

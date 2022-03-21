@@ -19,7 +19,7 @@ type bridgeTreeStorage interface {
 	GetLatestExitRoot(ctx context.Context) (*etherman.GlobalExitRoot, error)
 }
 
-// bridgeServiceStorage interface for the Bridge Service
+// BridgeServiceStorage interface for the Bridge Service.
 type BridgeServiceStorage interface {
 	GetClaims(ctx context.Context, destNetwork uint, limit uint, offset uint) ([]*etherman.Claim, error)
 	GetDeposits(ctx context.Context, depositCount uint, origNetwork uint, limit uint) ([]*etherman.Deposit, error)

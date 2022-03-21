@@ -61,7 +61,7 @@ func MockBridgeCtrl(store *pgstorage.PostgresStorage) (*BridgeTree, error) {
 	}
 
 	btCfg := Config{
-		Height: uint8(32),
+		Height: uint8(32), //nolint:gomnd
 		Store:  "postgres",
 	}
 
@@ -85,7 +85,7 @@ func MockBridgeCtrl(store *pgstorage.PostgresStorage) (*BridgeTree, error) {
 			return nil, err
 		}
 
-		amount, _ := new(big.Int).SetString(testDepositVectors[i].Amount, 10)
+		amount, _ := new(big.Int).SetString(testDepositVectors[i].Amount, 10) //nolint:gomnd
 		deposit := &etherman.Deposit{
 			OriginalNetwork:    testDepositVectors[i].OriginalNetwork,
 			TokenAddress:       common.HexToAddress(testDepositVectors[i].TokenAddress),
@@ -101,7 +101,7 @@ func MockBridgeCtrl(store *pgstorage.PostgresStorage) (*BridgeTree, error) {
 			return nil, err
 		}
 
-		amount, _ = new(big.Int).SetString(testClaimVectors[i].Amount, 10)
+		amount, _ = new(big.Int).SetString(testClaimVectors[i].Amount, 10) //nolint:gomnd
 		err = store.AddClaim(context.TODO(), &etherman.Claim{
 			Index:              testClaimVectors[i].Index,
 			OriginalNetwork:    testClaimVectors[i].OriginalNetwork,

@@ -81,11 +81,11 @@ func runRestServer(ctx context.Context, grpcPort, httpPort string) error {
 	signal.Notify(c, os.Interrupt)
 	go func() {
 		for range c {
-			srv.Shutdown(ctx)
+			_ = srv.Shutdown(ctx)
 			<-ctx.Done()
 		}
 
-		_, cancel := context.WithTimeout(ctx, 5*time.Second)
+		_, cancel := context.WithTimeout(ctx, 5*time.Second) //nolint:gomnd
 		defer cancel()
 
 		_ = srv.Shutdown(ctx)

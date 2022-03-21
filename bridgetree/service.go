@@ -27,8 +27,8 @@ func NewBridgeService(storage BridgeServiceStorage, bridgeCtrl *BridgeTree) pb.B
 }
 
 // CheckAPI returns api version.
-func (s *bridgeService) CheckAPI(ctx context.Context, req *pb.CheckApiRequest) (*pb.CheckApiResponse, error) {
-	return &pb.CheckApiResponse{
+func (s *bridgeService) CheckAPI(ctx context.Context, req *pb.CheckAPIRequest) (*pb.CheckAPIResponse, error) {
+	return &pb.CheckAPIResponse{
 		Api: version,
 	}, nil
 }
@@ -65,7 +65,7 @@ func (s *bridgeService) GetBridges(ctx context.Context, req *pb.GetBridgesReques
 
 // GetClaims returns claims for the specific smart contract address both in L1 and L2.
 func (s *bridgeService) GetClaims(ctx context.Context, req *pb.GetClaimsRequest) (*pb.GetClaimsResponse, error) {
-	claims, err := s.storage.GetClaims(ctx, uint(1000), limit, uint(req.Offset))
+	claims, err := s.storage.GetClaims(ctx, uint(1000), limit, uint(req.Offset)) //nolint:gomnd
 	if err != nil {
 		return nil, err
 	}

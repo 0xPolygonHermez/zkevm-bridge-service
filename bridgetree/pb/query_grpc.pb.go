@@ -20,7 +20,7 @@ const _ = grpc.SupportPackageIsVersion7
 type BridgeServiceClient interface {
 	// Getters
 	/// Get api version
-	CheckApi(ctx context.Context, in *CheckApiRequest, opts ...grpc.CallOption) (*CheckApiResponse, error)
+	CheckAPI(ctx context.Context, in *CheckAPIRequest, opts ...grpc.CallOption) (*CheckAPIResponse, error)
 	/// Get bridges for the specific smart contract address both in L1 and L2
 	GetBridges(ctx context.Context, in *GetBridgesRequest, opts ...grpc.CallOption) (*GetBridgesResponse, error)
 	/// Get the merkle proof for the specific deposit
@@ -39,9 +39,9 @@ func NewBridgeServiceClient(cc grpc.ClientConnInterface) BridgeServiceClient {
 	return &bridgeServiceClient{cc}
 }
 
-func (c *bridgeServiceClient) CheckApi(ctx context.Context, in *CheckApiRequest, opts ...grpc.CallOption) (*CheckApiResponse, error) {
-	out := new(CheckApiResponse)
-	err := c.cc.Invoke(ctx, "/hermez.bridge.v1.BridgeService/CheckApi", in, out, opts...)
+func (c *bridgeServiceClient) CheckAPI(ctx context.Context, in *CheckAPIRequest, opts ...grpc.CallOption) (*CheckAPIResponse, error) {
+	out := new(CheckAPIResponse)
+	err := c.cc.Invoke(ctx, "/hermez.bridge.v1.BridgeService/CheckAPI", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -90,7 +90,7 @@ func (c *bridgeServiceClient) GetClaims(ctx context.Context, in *GetClaimsReques
 type BridgeServiceServer interface {
 	// Getters
 	/// Get api version
-	CheckApi(context.Context, *CheckApiRequest) (*CheckApiResponse, error)
+	CheckAPI(context.Context, *CheckAPIRequest) (*CheckAPIResponse, error)
 	/// Get bridges for the specific smart contract address both in L1 and L2
 	GetBridges(context.Context, *GetBridgesRequest) (*GetBridgesResponse, error)
 	/// Get the merkle proof for the specific deposit
@@ -106,8 +106,8 @@ type BridgeServiceServer interface {
 type UnimplementedBridgeServiceServer struct {
 }
 
-func (UnimplementedBridgeServiceServer) CheckApi(context.Context, *CheckApiRequest) (*CheckApiResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method CheckApi not implemented")
+func (UnimplementedBridgeServiceServer) CheckAPI(context.Context, *CheckAPIRequest) (*CheckAPIResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CheckAPI not implemented")
 }
 func (UnimplementedBridgeServiceServer) GetBridges(context.Context, *GetBridgesRequest) (*GetBridgesResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetBridges not implemented")
@@ -134,20 +134,20 @@ func RegisterBridgeServiceServer(s grpc.ServiceRegistrar, srv BridgeServiceServe
 	s.RegisterService(&BridgeService_ServiceDesc, srv)
 }
 
-func _BridgeService_CheckApi_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(CheckApiRequest)
+func _BridgeService_CheckAPI_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CheckAPIRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(BridgeServiceServer).CheckApi(ctx, in)
+		return srv.(BridgeServiceServer).CheckAPI(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/hermez.bridge.v1.BridgeService/CheckApi",
+		FullMethod: "/hermez.bridge.v1.BridgeService/CheckAPI",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(BridgeServiceServer).CheckApi(ctx, req.(*CheckApiRequest))
+		return srv.(BridgeServiceServer).CheckAPI(ctx, req.(*CheckAPIRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -232,8 +232,8 @@ var BridgeService_ServiceDesc = grpc.ServiceDesc{
 	HandlerType: (*BridgeServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "CheckApi",
-			Handler:    _BridgeService_CheckApi_Handler,
+			MethodName: "CheckAPI",
+			Handler:    _BridgeService_CheckAPI_Handler,
 		},
 		{
 			MethodName: "GetBridges",

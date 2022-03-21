@@ -45,13 +45,13 @@ func TestBridgeService(t *testing.T) {
 		}
 
 		bodyBytes, err := ioutil.ReadAll(resp.Body)
-		resp.Body.Close()
+		_ = resp.Body.Close()
 		if err != nil {
 			continue
 		}
 
-		var apiResp pb.CheckApiResponse
-		err = json.Unmarshal(bodyBytes, &apiResp)
+		var apiResp pb.CheckAPIResponse
+		_ = json.Unmarshal(bodyBytes, &apiResp)
 		require.NoError(t, err)
 
 		require.Equal(t, "v1", apiResp.Api)
@@ -67,7 +67,7 @@ func TestBridgeService(t *testing.T) {
 	require.NoError(t, err)
 
 	var bridgeResp pb.GetBridgesResponse
-	json.Unmarshal(bodyBytes, &bridgeResp)
+	_ = json.Unmarshal(bodyBytes, &bridgeResp)
 	require.Greater(t, len(bridgeResp.Deposits), 0)
 
 	offset := 3
@@ -77,7 +77,7 @@ func TestBridgeService(t *testing.T) {
 	bodyBytes, err = ioutil.ReadAll(resp.Body)
 	require.NoError(t, err)
 
-	json.Unmarshal(bodyBytes, &bridgeResp)
+	_ = json.Unmarshal(bodyBytes, &bridgeResp)
 	require.Equal(t, len(bridgeResp.Deposits), offset-1)
 
 	offset = 1
@@ -88,7 +88,7 @@ func TestBridgeService(t *testing.T) {
 	require.NoError(t, err)
 
 	var claimResp pb.GetClaimsResponse
-	json.Unmarshal(bodyBytes, &claimResp)
+	_ = json.Unmarshal(bodyBytes, &claimResp)
 	require.Equal(t, len(claimResp.Claims), 2)
 
 	resp, err = http.Get(fmt.Sprintf("%s%s?orig_net=%d&deposit_cnt=%d", address, "/merkle-proofs", 0, 2))
@@ -98,7 +98,7 @@ func TestBridgeService(t *testing.T) {
 	require.NoError(t, err)
 
 	var proofResp pb.GetProofResponse
-	json.Unmarshal(bodyBytes, &proofResp)
+	_ = json.Unmarshal(bodyBytes, &proofResp)
 	require.Equal(t, len(proofResp.Proof.MerkleProof), 32)
 
 	resp, err = http.Get(fmt.Sprintf("%s%s?orig_net=%d&deposit_cnt=%d", address, "/claim-status", 0, 2))
@@ -108,6 +108,6 @@ func TestBridgeService(t *testing.T) {
 	require.NoError(t, err)
 
 	var claimStatus pb.GetClaimStatusResponse
-	json.Unmarshal(bodyBytes, &claimStatus)
+	_ = json.Unmarshal(bodyBytes, &claimStatus)
 	require.Equal(t, claimStatus.Ready, true)
 }
