@@ -1,18 +1,23 @@
 DOCKERCOMPOSE := docker-compose -f docker-compose.yml
-DOCKERCOMPOSEDB := hez-postgres
+DOCKERCOMPOSEDBCORE := hez-postgres-core
+DOCKERCOMPOSEDBBRIDGE := hez-postgres-bridge
 DOCKERCOMPOSEHERMEZCORE := hez-core
 DOCKERCOMPOSENETWORK := hez-network
 DOCKERCOMPOSEPROVER := hez-prover
 DOCKERCOMPOSEBRIDGE := hez-bridge
 
-RUNDB := $(DOCKERCOMPOSE) up -d $(DOCKERCOMPOSEDB)
+RUNDBCORE := $(DOCKERCOMPOSE) up -d $(DOCKERCOMPOSEDBCORE)
+RUNDBBRDIGE := $(DOCKERCOMPOSE) up -d $(DOCKERCOMPOSEDBBRIDGE)
+RUNDBS := ${RUNDBCORE} && ${RUNDBBRDIGE}
 RUNCORE := $(DOCKERCOMPOSE) up -d $(DOCKERCOMPOSEHERMEZCORE)
 RUNNETWORK := $(DOCKERCOMPOSE) up -d $(DOCKERCOMPOSENETWORK)
 RUNPROVER := $(DOCKERCOMPOSE) up -d $(DOCKERCOMPOSEPROVER)
 RUNBRIDGE := $(DOCKERCOMPOSE) up -d $(DOCKERCOMPOSEBRIDGE)
 RUN := $(DOCKERCOMPOSE) up -d
 
-STOPDB := $(DOCKERCOMPOSE) stop $(DOCKERCOMPOSEDB) && $(DOCKERCOMPOSE) rm -f $(DOCKERCOMPOSEDB)
+STOPDBCORE := $(DOCKERCOMPOSE) stop $(DOCKERCOMPOSEDBCORE) && $(DOCKERCOMPOSE) rm -f $(DOCKERCOMPOSEDBCORE)
+STOPDBBRIDGE := $(DOCKERCOMPOSE) stop $(DOCKERCOMPOSEDBBRIDGE) && $(DOCKERCOMPOSE) rm -f $(DOCKERCOMPOSEDBBRIDGE)
+STOPDBS := ${STOPDBCORE} && ${STOPDBBRIDGE}
 STOPCORE := $(DOCKERCOMPOSE) stop $(DOCKERCOMPOSEHERMEZCORE) && $(DOCKERCOMPOSE) rm -f $(DOCKERCOMPOSEHERMEZCORE)
 STOPNETWORK := $(DOCKERCOMPOSE) stop $(DOCKERCOMPOSENETWORK) && $(DOCKERCOMPOSE) rm -f $(DOCKERCOMPOSENETWORK)
 STOPPROVER := $(DOCKERCOMPOSE) stop $(DOCKERCOMPOSEPROVER) && $(DOCKERCOMPOSE) rm -f $(DOCKERCOMPOSEPROVER)
@@ -59,13 +64,29 @@ install-linter: ## Installs the linter
 build-docker: ## Builds a docker image with the core binary
 	docker build -t hezbridge -f ./Dockerfile .
 
-.PHONY: run-db
-run-db: ## Runs the node database
-	$(RUNDB)
+.PHONY: run-db-core
+run-db-core: ## Runs the node database
+	$(RUNDBCORE)
 
-.PHONY: stop-db
-stop-db: ## Stops the node database
-	$(STOPDB)
+.PHONY: stop-db-core
+stop-db-core: ## Stops the node database
+	$(STOPDBCORE)
+
+.PHONY: run-db-bridge
+run-db-bridge: ## Runs the node database
+	$(RUNDBBRIDGE)
+
+.PHONY: stop-db-bridge
+stop-db-bridge: ## Stops the node database
+	$(STOPDBBRIDGE)
+
+.PHONY: run-dbs
+run-dbs: ## Runs the node database
+	$(RUNDBS)
+
+.PHONY: stop-dbs
+stop-dbs: ## Stops the node database
+	$(STOPDBS)
 
 .PHONY: run-core
 run-core: ## Runs the core
@@ -98,3 +119,14 @@ run-bridge: ## Runs the bridge service
 .PHONY: stop-bridge
 stop-bridge: ## Stops the bridge service
 	$(STOPBRIDGE)
+
+.PHONY: stop
+stop: ## Stops all services
+	$(STOP)
+
+.PHONY: restart
+restart: stop run ## Executes `make stop` and `make run` commands
+
+.PHONY: run
+run: ## runs all services
+	$(RUN)

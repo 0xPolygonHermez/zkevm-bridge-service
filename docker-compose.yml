@@ -1,7 +1,7 @@
 version: '3'
 services:
-  hez-postgres:
-    container_name: hez-postgres
+  hez-postgres-core:
+    container_name: hez-postgres-core
     image: postgres
     ports:
       - 5432:5432
@@ -10,6 +10,20 @@ services:
       - POSTGRES_USER=test_user
       - POSTGRES_PASSWORD=test_password
       - POSTGRES_DB=test_db
+
+  hez-postgres-bridge:
+    container_name: hez-postgres-bridge
+    image: postgres
+    expose:
+      - 5433
+    ports:
+      - 5433:5433
+    environment:
+      # In order to update this values, you may need to run: docker rm -f -v postgres
+      - POSTGRES_USER=test_user
+      - POSTGRES_PASSWORD=test_password
+      - POSTGRES_DB=test_db
+    command: -p 5433
 
   hez-core:
     container_name: hez-core
@@ -20,12 +34,12 @@ services:
       - HERMEZCORE_DATABASE_USER=test_user
       - HERMEZCORE_DATABASE_PASSWORD=test_password
       - HERMEZCORE_DATABASE_NAME=test_db
-      - HERMEZCORE_DATABASE_HOST=hez-postgres
+      - HERMEZCORE_DATABASE_HOST=hez-postgres-core
+      - HERMEZCORE_DATABASE_PORT=5432
       - HERMEZCORE_ETHERMAN_PRIVATEKEYPATH=/pk/keystore
     volumes:
       - ./test/test.keystore:/pk/keystore
-      - ./config/config.local.toml:/app/config.toml
-    command: ["./hezcore", "run", "--network", "local", "--cfg", "/app/config.toml"]
+    command: ["./hezcore", "run", "--network", "local", "--cfg", "/app/config.local.toml"]
 
   hez-network:
     container_name: hez-network
@@ -42,7 +56,7 @@ services:
       - POSTGRES_USER=test_user
       - POSTGRES_PASSWORD=test_password
       - POSTGRES_DB=test_db
-      - POSTGRES_HOST=hez-postgres
+      - POSTGRES_HOST=hez-postgres-core
       - POSTGRES_PORT=5432
       - PROOF_TIME=1000
 
@@ -55,7 +69,8 @@ services:
       - HERMEZBRIDGE_DATABASE_USER=test_user
       - HERMEZBRIDGE_DATABASE_PASSWORD=test_password
       - HERMEZBRIDGE_DATABASE_NAME=test_db
-      - HERMEZBRIDGE_DATABASE_HOST=hez-postgres
+      - HERMEZBRIDGE_DATABASE_HOST=hez-postgres-bridge
+      - HERMEZBRIDGE_DATABASE_PORT=5433
     volumes:
       - ./config/config.local.toml:/app/config.toml
     command: ["./hezbridge", "run", "--network", "local", "--cfg", "/app/config.toml"]

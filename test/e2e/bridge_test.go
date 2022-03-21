@@ -9,12 +9,14 @@ import (
 
 	"github.com/hermeznetwork/hermez-bridge/test/operations"
 	"github.com/hermeznetwork/hermez-bridge/test/vectors"
+	"github.com/hermeznetwork/hermez-bridge/db"
+	"github.com/hermeznetwork/hermez-bridge/bridgetree"
 	"github.com/stretchr/testify/require"
 	"gotest.tools/assert"
 )
 
-// E2ETest tests the flow of deposit and withdraw funds using the vector
-func E2ETest(t *testing.T) {
+// TestE2E tests the flow of deposit and withdraw funds using the vector
+func TestE2E(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
@@ -30,13 +32,27 @@ func E2ETest(t *testing.T) {
 		t.Run("Test id "+strconv.FormatUint(uint64(testCase.ID), 10), func(t *testing.T) {
 			ctx := context.Background()
 
-			opsCfg := &operations.Config{
-				
+			opsCfg := &operations.Config {
+				Storage: db.Config {
+					Database: "postgres",
+					Name: "test_db",
+					User: "test_user",
+					Password: "test_password",
+					Host: "localhost",
+					Port: "5433",
+				},
+				BT: bridgetree.Config {
+					Store: "postgres",
+					Height: uint8(32),
+				},
 			}
 			opsman, err := operations.NewManager(ctx, opsCfg)
 			require.NoError(t, err)
 
-			fmt.Println(opsman, testCase.Txs)
+			fmt.Println(testCase.Txs)
+
+			//Run environment
+			require.NoError(t, opsman.Setup())
 
 			// TODO Check initial globalExitRoot
 			// TODO Send L1 deposit

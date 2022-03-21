@@ -53,6 +53,7 @@ func RunMigrations(cfg Config) error {
 		User:     cfg.User,
 		Password: cfg.Password,
 		Host:     cfg.Host,
+		Port:     cfg.Port,
 	}
 	return pgstorage.RunMigrations(config)
 }

@@ -70,14 +70,7 @@ func NewManager(ctx context.Context, cfg *Config) (*Manager, error) {
 		wait: NewWait(),
 	}
 	//Init storage and mt
-	pgConfig := pgstorage.Config {
-		Name: cfg.Storage.Name,
-		User: cfg.Storage.User,
-		Password: cfg.Storage.Password,
-		Port: cfg.Storage.Port,
-		Host: cfg.Storage.Host,
-	}
-	pgst, err := pgstorage.NewPostgresStorage(pgConfig)
+	pgst, err := pgstorage.NewPostgresStorage(dbConfig)
 	if err != nil {
 		return nil, err
 	}
