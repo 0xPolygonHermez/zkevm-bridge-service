@@ -53,7 +53,7 @@ func (bt *BridgeController) AddDeposit(deposit *etherman.Deposit) error {
 
 	leaf := hashDeposit(deposit)
 
-	tID := bt.networkIDs[deposit.OriginNetwork]
+	tID := bt.networkIDs[deposit.OriginalNetwork]
 	ctx = context.WithValue(context.TODO(), contextKeyNetwork, tID) //nolint
 	return bt.exitTrees[tID-1].addLeaf(ctx, leaf)
 }

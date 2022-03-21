@@ -14,7 +14,7 @@ type merkleTreeStore interface {
 	GetRoot(ctx context.Context, depositCount uint, depth uint8) ([]byte, error)
 }
 
-// bridgeTreeStorage interface for the Bridge Tree
+// bridgeStorage interface for the Bridge Tree
 type bridgeStorage interface {
 	GetLatestExitRoot(ctx context.Context) (*etherman.GlobalExitRoot, error)
 }

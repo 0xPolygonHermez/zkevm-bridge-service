@@ -28,7 +28,7 @@ func start(ctx *cli.Context) error {
 		return err
 	}
 
-	etherman, l2Etherman, err := newEtherman(*c)
+	etherman, l2Ethermans, err := newEthermans(*c)
 	if err != nil {
 		log.Error(err)
 		return err
@@ -61,8 +61,10 @@ func start(ctx *cli.Context) error {
 		}
 	}
 
-	go runL1Synchronizer(c.NetworkConfig, bridgeController, etherman, c.Synchronizer, storage)
-	go runL2Synchronizer(c.NetworkConfig, bridgeController, l2Etherman, c.Synchronizer, storage)
+	go runSynchronizer(c.NetworkConfig.GenBlockNumber, bridgeController, etherman, c.Synchronizer, storage)
+	for _, client := range l2Ethermans {
+		go runSynchronizer(0, bridgeController, client, c.Synchronizer, storage)
+	}
 
 	// Wait for an in interrupt.
 	ch := make(chan os.Signal, 1)
@@ -76,30 +78,27 @@ func setupLog(c log.Config) {
 	log.Init(c)
 }
 
-func newEtherman(c config.Config) (*etherman.ClientEtherMan, *etherman.ClientEtherMan, error) {
+func newEthermans(c config.Config) (*etherman.ClientEtherMan, []*etherman.ClientEtherMan, error) {
 	l1Etherman, err := etherman.NewEtherman(c.Etherman, c.NetworkConfig.PoEAddr, c.NetworkConfig.BridgeAddr, c.NetworkConfig.GlobalExitRootManAddr)
 	if err != nil {
 		return nil, nil, err
 	}
-	l2Etherman, err := etherman.NewL2Etherman(c.Etherman, c.NetworkConfig.L2BridgeAddr)
-	if err != nil {
-		return l1Etherman, nil, err
+	if len(c.L2BridgeAddrs) != len(c.Etherman.L2URLs) {
+		log.Fatal("Environment configuration error. L2 bridge addresses and l2 hermezCore urls mismatch")
 	}
-	return l1Etherman, l2Etherman, nil
+	var l2Ethermans []*etherman.ClientEtherMan
+	for i, addr := range c.L2BridgeAddrs {
+		l2Etherman, err := etherman.NewL2Etherman(c.Etherman.L2URLs[i], addr)
+		if err != nil {
+			return l1Etherman, nil, err
+		}
+		l2Ethermans = append(l2Ethermans, l2Etherman)
+	}
+	return l1Etherman, l2Ethermans, nil
 }
 
-func runL1Synchronizer(networkConfig config.NetworkConfig, bridgeController *bridgectrl.BridgeController, etherman *etherman.ClientEtherMan, cfg synchronizer.Config, storage db.Storage) {
-	sy, err := synchronizer.NewSynchronizer(storage, bridgeController, etherman, networkConfig.GenBlockNumber, cfg, false)
-	if err != nil {
-		log.Fatal(err)
-	}
-	if err := sy.Sync(); err != nil {
-		log.Fatal(err)
-	}
-}
-
-func runL2Synchronizer(networkConfig config.NetworkConfig, bridgeController *bridgectrl.BridgeController, etherman *etherman.ClientEtherMan, cfg synchronizer.Config, storage db.Storage) {
-	sy, err := synchronizer.NewSynchronizer(storage, bridgeController, etherman, 0, cfg, true)
+func runSynchronizer(genBlockNumber uint64, brdigeCtrl *bridgectrl.BridgeController, etherman *etherman.ClientEtherMan, cfg synchronizer.Config, storage db.Storage) {
+	sy, err := synchronizer.NewSynchronizer(storage, brdigeCtrl, etherman, genBlockNumber, cfg)
 	if err != nil {
 		log.Fatal(err)
 	}

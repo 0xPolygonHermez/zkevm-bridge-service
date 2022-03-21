@@ -7,6 +7,7 @@ import (
 	"math/big"
 
 	"github.com/ethereum/go-ethereum"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -73,11 +74,11 @@ func NewEtherman(cfg Config, poeAddr common.Address, bridgeAddr common.Address, 
 }
 
 // NewL2Etherman creates a new etherman.
-func NewL2Etherman(cfg Config, bridgeAddr common.Address) (*ClientEtherMan, error) {
+func NewL2Etherman(url string, bridgeAddr common.Address) (*ClientEtherMan, error) {
 	// Connect to ethereum node
-	ethClient, err := ethclient.Dial(cfg.L2URL)
+	ethClient, err := ethclient.Dial(url)
 	if err != nil {
-		log.Errorf("error connecting to %s: %+v", cfg.L2URL, err)
+		log.Errorf("error connecting to %s: %+v", url, err)
 		return nil, err
 	}
 	// Create smc clients
@@ -298,7 +299,7 @@ func (etherMan *ClientEtherMan) processEvent(ctx context.Context, vLog types.Log
 		)
 		depositAux.Amount = deposit.Amount
 		depositAux.BlockNumber = vLog.BlockNumber
-		depositAux.OriginNetwork = uint(deposit.OriginNetwork)
+		depositAux.OriginalNetwork = uint(deposit.OriginNetwork)
 		depositAux.DestinationAddress = deposit.DestinationAddress
 		depositAux.DestinationNetwork = uint(deposit.DestinationNetwork)
 		depositAux.TokenAddress = deposit.TokenAddres
@@ -404,4 +405,13 @@ func (etherMan *ClientEtherMan) BlockByNumber(ctx context.Context, blockNumber u
 		return nil, err
 	}
 	return block, nil
+}
+
+// GetNetworkID function retrieves the networkID.
+func (etherMan *ClientEtherMan) GetNetworkID(ctx context.Context) (uint, error) {
+	networkID, err := etherMan.Bridge.NetworkID(&bind.CallOpts{Pending: false})
+	if err != nil {
+		return 0, err
+	}
+	return uint(networkID), nil
 }
