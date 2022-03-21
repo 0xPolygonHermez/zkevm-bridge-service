@@ -26,7 +26,7 @@ func init() {
 	}
 }
 
-func TestBridgeService(t *testing.T) {
+func TestBridgeMock(t *testing.T) {
 	err := RunMockServer()
 	require.NoError(t, err)
 
