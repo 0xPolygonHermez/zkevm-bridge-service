@@ -37,7 +37,7 @@ func hashDeposit(deposit *etherman.Deposit) [KeyLen]byte {
 	binary.LittleEndian.PutUint32(origNet, uint32(deposit.OriginalNetwork))
 	destNet := make([]byte, 4) //nolint:gomnd
 	binary.LittleEndian.PutUint32(destNet, uint32(deposit.DestinationNetwork))
-	var buf [32]byte
+	var buf [KeyLen]byte
 	copy(res[:], keccak256.Hash(origNet, deposit.TokenAddress[:], deposit.Amount.FillBytes(buf[:]), destNet, deposit.DestinationAddress[:]))
 	return res
 }

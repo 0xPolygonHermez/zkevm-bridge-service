@@ -15,15 +15,16 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var (
-	testHeight = 32
-)
-
 type leafVectorRaw struct {
 	Leaves        []string   `json:"leaves"`
 	ExpectedRoots []string   `json:"expectedRoots"`
 	ExpectedCount uint       `json:"expectedCount"`
 	Prooves       [][]string `json:"prooves"`
+}
+
+type mtTestRaw struct {
+	Height  uint            `json:"height"`
+	Vectors []leafVectorRaw `json:"vectors"`
 }
 
 func init() {
@@ -37,12 +38,12 @@ func init() {
 	}
 }
 
-func formatBytes32String(text string) ([32]byte, error) {
+func formatBytes32String(text string) ([KeyLen]byte, error) {
 	bText := []byte(text)
 	if len(bText) > 31 {
-		return [32]byte{}, fmt.Errorf("text is more than 31 bytes long")
+		return [KeyLen]byte{}, fmt.Errorf("text is more than 31 bytes long")
 	}
-	var res [32]byte
+	var res [KeyLen]byte
 	copy(res[:], bText)
 	return res, nil
 }
@@ -51,15 +52,15 @@ func TestMerkleTree(t *testing.T) {
 	data, err := os.ReadFile("test/vectors/mt-raw.json")
 	require.NoError(t, err)
 
-	var testVectors []leafVectorRaw
-	err = json.Unmarshal(data, &testVectors)
+	var mtTestRaw mtTestRaw
+	err = json.Unmarshal(data, &mtTestRaw)
 	require.NoError(t, err)
 
 	dbCfg := pgstorage.NewConfigFromEnv()
 
 	ctx := context.WithValue(context.Background(), contextKeyNetwork, uint8(1)) //nolint
 
-	for ti, testVector := range testVectors {
+	for ti, testVector := range mtTestRaw.Vectors {
 		t.Run(fmt.Sprintf("Test vector %d", ti), func(t *testing.T) {
 			err = pgstorage.InitOrReset(dbCfg)
 			require.NoError(t, err)
@@ -67,7 +68,7 @@ func TestMerkleTree(t *testing.T) {
 			store, err := pgstorage.NewPostgresStorage(dbCfg)
 			require.NoError(t, err)
 
-			mt, err := NewMerkleTree(ctx, store, uint8(testHeight))
+			mt, err := NewMerkleTree(ctx, store, uint8(mtTestRaw.Height))
 			require.NoError(t, err)
 			assert.Equal(t, hex.EncodeToString(mt.root[:]), testVector.ExpectedRoots[0])
 

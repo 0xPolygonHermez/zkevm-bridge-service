@@ -14,21 +14,10 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/hermez-bridge/db/pgstorage"
 	"github.com/hermeznetwork/hermez-bridge/etherman"
+	"github.com/hermeznetwork/hermez-bridge/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
-
-type depositVectorRaw struct {
-	OriginalNetwork    uint   `json:"origNetwork"`
-	TokenAddress       string `json:"tokenAddress"`
-	Amount             string `json:"amount"`
-	DestinationNetwork uint   `json:"destNetwork"`
-	DestinationAddress string `json:"destAddress"`
-	BlockNumber        uint64 `json:"blockNumber"`
-	DepositCount       uint   `json:"depositCount"`
-	ExpectedHash       string `json:"expectedHash"`
-	ExpectedRoot       string `json:"expectedRoot"`
-}
 
 func init() {
 	// Change dir to project root
@@ -41,11 +30,11 @@ func init() {
 	}
 }
 
-func TestBridgeCtrl(t *testing.T) {
-	data, err := os.ReadFile("test/vectors/mainnet-raw.json")
+func TestBridgeTree(t *testing.T) {
+	data, err := os.ReadFile("test/vectors/deposit-raw.json")
 	require.NoError(t, err)
 
-	var testVectors []depositVectorRaw
+	var testVectors []test.DepositVectorRaw
 	err = json.Unmarshal(data, &testVectors)
 	require.NoError(t, err)
 
@@ -54,7 +43,7 @@ func TestBridgeCtrl(t *testing.T) {
 	require.NoError(t, err)
 
 	cfg := Config{
-		Height: uint8(testHeight),
+		Height: uint8(32), //nolint:gomnd
 		Store:  "postgres",
 	}
 
@@ -106,8 +95,7 @@ func TestBridgeCtrl(t *testing.T) {
 		}
 
 		for _, testVector := range testVectors {
-			merkleProof := make([][KeyLen]byte, testHeight)
-			globalExitRoot, err := bt.GetClaim(testVector.OriginalNetwork, testVector.DepositCount, merkleProof)
+			merkleProof, globalExitRoot, err := bt.GetClaim(testVector.OriginalNetwork, testVector.DepositCount)
 			require.NoError(t, err)
 
 			log.Println(globalExitRoot)

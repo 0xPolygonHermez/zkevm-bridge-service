@@ -129,3 +129,8 @@ func (mt *MerkleTree) resetLeaf(ctx context.Context, depositCount uint) error {
 	copy(mt.root[:], root)
 	return nil
 }
+
+func (mt *MerkleTree) getDepositCntByRoot(ctx context.Context, root [KeyLen]byte) (uint, error) {
+	_, depositCnt, err := mt.store.Get(ctx, root[:])
+	return depositCnt, err
+}

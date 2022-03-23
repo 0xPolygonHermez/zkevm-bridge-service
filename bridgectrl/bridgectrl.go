@@ -59,7 +59,7 @@ func (bt *BridgeController) AddDeposit(deposit *etherman.Deposit) error {
 }
 
 // GetClaim returns claim information to the user.
-func (bt *BridgeController) GetClaim(networkID uint, index uint, merkleProof [][KeyLen]byte) (*etherman.GlobalExitRoot, error) {
+func (bt *BridgeController) GetClaim(networkID uint, index uint) ([][KeyLen]byte, *etherman.GlobalExitRoot, error) {
 	var (
 		ctx   context.Context
 		proof [][KeyLen]byte
@@ -67,21 +67,26 @@ func (bt *BridgeController) GetClaim(networkID uint, index uint, merkleProof [][
 
 	tID := bt.networkIDs[networkID]
 	ctx = context.WithValue(context.TODO(), contextKeyNetwork, tID) //nolint
+	tID--
 	globalExitRoot, err := bt.storage.GetLatestExitRoot(context.TODO())
 	if err != nil {
-		return nil, err
+		return proof, nil, err
 	}
 
 	proof, err = bt.exitTrees[tID].getSiblings(ctx, index-1, globalExitRoot.ExitRoots[tID])
 	if err != nil {
-		return nil, err
+		return proof, nil, err
 	}
-	copy(merkleProof, proof)
 
-	return &etherman.GlobalExitRoot{
+	return proof, &etherman.GlobalExitRoot{
 		GlobalExitRootNum: globalExitRoot.GlobalExitRootNum,
 		ExitRoots:         []common.Hash{bt.exitTrees[0].root, bt.exitTrees[1].root},
 	}, err
+}
+
+// GetMerkleRoot returns claim information to the user.
+func (bt *BridgeController) GetMerkleRoot(networkID uint) ([][KeyLen]byte, error) {
+	return nil, nil
 }
 
 // ReorgMT reorg the specific merkle tree.
