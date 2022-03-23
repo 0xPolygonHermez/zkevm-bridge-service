@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/hermeznetwork/hermez-bridge/bridgetree"
+	"github.com/hermeznetwork/hermez-bridge/bridgectrl"
 	"github.com/hermeznetwork/hermez-bridge/etherman"
 	"github.com/hermeznetwork/hermez-bridge/gerror"
 	"github.com/hermeznetwork/hermez-core/log"
@@ -27,14 +27,14 @@ type ClientSynchronizer struct {
 	storage        storageInterface
 	ctx            context.Context
 	cancelCtx      context.CancelFunc
-	bridgeTree     *bridgetree.BridgeTree
+	bridgeCtrl     *bridgectrl.BridgeController
 	genBlockNumber uint64
 	cfg            Config
 	networkID      uint
 }
 
 // NewSynchronizer creates and initializes an instance of Synchronizer
-func NewSynchronizer(storage storageInterface, bridge *bridgetree.BridgeTree, ethMan localEtherMan, genBlockNumber uint64, cfg Config) (Synchronizer, error) {
+func NewSynchronizer(storage storageInterface, bridge *bridgectrl.BridgeController, ethMan localEtherMan, genBlockNumber uint64, cfg Config) (Synchronizer, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	networkID, err := ethMan.GetNetworkID(ctx)
 	if err != nil {
@@ -45,7 +45,7 @@ func NewSynchronizer(storage storageInterface, bridge *bridgetree.BridgeTree, et
 		storage:        storage,
 		ctx:            ctx,
 		cancelCtx:      cancel,
-		bridgeTree:     bridge,
+		bridgeCtrl:     bridge,
 		genBlockNumber: genBlockNumber,
 		cfg:            cfg,
 		networkID:      networkID,
@@ -216,7 +216,7 @@ func (s *ClientSynchronizer) processBlockRange(blocks []etherman.Block, order ma
 					log.Fatal("failed to store new deposit locally, block: %d, Deposit: %+v err: %v", &blocks[i].BlockNumber, deposit, err)
 				}
 
-				err = s.bridgeTree.AddDeposit(deposit)
+				err = s.bridgeCtrl.AddDeposit(deposit)
 				if err != nil {
 					log.Fatal("failed to store new deposit in the bridge tree, block: %d, Deposit: %+v err: %v", &blocks[i].BlockNumber, deposit, err)
 				}
@@ -290,7 +290,13 @@ func (s *ClientSynchronizer) resetState(block *etherman.Block) error {
 		log.Error("error committing the resetted state. Error: ", err)
 		return err
 	}
-	return nil
+
+	depositCnt, err := s.storage.GetNumberDeposits(s.ctx, s.networkID)
+	if err != nil {
+		return err
+	}
+
+	return s.bridgeCtrl.ReorgMT(uint(depositCnt), s.networkID)
 }
 
 /*

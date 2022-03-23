@@ -4,7 +4,7 @@ import (
 	"os"
 	"os/signal"
 
-	"github.com/hermeznetwork/hermez-bridge/bridgetree"
+	"github.com/hermeznetwork/hermez-bridge/bridgectrl"
 	"github.com/hermeznetwork/hermez-bridge/config"
 	"github.com/hermeznetwork/hermez-bridge/db"
 	"github.com/hermeznetwork/hermez-bridge/db/pgstorage"
@@ -39,9 +39,9 @@ func start(ctx *cli.Context) error {
 		return err
 	}
 
-	var brdigeTree *bridgetree.BridgeTree
+	var bridgeController *bridgectrl.BridgeController
 
-	if c.BridgeTree.Store == "postgres" {
+	if c.BridgeController.Store == "postgres" {
 		pgStorage, err := pgstorage.NewPostgresStorage(pgstorage.Config{
 			User:     c.Database.User,
 			Password: c.Database.Password,
@@ -54,16 +54,16 @@ func start(ctx *cli.Context) error {
 			return err
 		}
 
-		brdigeTree, err = bridgetree.NewBridgeTree(c.BridgeTree, []uint64{0, 1000}, pgStorage, pgStorage)
+		bridgeController, err = bridgectrl.NewBridgeController(c.BridgeController, []uint{0, 1000}, pgStorage, pgStorage)
 		if err != nil {
 			log.Error(err)
 			return err
 		}
 	}
 
-	go runSynchronizer(c.NetworkConfig.GenBlockNumber, brdigeTree, etherman, c.Synchronizer, storage)
+	go runSynchronizer(c.NetworkConfig.GenBlockNumber, bridgeController, etherman, c.Synchronizer, storage)
 	for _, client := range l2Ethermans {
-		go runSynchronizer(0, brdigeTree, client, c.Synchronizer, storage)
+		go runSynchronizer(0, bridgeController, client, c.Synchronizer, storage)
 	}
 
 	// Wait for an in interrupt.
@@ -97,8 +97,8 @@ func newEthermans(c config.Config) (*etherman.ClientEtherMan, []*etherman.Client
 	return l1Etherman, l2Ethermans, nil
 }
 
-func runSynchronizer(genBlockNumber uint64, brdigeTree *bridgetree.BridgeTree, etherman *etherman.ClientEtherMan, cfg synchronizer.Config, storage db.Storage) {
-	sy, err := synchronizer.NewSynchronizer(storage, brdigeTree, etherman, genBlockNumber, cfg)
+func runSynchronizer(genBlockNumber uint64, brdigeCtrl *bridgectrl.BridgeController, etherman *etherman.ClientEtherMan, cfg synchronizer.Config, storage db.Storage) {
+	sy, err := synchronizer.NewSynchronizer(storage, brdigeCtrl, etherman, genBlockNumber, cfg)
 	if err != nil {
 		log.Fatal(err)
 	}

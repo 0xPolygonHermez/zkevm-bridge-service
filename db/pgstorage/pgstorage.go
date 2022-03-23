@@ -15,27 +15,27 @@ import (
 )
 
 const (
-	getLastBlockSQL       = "SELECT * FROM sync.block where network_id = $1 ORDER BY block_num DESC LIMIT 1"
-	addBlockSQL           = "INSERT INTO sync.block (block_num, block_hash, parent_hash, received_at, network_id) VALUES ($1, $2, $3, $4, $5) RETURNING id;"
-	addDepositSQL         = "INSERT INTO sync.deposit (orig_net, token_addr, amount, dest_net, dest_addr, block_num, deposit_cnt, block_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"
-	getDepositSQL         = "SELECT orig_net, token_addr, amount, dest_net, dest_addr, block_num, deposit_cnt, block_id FROM sync.deposit WHERE orig_net = $1 AND deposit_cnt = $2"
-	getNodeByKeySQL       = "SELECT value FROM merkletree.rht WHERE key = $1 AND network = $2"
-	setNodeByKeySQL       = "INSERT INTO merkletree.rht (key, value, network) VALUES ($1, $2, $3)"
-	getMTRootSQL          = "SELECT index FROM merkletree.root_track WHERE root = $1 AND network = $2"
-	setMTRootSQL          = "INSERT INTO merkletree.root_track (index, root, network) VALUES($1, $2, $3)"
-	getPreviousBlockSQL   = "SELECT id, block_num, block_hash, parent_hash, network_id, received_at FROM sync.block WHERE network_id = $1 ORDER BY block_num DESC LIMIT 1 OFFSET $2"
-	resetSQL              = "DELETE FROM sync.block WHERE block_num > $1 AND network_id = $2"
-	resetConsolidationSQL = "UPDATE sync.batch SET aggregator = '\x0000000000000000000000000000000000000000', consolidated_tx_hash = '\x0000000000000000000000000000000000000000000000000000000000000000', consolidated_at = null WHERE consolidated_at > $1 AND network_id = $2"
-	addGlobalExitRootSQL  = "INSERT INTO sync.exit_root (block_num, global_exit_root_num, mainnet_exit_root, rollup_exit_root, block_id) VALUES ($1, $2, $3, $4, $5)"
-	getExitRootSQL        = "SELECT block_id, block_num, global_exit_root_num, mainnet_exit_root, rollup_exit_root FROM sync.exit_root ORDER BY global_exit_root_num DESC LIMIT 1"
-	addClaimSQL           = "INSERT INTO sync.claim (index, orig_net, token_addr, amount, dest_addr, block_num, dest_net, block_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"
-	getClaimSQL           = "SELECT index, orig_net, token_addr, amount, dest_addr, block_num, dest_net, block_id FROM sync.claim WHERE index = $1 AND orig_net = $2"
-	addTokenWrappedSQL    = "INSERT INTO sync.token_wrapped (orig_net, orig_token_addr, wrapped_token_addr, block_num, dest_net, block_id) VALUES ($1, $2, $3, $4, $5, $6)"
-	getTokenWrappedSQL    = "SELECT orig_net, orig_token_addr, wrapped_token_addr, block_num, dest_net, block_id FROM sync.token_wrapped WHERE orig_net = $1 AND orig_token_addr = $2" // nolint
-	consolidateBatchSQL   = "UPDATE sync.batch SET consolidated_tx_hash = $1, consolidated_at = $2, aggregator = $3 WHERE batch_num = $4 AND network_id = $5"
-	addBatchSQL           = "INSERT INTO sync.batch (batch_num, batch_hash, block_num, sequencer, aggregator, consolidated_tx_hash, header, uncles, received_at, chain_id, global_exit_root, block_id, network_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)"
-	getBatchByNumberSQL   = "SELECT block_num, sequencer, aggregator, consolidated_tx_hash, header, uncles, chain_id, global_exit_root, received_at, consolidated_at, block_id, network_id FROM sync.batch WHERE batch_num = $1 AND network_id = $2"
-	getNumDepositsSQL     = "SELECT MAX(deposit_cnt) FROM sync.deposit WHERE orig_net = $1"
+	getLastBlockSQL        = "SELECT * FROM sync.block where network_id = $1 ORDER BY block_num DESC LIMIT 1"
+	addBlockSQL            = "INSERT INTO sync.block (block_num, block_hash, parent_hash, received_at, network_id) VALUES ($1, $2, $3, $4, $5) RETURNING id;"
+	addDepositSQL          = "INSERT INTO sync.deposit (orig_net, token_addr, amount, dest_net, dest_addr, block_num, deposit_cnt, block_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"
+	getDepositSQL          = "SELECT orig_net, token_addr, amount, dest_net, dest_addr, block_num, deposit_cnt, block_id FROM sync.deposit WHERE orig_net = $1 AND deposit_cnt = $2"
+	getNodeByKeySQL        = "SELECT value, deposit_cnt FROM merkletree.rht WHERE key = $1 AND network = $2"
+	getRootByDepositCntSQL = "SELECT key FROM merkletree.rht WHERE deposit_cnt = $1 AND depth = $2 AND network = $3"
+	setNodeByKeySQL        = "INSERT INTO merkletree.rht (key, value, network, deposit_cnt, depth) VALUES ($1, $2, $3, $4, $5)"
+	resetNodeByKeySQL      = "DELETE FROM merkletree.rht WHERE deposit_cnt > $1 AND network = $2"
+	getPreviousBlockSQL    = "SELECT id, block_num, block_hash, parent_hash, network_id, received_at FROM sync.block WHERE network_id = $1 ORDER BY block_num DESC LIMIT 1 OFFSET $2"
+	resetSQL               = "DELETE FROM sync.block WHERE block_num > $1 AND network_id = $2"
+	resetConsolidationSQL  = "UPDATE sync.batch SET aggregator = '\x0000000000000000000000000000000000000000', consolidated_tx_hash = '\x0000000000000000000000000000000000000000000000000000000000000000', consolidated_at = null WHERE consolidated_at > $1 AND network_id = $2"
+	addGlobalExitRootSQL   = "INSERT INTO sync.exit_root (block_num, global_exit_root_num, mainnet_exit_root, rollup_exit_root, block_id) VALUES ($1, $2, $3, $4, $5)"
+	getExitRootSQL         = "SELECT block_id, block_num, global_exit_root_num, mainnet_exit_root, rollup_exit_root FROM sync.exit_root ORDER BY global_exit_root_num DESC LIMIT 1"
+	addClaimSQL            = "INSERT INTO sync.claim (index, orig_net, token_addr, amount, dest_addr, block_num, dest_net, block_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"
+	getClaimSQL            = "SELECT index, orig_net, token_addr, amount, dest_addr, block_num, dest_net, block_id FROM sync.claim WHERE index = $1 AND orig_net = $2"
+	addTokenWrappedSQL     = "INSERT INTO sync.token_wrapped (orig_net, orig_token_addr, wrapped_token_addr, block_num, dest_net, block_id) VALUES ($1, $2, $3, $4, $5, $6)"
+	getTokenWrappedSQL     = "SELECT orig_net, orig_token_addr, wrapped_token_addr, block_num, dest_net, block_id FROM sync.token_wrapped WHERE orig_net = $1 AND orig_token_addr = $2" // nolint
+	consolidateBatchSQL    = "UPDATE sync.batch SET consolidated_tx_hash = $1, consolidated_at = $2, aggregator = $3 WHERE batch_num = $4 AND network_id = $5"
+	addBatchSQL            = "INSERT INTO sync.batch (batch_num, batch_hash, block_num, sequencer, aggregator, consolidated_tx_hash, header, uncles, received_at, chain_id, global_exit_root, block_id, network_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)"
+	getBatchByNumberSQL    = "SELECT block_num, sequencer, aggregator, consolidated_tx_hash, header, uncles, chain_id, global_exit_root, received_at, consolidated_at, block_id, network_id FROM sync.batch WHERE batch_num = $1 AND network_id = $2"
+	getNumDepositsSQL      = "SELECT MAX(deposit_cnt) FROM sync.deposit WHERE orig_net = $1"
 )
 
 var (
@@ -103,23 +103,41 @@ func (s *PostgresStorage) GetDeposit(ctx context.Context, depositCounterUser uin
 }
 
 // Get gets value of key from the merkle tree
-func (s *PostgresStorage) Get(ctx context.Context, key []byte) ([][]byte, error) {
-	var data [][]byte
-	err := s.db.QueryRow(ctx, getNodeByKeySQL, key, string(ctx.Value(contextKeyNetwork).(uint8))).Scan(pq.Array(&data))
+func (s *PostgresStorage) Get(ctx context.Context, key []byte) ([][]byte, uint, error) {
+	var (
+		data       [][]byte
+		depositCnt uint
+	)
+
+	err := s.db.QueryRow(ctx, getNodeByKeySQL, key, string(ctx.Value(contextKeyNetwork).(uint8))).Scan(pq.Array(&data), &depositCnt)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, 0, gerror.ErrStorageNotFound
+		}
+		return nil, 0, err
+	}
+	return data, depositCnt, nil
+}
+
+// GetRoot gets root by the deposit count from the merkle tree
+func (s *PostgresStorage) GetRoot(ctx context.Context, depositCnt uint, depth uint8) ([]byte, error) {
+	var root []byte
+
+	err := s.db.QueryRow(ctx, getRootByDepositCntSQL, depositCnt, string(depth+1), string(ctx.Value(contextKeyNetwork).(uint8))).Scan(&root)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, gerror.ErrStorageNotFound
 		}
 		return nil, err
 	}
-	return data, nil
+	return root, nil
 }
 
 // Set inserts a key-value pair into the db.
 // If record with such a key already exists its assumed that the value is correct,
 // because it's a reverse hash table, and the key is a hash of the value
-func (s *PostgresStorage) Set(ctx context.Context, key []byte, value [][]byte) error {
-	_, err := s.db.Exec(ctx, setNodeByKeySQL, key, pq.Array(value), string(ctx.Value(contextKeyNetwork).(uint8)))
+func (s *PostgresStorage) Set(ctx context.Context, key []byte, value [][]byte, depositCnt uint, depth uint8) error {
+	_, err := s.db.Exec(ctx, setNodeByKeySQL, key, pq.Array(value), string(ctx.Value(contextKeyNetwork).(uint8)), depositCnt, string(depth+1))
 	if err != nil {
 		if strings.Contains(err.Error(), "duplicate key value violates unique constraint") {
 			return nil
@@ -129,22 +147,9 @@ func (s *PostgresStorage) Set(ctx context.Context, key []byte, value [][]byte) e
 	return nil
 }
 
-// GetMTRoot returns deposit count for the specific root in the merkle tree
-func (s *PostgresStorage) GetMTRoot(ctx context.Context, root []byte) (uint, error) {
-	var index uint
-	err := s.db.QueryRow(ctx, getMTRootSQL, root, string(ctx.Value(contextKeyNetwork).(uint8))).Scan(&index)
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return 0, gerror.ErrStorageNotFound
-		}
-		return 0, err
-	}
-	return index, nil
-}
-
-// SetMTRoot inserts a track of root to the merkle tree
-func (s *PostgresStorage) SetMTRoot(ctx context.Context, index uint, root []byte) error {
-	_, err := s.db.Exec(ctx, setMTRootSQL, index, root, string(ctx.Value(contextKeyNetwork).(uint8)))
+// ResetMT resets nodes of the Merkle Tree.
+func (s *PostgresStorage) ResetMT(ctx context.Context, depositCnt uint) error {
+	_, err := s.db.Exec(ctx, resetNodeByKeySQL, depositCnt, string(ctx.Value(contextKeyNetwork).(uint8)))
 	return err
 }
 
