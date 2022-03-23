@@ -31,4 +31,5 @@ type storageInterface interface {
 	AddTokenWrapped(ctx context.Context, tokeWrapped *etherman.TokenWrapped) error
 	Reset(ctx context.Context, block *etherman.Block, networkID uint) error
 	GetPreviousBlock(ctx context.Context, networkID uint, offset uint64) (*etherman.Block, error)
+	GetNumberDeposits(ctx context.Context, origNetworkID uint) (uint64, error)
 }

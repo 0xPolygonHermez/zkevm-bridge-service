@@ -1,10 +1,10 @@
-package bridgetree
+package bridgectrl
 
 import (
 	"context"
 	"encoding/hex"
 
-	"github.com/hermeznetwork/hermez-bridge/bridgetree/pb"
+	"github.com/hermeznetwork/hermez-bridge/bridgectrl/pb"
 )
 
 const (
@@ -14,12 +14,12 @@ const (
 
 type bridgeService struct {
 	storage    BridgeServiceStorage
-	bridgeCtrl *BridgeTree
+	bridgeCtrl *BridgeController
 	pb.UnimplementedBridgeServiceServer
 }
 
 // NewBridgeService creates new bridge service.
-func NewBridgeService(storage BridgeServiceStorage, bridgeCtrl *BridgeTree) pb.BridgeServiceServer {
+func NewBridgeService(storage BridgeServiceStorage, bridgeCtrl *BridgeController) pb.BridgeServiceServer {
 	return &bridgeService{
 		storage:    storage,
 		bridgeCtrl: bridgeCtrl,
@@ -117,10 +117,10 @@ func (s *bridgeService) GetClaimStatus(ctx context.Context, req *pb.GetClaimStat
 		return nil, err
 	}
 
-	tID := s.bridgeCtrl.networkIDs[uint64(req.OrigNet)]
+	tID := s.bridgeCtrl.networkIDs[uint(req.OrigNet)]
 	ctx = context.WithValue(ctx, contextKeyNetwork, tID) //nolint
 	tID--
-	depositCnt, err := s.bridgeCtrl.exitRootTrees[tID].getDepositCntByRoot(ctx, exitRoot.ExitRoots[tID])
+	depositCnt, err := s.bridgeCtrl.exitTrees[tID].getDepositCntByRoot(ctx, exitRoot.ExitRoots[tID])
 	if err != nil {
 		return nil, err
 	}

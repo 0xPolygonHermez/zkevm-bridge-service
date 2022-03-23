@@ -1,4 +1,4 @@
-package bridgetree
+package bridgectrl
 
 import (
 	"context"
@@ -82,21 +82,23 @@ func TestMerkleTree(t *testing.T) {
 
 				assert.Equal(t, hex.EncodeToString(mt.root[:]), testVector.ExpectedRoots[i+1])
 
-				index, err := mt.store.GetMTRoot(ctx, mt.root[:])
-				require.NoError(t, err)
-
-				assert.Equal(t, uint(i+1), index)
-
 				prooves, err := mt.getSiblings(ctx, uint(i), mt.root)
 				require.NoError(t, err)
-				proofStrings := make([]string, 0)
 
+				proofStrings := make([]string, 0)
 				for i := 0; i < len(prooves); i++ {
 					proofStrings = append(proofStrings, hex.EncodeToString(prooves[i][:]))
 				}
 				assert.Equal(t, proofStrings, testVector.Prooves[i])
 			}
 			assert.Equal(t, mt.count, testVector.ExpectedCount)
+
+			for i := len(testVector.Leaves) - 1; i >= 0; i-- {
+				err := mt.resetLeaf(ctx, uint(i))
+				require.NoError(t, err)
+				assert.Equal(t, hex.EncodeToString(mt.root[:]), testVector.ExpectedRoots[i])
+				assert.Equal(t, mt.count, uint(i))
+			}
 		})
 	}
 }

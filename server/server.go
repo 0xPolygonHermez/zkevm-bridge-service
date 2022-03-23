@@ -10,8 +10,8 @@ import (
 	"time"
 
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
-	"github.com/hermeznetwork/hermez-bridge/bridgetree"
-	"github.com/hermeznetwork/hermez-bridge/bridgetree/pb"
+	"github.com/hermeznetwork/hermez-bridge/bridgectrl"
+	"github.com/hermeznetwork/hermez-bridge/bridgectrl/pb"
 	"github.com/hermeznetwork/hermez-bridge/gerror"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -20,7 +20,7 @@ import (
 )
 
 // RunServer runs gRPC server and HTTP gateway
-func RunServer(storage bridgetree.BridgeServiceStorage, bridgeCtrl *bridgetree.BridgeTree, cfg Config) error {
+func RunServer(storage bridgectrl.BridgeServiceStorage, bridgeCtrl *bridgectrl.BridgeController, cfg Config) error {
 	ctx := context.Background()
 
 	if len(cfg.GRPCPort) == 0 {
@@ -31,7 +31,7 @@ func RunServer(storage bridgetree.BridgeServiceStorage, bridgeCtrl *bridgetree.B
 		return fmt.Errorf("invalid TCP port for HTTP gateway: '%s'", cfg.HTTPPort)
 	}
 
-	bridgeService := bridgetree.NewBridgeService(storage, bridgeCtrl)
+	bridgeService := bridgectrl.NewBridgeService(storage, bridgeCtrl)
 
 	go func() {
 		_ = runRestServer(ctx, cfg.GRPCPort, cfg.HTTPPort)

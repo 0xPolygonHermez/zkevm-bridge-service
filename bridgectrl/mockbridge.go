@@ -1,4 +1,4 @@
-package bridgetree
+package bridgectrl
 
 import (
 	"context"
@@ -26,7 +26,7 @@ func init() {
 }
 
 // MockBridgeCtrl prepares mock data in the bridge service
-func MockBridgeCtrl(store *pgstorage.PostgresStorage) (*BridgeTree, error) {
+func MockBridgeCtrl(store *pgstorage.PostgresStorage) (*BridgeController, error) {
 	data, err := os.ReadFile("test/vectors/block-raw.json")
 	if err != nil {
 		return nil, err
@@ -65,7 +65,7 @@ func MockBridgeCtrl(store *pgstorage.PostgresStorage) (*BridgeTree, error) {
 		Store:  "postgres",
 	}
 
-	bt, err := NewBridgeTree(btCfg, []uint64{0, 1000, 1001}, store, store)
+	bt, err := NewBridgeController(btCfg, []uint{0, 1000, 1001}, store, store)
 	if err != nil {
 		return nil, err
 	}
@@ -124,7 +124,7 @@ func MockBridgeCtrl(store *pgstorage.PostgresStorage) (*BridgeTree, error) {
 		err = store.AddExitRoot(context.TODO(), &etherman.GlobalExitRoot{
 			BlockNumber:       0,
 			GlobalExitRootNum: big.NewInt(int64(i)),
-			ExitRoots:         []common.Hash{common.BytesToHash(bt.exitRootTrees[0].root[:]), common.BytesToHash(bt.exitRootTrees[1].root[:])},
+			ExitRoots:         []common.Hash{common.BytesToHash(bt.exitTrees[0].root[:]), common.BytesToHash(bt.exitTrees[1].root[:])},
 			BlockID:           id,
 		})
 		if err != nil {

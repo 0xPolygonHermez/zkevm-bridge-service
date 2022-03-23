@@ -9,7 +9,7 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/hermeznetwork/hermez-bridge/bridgetree/pb"
+	"github.com/hermeznetwork/hermez-bridge/bridgectrl/pb"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/encoding/protojson"
 )

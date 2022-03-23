@@ -1,7 +1,7 @@
 package server
 
 import (
-	"github.com/hermeznetwork/hermez-bridge/bridgetree"
+	"github.com/hermeznetwork/hermez-bridge/bridgectrl"
 	"github.com/hermeznetwork/hermez-bridge/db/pgstorage"
 )
 
@@ -18,7 +18,7 @@ func RunMockServer() error {
 		return err
 	}
 
-	bt, err := bridgetree.MockBridgeCtrl(store)
+	bt, err := bridgectrl.MockBridgeCtrl(store)
 	if err != nil {
 		return err
 	}
