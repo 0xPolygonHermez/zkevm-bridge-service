@@ -43,7 +43,7 @@ func TestBridgeTree(t *testing.T) {
 	require.NoError(t, err)
 
 	cfg := Config{
-		Height: uint8(testHeight),
+		Height: uint8(32), //nolint:gomnd
 		Store:  "postgres",
 	}
 

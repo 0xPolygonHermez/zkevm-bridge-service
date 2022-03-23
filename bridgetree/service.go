@@ -120,7 +120,7 @@ func (s *bridgeService) GetClaimStatus(ctx context.Context, req *pb.GetClaimStat
 	tID := s.bridgeCtrl.networkIDs[uint64(req.OrigNet)]
 	ctx = context.WithValue(ctx, contextKeyNetwork, tID) //nolint
 	tID--
-	depositCnt, err := s.bridgeCtrl.exitRootTrees[tID].getCntByRoot(ctx, exitRoot.ExitRoots[tID])
+	depositCnt, err := s.bridgeCtrl.exitRootTrees[tID].getDepositCntByRoot(ctx, exitRoot.ExitRoots[tID])
 	if err != nil {
 		return nil, err
 	}

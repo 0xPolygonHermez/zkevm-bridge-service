@@ -1,7 +1,6 @@
 package server
 
 import (
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -9,11 +8,13 @@ import (
 	"path"
 	"runtime"
 	"testing"
-	"time"
 
 	"github.com/hermeznetwork/hermez-bridge/bridgetree/pb"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/protobuf/encoding/protojson"
 )
+
+const port = "8080"
 
 func init() {
 	// Change dir to project root
@@ -30,44 +31,33 @@ func TestBridgeMock(t *testing.T) {
 	err := RunMockServer()
 	require.NoError(t, err)
 
-	address := "http://localhost:8080"
+	err = healthRestCheck(port)
+	require.NoError(t, err)
 
-	// Check the api version
-	checkLimit := 15
+	address := "http://localhost:" + port
 
-	for checkLimit > 0 {
-		time.Sleep(1 * time.Second)
-		checkLimit--
-
-		resp, err := http.Get(address + "/api")
-		if err != nil {
-			continue
-		}
-
-		bodyBytes, err := ioutil.ReadAll(resp.Body)
-		_ = resp.Body.Close()
-		if err != nil {
-			continue
-		}
-
-		var apiResp pb.CheckAPIResponse
-		_ = json.Unmarshal(bodyBytes, &apiResp)
-		require.NoError(t, err)
-
-		require.Equal(t, "v1", apiResp.Api)
-		break
-	}
-
-	require.GreaterOrEqual(t, checkLimit, 1)
-
-	resp, err := http.Get(fmt.Sprintf("%s%s/%s", address, "/bridges", "0xeB17ce701E9D92724AA2ABAdA7E4B28830597Dd9"))
+	resp, err := http.Get(address + "/api")
 	require.NoError(t, err)
 
 	bodyBytes, err := ioutil.ReadAll(resp.Body)
 	require.NoError(t, err)
+	_ = resp.Body.Close()
+
+	var apiResp pb.CheckAPIResponse
+	err = protojson.Unmarshal(bodyBytes, &apiResp)
+	require.NoError(t, err)
+
+	require.Equal(t, "v1", apiResp.Api)
+
+	resp, err = http.Get(fmt.Sprintf("%s%s/%s", address, "/bridges", "0xeB17ce701E9D92724AA2ABAdA7E4B28830597Dd9"))
+	require.NoError(t, err)
+
+	bodyBytes, err = ioutil.ReadAll(resp.Body)
+	require.NoError(t, err)
 
 	var bridgeResp pb.GetBridgesResponse
-	_ = json.Unmarshal(bodyBytes, &bridgeResp)
+	err = protojson.Unmarshal(bodyBytes, &bridgeResp)
+	require.NoError(t, err)
 	require.Greater(t, len(bridgeResp.Deposits), 0)
 
 	offset := 3
@@ -77,7 +67,8 @@ func TestBridgeMock(t *testing.T) {
 	bodyBytes, err = ioutil.ReadAll(resp.Body)
 	require.NoError(t, err)
 
-	_ = json.Unmarshal(bodyBytes, &bridgeResp)
+	err = protojson.Unmarshal(bodyBytes, &bridgeResp)
+	require.NoError(t, err)
 	require.Equal(t, len(bridgeResp.Deposits), offset-1)
 
 	offset = 1
@@ -88,7 +79,7 @@ func TestBridgeMock(t *testing.T) {
 	require.NoError(t, err)
 
 	var claimResp pb.GetClaimsResponse
-	_ = json.Unmarshal(bodyBytes, &claimResp)
+	_ = protojson.Unmarshal(bodyBytes, &claimResp)
 	require.Equal(t, len(claimResp.Claims), 2)
 
 	resp, err = http.Get(fmt.Sprintf("%s%s?orig_net=%d&deposit_cnt=%d", address, "/merkle-proofs", 0, 2))
@@ -98,7 +89,8 @@ func TestBridgeMock(t *testing.T) {
 	require.NoError(t, err)
 
 	var proofResp pb.GetProofResponse
-	_ = json.Unmarshal(bodyBytes, &proofResp)
+	err = protojson.Unmarshal(bodyBytes, &proofResp)
+	require.NoError(t, err)
 	require.Equal(t, len(proofResp.Proof.MerkleProof), 32)
 
 	resp, err = http.Get(fmt.Sprintf("%s%s?orig_net=%d&deposit_cnt=%d", address, "/claim-status", 0, 2))
@@ -108,6 +100,7 @@ func TestBridgeMock(t *testing.T) {
 	require.NoError(t, err)
 
 	var claimStatus pb.GetClaimStatusResponse
-	_ = json.Unmarshal(bodyBytes, &claimStatus)
+	err = protojson.Unmarshal(bodyBytes, &claimStatus)
+	require.NoError(t, err)
 	require.Equal(t, claimStatus.Ready, true)
 }

@@ -110,6 +110,6 @@ func (mt *MerkleTree) addLeaf(ctx context.Context, leaf [KeyLen]byte) error {
 	return mt.store.SetMTRoot(ctx, mt.count, cur[:])
 }
 
-func (mt *MerkleTree) getCntByRoot(ctx context.Context, root [KeyLen]byte) (uint, error) {
+func (mt *MerkleTree) getDepositCntByRoot(ctx context.Context, root [KeyLen]byte) (uint, error) {
 	return mt.store.GetMTRoot(ctx, root[:])
 }
