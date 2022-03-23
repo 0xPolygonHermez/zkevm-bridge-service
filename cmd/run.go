@@ -54,7 +54,7 @@ func start(ctx *cli.Context) error {
 			return err
 		}
 
-		bridgeController, err = bridgectrl.NewBridgeController(c.BridgeController, []uint{0, 1000}, pgStorage, pgStorage) // issue #42
+		bridgeController, err = bridgectrl.NewBridgeController(c.BridgeController, []uint{0, 1000}, pgStorage, pgStorage)
 		if err != nil {
 			log.Error(err)
 			return err
