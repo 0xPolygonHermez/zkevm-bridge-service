@@ -79,7 +79,8 @@ func TestBridgeMock(t *testing.T) {
 	require.NoError(t, err)
 
 	var claimResp pb.GetClaimsResponse
-	_ = protojson.Unmarshal(bodyBytes, &claimResp)
+	err = protojson.Unmarshal(bodyBytes, &claimResp)
+	require.NoError(t, err)
 	require.Equal(t, len(claimResp.Claims), 2)
 
 	resp, err = http.Get(fmt.Sprintf("%s%s?orig_net=%d&deposit_cnt=%d", address, "/merkle-proofs", 0, 2))
