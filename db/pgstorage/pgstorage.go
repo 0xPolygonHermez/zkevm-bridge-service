@@ -15,26 +15,29 @@ import (
 )
 
 const (
-	getLastBlockSQL      = "SELECT * FROM sync.block where network_id = $1 ORDER BY block_num DESC LIMIT 1"
-	addBlockSQL          = "INSERT INTO sync.block (block_num, block_hash, parent_hash, received_at, network_id) VALUES ($1, $2, $3, $4, $5) RETURNING id;"
-	addDepositSQL        = "INSERT INTO sync.deposit (orig_net, token_addr, amount, dest_net, dest_addr, block_num, deposit_cnt, block_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"
-	getDepositSQL        = "SELECT orig_net, token_addr, amount, dest_net, dest_addr, block_num, deposit_cnt, block_id FROM sync.deposit WHERE orig_net = $1 AND deposit_cnt = $2"
-	getNodeByKeySQL      = "SELECT value FROM merkletree.rht WHERE key = $1 AND network = $2"
-	setNodeByKeySQL      = "INSERT INTO merkletree.rht (key, value, network) VALUES ($1, $2, $3)"
-	getMTRootSQL         = "SELECT index FROM merkletree.root_track WHERE root = $1 AND network = $2"
-	setMTRootSQL         = "INSERT INTO merkletree.root_track (index, root, network) VALUES($1, $2, $3)"
-	getPreviousBlockSQL  = "SELECT id, block_num, block_hash, parent_hash, network_id, received_at FROM sync.block WHERE network_id = $1 ORDER BY block_num DESC LIMIT 1 OFFSET $2"
-	resetSQL             = "DELETE FROM sync.block WHERE block_num > $1 AND network_id = $2"
-	addGlobalExitRootSQL = "INSERT INTO sync.exit_root (block_num, global_exit_root_num, mainnet_exit_root, rollup_exit_root, block_id) VALUES ($1, $2, $3, $4, $5)"
-	getExitRootSQL       = "SELECT block_id, block_num, global_exit_root_num, mainnet_exit_root, rollup_exit_root FROM sync.exit_root ORDER BY global_exit_root_num DESC LIMIT 1"
-	addClaimSQL          = "INSERT INTO sync.claim (index, orig_net, token_addr, amount, dest_addr, block_num, dest_net, block_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"
-	getClaimSQL          = "SELECT index, orig_net, token_addr, amount, dest_addr, block_num, dest_net, block_id FROM sync.claim WHERE index = $1 AND orig_net = $2"
-	addTokenWrappedSQL   = "INSERT INTO sync.token_wrapped (orig_net, orig_token_addr, wrapped_token_addr, block_num, dest_net, block_id) VALUES ($1, $2, $3, $4, $5, $6)"
-	getTokenWrappedSQL   = "SELECT orig_net, orig_token_addr, wrapped_token_addr, block_num, dest_net, block_id FROM sync.token_wrapped WHERE orig_net = $1 AND orig_token_addr = $2" // nolint
-	consolidateBatchSQL  = "UPDATE sync.batch SET consolidated_tx_hash = $1, consolidated_at = $2, aggregator = $3 WHERE batch_num = $4 AND network_id = $5"
-	addBatchSQL          = "INSERT INTO sync.batch (batch_num, batch_hash, block_num, sequencer, aggregator, consolidated_tx_hash, header, uncles, received_at, chain_id, global_exit_root, block_id, network_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)"
-	getBatchByNumberSQL  = "SELECT block_num, sequencer, aggregator, consolidated_tx_hash, header, uncles, chain_id, global_exit_root, received_at, consolidated_at, block_id, network_id FROM sync.batch WHERE batch_num = $1 AND network_id = $2"
-	getNumDepositsSQL    = "SELECT MAX(deposit_cnt) FROM sync.deposit WHERE orig_net = $1"
+	getLastBlockSQL        = "SELECT * FROM sync.block where network_id = $1 ORDER BY block_num DESC LIMIT 1"
+	addBlockSQL            = "INSERT INTO sync.block (block_num, block_hash, parent_hash, received_at, network_id) VALUES ($1, $2, $3, $4, $5) RETURNING id;"
+	addDepositSQL          = "INSERT INTO sync.deposit (orig_net, token_addr, amount, dest_net, dest_addr, block_num, deposit_cnt, block_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"
+	getDepositSQL          = "SELECT orig_net, token_addr, amount, dest_net, dest_addr, block_num, deposit_cnt, block_id FROM sync.deposit WHERE orig_net = $1 AND deposit_cnt = $2"
+	getDepositsSQL         = "SELECT orig_net, token_addr, amount, dest_net, dest_addr, block_num, deposit_cnt, block_id FROM sync.deposit WHERE orig_net = $1 AND deposit_cnt < $2 ORDER BY deposit_cnt DESC LIMIT $3"
+	getNodeByKeySQL        = "SELECT value, deposit_cnt FROM merkletree.rht WHERE key = $1 AND network = $2"
+	getRootByDepositCntSQL = "SELECT key FROM merkletree.rht WHERE deposit_cnt = $1 AND depth = $2 AND network = $3"
+	setNodeByKeySQL        = "INSERT INTO merkletree.rht (key, value, network, deposit_cnt, depth) VALUES ($1, $2, $3, $4, $5)"
+	resetNodeByKeySQL      = "DELETE FROM merkletree.rht WHERE deposit_cnt > $1 AND network = $2"
+	getPreviousBlockSQL    = "SELECT id, block_num, block_hash, parent_hash, network_id, received_at FROM sync.block WHERE network_id = $1 ORDER BY block_num DESC LIMIT 1 OFFSET $2"
+	resetSQL               = "DELETE FROM sync.block WHERE block_num > $1 AND network_id = $2"
+	resetConsolidationSQL  = "UPDATE sync.batch SET aggregator = '\x0000000000000000000000000000000000000000', consolidated_tx_hash = '\x0000000000000000000000000000000000000000000000000000000000000000', consolidated_at = null WHERE consolidated_at > $1 AND network_id = $2"
+	addGlobalExitRootSQL   = "INSERT INTO sync.exit_root (block_num, global_exit_root_num, mainnet_exit_root, rollup_exit_root, block_id) VALUES ($1, $2, $3, $4, $5)"
+	getExitRootSQL         = "SELECT block_id, block_num, global_exit_root_num, mainnet_exit_root, rollup_exit_root FROM sync.exit_root ORDER BY global_exit_root_num DESC LIMIT 1"
+	addClaimSQL            = "INSERT INTO sync.claim (index, orig_net, token_addr, amount, dest_addr, block_num, dest_net, block_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"
+	getClaimSQL            = "SELECT index, orig_net, token_addr, amount, dest_addr, block_num, dest_net, block_id FROM sync.claim WHERE index = $1 AND orig_net = $2"
+	getClaimsSQL           = "SELECT index, orig_net, token_addr, amount, dest_addr, block_num, dest_net, block_id FROM sync.claim WHERE dest_net = $1 LIMIT $2 OFFSET $3"
+	addTokenWrappedSQL     = "INSERT INTO sync.token_wrapped (orig_net, orig_token_addr, wrapped_token_addr, block_num, dest_net, block_id) VALUES ($1, $2, $3, $4, $5, $6)"
+	getTokenWrappedSQL     = "SELECT orig_net, orig_token_addr, wrapped_token_addr, block_num, dest_net, block_id FROM sync.token_wrapped WHERE orig_net = $1 AND orig_token_addr = $2" // nolint
+	consolidateBatchSQL    = "UPDATE sync.batch SET consolidated_tx_hash = $1, consolidated_at = $2, aggregator = $3 WHERE batch_num = $4 AND network_id = $5"
+	addBatchSQL            = "INSERT INTO sync.batch (batch_num, batch_hash, block_num, sequencer, aggregator, consolidated_tx_hash, header, uncles, received_at, chain_id, global_exit_root, block_id, network_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)"
+	getBatchByNumberSQL    = "SELECT block_num, sequencer, aggregator, consolidated_tx_hash, header, uncles, chain_id, global_exit_root, received_at, consolidated_at, block_id, network_id FROM sync.batch WHERE batch_num = $1 AND network_id = $2"
+	getNumDepositsSQL      = "SELECT MAX(deposit_cnt) FROM sync.deposit WHERE orig_net = $1"
 )
 
 var (
@@ -85,13 +88,12 @@ func (s *PostgresStorage) AddDeposit(ctx context.Context, deposit *etherman.Depo
 }
 
 // GetDeposit gets a specific L1 deposit
-func (s *PostgresStorage) GetDeposit(ctx context.Context, depositCounterUser uint, destNetwork uint) (*etherman.Deposit, error) {
+func (s *PostgresStorage) GetDeposit(ctx context.Context, depositCounterUser uint, origNetwork uint) (*etherman.Deposit, error) {
 	var (
 		deposit etherman.Deposit
 		amount  string
 	)
-	err := s.db.QueryRow(ctx, getDepositSQL, destNetwork, depositCounterUser).Scan(&deposit.OriginalNetwork, &deposit.TokenAddress,
-		&amount, &deposit.DestinationNetwork, &deposit.DestinationAddress, &deposit.BlockNumber, &deposit.DepositCount, &deposit.BlockID)
+	err := s.db.QueryRow(ctx, getDepositSQL, origNetwork, depositCounterUser).Scan(&deposit.OriginalNetwork, &deposit.TokenAddress, &amount, &deposit.DestinationNetwork, &deposit.DestinationAddress, &deposit.BlockNumber, &deposit.DepositCount, &deposit.BlockID)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, gerror.ErrStorageNotFound
 	} else if err != nil {
@@ -101,24 +103,71 @@ func (s *PostgresStorage) GetDeposit(ctx context.Context, depositCounterUser uin
 	return &deposit, nil
 }
 
+// GetDeposits gets the deposit list which be smaller than depositCount
+func (s *PostgresStorage) GetDeposits(ctx context.Context, depositCount uint, origNetwork uint, limit uint) ([]*etherman.Deposit, error) {
+	rows, err := s.db.Query(ctx, getDepositsSQL, origNetwork, depositCount, limit)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, gerror.ErrStorageNotFound
+	} else if err != nil {
+		return nil, err
+	}
+
+	deposits := make([]*etherman.Deposit, 0, len(rows.RawValues()))
+
+	for rows.Next() {
+		var (
+			deposit etherman.Deposit
+			amount  string
+		)
+		err := rows.Scan(&deposit.OriginalNetwork, &deposit.TokenAddress, &amount, &deposit.DestinationNetwork, &deposit.DestinationAddress, &deposit.BlockNumber, &deposit.DepositCount, &deposit.BlockID)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, gerror.ErrStorageNotFound
+		} else if err != nil {
+			return nil, err
+		}
+		deposit.Amount, _ = new(big.Int).SetString(amount, 10) // nolint
+		deposits = append(deposits, &deposit)
+	}
+
+	return deposits, nil
+}
+
 // Get gets value of key from the merkle tree
-func (s *PostgresStorage) Get(ctx context.Context, key []byte) ([][]byte, error) {
-	var data [][]byte
-	err := s.db.QueryRow(ctx, getNodeByKeySQL, key, string(ctx.Value(contextKeyNetwork).(uint8))).Scan(pq.Array(&data))
+func (s *PostgresStorage) Get(ctx context.Context, key []byte) ([][]byte, uint, error) {
+	var (
+		data       [][]byte
+		depositCnt uint
+	)
+
+	err := s.db.QueryRow(ctx, getNodeByKeySQL, key, string(ctx.Value(contextKeyNetwork).(uint8))).Scan(pq.Array(&data), &depositCnt)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, 0, gerror.ErrStorageNotFound
+		}
+		return nil, 0, err
+	}
+	return data, depositCnt, nil
+}
+
+// GetRoot gets root by the deposit count from the merkle tree
+func (s *PostgresStorage) GetRoot(ctx context.Context, depositCnt uint, depth uint8) ([]byte, error) {
+	var root []byte
+
+	err := s.db.QueryRow(ctx, getRootByDepositCntSQL, depositCnt, string(depth+1), string(ctx.Value(contextKeyNetwork).(uint8))).Scan(&root)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, gerror.ErrStorageNotFound
 		}
 		return nil, err
 	}
-	return data, nil
+	return root, nil
 }
 
 // Set inserts a key-value pair into the db.
 // If record with such a key already exists its assumed that the value is correct,
 // because it's a reverse hash table, and the key is a hash of the value
-func (s *PostgresStorage) Set(ctx context.Context, key []byte, value [][]byte) error {
-	_, err := s.db.Exec(ctx, setNodeByKeySQL, key, pq.Array(value), string(ctx.Value(contextKeyNetwork).(uint8)))
+func (s *PostgresStorage) Set(ctx context.Context, key []byte, value [][]byte, depositCnt uint, depth uint8) error {
+	_, err := s.db.Exec(ctx, setNodeByKeySQL, key, pq.Array(value), string(ctx.Value(contextKeyNetwork).(uint8)), depositCnt, string(depth+1))
 	if err != nil {
 		if strings.Contains(err.Error(), "duplicate key value violates unique constraint") {
 			return nil
@@ -128,22 +177,9 @@ func (s *PostgresStorage) Set(ctx context.Context, key []byte, value [][]byte) e
 	return nil
 }
 
-// GetMTRoot returns deposit count for the specific root in the merkle tree
-func (s *PostgresStorage) GetMTRoot(ctx context.Context, root []byte) (uint, error) {
-	var index uint
-	err := s.db.QueryRow(ctx, getMTRootSQL, root, string(ctx.Value(contextKeyNetwork).(uint8))).Scan(&index)
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return 0, gerror.ErrStorageNotFound
-		}
-		return 0, err
-	}
-	return index, nil
-}
-
-// SetMTRoot inserts a track of root to the merkle tree
-func (s *PostgresStorage) SetMTRoot(ctx context.Context, index uint, root []byte) error {
-	_, err := s.db.Exec(ctx, setMTRootSQL, index, root, string(ctx.Value(contextKeyNetwork).(uint8)))
+// ResetMT resets nodes of the Merkle Tree.
+func (s *PostgresStorage) ResetMT(ctx context.Context, depositCnt uint) error {
+	_, err := s.db.Exec(ctx, resetNodeByKeySQL, depositCnt, string(ctx.Value(contextKeyNetwork).(uint8)))
 	return err
 }
 
@@ -161,8 +197,13 @@ func (s *PostgresStorage) GetPreviousBlock(ctx context.Context, networkID uint, 
 }
 
 // Reset resets the state to a specific block
-func (s *PostgresStorage) Reset(ctx context.Context, blockNumber uint64, networkID uint) error {
-	_, err := s.db.Exec(ctx, resetSQL, blockNumber, networkID)
+func (s *PostgresStorage) Reset(ctx context.Context, block *etherman.Block, networkID uint) error {
+	if _, err := s.db.Exec(ctx, resetSQL, block.BlockNumber, networkID); err != nil {
+		return err
+	}
+
+	//Remove consolidations
+	_, err := s.db.Exec(ctx, resetConsolidationSQL, block.ReceivedAt, networkID)
 	return err
 }
 
@@ -174,6 +215,16 @@ func (s *PostgresStorage) Rollback(ctx context.Context) error {
 		return err
 	}
 
+	return gerror.ErrNilDBTransaction
+}
+
+// Commit commits a db transaction
+func (s *PostgresStorage) Commit(ctx context.Context) error {
+	if s.dbTx != nil {
+		err := s.dbTx.Commit(ctx)
+		s.dbTx = nil
+		return err
+	}
 	return gerror.ErrNilDBTransaction
 }
 
@@ -219,13 +270,12 @@ func (s *PostgresStorage) AddClaim(ctx context.Context, claim *etherman.Claim) e
 }
 
 // GetClaim gets a specific L1 claim
-func (s *PostgresStorage) GetClaim(ctx context.Context, depositCounterUser uint, originalNetwork uint) (*etherman.Claim, error) {
+func (s *PostgresStorage) GetClaim(ctx context.Context, depositCounterUser uint, origNetwork uint) (*etherman.Claim, error) {
 	var (
 		claim  etherman.Claim
 		amount string
 	)
-	err := s.db.QueryRow(ctx, getClaimSQL, depositCounterUser, originalNetwork).Scan(&claim.Index, &claim.OriginalNetwork,
-		&claim.Token, &amount, &claim.DestinationAddress, &claim.BlockNumber, &claim.DestinationNetwork, &claim.BlockID)
+	err := s.db.QueryRow(ctx, getClaimSQL, depositCounterUser, origNetwork).Scan(&claim.Index, &claim.OriginalNetwork, &claim.Token, &amount, &claim.DestinationAddress, &claim.BlockNumber, &claim.DestinationNetwork, &claim.BlockID)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, gerror.ErrStorageNotFound
 	} else if err != nil {
@@ -233,6 +283,35 @@ func (s *PostgresStorage) GetClaim(ctx context.Context, depositCounterUser uint,
 	}
 	claim.Amount, _ = new(big.Int).SetString(amount, 10) // nolint
 	return &claim, nil
+}
+
+// GetClaims gets the claim list which be smaller than index
+func (s *PostgresStorage) GetClaims(ctx context.Context, destNetwork uint, limit uint, offset uint) ([]*etherman.Claim, error) {
+	rows, err := s.db.Query(ctx, getClaimsSQL, destNetwork, limit, offset)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, gerror.ErrStorageNotFound
+	} else if err != nil {
+		return nil, err
+	}
+
+	claims := make([]*etherman.Claim, 0, len(rows.RawValues()))
+
+	for rows.Next() {
+		var (
+			claim  etherman.Claim
+			amount string
+		)
+		err := rows.Scan(&claim.Index, &claim.OriginalNetwork, &claim.Token, &amount, &claim.DestinationAddress, &claim.BlockNumber, &claim.DestinationNetwork, &claim.BlockID)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, gerror.ErrStorageNotFound
+		} else if err != nil {
+			return nil, err
+		}
+		claim.Amount, _ = new(big.Int).SetString(amount, 10) // nolint
+		claims = append(claims, &claim)
+	}
+
+	return claims, nil
 }
 
 // AddTokenWrapped adds a new claim to the db

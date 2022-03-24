@@ -1,4 +1,4 @@
-package bridgetree
+package bridgectrl
 
 import (
 	"context"
@@ -26,7 +26,7 @@ func init() {
 // NewMerkleTree creates new MerkleTree.
 func NewMerkleTree(ctx context.Context, store merkleTreeStore, height uint8) (*MerkleTree, error) {
 	for h := uint8(0); h < height; h++ {
-		err := store.Set(ctx, zeroHashes[h+1][:], [][]byte{zeroHashes[h][:], zeroHashes[h][:]})
+		err := store.Set(ctx, zeroHashes[h+1][:], [][]byte{zeroHashes[h][:], zeroHashes[h][:]}, 0, h)
 		if err != nil {
 			return nil, err
 		}
@@ -48,7 +48,11 @@ func (mt *MerkleTree) getSiblings(ctx context.Context, index uint, root [KeyLen]
 
 	cur := root
 	for h := mt.height - 1; ; h-- {
-		value, err := mt.store.Get(ctx, cur[:])
+		value, _, err := mt.store.Get(ctx, cur[:])
+		if err != nil {
+			return nil, err
+		}
+
 		copy(left[:], value[0])
 		copy(right[:], value[1])
 
@@ -90,13 +94,13 @@ func (mt *MerkleTree) addLeaf(ctx context.Context, leaf [KeyLen]byte) error {
 	for h := uint8(0); h < mt.height; h++ {
 		if index&(1<<h) > 0 {
 			parent = hash(siblings[h], cur)
-			err := mt.store.Set(ctx, parent[:], [][]byte{siblings[h][:], cur[:]})
+			err := mt.store.Set(ctx, parent[:], [][]byte{siblings[h][:], cur[:]}, index+1, h)
 			if err != nil {
 				return err
 			}
 		} else {
 			parent = hash(cur, siblings[h])
-			err := mt.store.Set(ctx, parent[:], [][]byte{cur[:], siblings[h][:]})
+			err := mt.store.Set(ctx, parent[:], [][]byte{cur[:], siblings[h][:]}, index+1, h)
 			if err != nil {
 				return err
 			}
@@ -107,5 +111,26 @@ func (mt *MerkleTree) addLeaf(ctx context.Context, leaf [KeyLen]byte) error {
 	// Set the root value
 	mt.root = cur
 	mt.count++
-	return mt.store.SetMTRoot(ctx, mt.count, cur[:])
+	return nil
+}
+
+func (mt *MerkleTree) resetLeaf(ctx context.Context, depositCount uint) error {
+	err := mt.store.ResetMT(ctx, depositCount)
+	if err != nil {
+		return err
+	}
+
+	mt.count = depositCount
+	root, err := mt.store.GetRoot(ctx, depositCount, mt.height-1)
+	if err != nil {
+		return err
+	}
+
+	copy(mt.root[:], root)
+	return nil
+}
+
+func (mt *MerkleTree) getDepositCntByRoot(ctx context.Context, root [KeyLen]byte) (uint, error) {
+	_, depositCnt, err := mt.store.Get(ctx, root[:])
+	return depositCnt, err
 }

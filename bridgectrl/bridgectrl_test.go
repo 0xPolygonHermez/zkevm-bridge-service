@@ -1,4 +1,4 @@
-package bridgetree
+package bridgectrl
 
 import (
 	"context"
@@ -14,21 +14,10 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/hermez-bridge/db/pgstorage"
 	"github.com/hermeznetwork/hermez-bridge/etherman"
+	"github.com/hermeznetwork/hermez-bridge/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
-
-type depositVectorRaw struct {
-	OriginalNetwork    uint   `json:"origNetwork"`
-	TokenAddress       string `json:"tokenAddress"`
-	Amount             string `json:"amount"`
-	DestinationNetwork uint   `json:"destNetwork"`
-	DestinationAddress string `json:"destAddress"`
-	BlockNumber        uint64 `json:"blockNumber"`
-	DepositCount       uint   `json:"depositCount"`
-	ExpectedHash       string `json:"expectedHash"`
-	ExpectedRoot       string `json:"expectedRoot"`
-}
 
 func init() {
 	// Change dir to project root
@@ -42,10 +31,10 @@ func init() {
 }
 
 func TestBridgeTree(t *testing.T) {
-	data, err := os.ReadFile("test/vectors/mainnet-raw.json")
+	data, err := os.ReadFile("test/vectors/deposit-raw.json")
 	require.NoError(t, err)
 
-	var testVectors []depositVectorRaw
+	var testVectors []test.DepositVectorRaw
 	err = json.Unmarshal(data, &testVectors)
 	require.NoError(t, err)
 
@@ -54,7 +43,7 @@ func TestBridgeTree(t *testing.T) {
 	require.NoError(t, err)
 
 	cfg := Config{
-		Height: uint8(testHeight),
+		Height: uint8(32), //nolint:gomnd
 		Store:  "postgres",
 	}
 
@@ -73,7 +62,7 @@ func TestBridgeTree(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	bt, err := NewBridgeTree(cfg, []uint64{0, 1000}, store, store)
+	bt, err := NewBridgeController(cfg, []uint{0, 1000}, store, store)
 	require.NoError(t, err)
 
 	t.Run("Test adding deposit for the bridge tree", func(t *testing.T) {
@@ -97,21 +86,25 @@ func TestBridgeTree(t *testing.T) {
 			err = store.AddExitRoot(context.TODO(), &etherman.GlobalExitRoot{
 				BlockNumber:       0,
 				GlobalExitRootNum: big.NewInt(int64(i)),
-				ExitRoots:         []common.Hash{common.BytesToHash(bt.exitRootTrees[0].root[:]), common.BytesToHash(bt.exitRootTrees[1].root[:])},
+				ExitRoots:         []common.Hash{common.BytesToHash(bt.exitTrees[0].root[:]), common.BytesToHash(bt.exitTrees[1].root[:])},
 				BlockID:           id,
 			})
 			require.NoError(t, err)
 
-			assert.Equal(t, testVector.ExpectedRoot, hex.EncodeToString(bt.exitRootTrees[0].root[:]))
+			assert.Equal(t, testVector.ExpectedRoot, hex.EncodeToString(bt.exitTrees[0].root[:]))
 		}
 
 		for _, testVector := range testVectors {
-			merkleProof := make([][KeyLen]byte, testHeight)
-			globalExitRoot, err := bt.GetClaim(testVector.OriginalNetwork, testVector.DepositCount, merkleProof)
+			merkleProof, globalExitRoot, err := bt.GetClaim(testVector.OriginalNetwork, testVector.DepositCount)
 			require.NoError(t, err)
 
 			log.Println(globalExitRoot)
 			log.Println(merkleProof)
+		}
+
+		for i := len(testVectors) - 1; i >= 0; i-- {
+			err := bt.ReorgMT(testVectors[i].DepositCount, testVectors[i].OriginalNetwork)
+			require.NoError(t, err)
 		}
 	})
 }

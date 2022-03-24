@@ -6,12 +6,8 @@ CREATE TABLE merkletree.rht
 (
     key BYTEA PRIMARY KEY,
     value BYTEA[],
-    network CHAR NOT NULL
-);
-
-CREATE TABLE merkletree.root_track 
-(
-    index BIGINT PRIMARY KEY,
-    root BYTEA NOT NULL,
-    network CHAR NOT NULL
+    depth CHAR NOT NULL,
+    network CHAR NOT NULL,
+    -- To parse uint8 to char in database, we are using one-index in the database
+    deposit_cnt BIGINT NOT NULL
 );

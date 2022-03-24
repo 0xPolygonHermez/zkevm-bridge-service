@@ -9,8 +9,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/hermeznetwork/hermez-bridge/bridgetree"
-	"github.com/hermeznetwork/hermez-bridge/db"
+	"github.com/hermeznetwork/hermez-bridge/bridgectrl"
 	"github.com/hermeznetwork/hermez-bridge/etherman"
 	"github.com/hermeznetwork/hermez-bridge/gerror"
 	"github.com/hermeznetwork/hermez-core/log"
@@ -25,17 +24,17 @@ type Synchronizer interface {
 // ClientSynchronizer struct
 type ClientSynchronizer struct {
 	etherMan       localEtherMan
-	storage        db.Storage
+	storage        storageInterface
 	ctx            context.Context
 	cancelCtx      context.CancelFunc
-	bridgeTree     *bridgetree.BridgeTree
+	bridgeCtrl     *bridgectrl.BridgeController
 	genBlockNumber uint64
 	cfg            Config
 	networkID      uint
 }
 
 // NewSynchronizer creates and initializes an instance of Synchronizer
-func NewSynchronizer(storage db.Storage, bridge *bridgetree.BridgeTree, ethMan localEtherMan, genBlockNumber uint64, cfg Config) (Synchronizer, error) {
+func NewSynchronizer(storage storageInterface, bridge *bridgectrl.BridgeController, ethMan localEtherMan, genBlockNumber uint64, cfg Config) (Synchronizer, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	networkID, err := ethMan.GetNetworkID(ctx)
 	if err != nil {
@@ -46,7 +45,7 @@ func NewSynchronizer(storage db.Storage, bridge *bridgetree.BridgeTree, ethMan l
 		storage:        storage,
 		ctx:            ctx,
 		cancelCtx:      cancel,
-		bridgeTree:     bridge,
+		bridgeCtrl:     bridge,
 		genBlockNumber: genBlockNumber,
 		cfg:            cfg,
 		networkID:      networkID,
@@ -217,7 +216,7 @@ func (s *ClientSynchronizer) processBlockRange(blocks []etherman.Block, order ma
 					log.Fatal("failed to store new deposit locally, block: %d, Deposit: %+v err: %v", &blocks[i].BlockNumber, deposit, err)
 				}
 
-				err = s.bridgeTree.AddDeposit(deposit)
+				err = s.bridgeCtrl.AddDeposit(deposit)
 				if err != nil {
 					log.Fatal("failed to store new deposit in the bridge tree, block: %d, Deposit: %+v err: %v", &blocks[i].BlockNumber, deposit, err)
 				}
@@ -266,11 +265,38 @@ func (s *ClientSynchronizer) processBlockRange(blocks []etherman.Block, order ma
 // This function allows reset the state until an specific block
 func (s *ClientSynchronizer) resetState(block *etherman.Block) error {
 	log.Debug("NetworkID: ", s.networkID, ". Reverting synchronization to block: ", block.BlockNumber)
-	err := s.storage.Reset(s.ctx, block.BlockNumber, s.networkID)
+	err := s.storage.BeginDBTransaction(s.ctx)
+	if err != nil {
+		log.Error("error starting a db transaction to reset the state. Error: ", err)
+		return err
+	}
+	err = s.storage.Reset(s.ctx, block, s.networkID)
+	if err != nil {
+		rollbackErr := s.storage.Rollback(s.ctx)
+		if rollbackErr != nil {
+			log.Error("error rolling back state to store block. BlockNumber: %d, rollbackErr: %v, error : %v", block.BlockNumber, rollbackErr, err)
+			return rollbackErr
+		}
+		log.Error("error resetting the state. Error: ", err)
+		return err
+	}
+	err = s.storage.Commit(s.ctx)
+	if err != nil {
+		rollbackErr := s.storage.Rollback(s.ctx)
+		if rollbackErr != nil {
+			log.Error("error rolling back state to store block. BlockNumber: %d, rollbackErr: %v, error : %v", block.BlockNumber, rollbackErr, err)
+			return rollbackErr
+		}
+		log.Error("error committing the resetted state. Error: ", err)
+		return err
+	}
+
+	depositCnt, err := s.storage.GetNumberDeposits(s.ctx, s.networkID)
 	if err != nil {
 		return err
 	}
-	return nil
+
+	return s.bridgeCtrl.ReorgMT(uint(depositCnt), s.networkID)
 }
 
 /*

@@ -9,4 +9,6 @@ var (
 	ErrStorageNotRegister = errors.New("Not registered storage")
 	// ErrNilDBTransaction indicates the db transaction has not been properly initialized
 	ErrNilDBTransaction = errors.New("database transaction not properly initialized")
+	// ErrRestServerHealth indicates the health check of rest server failed
+	ErrRestServerHealth = errors.New("Not ready for the rest server")
 )
