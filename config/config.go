@@ -9,6 +9,7 @@ import (
 	"github.com/hermeznetwork/hermez-bridge/bridgectrl"
 	"github.com/hermeznetwork/hermez-bridge/db"
 	"github.com/hermeznetwork/hermez-bridge/etherman"
+	"github.com/hermeznetwork/hermez-bridge/server"
 	"github.com/hermeznetwork/hermez-bridge/synchronizer"
 	"github.com/hermeznetwork/hermez-core/log"
 	"github.com/mitchellh/mapstructure"
@@ -22,6 +23,7 @@ type Config struct {
 	Etherman         etherman.Config
 	Synchronizer     synchronizer.Config
 	BridgeController bridgectrl.Config
+	BridgeServer     server.Config
 	NetworkConfig
 }
 
