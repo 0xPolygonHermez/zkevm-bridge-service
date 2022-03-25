@@ -55,6 +55,12 @@ func main() {
 			Action:  start,
 			Flags:   flags,
 		},
+		{
+			Name:    "mockserver",
+			Aliases: []string{},
+			Usage:   "Run the hermez core",
+			Action:  runMockServer,
+		},
 	}
 
 	err := app.Run(os.Args)

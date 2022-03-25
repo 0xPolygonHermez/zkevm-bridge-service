@@ -13,6 +13,7 @@ import (
 	"github.com/hermeznetwork/hermez-bridge/bridgectrl"
 	"github.com/hermeznetwork/hermez-bridge/bridgectrl/pb"
 	"github.com/hermeznetwork/hermez-bridge/gerror"
+	"github.com/hermeznetwork/hermez-core/log"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/health/grpc_health_v1"
@@ -110,6 +111,7 @@ func runGRPCServer(ctx context.Context, bridgeServer pb.BridgeServiceServer, por
 		}
 	}()
 
+	log.Info("gRPC Server is serving at ", port)
 	return server.Serve(listen)
 }
 
@@ -158,5 +160,6 @@ func runRestServer(ctx context.Context, grpcPort, httpPort string) error {
 		_ = srv.Shutdown(ctx)
 	}()
 
+	log.Info("Restful Server is serving at ", httpPort)
 	return srv.ListenAndServe()
 }

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"os"
 	"os/signal"
 
@@ -9,6 +10,8 @@ import (
 	"github.com/hermeznetwork/hermez-bridge/db"
 	"github.com/hermeznetwork/hermez-bridge/db/pgstorage"
 	"github.com/hermeznetwork/hermez-bridge/etherman"
+	"github.com/hermeznetwork/hermez-bridge/gerror"
+	"github.com/hermeznetwork/hermez-bridge/server"
 	"github.com/hermeznetwork/hermez-bridge/synchronizer"
 	"github.com/hermeznetwork/hermez-core/log"
 	"github.com/urfave/cli/v2"
@@ -33,6 +36,25 @@ func start(ctx *cli.Context) error {
 		log.Error(err)
 		return err
 	}
+
+	networkID, err := etherman.GetNetworkID(context.Background())
+	if err != nil {
+		log.Error(err)
+		return err
+	}
+
+	var networkIDs = []uint{networkID}
+
+	for _, client := range l2Ethermans {
+		networkID, err := client.GetNetworkID(context.Background())
+		if err != nil {
+			log.Error(err)
+			return err
+		}
+
+		networkIDs = append(networkIDs, networkID)
+	}
+
 	storage, err := db.NewStorage(c.Database)
 	if err != nil {
 		log.Error(err)
@@ -54,11 +76,20 @@ func start(ctx *cli.Context) error {
 			return err
 		}
 
-		bridgeController, err = bridgectrl.NewBridgeController(c.BridgeController, []uint{0, 1000}, pgStorage, pgStorage)
+		bridgeController, err = bridgectrl.NewBridgeController(c.BridgeController, networkIDs, pgStorage, pgStorage)
 		if err != nil {
 			log.Error(err)
 			return err
 		}
+
+		err = server.RunServer(pgStorage, bridgeController, c.BridgeServer)
+		if err != nil {
+			log.Error(err)
+			return err
+		}
+	} else {
+		log.Error(gerror.ErrStorageNotRegister)
+		return gerror.ErrStorageNotRegister
 	}
 
 	go runSynchronizer(c.NetworkConfig.GenBlockNumber, bridgeController, etherman, c.Synchronizer, storage)

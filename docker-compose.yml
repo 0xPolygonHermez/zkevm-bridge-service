@@ -1,12 +1,29 @@
 version: '3'
 services:
-  hez-postgres:
-    container_name: hez-postgres
+  hez-postgres-bridge:
+    container_name: hez-postgres-bridge
     image: postgres
+    expose:
+      - 5433
     ports:
-      - 5432:5432
+      - 5433:5433
     environment:
       # In order to update this values, you may need to run: docker rm -f -v postgres
       - POSTGRES_USER=test_user
       - POSTGRES_PASSWORD=test_password
       - POSTGRES_DB=test_db
+    command: -p 5433
+    
+  hez-bridge-mock:
+    container_name: hez-bridge
+    image: hezbridge
+    ports:
+      - 8124:8124
+      - 8080:8080
+    environment:
+      - HERMEZBRIDGE_DATABASE_USER=test_user
+      - HERMEZBRIDGE_DATABASE_PASSWORD=test_password
+      - HERMEZBRIDGE_DATABASE_NAME=test_db
+      - HERMEZBRIDGE_DATABASE_HOST=hez-postgres-bridge
+      - HERMEZBRIDGE_DATABASE_PORT=5433
+    command: ["./hezbridge", "mockserver"]

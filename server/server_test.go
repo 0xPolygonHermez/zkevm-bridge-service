@@ -60,7 +60,7 @@ func TestBridgeMock(t *testing.T) {
 	require.NoError(t, err)
 	require.Greater(t, len(bridgeResp.Deposits), 0)
 
-	offset := 3
+	offset := 0
 	resp, err = http.Get(fmt.Sprintf("%s%s/%s?offset=%d", address, "/bridges", "0xeB17ce701E9D92724AA2ABAdA7E4B28830597Dd9", offset))
 	require.NoError(t, err)
 
@@ -69,10 +69,10 @@ func TestBridgeMock(t *testing.T) {
 
 	err = protojson.Unmarshal(bodyBytes, &bridgeResp)
 	require.NoError(t, err)
-	require.Equal(t, len(bridgeResp.Deposits), offset-1)
+	require.Equal(t, len(bridgeResp.Deposits), 1)
 
-	offset = 1
-	resp, err = http.Get(fmt.Sprintf("%s%s/%s?offset=%d", address, "/claims", "0xeB17ce701E9D92724AA2ABAdA7E4B28830597Dd9", offset))
+	offset = 0
+	resp, err = http.Get(fmt.Sprintf("%s%s/%s?offset=%d", address, "/claims", "0xabCcEd19d7f290B84608feC510bEe872CC8F5112", offset))
 	require.NoError(t, err)
 
 	bodyBytes, err = ioutil.ReadAll(resp.Body)
@@ -81,7 +81,7 @@ func TestBridgeMock(t *testing.T) {
 	var claimResp pb.GetClaimsResponse
 	err = protojson.Unmarshal(bodyBytes, &claimResp)
 	require.NoError(t, err)
-	require.Equal(t, len(claimResp.Claims), 2)
+	require.Equal(t, len(claimResp.Claims), 1)
 
 	resp, err = http.Get(fmt.Sprintf("%s%s?orig_net=%d&deposit_cnt=%d", address, "/merkle-proofs", 0, 2))
 	require.NoError(t, err)
