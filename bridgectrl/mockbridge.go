@@ -5,25 +5,12 @@ import (
 	"encoding/json"
 	"math/big"
 	"os"
-	"path"
-	"runtime"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/hermez-bridge/db/pgstorage"
 	"github.com/hermeznetwork/hermez-bridge/etherman"
 	"github.com/hermeznetwork/hermez-bridge/test"
 )
-
-func init() {
-	// Change dir to project root
-	// This is important because we have relative paths to files containing test vectors
-	_, filename, _, _ := runtime.Caller(0)
-	dir := path.Join(path.Dir(filename), "../")
-	err := os.Chdir(dir)
-	if err != nil {
-		panic(err)
-	}
-}
 
 // MockBridgeCtrl prepares mock data in the bridge service
 func MockBridgeCtrl(store *pgstorage.PostgresStorage) (*BridgeController, error) {

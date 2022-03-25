@@ -130,6 +130,7 @@ restart: stop run ## Executes `make stop` and `make run` commands
 .PHONY: run
 run: ## runs all services
 	$(RUN)
+
 .PHONY: proto-gen
 proto-gen:
 	protoc --proto_path=proto/hermez/bridge/v1 --proto_path=third_party --go_out=bridgetree/pb --go-grpc_out=bridgetree/pb  --go_opt=paths=source_relative --go-grpc_opt=paths=source_relative query.proto

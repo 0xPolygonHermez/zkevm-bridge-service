@@ -10,7 +10,7 @@ import (
 	"github.com/hermeznetwork/hermez-bridge/test/operations"
 	"github.com/hermeznetwork/hermez-bridge/test/vectors"
 	"github.com/hermeznetwork/hermez-bridge/db"
-	"github.com/hermeznetwork/hermez-bridge/bridgetree"
+	"github.com/hermeznetwork/hermez-bridge/bridgectrl"
 	"github.com/stretchr/testify/require"
 	"gotest.tools/assert"
 )
@@ -25,7 +25,7 @@ func TestE2E(t *testing.T) {
 		require.NoError(t, operations.Teardown())
 	}()
 
-	testCases, err := vectors.LoadE2ETestVectors("./../vectors/src/test-vector-data/e2e-test.json")
+	testCases, err := vectors.LoadE2ETestVectors("./../vectors/e2e-test.json")
 	require.NoError(t, err)
 
 	for _, testCase := range testCases {
@@ -41,7 +41,7 @@ func TestE2E(t *testing.T) {
 					Host: "localhost",
 					Port: "5433",
 				},
-				BT: bridgetree.Config {
+				BT: bridgectrl.Config {
 					Store: "postgres",
 					Height: uint8(32),
 				},
