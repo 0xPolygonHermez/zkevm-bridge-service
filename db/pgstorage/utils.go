@@ -59,14 +59,13 @@ func InitOrReset(cfg Config) error {
 }
 
 // NewConfigFromEnv creates config from standard postgres environment variables,
-// see https://www.postgresql.org/docs/11/libpq-envars.html for details
 func NewConfigFromEnv() Config {
 	return Config{
-		User:     getEnv("PGUSER", "test_user"),
-		Password: getEnv("PGPASSWORD", "test_password"),
-		Name:     getEnv("PGDATABASE", "test_db"),
-		Host:     getEnv("PGHOST", "localhost"),
-		Port:     getEnv("PGPORT", "5433"),
+		User:     getEnv("HERMEZBRIDGE_DATABASE_USER", "test_user"),
+		Password: getEnv("HERMEZBRIDGE_DATABASE_PASSWORD", "test_password"),
+		Name:     getEnv("HERMEZBRIDGE_DATABASE_NAME", "test_db"),
+		Host:     getEnv("HERMEZBRIDGE_DATABASE_HOST", "localhost"),
+		Port:     getEnv("HERMEZBRIDGE_DATABASE_PORT", "5433"),
 	}
 }
 

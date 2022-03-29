@@ -35,12 +35,7 @@ func (s *bridgeService) CheckAPI(ctx context.Context, req *pb.CheckAPIRequest) (
 
 // GetBridges returns bridges for the specific smart contract address both in L1 and L2.
 func (s *bridgeService) GetBridges(ctx context.Context, req *pb.GetBridgesRequest) (*pb.GetBridgesResponse, error) {
-	depositCnt := uint(1<<31 - 1)
-	if req.Offset > 0 {
-		depositCnt = uint(req.Offset)
-	}
-
-	deposits, err := s.storage.GetDeposits(ctx, depositCnt, uint(0), limit)
+	deposits, err := s.storage.GetDeposits(ctx, req.EtherAddr, limit, uint(req.Offset))
 	if err != nil {
 		return nil, err
 	}
@@ -65,7 +60,7 @@ func (s *bridgeService) GetBridges(ctx context.Context, req *pb.GetBridgesReques
 
 // GetClaims returns claims for the specific smart contract address both in L1 and L2.
 func (s *bridgeService) GetClaims(ctx context.Context, req *pb.GetClaimsRequest) (*pb.GetClaimsResponse, error) {
-	claims, err := s.storage.GetClaims(ctx, uint(1000), limit, uint(req.Offset)) //nolint:gomnd
+	claims, err := s.storage.GetClaims(ctx, req.EtherAddr, limit, uint(req.Offset)) //nolint:gomnd
 	if err != nil {
 		return nil, err
 	}

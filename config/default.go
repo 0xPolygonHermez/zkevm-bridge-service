@@ -12,16 +12,24 @@ User = "test_user"
 Password = "test_password"
 Name = "test_db"
 Host = "localhost"
-Port = "5432"
+Port = "5433"
 
 [Etherman]
 L1URL = "http://localhost"
-L2URL = "http://localhost"
+L2URLs = ["http://localhost"]
 PrivateKeyPath = "./test/test.keystore"
 PrivateKeyPassword = "testonly"
 
 [Synchronizer]
 SyncInterval = "0s"
 SyncChunkSize = 100
+
+[BridgeController]
+Store = "postgres"
+Height = 32
+
+[BridgeServer]
+GRPCPort = "9090"
+HTTPPort = "8080"
 
 `

@@ -69,6 +69,7 @@ services:
     image: hezbridge
     ports:
       - 8124:8124
+      - 8080:8080
     environment:
       - HERMEZBRIDGE_DATABASE_USER=test_user
       - HERMEZBRIDGE_DATABASE_PASSWORD=test_password
@@ -78,3 +79,17 @@ services:
     volumes:
       - ./config/config.local.toml:/app/config.toml
     command: ["./hezbridge", "run", "--network", "local", "--cfg", "/app/config.toml"]
+
+  hez-bridge-mock:
+    container_name: hez-bridge-mock
+    image: hezbridge
+    ports:
+      - 8124:8124
+      - 8080:8080
+    environment:
+      - HERMEZBRIDGE_DATABASE_USER=test_user
+      - HERMEZBRIDGE_DATABASE_PASSWORD=test_password
+      - HERMEZBRIDGE_DATABASE_NAME=test_db
+      - HERMEZBRIDGE_DATABASE_HOST=hez-postgres-bridge
+      - HERMEZBRIDGE_DATABASE_PORT=5433
+    command: ["./hezbridge", "mockserver"]

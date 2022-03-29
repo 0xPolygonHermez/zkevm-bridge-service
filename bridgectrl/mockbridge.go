@@ -52,7 +52,7 @@ func MockBridgeCtrl(store *pgstorage.PostgresStorage) (*BridgeController, error)
 		Store:  "postgres",
 	}
 
-	bt, err := NewBridgeController(btCfg, []uint{0, 1000, 1001}, store, store)
+	bt, err := NewBridgeController(btCfg, []uint{0, 1000, 1001, 1002}, store, store)
 	if err != nil {
 		return nil, err
 	}
