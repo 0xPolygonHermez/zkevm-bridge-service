@@ -139,7 +139,7 @@ func (s *ClientSynchronizer) syncBlocks(lastBlockSynced *etherman.Block) (*ether
 	for {
 		toBlock := fromBlock + s.cfg.SyncChunkSize
 
-		log.Debugf("NetworkID: ", s.networkID, ", Getting bridge info from block %d to block %d", fromBlock, toBlock)
+		log.Debugf("NetworkID: %d, Getting bridge info from block %d to block %d", s.networkID, fromBlock, toBlock)
 		// This function returns the bridge information contained in the blocks and an extra param called order.
 		// Order param is a map that contains the event order to allow the synchronizer store the info in the same order that is readed.
 		// Name can be defferent in the order struct. For instance: Batches or Name:NewSequencers. This name is an identifier to check
