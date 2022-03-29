@@ -17,3 +17,11 @@ L2URLs = ["http://hez-core:8123"]
 [Synchronizer]
 SyncInterval = "1s"
 SyncChunkSize = 100
+
+[BridgeController]
+Store = "postgres"
+Height = 32
+
+[BridgeServer]
+GRPCPort = "9090"
+HTTPPort = "8080"

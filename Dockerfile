@@ -21,4 +21,5 @@ COPY --from=build /src/dist/hezbridge /app/hezbridge
 COPY --from=build /src/test/vectors /app/test/vectors
 EXPOSE 8124
 EXPOSE 8080
+EXPOSE 9090
 CMD ["./hezbridge", "run"]

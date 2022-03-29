@@ -70,6 +70,7 @@ services:
     ports:
       - 8124:8124
       - 8080:8080
+      - 9090:9090
     environment:
       - HERMEZBRIDGE_DATABASE_USER=test_user
       - HERMEZBRIDGE_DATABASE_PASSWORD=test_password
@@ -86,6 +87,7 @@ services:
     ports:
       - 8124:8124
       - 8080:8080
+      - 9090:9090
     environment:
       - HERMEZBRIDGE_DATABASE_USER=test_user
       - HERMEZBRIDGE_DATABASE_PASSWORD=test_password
