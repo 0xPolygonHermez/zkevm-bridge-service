@@ -13,6 +13,7 @@ import (
 	"github.com/hermeznetwork/hermez-bridge/bridgectrl"
 	"github.com/hermeznetwork/hermez-bridge/bridgectrl/pb"
 	"github.com/hermeznetwork/hermez-bridge/gerror"
+	"github.com/hermeznetwork/hermez-bridge/test/operations"
 	"github.com/hermeznetwork/hermez-core/log"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -42,7 +43,7 @@ func RunServer(storage bridgectrl.BridgeServiceStorage, bridgeCtrl *bridgectrl.B
 		_ = runGRPCServer(ctx, bridgeService, cfg.GRPCPort)
 	}()
 
-	return nil
+	return operations.WaitGRPCHealthy(fmt.Sprintf("0.0.0.0:%s", cfg.GRPCPort))
 }
 
 // HealthChecker will provide an implementation of the HealthCheck interface.

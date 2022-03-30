@@ -218,7 +218,7 @@ func (s *ClientSynchronizer) processBlockRange(blocks []etherman.Block, order ma
 
 				err = s.bridgeCtrl.AddDeposit(deposit)
 				if err != nil {
-					log.Fatal("failed to store new deposit in the bridge tree, block: %d, Deposit: %+v err: %v", &blocks[i].BlockNumber, deposit, err)
+					log.Fatal("failed to add new deposit in the bridge tree, block: %d, Deposit: %+v err: %v", &blocks[i].BlockNumber, deposit, err)
 				}
 			} else if element.Name == etherman.GlobalExitRootsOrder {
 				exitRoot := blocks[i].GlobalExitRoots[element.Pos]
@@ -230,6 +230,11 @@ func (s *ClientSynchronizer) processBlockRange(blocks []etherman.Block, order ma
 						log.Fatal("error rolling back state to store block. BlockNumber: ", blocks[i].BlockNumber)
 					}
 					log.Fatal("error storing new globalExitRoot in Block: %d, ExitRoot: %+v, err: %v", blocks[i].BlockNumber, exitRoot, err)
+				}
+
+				err = s.bridgeCtrl.CheckExitRoot(exitRoot)
+				if err != nil {
+					log.Fatal("error checking new globalExitRoot in Block: %d, ExitRoot: %+v, err: %v", blocks[i].BlockNumber, exitRoot, err)
 				}
 			} else if element.Name == etherman.ClaimsOrder {
 				claim := blocks[i].Claims[element.Pos]
