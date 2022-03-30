@@ -25,6 +25,7 @@ import (
 	"github.com/hermeznetwork/hermez-core/encoding"
 	"github.com/hermeznetwork/hermez-core/log"
 	"github.com/hermeznetwork/hermez-core/test/operations"
+	"github.com/hermeznetwork/hermez-core/etherman/smartcontracts/bridge"
 )
 
 const (
@@ -32,8 +33,9 @@ const (
 	l2NetworkURL = "http://localhost:8123"
 
 	poeAddress        = "0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9"
-	maticTokenAddress = "0x5FbDB2315678afecb367f032d93F642f64180aa3" //nolint:gosec
-	bridgeAddress     = "0x0000000000000000000000000000000000000000"
+	MaticTokenAddress = "0x5FbDB2315678afecb367f032d93F642f64180aa3" //nolint:gosec
+	l1BridgeAddr      = "0x0000000000000000000000000000000000000000"
+	l2BridgeAddr      = "0x5FbDB2315678afecb367f032d93F642f64180aa3"
 
 	l1AccHexAddress    = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
 	l1AccHexPrivateKey = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
@@ -106,6 +108,11 @@ func (m *Manager) Storage() *db.Storage {
 	return m.storage
 }
 
+// GetCurrentGlobalExitRootFromSmc retrieves the current globalExitRoot
+func (m *Manager) GetCurrentGlobalExitRootFromSmc() {
+	//TODO
+}
+
 // CheckVirtualRoot verifies if the given root is the current root of the
 // merkletree for virtual state.
 func (m *Manager) CheckGlobalExitRoot(expectedRoot string) error {
@@ -133,19 +140,54 @@ func (m *Manager) SendL2Txs() error {
 	return err
 }
 
-// SendL1Txs sends the given L1 txs and waits for them to be consolidated
-func (m *Manager) SendL1Txs() error {
-	//TODO Send L2
+// SendL1Deposit sends a deposit from l1 to l2
+func (m *Manager) SendL1Deposit(ctx context.Context, tokenAddr common.Address, amount *big.Int,
+	destNetwork uint32, destAddr *common.Address,
+	) error {
+	client, auth, err := initClientConnection(ctx, "l1")
+	if err != nil {
+		return err
+	}
+	if destAddr == nil {
+		destAddr = &auth.From
+	}
+	br, err := bridge.NewBridge(common.HexToAddress(l1BridgeAddr), client)
+	if err != nil {
+		return nil
+	}
+	tx, err := br.Bridge(auth, tokenAddr, amount, destNetwork, *destAddr)
+	if err != nil {
+		return err
+	}
 
-	var currentBatchNumber uint64
-	// Wait for sequencer to select txs from pool and propose a new batch
-	// Wait for the synchronizer to update state
-	err := m.wait.Poll(defaultInterval, defaultDeadline, func() (bool, error) {
-		// TODO call hermez core rpc to check current batch
-		var latestBatchNumber uint64
-		done := latestBatchNumber > currentBatchNumber
-		return done, nil
-	})
+	// wait matic transfer to be mined
+	log.Infof("Waiting tx to be mined")
+	const txTimeout = 15 * time.Second
+	_, err = m.WaitTxToBeMined(ctx, client, tx.Hash(), txTimeout)
+	return err
+}
+
+// SendL2Deposit sends a deposit from l2 to l1
+func (m *Manager) SendL2Deposit(ctx context.Context, tokenAddr common.Address, amount *big.Int,
+	destNetwork uint32, destAddr common.Address,
+	) error {
+	client, auth, err := initClientConnection(ctx, "l2")
+	if err != nil {
+		return err
+	}
+	br, err := bridge.NewBridge(common.HexToAddress(l2BridgeAddr), client)
+	if err != nil {
+		return nil
+	}
+	tx, err := br.Bridge(auth, tokenAddr, amount, destNetwork, destAddr)
+	if err != nil {
+		return err
+	}
+
+	// wait matic transfer to be mined
+	log.Infof("Waiting tx to be mined")
+	const txTimeout = 15 * time.Second
+	_, err = m.WaitTxToBeMined(ctx, client, tx.Hash(), txTimeout)
 	return err
 }
 
@@ -175,7 +217,7 @@ func (m *Manager) Setup() error {
 	}
 
 	//Send funds to hermezCore
-	err = AddFunds(m.ctx)
+	err = m.AddFunds(m.ctx)
 	if err != nil {
 		return err
 	}
@@ -188,7 +230,7 @@ func (m *Manager) Setup() error {
 	time.Sleep(15 * time.Second)
 
 	//Deploy Bridge and GlobalExitRoot Smc
-	bridgeAddr, globlaExitRootL2Addr, err := DeploySmc(m.ctx)
+	bridgeAddr, globlaExitRootL2Addr, err := m.DeploySmc(m.ctx)
 	log.Warn(bridgeAddr, globlaExitRootL2Addr)
 
 	time.Sleep(30 * time.Second)
@@ -203,28 +245,10 @@ func (m *Manager) Setup() error {
 }
 
 // AddFunds adds matic and eth to the hermez core wallet.
-func AddFunds(ctx context.Context) error {
+func (m *Manager) AddFunds(ctx context.Context) error {
 	// Eth client
 	log.Infof("Connecting to l1")
-	client, err := ethclient.Dial(l1NetworkURL)
-	if err != nil {
-		return err
-	}
-
-	// Get network chain id
-	log.Infof("Getting chainID")
-	chainID, err := client.NetworkID(ctx)
-	if err != nil {
-		return err
-	}
-
-	// Preparing l1 acc info
-	log.Infof("Preparing authorization")
-	privateKey, err := crypto.HexToECDSA(strings.TrimPrefix(l1AccHexPrivateKey, "0x"))
-	if err != nil {
-		return err
-	}
-	auth, err := bind.NewKeyedTransactorWithChainID(privateKey, chainID)
+	client, auth, err := initClientConnection(ctx, "l1")
 	if err != nil {
 		return err
 	}
@@ -259,14 +283,14 @@ func AddFunds(ctx context.Context) error {
 	// Wait eth transfer to be mined
 	log.Infof("Waiting tx to be mined")
 	const txETHTransferTimeout = 5 * time.Second
-	_, err = waitTxToBeMined(ctx, client, signedTx.Hash(), txETHTransferTimeout)
+	_, err = m.WaitTxToBeMined(ctx, client, signedTx.Hash(), txETHTransferTimeout)
 	if err != nil {
 		return err
 	}
 
 	// Create matic maticTokenSC sc instance
 	log.Infof("Loading Matic token SC instance")
-	maticAddr := common.HexToAddress(maticTokenAddress)
+	maticAddr := common.HexToAddress(MaticTokenAddress)
 	maticTokenSC, err := operations.NewToken(maticAddr, client)
 	if err != nil {
 		return err
@@ -283,14 +307,14 @@ func AddFunds(ctx context.Context) error {
 	// wait matic transfer to be mined
 	log.Infof("Waiting tx to be mined")
 	const txMaticTransferTimeout = 5 * time.Second
-	_, err = waitTxToBeMined(ctx, client, tx.Hash(), txMaticTransferTimeout)
+	_, err = m.WaitTxToBeMined(ctx, client, tx.Hash(), txMaticTransferTimeout)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func DeploySmc(ctx context.Context) (common.Address, common.Address, error) {
+func (m *Manager) DeploySmc(ctx context.Context) (common.Address, common.Address, error) {
 	bridgeByteCode, err := readBytecode("bridge.bin")
 	if err != nil {
 		log.Error(1, err)
@@ -304,29 +328,8 @@ func DeploySmc(ctx context.Context) (common.Address, common.Address, error) {
 
 	// Eth client
 	log.Info("Connecting to l2")
-	client, err := ethclient.Dial(l2NetworkURL)
+	client, auth, err := initClientConnection(ctx, "l2")
 	if err != nil {
-		log.Error(3)
-		return common.Address{}, common.Address{}, err
-	}
-	// Get network chain id
-	log.Infof("Getting chainID")
-	chainID, err := client.NetworkID(ctx)
-	if err != nil {
-		log.Error(4)
-		return common.Address{}, common.Address{}, err
-	}
-
-	// Preparing l1 acc info
-	log.Infof("Preparing authorization")
-	privateKey, err := crypto.HexToECDSA(strings.TrimPrefix(l1AccHexPrivateKey, "0x"))
-	if err != nil {
-		log.Error(5)
-		return common.Address{}, common.Address{}, err
-	}
-	auth, err := bind.NewKeyedTransactorWithChainID(privateKey, chainID)
-	if err != nil {
-		log.Error(6)
 		return common.Address{}, common.Address{}, err
 	}
 
@@ -348,7 +351,7 @@ func DeploySmc(ctx context.Context) (common.Address, common.Address, error) {
 	networkID := "0000000000000000000000000000000000000000000000000000000000000002"
 	fullByteCode := bridgeByteCode+networkID+hex.EncodeToString(globalExitRootPaddedAddr)
 
-	bridgeL2Addr, err := deploySC(ctx, client, common.Hex2Bytes(fullByteCode), 80000000, nonce, auth)
+	bridgeL2Addr, err := m.DeploySC(ctx, client, common.Hex2Bytes(fullByteCode), 80000000, nonce, auth)
 	if err != nil {
 		log.Error(9, err)
 		return common.Address{}, common.Address{}, err
@@ -356,7 +359,7 @@ func DeploySmc(ctx context.Context) (common.Address, common.Address, error) {
 
 	BridgePaddedAddr := common.LeftPadBytes(bridgeL2Addr.Bytes(), 32)
 	fullByteCode = globalExitRootL2ByteCode+hex.EncodeToString(BridgePaddedAddr)
-	globalExitRootL2Addr, err := deploySC(ctx, client, common.Hex2Bytes(fullByteCode), 80000000, nonce+1, auth)
+	globalExitRootL2Addr, err := m.DeploySC(ctx, client, common.Hex2Bytes(fullByteCode), 80000000, nonce+1, auth)
 	if err != nil {
 		log.Error(10, err)
 		return common.Address{}, common.Address{}, err
@@ -381,14 +384,7 @@ func readBytecode(contractPath string) (string, error) {
 	return string(content), nil
 }
 
-func deploySC(ctx context.Context, client *ethclient.Client, scByteCode []byte, gasLimit, nonce uint64, auth *bind.TransactOpts) (common.Address, error) {
-	
-
-	// log.Infof("reading nonce for account: %v", auth.From.Hex())
-	// nonce, err := client.NonceAt(ctx, auth.From, nil)
-	// log.Infof("nonce: %v", nonce)
-	// chkErr(err)
-
+func (m *Manager) DeploySC(ctx context.Context, client *ethclient.Client, scByteCode []byte, gasLimit, nonce uint64, auth *bind.TransactOpts) (common.Address, error) {
 	// we need to use this method to send `TO` field as `NULL`,
 	// so the explorer can detect this is a smart contract creation
 
@@ -415,7 +411,7 @@ func deploySC(ctx context.Context, client *ethclient.Client, scByteCode []byte, 
 	}
 	log.Infof("tx sent: %v", signedTx.Hash().Hex())
 	txMinedTimeoutLimit := 60 * time.Second
-	r, err := waitTxToBeMined(ctx, client, signedTx.Hash(), txMinedTimeoutLimit)
+	r, err := m.WaitTxToBeMined(ctx, client, signedTx.Hash(), txMinedTimeoutLimit)
 	if err != nil {
 		log.Error(9.3, err)
 		return common.Address{}, err
@@ -530,7 +526,8 @@ func stopBridge() error {
 	return runCmd(cmd)
 }
 
-func waitTxToBeMined(ctx context.Context, client *ethclient.Client, hash common.Hash, timeout time.Duration) (*types.Receipt, error) {
+//WaitTxToBeMined waits until a tx is mined or forged
+func (m *Manager) WaitTxToBeMined(ctx context.Context, client *ethclient.Client, hash common.Hash, timeout time.Duration) (*types.Receipt, error) {
 	start := time.Now()
 	for {
 		if time.Since(start) > timeout {
@@ -561,4 +558,66 @@ func waitTxToBeMined(ctx context.Context, client *ethclient.Client, hash common.
 			return r, nil
 		}
 	}
+}
+
+// CheckAccountBalance checks the balance by address
+func (m *Manager) CheckAccountBalance(ctx context.Context, account common.Address) {
+	//TODO
+}
+
+var (
+	l2Client *ethclient.Client
+	l1Client *ethclient.Client
+)
+
+func initClientConnection(ctx context.Context, network string) (*ethclient.Client, *bind.TransactOpts, error) {
+	var (
+		client *ethclient.Client
+		err error
+	)
+	if network == "l2" || network == "L2" {
+		if l2Client != nil {
+			client = l2Client
+		} else {
+			// Eth client
+			log.Info("Connecting...")
+			client, err = ethclient.Dial(l2NetworkURL)
+			if err != nil {
+				return nil, nil, err
+			}
+			l2Client = client
+		}
+	} else {
+		if l1Client != nil {
+			client = l1Client
+		} else {
+			// Eth client
+			log.Info("Connecting...")
+			client, err = ethclient.Dial(l1NetworkURL)
+			if err != nil {
+				return nil, nil, err
+			}
+			l1Client = client
+		}
+	}
+
+	// Get network chain id
+	log.Infof("Getting chainID")
+	chainID, err := client.NetworkID(ctx)
+	if err != nil {
+		return nil, nil, err
+
+	}
+
+	// Preparing l1 acc info
+	log.Infof("Preparing authorization")
+	privateKey, err := crypto.HexToECDSA(strings.TrimPrefix(l1AccHexPrivateKey, "0x"))
+	if err != nil {
+		return nil, nil, err
+	}
+	auth, err := bind.NewKeyedTransactorWithChainID(privateKey, chainID)
+	if err != nil {
+		return nil, nil, err
+	}
+	return client, auth, nil
 }
