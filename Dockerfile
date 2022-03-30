@@ -19,6 +19,6 @@ FROM golang:1.17
 WORKDIR /app
 COPY --from=build /src/dist/hezbridge /app/hezbridge
 COPY --from=build /src/test/vectors /app/test/vectors
-EXPOSE 8124
+EXPOSE 9090
 EXPOSE 8080
 CMD ["./hezbridge", "run"]
