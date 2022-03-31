@@ -3,6 +3,7 @@ package operations
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"time"
 
 	"google.golang.org/grpc"
@@ -11,7 +12,7 @@ import (
 )
 
 const (
-	defaultInterval = 2 * time.Second
+	defaultInterval = 500 * time.Millisecond
 	defaultDeadline = 30 * time.Second
 )
 
@@ -54,6 +55,20 @@ func WaitGRPCHealthy(address string) error {
 	return w.Poll(defaultInterval, defaultDeadline, func() (bool, error) {
 		return grpcHealthyCondition(address)
 	})
+}
+
+// WaitRestHealthy waits for a rest enpoint to be ready
+func WaitRestHealthy(address string) error {
+	w := NewWait()
+	return w.Poll(defaultInterval, defaultDeadline, func() (bool, error) {
+		return restHealthyCondition(address)
+	})
+}
+
+func restHealthyCondition(address string) (bool, error) {
+	resp, err := http.Get(address + "/healthz")
+
+	return resp.StatusCode == http.StatusOK, err
 }
 
 func grpcHealthyCondition(address string) (bool, error) {

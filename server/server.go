@@ -12,8 +12,6 @@ import (
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/hermeznetwork/hermez-bridge/bridgectrl"
 	"github.com/hermeznetwork/hermez-bridge/bridgectrl/pb"
-	"github.com/hermeznetwork/hermez-bridge/gerror"
-	"github.com/hermeznetwork/hermez-bridge/test/operations"
 	"github.com/hermeznetwork/hermez-core/log"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -43,7 +41,7 @@ func RunServer(storage bridgectrl.BridgeServiceStorage, bridgeCtrl *bridgectrl.B
 		_ = runGRPCServer(ctx, bridgeService, cfg.GRPCPort)
 	}()
 
-	return operations.WaitGRPCHealthy(fmt.Sprintf("0.0.0.0:%s", cfg.GRPCPort))
+	return nil
 }
 
 // HealthChecker will provide an implementation of the HealthCheck interface.
@@ -71,24 +69,6 @@ func (s *healthChecker) Watch(req *grpc_health_v1.HealthCheckRequest, server grp
 	return server.Send(&grpc_health_v1.HealthCheckResponse{
 		Status: grpc_health_v1.HealthCheckResponse_SERVING,
 	})
-}
-
-func healthRestCheck(port string) error {
-	address := "http://localhost:" + port
-	checkLimit := 20
-
-	for checkLimit > 0 {
-		checkLimit--
-		time.Sleep(500 * time.Millisecond) //nolint:gomnd
-
-		resp, _ := http.Get(address + "/healthz")
-
-		if resp.StatusCode == http.StatusOK {
-			return nil
-		}
-	}
-
-	return gerror.ErrRestServerHealth
 }
 
 func runGRPCServer(ctx context.Context, bridgeServer pb.BridgeServiceServer, port string) error {
