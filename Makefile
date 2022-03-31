@@ -8,8 +8,8 @@ DOCKERCOMPOSEBRIDGE := hez-bridge
 DOCKERCOMPOSEMOCKSERVER := hez-bridge-mock
 
 RUNDBCORE := $(DOCKERCOMPOSE) up -d $(DOCKERCOMPOSEDBCORE)
-RUNDBBRDIGE := $(DOCKERCOMPOSE) up -d $(DOCKERCOMPOSEDBBRIDGE)
-RUNDBS := ${RUNDBCORE} && ${RUNDBBRDIGE}
+RUNDBBRIDGE := $(DOCKERCOMPOSE) up -d $(DOCKERCOMPOSEDBBRIDGE)
+RUNDBS := ${RUNDBCORE} && ${RUNDBBRIDGE}
 RUNCORE := $(DOCKERCOMPOSE) up -d $(DOCKERCOMPOSEHERMEZCORE)
 RUNNETWORK := $(DOCKERCOMPOSE) up -d $(DOCKERCOMPOSENETWORK)
 RUNPROVER := $(DOCKERCOMPOSE) up -d $(DOCKERCOMPOSEPROVER)
@@ -56,8 +56,8 @@ install-git-hooks: ## Moves hook files to the .git/hooks directory
 .PHONY: test
 test: ## Runs only short tests without checking race conditions
 	$(STOPDBBRIDGE) || true
-	$(RUNDBBRDIGE); sleep 5
-	trap '$(STOPDBBRIDGE)' EXIT; go test -short -p 1 ./...
+	$(RUNDBBRIDGE); sleep 5
+	trap '$(STOPDBBRIDGE)' EXIT; go test --cover -short -p 1 ./...
 
 .PHONY: install-linter
 install-linter: ## Installs the linter
@@ -65,7 +65,7 @@ install-linter: ## Installs the linter
 
 .PHONY: build-docker
 build-docker: ## Builds a docker image with the core binary
-	docker build -t hezbridge -f ./Dockerfile .
+	docker build -t hezbridge -f ./Dockerfile . --build-arg PRIVATE_TOKEN=${PRIVATE_TOKEN}
 
 .PHONY: run-db-core
 run-db-core: ## Runs the node database
@@ -136,8 +136,8 @@ run: ## runs all services
 
 .PHONY: run-mockserver
 run-mockserver: ## runs the mocked restful server
-	$(RUNDBBRDIGE)
-	sleep 5
+	$(RUNDBBRIDGE)
+	sleep 3
 	$(RUNMOCKBRIDGE)
 
 .PHONY: proto-gen
