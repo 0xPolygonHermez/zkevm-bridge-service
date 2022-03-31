@@ -90,8 +90,6 @@ func TestBridgeTree(t *testing.T) {
 				BlockID:           id,
 			})
 			require.NoError(t, err)
-
-			// assert.Equal(t, testVector.ExpectedRoot, hex.EncodeToString(bt.exitTrees[0].root[:]))
 		}
 
 		for i, testVector := range testVectors {
