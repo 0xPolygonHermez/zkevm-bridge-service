@@ -2,15 +2,29 @@ package test
 
 // DepositVectorRaw represents the deposit vector
 type DepositVectorRaw struct {
-	OriginalNetwork    uint   `json:"origNetwork"`
+	OriginalNetwork    uint   `json:"originalNetwork"`
 	TokenAddress       string `json:"tokenAddress"`
 	Amount             string `json:"amount"`
-	DestinationNetwork uint   `json:"destNetwork"`
-	DestinationAddress string `json:"destAddress"`
-	BlockNumber        uint64 `json:"blockNumber"`
-	DepositCount       uint   `json:"depositCount"`
-	ExpectedHash       string `json:"expectedHash"`
-	ExpectedRoot       string `json:"expectedRoot"`
+	DestinationNetwork uint   `json:"destinationNetwork"`
+	DestinationAddress string `json:"destinationAddress"`
+	ExpectedHash       string `json:"leafValue"`
+	CurrentHash        string `json:"currentLeafValue"`
+}
+
+// MTRootVectorRaw represents the root of Merkle Tree
+type MTRootVectorRaw struct {
+	ExistingLeaves []string         `json:"previousLeafsValues"`
+	CurrentRoot    string           `json:"currentRoot"`
+	NewLeaf        DepositVectorRaw `json:"newLeaf"`
+	NewRoot        string           `json:"newRoot"`
+}
+
+// MTClaimVectorRaw represents the merkle proof
+type MTClaimVectorRaw struct {
+	Deposits     []DepositVectorRaw `json:"leafs"`
+	Index        uint               `json:"index"`
+	MerkleProof  []string           `json:"proof"`
+	ExpectedRoot string             `json:"root"`
 }
 
 // ClaimVectorRaw represents the claim vector

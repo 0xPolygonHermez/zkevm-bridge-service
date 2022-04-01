@@ -79,9 +79,9 @@ func MockBridgeCtrl(store *pgstorage.PostgresStorage) (*BridgeController, error)
 			Amount:             amount,
 			DestinationNetwork: testDepositVectors[i].DestinationNetwork,
 			DestinationAddress: common.HexToAddress(testDepositVectors[i].DestinationAddress),
-			DepositCount:       testDepositVectors[i].DepositCount,
+			DepositCount:       uint(i + 1),
 			BlockID:            id,
-			BlockNumber:        testDepositVectors[i].BlockNumber,
+			BlockNumber:        0,
 		}
 		err = store.AddDeposit(context.TODO(), deposit)
 		if err != nil {
