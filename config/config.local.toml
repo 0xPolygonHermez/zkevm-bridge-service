@@ -15,7 +15,7 @@ L1URL = "http://hez-network:8545"
 L2URLs = ["http://hez-core:8123"]
 
 [Synchronizer]
-SyncInterval = "1s"
+SyncInterval = "2s"
 SyncChunkSize = 100
 
 [BridgeController]

@@ -20,12 +20,16 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/hermeznetwork/hermez-bridge/bridgectrl"
+	"github.com/hermeznetwork/hermez-bridge/bridgectrl/pb"
 	"github.com/hermeznetwork/hermez-bridge/db"
 	"github.com/hermeznetwork/hermez-bridge/db/pgstorage"
 	"github.com/hermeznetwork/hermez-core/encoding"
 	"github.com/hermeznetwork/hermez-core/log"
 	"github.com/hermeznetwork/hermez-core/test/operations"
 	"github.com/hermeznetwork/hermez-core/etherman/smartcontracts/bridge"
+	"github.com/hermeznetwork/hermez-core/etherman/smartcontracts/globalexitrootmanager"
+	erc20 "github.com/hermeznetwork/hermez-core/etherman/smartcontracts/matic"
+	"github.com/hermeznetwork/hermez-bridge/etherman"
 )
 
 const (
@@ -34,7 +38,7 @@ const (
 
 	poeAddress        = "0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9"
 	MaticTokenAddress = "0x5FbDB2315678afecb367f032d93F642f64180aa3" //nolint:gosec
-	l1BridgeAddr      = "0x0000000000000000000000000000000000000000"
+	l1BridgeAddr      = "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9"
 	l2BridgeAddr      = "0x5FbDB2315678afecb367f032d93F642f64180aa3"
 
 	l1AccHexAddress    = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
@@ -48,7 +52,7 @@ const (
 
 var (
 	dbConfig = pgstorage.NewConfigFromEnv()
-	networks = []uint{1,2}
+	networks = []uint{0,2}
 )
 
 
@@ -65,9 +69,10 @@ type Manager struct {
 	cfg *Config
 	ctx context.Context
 
-	storage    *db.Storage
-	bridgetree *bridgectrl.BridgeController
-	wait       *Wait
+	storage       db.Storage
+	bridgetree    *bridgectrl.BridgeController
+	bridgeService pb.BridgeServiceServer
+	wait          *Wait
 }
 
 // NewManager returns a manager ready to be used and a potential error caused
@@ -97,47 +102,12 @@ func NewManager(ctx context.Context, cfg *Config) (*Manager, error) {
 	if err != nil {
 		return nil, err
 	}
-	opsman.storage = &st
+	bService := bridgectrl.NewBridgeService(pgst, bt)
+	opsman.storage = st
 	opsman.bridgetree = bt
+	opsman.bridgeService = bService
 
 	return opsman, nil
-}
-
-// Storage is a getter for the storage field.
-func (m *Manager) Storage() *db.Storage {
-	return m.storage
-}
-
-// GetCurrentGlobalExitRootFromSmc retrieves the current globalExitRoot
-func (m *Manager) GetCurrentGlobalExitRootFromSmc() {
-	//TODO
-}
-
-// CheckVirtualRoot verifies if the given root is the current root of the
-// merkletree for virtual state.
-func (m *Manager) CheckGlobalExitRoot(expectedRoot string) error {
-	// root, err := m.st.GetStateRoot(m.ctx, true)
-	// if err != nil {
-	// 	return err
-	// }
-	// return m.checkRoot(root, expectedRoot)
-	return nil
-}
-
-// SendL2Txs sends the given L2 txs and waits for them to be consolidated
-func (m *Manager) SendL2Txs() error {
-	//TODO Send L2
-
-	var currentBatchNumber uint64
-	// Wait for sequencer to select txs from pool and propose a new batch
-	// Wait for the synchronizer to update state
-	err := m.wait.Poll(defaultInterval, defaultDeadline, func() (bool, error) {
-		// TODO call hermez core rpc to check current batch
-		var latestBatchNumber uint64
-		done := latestBatchNumber > currentBatchNumber
-		return done, nil
-	})
-	return err
 }
 
 // SendL1Deposit sends a deposit from l1 to l2
@@ -146,40 +116,59 @@ func (m *Manager) SendL1Deposit(ctx context.Context, tokenAddr common.Address, a
 	) error {
 	client, auth, err := initClientConnection(ctx, "l1")
 	if err != nil {
+		log.Error(1)
 		return err
+	}
+	emptyAddr := common.Address{}
+	if tokenAddr == emptyAddr {
+		auth.Value = amount
 	}
 	if destAddr == nil {
 		destAddr = &auth.From
 	}
 	br, err := bridge.NewBridge(common.HexToAddress(l1BridgeAddr), client)
 	if err != nil {
+		log.Error(2)
 		return nil
 	}
 	tx, err := br.Bridge(auth, tokenAddr, amount, destNetwork, *destAddr)
 	if err != nil {
+		log.Error(3, err)
 		return err
 	}
 
 	// wait matic transfer to be mined
-	log.Infof("Waiting tx to be mined")
+	log.Infof("Waiting L1Deposit to be mined")
 	const txTimeout = 15 * time.Second
 	_, err = m.WaitTxToBeMined(ctx, client, tx.Hash(), txTimeout)
-	return err
+	if err != nil {
+		return err
+	}
+	//Wait to process tx and sync it
+	time.Sleep(15 * time.Second)
+	return nil
 }
 
 // SendL2Deposit sends a deposit from l2 to l1
 func (m *Manager) SendL2Deposit(ctx context.Context, tokenAddr common.Address, amount *big.Int,
-	destNetwork uint32, destAddr common.Address,
+	destNetwork uint32, destAddr *common.Address,
 	) error {
 	client, auth, err := initClientConnection(ctx, "l2")
 	if err != nil {
 		return err
 	}
+	emptyAddr := common.Address{}
+	if tokenAddr == emptyAddr {
+		auth.Value = amount
+	}
+	if destAddr == nil {
+		destAddr = &auth.From
+	}
 	br, err := bridge.NewBridge(common.HexToAddress(l2BridgeAddr), client)
 	if err != nil {
 		return nil
 	}
-	tx, err := br.Bridge(auth, tokenAddr, amount, destNetwork, destAddr)
+	tx, err := br.Bridge(auth, tokenAddr, amount, destNetwork, *destAddr)
 	if err != nil {
 		return err
 	}
@@ -231,16 +220,22 @@ func (m *Manager) Setup() error {
 
 	//Deploy Bridge and GlobalExitRoot Smc
 	bridgeAddr, globlaExitRootL2Addr, err := m.DeploySmc(m.ctx)
+	if err != nil {
+		log.Error("Error deploying", err)
+		panic(err)
+		return err
+	}
 	log.Warn(bridgeAddr, globlaExitRootL2Addr)
 
-	time.Sleep(30 * time.Second)
+	time.Sleep(15 * time.Second)
 
 	// Run bridge container
 	err = m.startBridge()
 	if err != nil {
 		return err
 	}
-
+	log.Warn("Bridge started without any error")
+	time.Sleep(30 * time.Second)
 	return nil
 }
 
@@ -561,8 +556,39 @@ func (m *Manager) WaitTxToBeMined(ctx context.Context, client *ethclient.Client,
 }
 
 // CheckAccountBalance checks the balance by address
-func (m *Manager) CheckAccountBalance(ctx context.Context, account common.Address) {
-	//TODO
+func (m *Manager) CheckAccountBalance(ctx context.Context, network string, account *common.Address) (*big.Int, error) {
+	client, auth, err := initClientConnection(ctx, network)
+	if err != nil {
+		return big.NewInt(0), nil
+	}
+	if account == nil {
+		account = &auth.From
+	}
+	balance, err := client.BalanceAt(ctx, *account, nil)
+	if err != nil {
+		return big.NewInt(0), nil
+	}
+	return balance, nil
+}
+
+// CheckAccountTokenBalance checks the balance by address
+func (m *Manager) CheckAccountTokenBalance(ctx context.Context, network string, tokenAddr common.Address, account *common.Address) (*big.Int, error) {
+	client, auth, err := initClientConnection(ctx, network)
+	if err != nil {
+		return big.NewInt(0), nil
+	}
+	if account == nil {
+		account = &auth.From
+	}
+	erc20Token, err := erc20.NewMatic(tokenAddr, client)
+	if err != nil {
+		return big.NewInt(0), nil
+	}
+	balance, err := erc20Token.BalanceOf(&bind.CallOpts{Pending: false}, *account)
+	if err != nil {
+		return big.NewInt(0), nil
+	}
+	return balance, nil
 }
 
 var (
@@ -620,4 +646,116 @@ func initClientConnection(ctx context.Context, network string) (*ethclient.Clien
 		return nil, nil, err
 	}
 	return client, auth, nil
+}
+
+func (m *Manager) GetClaimData(networkID, depositCount uint) ([][bridgectrl.KeyLen]byte, *etherman.GlobalExitRoot, error) {
+	return m.bridgetree.GetClaim(networkID, depositCount)
+}
+
+func (m *Manager) GetBridgeInfoByDestAddr(ctx context.Context, addr *common.Address) ([]*pb.Deposit, error) {
+	_, auth, err := initClientConnection(ctx, "l2")
+	if err != nil {
+		return []*pb.Deposit{}, err
+	}
+	if addr == nil {
+		addr = &auth.From
+	}
+	req := pb.GetBridgesRequest{
+		EtherAddr: addr.String(),
+	}
+	res, err := m.bridgeService.GetBridges(ctx, &req)
+	if err != nil {
+		return []*pb.Deposit{}, err
+	}
+	return res.Deposits, nil
+}
+
+func (m *Manager) SendL1Claim(ctx context.Context, deposit *pb.Deposit, smtProof [][32]byte, globalExitRoot *etherman.GlobalExitRoot) error {
+	client, auth, err := initClientConnection(ctx, "l1")
+	if err != nil {
+		return err
+	}
+	br, err := bridge.NewBridge(common.HexToAddress(l1BridgeAddr), client)
+	if err != nil {
+		return err
+	}
+	amount, _ := new(big.Int).SetString(deposit.Amount, encoding.Base10)
+	tx, err := br.Claim(auth, common.HexToAddress(deposit.TokenAddr), amount, deposit.OrigNet, deposit.DestNet,
+	common.HexToAddress(deposit.DestAddr), smtProof, uint32(deposit.DepositCnt), globalExitRoot.GlobalExitRootNum,
+	globalExitRoot.ExitRoots[0], globalExitRoot.ExitRoots[1])
+	if err != nil {
+		return err
+	}
+
+	// wait matic transfer to be mined
+	log.Infof("Waiting tx to be mined")
+	const txTimeout = 15 * time.Second
+	_, err = m.WaitTxToBeMined(ctx, client, tx.Hash(), txTimeout)
+	return err
+
+}
+
+func (m *Manager) SendL2Claim(ctx context.Context, deposit *pb.Deposit, smtProof [][32]byte, globalExitRoot *etherman.GlobalExitRoot) error {
+	client, auth, err := initClientConnection(ctx, "l2")
+	if err != nil {
+		return err
+	}
+	br, err := bridge.NewBridge(common.HexToAddress(l2BridgeAddr), client)
+	if err != nil {
+		return err
+	}
+	amount, _ := new(big.Int).SetString(deposit.Amount, encoding.Base10)
+	tx, err := br.Claim(auth, common.HexToAddress(deposit.TokenAddr), amount, deposit.OrigNet, deposit.DestNet,
+	common.HexToAddress(deposit.DestAddr), smtProof, uint32(deposit.DepositCnt), globalExitRoot.GlobalExitRootNum,
+	globalExitRoot.ExitRoots[0], globalExitRoot.ExitRoots[1])
+	if err != nil {
+		return err
+	}
+
+	// wait matic transfer to be mined
+	log.Infof("Waiting tx to be mined")
+	const txTimeout = 15 * time.Second
+	_, err = m.WaitTxToBeMined(ctx, client, tx.Hash(), txTimeout)
+	return err
+
+}
+
+func (m *Manager) GetCurrentGlobalExitRootSynced(ctx context.Context) (*etherman.GlobalExitRoot, error) {
+	return m.storage.GetLatestExitRoot(ctx)
+}
+
+func (m *Manager) GetCurrentGlobalExitRootFromSmc(ctx context.Context) (*etherman.GlobalExitRoot, error) {
+	client, _, err := initClientConnection(ctx, "l1")
+	if err != nil {
+		return nil, err
+	}
+	br, err := bridge.NewBridge(common.HexToAddress(l1BridgeAddr), client)
+	if err != nil {
+		return nil, err
+	}
+	GlobalExitRootManAddr, err := br.GlobalExitRootManager(&bind.CallOpts{Pending: false})
+	if err != nil {
+		return nil, err
+	}
+	globalManager, err := globalexitrootmanager.NewGlobalexitrootmanager(GlobalExitRootManAddr, client)
+	if err != nil {
+		return nil, err
+	}
+	gNum, err := globalManager.LastGlobalExitRootNum(&bind.CallOpts{Pending: false})
+	if err != nil {
+		return nil, err
+	}
+	gMainnet, err := globalManager.LastMainnetExitRoot(&bind.CallOpts{Pending: false})
+	if err != nil {
+		return nil, err
+	}
+	gRollup, err := globalManager.LastRollupExitRoot(&bind.CallOpts{Pending: false})
+	if err != nil {
+		return nil, err
+	}
+	result := etherman.GlobalExitRoot {
+		GlobalExitRootNum: gNum,
+		ExitRoots: []common.Hash{gMainnet, gRollup},
+	}
+	return &result, nil
 }

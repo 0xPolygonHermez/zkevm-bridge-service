@@ -56,10 +56,6 @@ func (mt *MerkleTree) getSiblings(ctx context.Context, index uint, root [KeyLen]
 		copy(left[:], value[0])
 		copy(right[:], value[1])
 
-		if err != nil {
-			return nil, err
-		}
-
 		if index&(1<<h) > 0 {
 			siblings = append(siblings, left)
 			cur = right
