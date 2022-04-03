@@ -21,4 +21,4 @@ jobs:
           push: true
           tags: hermeznetwork/hermez-bridge
           secrets: |
-            GIT_AUTH_TOKEN=${{ secrets.GIT_TOKEN }}
+            "github_token=${{ secrets.GIT_TOKEN }}"
