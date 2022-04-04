@@ -74,8 +74,8 @@ func TestBridgeTree(t *testing.T) {
 				Amount:             amount,
 				DestinationNetwork: testVector.DestinationNetwork,
 				DestinationAddress: common.HexToAddress(testVector.DestinationAddress),
-				BlockNumber:        testVector.BlockNumber,
-				DepositCount:       testVector.DepositCount,
+				BlockNumber:        0,
+				DepositCount:       uint(i + 1),
 			}
 			leafHash := hashDeposit(deposit)
 			assert.Equal(t, testVector.ExpectedHash, hex.EncodeToString(leafHash[:]))
@@ -90,12 +90,10 @@ func TestBridgeTree(t *testing.T) {
 				BlockID:           id,
 			})
 			require.NoError(t, err)
-
-			assert.Equal(t, testVector.ExpectedRoot, hex.EncodeToString(bt.exitTrees[0].root[:]))
 		}
 
-		for _, testVector := range testVectors {
-			merkleProof, globalExitRoot, err := bt.GetClaim(testVector.OriginalNetwork, testVector.DepositCount)
+		for i, testVector := range testVectors {
+			merkleProof, globalExitRoot, err := bt.GetClaim(testVector.OriginalNetwork, uint(i+1))
 			require.NoError(t, err)
 
 			log.Println(globalExitRoot)
@@ -103,7 +101,7 @@ func TestBridgeTree(t *testing.T) {
 		}
 
 		for i := len(testVectors) - 1; i >= 0; i-- {
-			err := bt.ReorgMT(testVectors[i].DepositCount, testVectors[i].OriginalNetwork)
+			err := bt.ReorgMT(uint(i+1), testVectors[i].OriginalNetwork)
 			require.NoError(t, err)
 		}
 	})

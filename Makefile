@@ -136,7 +136,7 @@ run: ## runs all services
 
 .PHONY: run-mockserver
 run-mockserver: ## runs the mocked restful server
-	$(RUNDBBRIDGE)
+	$(RUNDBBRDIGE)
 	sleep 3
 	$(RUNMOCKBRIDGE)
 

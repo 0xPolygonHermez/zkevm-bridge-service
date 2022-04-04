@@ -67,7 +67,9 @@ func (bt *BridgeController) GetClaim(networkID uint, index uint) ([][KeyLen]byte
 
 	tID := bt.networkIDs[networkID]
 	ctx = context.WithValue(context.TODO(), contextKeyNetwork, tID) //nolint
-	tID--
+	if tID != 0 {
+		tID--
+	}
 	globalExitRoot, err := bt.storage.GetLatestExitRoot(context.TODO())
 	if err != nil {
 		return proof, nil, err
