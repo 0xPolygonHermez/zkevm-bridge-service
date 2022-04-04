@@ -104,12 +104,16 @@ func TestE2E(t *testing.T) {
 			require.NoError(t, err)
 			t.Log("smt: ", smtProof)
 			t.Logf("globalExitRoot: %+v", globaExitRoot)
-			// Claim funds in L1
-			opsman.SendL2Claim(ctx, deposits[1], smtProof, globaExitRoot)
-			// Check L2 funds to see if the amount has been increased
-			balance, err = opsman.CheckAccountBalance(ctx, "l2", nil)
+			// Force to propose a new batch
+			err = opsman.ForceBatchProposal(ctx)
 			require.NoError(t, err)
-			assert.NotEqual(t, big.NewInt(0), balance)
+			// Claim funds in L1
+			opsman.SendL2Claim(ctx, deposits[0], smtProof, globaExitRoot)
+			// Check L2 funds to see if the amount has been increased
+			balance2, err := opsman.CheckAccountBalance(ctx, "l2", nil)
+			require.NoError(t, err)
+			fmt.Println("Balance: ", balance, balance2)
+			assert.NotEqual(t, balance, balance2)
 
 
 			// Check globalExitRoot

@@ -222,7 +222,6 @@ func (m *Manager) Setup() error {
 	bridgeAddr, globlaExitRootL2Addr, err := m.DeploySmc(m.ctx)
 	if err != nil {
 		log.Error("Error deploying", err)
-		panic(err)
 		return err
 	}
 	log.Warn(bridgeAddr, globlaExitRootL2Addr)
@@ -758,4 +757,56 @@ func (m *Manager) GetCurrentGlobalExitRootFromSmc(ctx context.Context) (*etherma
 		ExitRoots: []common.Hash{gMainnet, gRollup},
 	}
 	return &result, nil
+}
+
+func (m *Manager) ForceBatchProposal(ctx context.Context) error {
+	// Eth client
+	log.Infof("Connecting to l2")
+	client, auth, err := initClientConnection(ctx, "l2")
+	if err != nil {
+		log.Error(1)
+		return err
+	}
+
+	// Getting l1 info
+	log.Infof("Getting L2 gasPrice info")
+	gasPrice, err := client.SuggestGasPrice(ctx)
+	if err != nil {
+		log.Error(2)
+		return err
+	}
+
+	// Send some Ether from l1Acc to sequencer acc
+	log.Infof("Getting current nonce for account: %s", l1AccHexAddress)
+	fromAddress := common.HexToAddress(l1AccHexAddress)
+	nonce, err := client.NonceAt(ctx, fromAddress, nil)
+	if err != nil {
+		log.Error(3)
+		return err
+	}
+	const gasLimit = 21000
+	toAddress := common.HexToAddress(sequencerAddress)
+	ethAmount := big.NewInt(1000000)
+	tx := types.NewTransaction(nonce, toAddress, ethAmount, gasLimit, gasPrice, nil)
+	signedTx, err := auth.Signer(auth.From, tx)
+	if err != nil {
+		log.Error(4)
+		return err
+	}
+	err = client.SendTransaction(ctx, signedTx)
+	if err != nil {
+		log.Error(5)
+		return err
+	}
+
+	// Wait eth transfer to be mined
+	log.Infof("Waiting tx to be mined")
+	time.Sleep(30 * time.Second)
+	// const txETHTransferTimeout = 20 * time.Second
+	// _, err = m.WaitTxToBeMined(ctx, client, signedTx.Hash(), txETHTransferTimeout)
+	// if err != nil {
+	// 	log.Error(6)
+	// 	return err
+	// }
+	return nil
 }
