@@ -16,9 +16,9 @@ services:
     
   hez-bridge-mock:
     container_name: hez-bridge
-    image: hezbridge
+    image: hermeznetwork/hermez-bridge
     ports:
-      - 8124:8124
+      - 9090:9090
       - 8080:8080
     environment:
       - HERMEZBRIDGE_DATABASE_USER=test_user

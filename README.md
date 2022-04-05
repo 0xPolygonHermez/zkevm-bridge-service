@@ -2,4 +2,4 @@
 
 
 ## Docker build
-You need to create the `secret` file with your personal github token before building the docker image locally.
+For the local build, we need to define the env variables `private_token` with your personal github token.
