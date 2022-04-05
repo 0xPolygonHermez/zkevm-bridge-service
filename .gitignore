@@ -15,6 +15,3 @@
 # vendor/
 /dist/
 .vscode
-
-# Secrete information
-secret
