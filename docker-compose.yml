@@ -68,7 +68,6 @@ services:
     container_name: hez-bridge
     image: hezbridge
     ports:
-      - 8124:8124
       - 8080:8080
       - 9090:9090
     environment:
@@ -85,7 +84,6 @@ services:
     container_name: hez-bridge-mock
     image: hezbridge
     ports:
-      - 8124:8124
       - 8080:8080
       - 9090:9090
     environment:

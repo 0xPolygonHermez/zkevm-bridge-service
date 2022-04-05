@@ -8,8 +8,8 @@ DOCKERCOMPOSEBRIDGE := hez-bridge
 DOCKERCOMPOSEMOCKSERVER := hez-bridge-mock
 
 RUNDBCORE := $(DOCKERCOMPOSE) up -d $(DOCKERCOMPOSEDBCORE)
-RUNDBBRDIGE := $(DOCKERCOMPOSE) up -d $(DOCKERCOMPOSEDBBRIDGE)
-RUNDBS := ${RUNDBCORE} && ${RUNDBBRDIGE}
+RUNDBBRIDGE := $(DOCKERCOMPOSE) up -d $(DOCKERCOMPOSEDBBRIDGE)
+RUNDBS := ${RUNDBCORE} && ${RUNDBBRIDGE}
 RUNCORE := $(DOCKERCOMPOSE) up -d $(DOCKERCOMPOSEHERMEZCORE)
 RUNNETWORK := $(DOCKERCOMPOSE) up -d $(DOCKERCOMPOSENETWORK)
 RUNPROVER := $(DOCKERCOMPOSE) up -d $(DOCKERCOMPOSEPROVER)
@@ -56,7 +56,7 @@ install-git-hooks: ## Moves hook files to the .git/hooks directory
 .PHONY: test
 test: ## Runs only short tests without checking race conditions
 	$(STOPDBBRIDGE) || true
-	$(RUNDBBRDIGE); sleep 5
+	$(RUNDBBRIDGE); sleep 5
 	trap '$(STOPDBBRIDGE)' EXIT; go test --cover -short -p 1 ./...
 
 .PHONY: install-linter
@@ -136,7 +136,7 @@ run: ## runs all services
 
 .PHONY: run-mockserver
 run-mockserver: ## runs the mocked restful server
-	$(RUNDBBRDIGE)
+	$(RUNDBBRIDGE)
 	sleep 3
 	$(RUNMOCKBRIDGE)
 

@@ -2,15 +2,12 @@ package operations
 
 import (
 	"context"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"math/big"
 	"os"
 	"os/exec"
 	"strings"
-	"runtime"
-	"path"
 	"time"
 
 	ethereum "github.com/ethereum/go-ethereum"
@@ -39,7 +36,7 @@ const (
 	poeAddress        = "0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9"
 	MaticTokenAddress = "0x5FbDB2315678afecb367f032d93F642f64180aa3" //nolint:gosec
 	l1BridgeAddr      = "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9"
-	l2BridgeAddr      = "0x5FbDB2315678afecb367f032d93F642f64180aa3"
+	l2BridgeAddr      = "0x9d98deabc42dd696deb9e40b4f1cab7ddbf55988"
 
 	l1AccHexAddress    = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
 	l1AccHexPrivateKey = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
@@ -52,7 +49,7 @@ const (
 
 var (
 	dbConfig = pgstorage.NewConfigFromEnv()
-	networks = []uint{0,2}
+	networks = []uint{0,1}
 )
 
 
@@ -173,7 +170,7 @@ func (m *Manager) SendL2Deposit(ctx context.Context, tokenAddr common.Address, a
 		return err
 	}
 
-	// wait matic transfer to be mined
+	// wait transfer to be forged
 	log.Infof("Waiting tx to be mined")
 	const txTimeout = 15 * time.Second
 	_, err = m.WaitTxToBeMined(ctx, client, tx.Hash(), txTimeout)
@@ -216,25 +213,14 @@ func (m *Manager) Setup() error {
 	if err != nil {
 		return err
 	}
-	time.Sleep(15 * time.Second)
-
-	//Deploy Bridge and GlobalExitRoot Smc
-	bridgeAddr, globlaExitRootL2Addr, err := m.DeploySmc(m.ctx)
-	if err != nil {
-		log.Error("Error deploying", err)
-		return err
-	}
-	log.Warn(bridgeAddr, globlaExitRootL2Addr)
-
-	time.Sleep(15 * time.Second)
+	// time.Sleep(15 * time.Second)
 
 	// Run bridge container
 	err = m.startBridge()
 	if err != nil {
 		return err
 	}
-	log.Warn("Bridge started without any error")
-	time.Sleep(30 * time.Second)
+	time.Sleep(15 * time.Second)
 	return nil
 }
 
@@ -306,113 +292,6 @@ func (m *Manager) AddFunds(ctx context.Context) error {
 		return err
 	}
 	return nil
-}
-
-func (m *Manager) DeploySmc(ctx context.Context) (common.Address, common.Address, error) {
-	bridgeByteCode, err := readBytecode("bridge.bin")
-	if err != nil {
-		log.Error(1, err)
-		return common.Address{}, common.Address{}, err
-	}
-	globalExitRootL2ByteCode, err := readBytecode("globalexitroot.bin")
-	if err != nil {
-		log.Error(2)
-		return common.Address{}, common.Address{}, err
-	}
-
-	// Eth client
-	log.Info("Connecting to l2")
-	client, auth, err := initClientConnection(ctx, "l2")
-	if err != nil {
-		return common.Address{}, common.Address{}, err
-	}
-
-	// Send some Ether from l1Acc to sequencer acc
-	log.Infof("Transferring ETH to the sequencer")
-	fromAddress := common.HexToAddress(l1AccHexAddress)
-	nonce, err := client.NonceAt(ctx, fromAddress, nil)
-	// nonce, err := client.PendingNonceAt(ctx, fromAddress)
-	if err != nil {
-		log.Error(7)
-		return common.Address{}, common.Address{}, err
-	}
-	// Simulate future address
-	calculatedglobalExitRootL2Addr := crypto.CreateAddress(auth.From, nonce+1)
-	// calculatedBridgeAddr := crypto.CreateAddress2()
-
-	//Build deployment bytecode bridgeL2
-	globalExitRootPaddedAddr := common.LeftPadBytes(calculatedglobalExitRootL2Addr.Bytes(), 32)
-	networkID := "0000000000000000000000000000000000000000000000000000000000000002"
-	fullByteCode := bridgeByteCode+networkID+hex.EncodeToString(globalExitRootPaddedAddr)
-
-	bridgeL2Addr, err := m.DeploySC(ctx, client, common.Hex2Bytes(fullByteCode), 80000000, nonce, auth)
-	if err != nil {
-		log.Error(9, err)
-		return common.Address{}, common.Address{}, err
-	}
-
-	BridgePaddedAddr := common.LeftPadBytes(bridgeL2Addr.Bytes(), 32)
-	fullByteCode = globalExitRootL2ByteCode+hex.EncodeToString(BridgePaddedAddr)
-	globalExitRootL2Addr, err := m.DeploySC(ctx, client, common.Hex2Bytes(fullByteCode), 80000000, nonce+1, auth)
-	if err != nil {
-		log.Error(10, err)
-		return common.Address{}, common.Address{}, err
-	}
-	return bridgeL2Addr, globalExitRootL2Addr, nil
-}
-
-// ReadBytecode reads the bytecode of the given contract.
-func readBytecode(contractPath string) (string, error) {
-	const basePath = "../l2contracts"
-
-	_, currentFilename, _, ok := runtime.Caller(0)
-	if !ok {
-		return "", fmt.Errorf("Could not get name of current file")
-	}
-	fullBasePath := path.Join(path.Dir(currentFilename), basePath)
-
-	content, err := os.ReadFile(path.Join(fullBasePath, contractPath))
-	if err != nil {
-		return "", err
-	}
-	return string(content), nil
-}
-
-func (m *Manager) DeploySC(ctx context.Context, client *ethclient.Client, scByteCode []byte, gasLimit, nonce uint64, auth *bind.TransactOpts) (common.Address, error) {
-	// we need to use this method to send `TO` field as `NULL`,
-	// so the explorer can detect this is a smart contract creation
-
-	tx := types.NewTx(&types.LegacyTx{
-		Nonce:    nonce,
-		To:       nil,
-		Value:    new(big.Int),
-		Gas:      gasLimit,
-		GasPrice: new(big.Int).SetUint64(1),
-		Data:     scByteCode,
-	})
-
-	signedTx, err := auth.Signer(auth.From, tx)
-	if err != nil {
-		log.Error(9.1, err)
-		return common.Address{}, err
-	}
-	log.Infof("sending tx to deploy sc")
-
-	err = client.SendTransaction(ctx, signedTx)
-	if err != nil {
-		log.Error(9.2, err)
-		return common.Address{}, err
-	}
-	log.Infof("tx sent: %v", signedTx.Hash().Hex())
-	txMinedTimeoutLimit := 60 * time.Second
-	r, err := m.WaitTxToBeMined(ctx, client, signedTx.Hash(), txMinedTimeoutLimit)
-	if err != nil {
-		log.Error(9.3, err)
-		return common.Address{}, err
-	}
-	log.Infof("SC Deployed to address: %v", r.ContractAddress.Hex())
-
-	return r.ContractAddress, nil
 }
 
 // Teardown stops all the components.
@@ -715,6 +594,8 @@ func (m *Manager) SendL2Claim(ctx context.Context, deposit *pb.Deposit, smtProof
 	log.Infof("Waiting tx to be mined")
 	const txTimeout = 15 * time.Second
 	_, err = m.WaitTxToBeMined(ctx, client, tx.Hash(), txTimeout)
+
+	//Wait for the consolidation
 	time.Sleep(30 * time.Second)
 	return err
 
@@ -802,12 +683,12 @@ func (m *Manager) ForceBatchProposal(ctx context.Context) error {
 
 	// Wait eth transfer to be mined
 	log.Infof("Waiting tx to be mined")
-	time.Sleep(30 * time.Second)
-	// const txETHTransferTimeout = 20 * time.Second
-	// _, err = m.WaitTxToBeMined(ctx, client, signedTx.Hash(), txETHTransferTimeout)
-	// if err != nil {
-	// 	log.Error(6)
-	// 	return err
-	// }
+	// time.Sleep(30 * time.Second)
+	const txETHTransferTimeout = 20 * time.Second
+	_, err = m.WaitTxToBeMined(ctx, client, signedTx.Hash(), txETHTransferTimeout)
+	if err != nil {
+		log.Error(6)
+		return err
+	}
 	return nil
 }
