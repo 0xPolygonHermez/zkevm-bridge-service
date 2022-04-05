@@ -715,6 +715,7 @@ func (m *Manager) SendL2Claim(ctx context.Context, deposit *pb.Deposit, smtProof
 	log.Infof("Waiting tx to be mined")
 	const txTimeout = 15 * time.Second
 	_, err = m.WaitTxToBeMined(ctx, client, tx.Hash(), txTimeout)
+	time.Sleep(30 * time.Second)
 	return err
 
 }

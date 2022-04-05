@@ -108,7 +108,8 @@ func TestE2E(t *testing.T) {
 			err = opsman.ForceBatchProposal(ctx)
 			require.NoError(t, err)
 			// Claim funds in L1
-			opsman.SendL2Claim(ctx, deposits[0], smtProof, globaExitRoot)
+			err = opsman.SendL2Claim(ctx, deposits[0], smtProof, globaExitRoot)
+			require.NoError(t, err)
 			// Check L2 funds to see if the amount has been increased
 			balance2, err := opsman.CheckAccountBalance(ctx, "l2", nil)
 			require.NoError(t, err)
