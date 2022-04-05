@@ -86,15 +86,23 @@ func (bt *BridgeController) GetClaim(networkID uint, index uint) ([][KeyLen]byte
 	}, err
 }
 
-// GetMerkleRoot returns claim information to the user.
-func (bt *BridgeController) GetMerkleRoot(networkID uint) ([][KeyLen]byte, error) {
-	return nil, nil
-}
-
 // ReorgMT reorg the specific merkle tree.
 func (bt *BridgeController) ReorgMT(depositCount uint, networkID uint) error {
 	var ctx context.Context
 	tID := bt.networkIDs[networkID]
 	ctx = context.WithValue(context.TODO(), contextKeyNetwork, tID) //nolint
 	return bt.exitTrees[tID-1].resetLeaf(ctx, depositCount)
+}
+
+// CheckExitRoot checks if each exitRoot is synchronized exactly
+func (bt *BridgeController) CheckExitRoot(globalExitRoot etherman.GlobalExitRoot) error {
+	for i, exitRoot := range globalExitRoot.ExitRoots {
+		ctx := context.WithValue(context.TODO(), contextKeyNetwork, uint8(i+1)) //nolint
+		_, err := bt.exitTrees[i].getDepositCntByRoot(ctx, exitRoot)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

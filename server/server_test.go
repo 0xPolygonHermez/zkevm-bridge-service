@@ -10,11 +10,15 @@ import (
 	"testing"
 
 	"github.com/hermeznetwork/hermez-bridge/bridgectrl/pb"
+	"github.com/hermeznetwork/hermez-bridge/test/operations"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/encoding/protojson"
 )
 
-const port = "8080"
+const (
+	grpcPort = "9090"
+	restPort = "8080"
+)
 
 func init() {
 	// Change dir to project root
@@ -31,10 +35,12 @@ func TestBridgeMock(t *testing.T) {
 	err := RunMockServer()
 	require.NoError(t, err)
 
-	err = healthRestCheck(port)
+	err = operations.WaitGRPCHealthy("0.0.0.0:" + grpcPort)
 	require.NoError(t, err)
 
-	address := "http://localhost:" + port
+	address := "http://localhost:" + restPort
+	err = operations.WaitRestHealthy(address)
+	require.NoError(t, err)
 
 	resp, err := http.Get(address + "/api")
 	require.NoError(t, err)
