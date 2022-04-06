@@ -75,7 +75,7 @@ func (bt *BridgeController) GetClaim(networkID uint, index uint) ([][KeyLen]byte
 		return proof, nil, err
 	}
 
-	proof, err = bt.exitTrees[tID].getSiblings(ctx, index-1, globalExitRoot.ExitRoots[tID])
+	proof, err = bt.exitTrees[tID].getSiblings(ctx, index, globalExitRoot.ExitRoots[tID])
 	if err != nil {
 		return proof, nil, err
 	}
