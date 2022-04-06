@@ -1,0 +1,34 @@
+package main
+
+import (
+	"fmt"
+	"path"
+	"path/filepath"
+	"runtime"
+
+	"github.com/hermeznetwork/hermez-core/scripts/cmd/dependencies"
+	"github.com/urfave/cli/v2"
+)
+
+func updateDeps(ctx *cli.Context) error {
+	_, filename, _, _ := runtime.Caller(0)
+	dir := path.Join(path.Dir(filename), "../../")
+	fmt.Print(dir)
+
+	cfg := &dependencies.Config{
+		Images: &dependencies.ImagesConfig{
+			Names:          []string{"hermeznetwork/hermez-node-zkevm"},
+			TargetFilePath: filepath.Join(dir, "docker-compose.yml"),
+		},
+		PB: &dependencies.PBConfig{
+			TargetDirPath: filepath.Join(dir, "proto/src"),
+			SourceRepo:    "https://github.com/hermeznetwork/comms-protocol.git",
+		},
+		TV: &dependencies.TVConfig{
+			TargetDirPath: filepath.Join(dir, "test/vectors"),
+			SourceRepo:    "https://github.com/hermeznetwork/test-vectors.git",
+		},
+	}
+
+	return dependencies.NewManager(cfg).Run()
+}

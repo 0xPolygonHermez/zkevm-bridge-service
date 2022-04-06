@@ -45,7 +45,7 @@ func formatBytes32String(text string) ([KeyLen]byte, error) {
 }
 
 func TestLeafHash(t *testing.T) {
-	data, err := os.ReadFile("test/vectors/leaf-vectors.json")
+	data, err := os.ReadFile("test/vectors/mt-bridge/leaf-vectors.json")
 	require.NoError(t, err)
 
 	var leafVectors []test.DepositVectorRaw
@@ -73,7 +73,7 @@ func TestLeafHash(t *testing.T) {
 }
 
 func TestMTAddLeaf(t *testing.T) {
-	data, err := os.ReadFile("test/vectors/root-vectors.json")
+	data, err := os.ReadFile("test/vectors/mt-bridge/root-vectors.json")
 	require.NoError(t, err)
 
 	var mtTestVectors []test.MTRootVectorRaw
@@ -127,7 +127,7 @@ func TestMTAddLeaf(t *testing.T) {
 }
 
 func TestMTGetProof(t *testing.T) {
-	data, err := os.ReadFile("test/vectors/claim-vectors.json")
+	data, err := os.ReadFile("test/vectors/mt-bridge/claim-vectors.json")
 	require.NoError(t, err)
 
 	var mtTestVectors []test.MTClaimVectorRaw
