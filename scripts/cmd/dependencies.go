@@ -17,7 +17,7 @@ func updateDeps(ctx *cli.Context) error {
 
 	cfg := &dependencies.Config{
 		Images: &dependencies.ImagesConfig{
-			Names:          []string{"hermeznetwork/hermez-node-zkevm"},
+			Names:          []string{"hermeznetwork/hermez-node-zkevm", "hermeznetwork/geth-zkevm-contracts", "hermeznetwork/hez-mock-prover"},
 			TargetFilePath: filepath.Join(dir, "docker-compose.yml"),
 		},
 		PB: &dependencies.PBConfig{
