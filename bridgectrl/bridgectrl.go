@@ -3,7 +3,6 @@ package bridgectrl
 import (
 	"context"
 
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/hermez-bridge/etherman"
 )
 
@@ -80,10 +79,7 @@ func (bt *BridgeController) GetClaim(networkID uint, index uint) ([][KeyLen]byte
 		return proof, nil, err
 	}
 
-	return proof, &etherman.GlobalExitRoot{
-		GlobalExitRootNum: globalExitRoot.GlobalExitRootNum,
-		ExitRoots:         []common.Hash{bt.exitTrees[0].root, bt.exitTrees[1].root},
-	}, err
+	return proof, globalExitRoot, err
 }
 
 // ReorgMT reorg the specific merkle tree.

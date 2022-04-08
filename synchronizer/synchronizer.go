@@ -232,10 +232,10 @@ func (s *ClientSynchronizer) processBlockRange(blocks []etherman.Block, order ma
 					log.Fatal("NetworkID: %d, error storing new globalExitRoot in Block: %d, ExitRoot: %+v, err: %v", s.networkID, blocks[i].BlockNumber, exitRoot, err)
 				}
 
-				err = s.bridgeCtrl.CheckExitRoot(exitRoot)
-				if err != nil {
-					log.Fatal("error checking new globalExitRoot in Block: %d, ExitRoot: %+v, err: %v", blocks[i].BlockNumber, exitRoot, err)
-				}
+				// err = s.bridgeCtrl.CheckExitRoot(exitRoot)
+				// if err != nil {
+				// 	log.Fatal("error checking new globalExitRoot in Block: %d, ExitRoot: %+v, err: %v", blocks[i].BlockNumber, exitRoot, err)
+				// }
 			} else if element.Name == etherman.ClaimsOrder {
 				claim := blocks[i].Claims[element.Pos]
 				claim.BlockID = blockID

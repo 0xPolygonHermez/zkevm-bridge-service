@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math/big"
 	"os"
+	// "encoding/hex"
 	"os/exec"
 	"strings"
 	"time"
@@ -25,6 +26,7 @@ import (
 	"github.com/hermeznetwork/hermez-core/test/operations"
 	"github.com/hermeznetwork/hermez-core/etherman/smartcontracts/bridge"
 	"github.com/hermeznetwork/hermez-core/etherman/smartcontracts/globalexitrootmanager"
+	"github.com/hermeznetwork/hermez-core/etherman/smartcontracts/proofofefficiency"
 	erc20 "github.com/hermeznetwork/hermez-core/etherman/smartcontracts/matic"
 	"github.com/hermeznetwork/hermez-bridge/etherman"
 )
@@ -142,7 +144,7 @@ func (m *Manager) SendL1Deposit(ctx context.Context, tokenAddr common.Address, a
 		return err
 	}
 	//Wait to process tx and sync it
-	time.Sleep(15 * time.Second)
+	time.Sleep(20 * time.Second)
 	return nil
 }
 
@@ -195,6 +197,7 @@ func (m *Manager) Setup() error {
 	if err != nil {
 		return err
 	}
+	time.Sleep(5 * time.Second)
 
 	// Start prover container
 	err = m.startProver()
@@ -213,13 +216,16 @@ func (m *Manager) Setup() error {
 	if err != nil {
 		return err
 	}
-	// time.Sleep(15 * time.Second)
+	//Wait for set the genesis and sync
+	time.Sleep(5 * time.Second)
 
 	// Run bridge container
 	err = m.startBridge()
 	if err != nil {
 		return err
 	}
+
+	//Wait for sync
 	time.Sleep(15 * time.Second)
 	return nil
 }
@@ -578,6 +584,7 @@ func (m *Manager) SendL2Claim(ctx context.Context, deposit *pb.Deposit, smtProof
 	if err != nil {
 		return err
 	}
+	auth.GasPrice = big.NewInt(0)
 	br, err := bridge.NewBridge(common.HexToAddress(l2BridgeAddr), client)
 	if err != nil {
 		return err
@@ -585,6 +592,9 @@ func (m *Manager) SendL2Claim(ctx context.Context, deposit *pb.Deposit, smtProof
 	amount, _ := new(big.Int).SetString(deposit.Amount, encoding.Base10)
 	tx, err := br.Claim(auth, common.HexToAddress(deposit.TokenAddr), amount, deposit.OrigNet, deposit.DestNet,
 	common.HexToAddress(deposit.DestAddr), smtProof, uint32(deposit.DepositCnt), globalExitRoot.GlobalExitRootNum,
+	globalExitRoot.ExitRoots[0], globalExitRoot.ExitRoots[1])
+	log.Warn(common.HexToAddress(deposit.TokenAddr), amount, deposit.OrigNet, deposit.DestNet,
+	common.HexToAddress(deposit.DestAddr), uint32(deposit.DepositCnt), globalExitRoot.GlobalExitRootNum,
 	globalExitRoot.ExitRoots[0], globalExitRoot.ExitRoots[1])
 	if err != nil {
 		return err
@@ -643,52 +653,50 @@ func (m *Manager) GetCurrentGlobalExitRootFromSmc(ctx context.Context) (*etherma
 
 func (m *Manager) ForceBatchProposal(ctx context.Context) error {
 	// Eth client
-	log.Infof("Connecting to l2")
-	client, auth, err := initClientConnection(ctx, "l2")
+	log.Infof("Connecting to l1")
+	client, auth, err := initClientConnection(ctx, "l1")
 	if err != nil {
-		log.Error(1)
 		return err
 	}
-
-	// Getting l1 info
-	log.Infof("Getting L2 gasPrice info")
-	gasPrice, err := client.SuggestGasPrice(ctx)
+	poeAddr := common.HexToAddress(poeAddress)
+	poe, err := proofofefficiency.NewProofofefficiency(poeAddr, client)
 	if err != nil {
-		log.Error(2)
 		return err
 	}
-
-	// Send some Ether from l1Acc to sequencer acc
-	log.Infof("Getting current nonce for account: %s", l1AccHexAddress)
-	fromAddress := common.HexToAddress(l1AccHexAddress)
-	nonce, err := client.NonceAt(ctx, fromAddress, nil)
+	maticAmount, err := poe.CalculateSequencerCollateral(&bind.CallOpts{Pending: false})
 	if err != nil {
-		log.Error(3)
 		return err
 	}
-	const gasLimit = 21000
-	toAddress := common.HexToAddress(sequencerAddress)
-	ethAmount := big.NewInt(1000000)
-	tx := types.NewTransaction(nonce, toAddress, ethAmount, gasLimit, gasPrice, nil)
-	signedTx, err := auth.Signer(auth.From, tx)
+	// callData, err := hex.DecodeString("00")
+	// if err != nil {
+	// 	return err
+	// }
+	matic, err := erc20.NewMatic(common.HexToAddress(MaticTokenAddress), client)
 	if err != nil {
-		log.Error(4)
 		return err
 	}
-	err = client.SendTransaction(ctx, signedTx)
+	txApprove, err := matic.Approve(auth, poeAddr, maticAmount)
 	if err != nil {
-		log.Error(5)
+		return err
+	}
+	//wait to proccess approve
+	const txETHTransferTimeout = 20 * time.Second
+	_, err = m.WaitTxToBeMined(ctx, client, txApprove.Hash(), txETHTransferTimeout)
+	if err != nil {
+		return err
+	}
+	// time.Sleep(30 * time.Second)
+	tx, err := poe.SendBatch(auth, []byte{}, maticAmount)
+	if err != nil {
 		return err
 	}
 
 	// Wait eth transfer to be mined
 	log.Infof("Waiting tx to be mined")
-	// time.Sleep(30 * time.Second)
-	const txETHTransferTimeout = 20 * time.Second
-	_, err = m.WaitTxToBeMined(ctx, client, signedTx.Hash(), txETHTransferTimeout)
+	_, err = m.WaitTxToBeMined(ctx, client, tx.Hash(), txETHTransferTimeout)
 	if err != nil {
-		log.Error(6)
 		return err
 	}
+	// time.Sleep(30 * time.Second)
 	return nil
 }

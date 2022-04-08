@@ -65,6 +65,20 @@ func (w *Wait) GRPCHealthy(address string) error {
 	})
 }
 
+// WaitRestHealthy waits for a rest enpoint to be ready
+func WaitRestHealthy(address string) error {
+	w := NewWait()
+	return w.Poll(defaultInterval, defaultDeadline, func() (bool, error) {
+		return restHealthyCondition(address)
+	})
+}
+
+func restHealthyCondition(address string) (bool, error) {
+	resp, err := http.Get(address + "/healthz")
+
+	return resp.StatusCode == http.StatusOK, err
+}
+
 // TxToBeMined waits until a tx has been mined or the given timeout expires.
 func (w *Wait) TxToBeMined(client *ethclient.Client, hash common.Hash, timeout time.Duration) error {
 	start := time.Now()

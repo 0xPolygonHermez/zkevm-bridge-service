@@ -2,6 +2,7 @@ package e2e
 
 import (
 	"context"
+	"encoding/hex"
 	"fmt"
 	"math/big"
 	"strconv"
@@ -15,7 +16,6 @@ import (
 	"github.com/hermeznetwork/hermez-bridge/test/vectors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/hermeznetwork/hermez-core/encoding"
 )
 
 // TestE2E tests the flow of deposit and withdraw funds using the vector
@@ -52,56 +52,64 @@ func TestE2E(t *testing.T) {
 			opsman, err := operations.NewManager(ctx, opsCfg)
 			require.NoError(t, err)
 
-			fmt.Println(testCase.Txs)
-
 			//Run environment
 			require.NoError(t, opsman.Setup())
 
 			// Check initial globalExitRoot. Must fail because at the beggining, no globalExitRoot event is thrown.
 			globalExitRootSMC, err := opsman.GetCurrentGlobalExitRootFromSmc(ctx)
-			require.NoError(t, err)
-			fmt.Printf("globalExitRootSMC: %+v", globalExitRootSMC)
-			globalExitRoot, err := opsman.GetCurrentGlobalExitRootSynced(ctx)
-			// require.Error(t, err)
-			if err != nil {
-				fmt.Println("err: ", err)
-				panic(err)
-			}
-			require.NoError(t, err)
-			t.Logf("initial globalExitRoot.GlobalExitRootNum: %d,", globalExitRoot.GlobalExitRootNum)
+			require.NoError(t, err)			
+			t.Logf("initial globalExitRootSMC.GlobalExitRootNum: %+v,", globalExitRootSMC)
 
 			// Send L1 deposit
-			var destNetwork uint32 = 2
-			amount := new(big.Int).SetUint64(1000000000000000000)
+			var destNetwork uint32 = 1
+			amount := new(big.Int).SetUint64(10000000000000000000)
 			// tokenAddr := common.HexToAddress(operations.MaticTokenAddress)
 			tokenAddr := common.Address{} // This means is eth
-			opsman.SendL1Deposit(ctx, tokenAddr, amount, destNetwork, nil)
+			destAddr := common.HexToAddress("0xc949254d682d8c9ad5682521675b8f43b102aec4")
+			opsman.SendL1Deposit(ctx, tokenAddr, amount, destNetwork, &destAddr)
 			require.NoError(t, err)
-			// Get Bridge Info By DestAddr
-			deposits, err := opsman.GetBridgeInfoByDestAddr(ctx, nil)
-			require.NoError(t, err)
+			// globalExitRoot, err := opsman.GetCurrentGlobalExitRootSynced(ctx)
+			// if err != nil {
+			// 	fmt.Println("err: ", err)
+			// 	panic(err)
+			// }
+			// require.NoError(t, err)
 			// Check globalExitRoot
 			globalExitRoot2, err := opsman.GetCurrentGlobalExitRootSynced(ctx)
 			require.NoError(t, err)
-			t.Logf("globalExitRoot.GlobalExitRootNum: %d, globalExitRoot2.GlobalExitRootNum: %d", globalExitRoot.GlobalExitRootNum, globalExitRoot2.GlobalExitRootNum)
-			assert.NotEqual(t, globalExitRoot.GlobalExitRootNum, globalExitRoot2.GlobalExitRootNum)
-			t.Logf("globalExitRoot.mainnet: %v, globalExitRoot2.mainnet: %v", globalExitRoot.ExitRoots[0], globalExitRoot2.ExitRoots[0])
-			assert.NotEqual(t, globalExitRoot.ExitRoots[0], globalExitRoot2.ExitRoots[0])
-			t.Logf("globalExitRoot.rollup: %v, globalExitRoot2.rollup: %v", globalExitRoot.ExitRoots[1], globalExitRoot2.ExitRoots[1])
-			assert.Equal(t, globalExitRoot.ExitRoots[1], globalExitRoot2.ExitRoots[1])
+			t.Logf("globalExitRoot.GlobalExitRootNum: %d, globalExitRoot2.GlobalExitRootNum: %d", globalExitRootSMC.GlobalExitRootNum, globalExitRoot2.GlobalExitRootNum)
+			assert.NotEqual(t, globalExitRootSMC.GlobalExitRootNum, globalExitRoot2.GlobalExitRootNum)
+			t.Logf("globalExitRootSMC.mainnet: %v, globalExitRoot2.mainnet: %v", globalExitRootSMC.ExitRoots[0], globalExitRoot2.ExitRoots[0])
+			assert.NotEqual(t, globalExitRootSMC.ExitRoots[0], globalExitRoot2.ExitRoots[0])
+			t.Logf("globalExitRootSMC.rollup: %v, globalExitRoot2.rollup: %v", globalExitRootSMC.ExitRoots[1], globalExitRoot2.ExitRoots[1])
+			assert.Equal(t, globalExitRootSMC.ExitRoots[1], globalExitRoot2.ExitRoots[1])
+			assert.Equal(t, common.HexToHash("0x843cb84814162b93794ad9087a037a1948f9aff051838ba3a93db0ac92b9f719"), globalExitRoot2.ExitRoots[0])
+
 			// Wait until a new batch proposal appears
 			t.Log("time1: ", time.Now())
 			time.Sleep(15 * time.Second)
 			t.Log("time2: ", time.Now())
-			// Check L2 funds
-			balance, err := opsman.CheckAccountBalance(ctx, "l2", nil)
+			// Get Bridge Info By DestAddr
+			deposits, err := opsman.GetBridgeInfoByDestAddr(ctx, &destAddr)
 			require.NoError(t, err)
-			initL2Balance, _ := new(big.Int).SetString("1000000000000000000000", encoding.Base10)
-			assert.Equal(t, initL2Balance, balance)
+			// Check L2 funds
+			balance, err := opsman.CheckAccountBalance(ctx, "l2", &destAddr)
+			require.NoError(t, err)
+			initL2Balance := big.NewInt(0)
+			assert.Equal(t, 0, balance.Cmp(initL2Balance))
+			t.Log(deposits)
 			t.Log("Before getClaimData: ", deposits[0].OrigNet, deposits[0].DepositCnt)
 			// Get the claim data
-			smtProof, globaExitRoot, err := opsman.GetClaimData(uint(deposits[0].OrigNet), 1)//uint(deposits[0].DepositCnt))
+			smtProof, globaExitRoot, err := opsman.GetClaimData(uint(deposits[0].OrigNet), uint(deposits[0].DepositCnt))
 			require.NoError(t, err)
+			t.Log("param: ", testCase.Txs[0].Params[5])
+			proof := testCase.Txs[0].Params[5].([]interface{})
+			assert.Equal(t, len(proof), len(smtProof))
+			for i,s := range smtProof {
+				t.Log("Smt element: ", hex.EncodeToString(s[:]))
+				t.Log("proof: ", proof[i].(string))
+				assert.Equal(t, proof[i].(string), "0x" + hex.EncodeToString(s[:]))
+			}
 			t.Log("smt: ", smtProof)
 			t.Logf("globalExitRoot: %+v", globaExitRoot)
 			// Force to propose a new batch
@@ -109,12 +117,14 @@ func TestE2E(t *testing.T) {
 			require.NoError(t, err)
 			// Claim funds in L1
 			err = opsman.SendL2Claim(ctx, deposits[0], smtProof, globaExitRoot)
+			t.Log("Error claiming l2 funds: ", err)
 			require.NoError(t, err)
 			// Check L2 funds to see if the amount has been increased
-			balance2, err := opsman.CheckAccountBalance(ctx, "l2", nil)
+			balance2, err := opsman.CheckAccountBalance(ctx, "l2", &destAddr)
 			require.NoError(t, err)
 			fmt.Println("Balance: ", balance, balance2)
 			assert.NotEqual(t, balance, balance2)
+			panic(1)
 
 
 			// Check globalExitRoot
@@ -126,7 +136,7 @@ func TestE2E(t *testing.T) {
 			opsman.SendL2Deposit(ctx, tokenAddr, amount, destNetwork, nil)
 			require.NoError(t, err)
 			// Wait until the batch that includes the tx is consolidated
-			time.Sleep(15 * time.Second)
+			time.Sleep(30 * time.Second)
 			// Get Bridge Info By DestAddr
 			deposits, err = opsman.GetBridgeInfoByDestAddr(ctx, nil)
 			require.NoError(t, err)
@@ -144,6 +154,7 @@ func TestE2E(t *testing.T) {
 			// Get the claim data
 			smtProof, globaExitRoot, err = opsman.GetClaimData(uint(deposits[1].OrigNet), uint(deposits[1].DepositCnt))
 			require.NoError(t, err)
+			t.Log("smt2: ", smtProof)
 			// Claim funds in L1
 			opsman.SendL1Claim(ctx, deposits[1], smtProof, globaExitRoot)
 			// Check L1 funds to see if the amount has been increased
