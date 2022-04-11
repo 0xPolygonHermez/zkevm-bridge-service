@@ -43,6 +43,8 @@ const (
 	l1AccHexAddress    = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
 	l1AccHexPrivateKey = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
 
+	l2AccHexPrivateKey = "0xdfd01798f92667dbf91df722434e8fbe96af0211d4d1b82bbbbc8f1def7a814f"
+
 	sequencerAddress    = "0x617b3a3528F9cDd6630fd3301B9c8911F7Bf063D"
 
 	makeCmd = "make"
@@ -113,7 +115,7 @@ func NewManager(ctx context.Context, cfg *Config) (*Manager, error) {
 func (m *Manager) SendL1Deposit(ctx context.Context, tokenAddr common.Address, amount *big.Int,
 	destNetwork uint32, destAddr *common.Address,
 	) error {
-	client, auth, err := initClientConnection(ctx, "l1")
+	client, auth, _, err := initClientConnection(ctx, "l1")
 	if err != nil {
 		log.Error(1)
 		return err
@@ -152,7 +154,7 @@ func (m *Manager) SendL1Deposit(ctx context.Context, tokenAddr common.Address, a
 func (m *Manager) SendL2Deposit(ctx context.Context, tokenAddr common.Address, amount *big.Int,
 	destNetwork uint32, destAddr *common.Address,
 	) error {
-	client, auth, err := initClientConnection(ctx, "l2")
+	client, _, auth, err := initClientConnection(ctx, "l2")
 	if err != nil {
 		return err
 	}
@@ -234,7 +236,7 @@ func (m *Manager) Setup() error {
 func (m *Manager) AddFunds(ctx context.Context) error {
 	// Eth client
 	log.Infof("Connecting to l1")
-	client, auth, err := initClientConnection(ctx, "l1")
+	client, auth, _, err := initClientConnection(ctx, "l1")
 	if err != nil {
 		return err
 	}
@@ -441,7 +443,7 @@ func (m *Manager) WaitTxToBeMined(ctx context.Context, client *ethclient.Client,
 
 // CheckAccountBalance checks the balance by address
 func (m *Manager) CheckAccountBalance(ctx context.Context, network string, account *common.Address) (*big.Int, error) {
-	client, auth, err := initClientConnection(ctx, network)
+	client, auth, _, err := initClientConnection(ctx, network)
 	if err != nil {
 		return big.NewInt(0), nil
 	}
@@ -457,7 +459,7 @@ func (m *Manager) CheckAccountBalance(ctx context.Context, network string, accou
 
 // CheckAccountTokenBalance checks the balance by address
 func (m *Manager) CheckAccountTokenBalance(ctx context.Context, network string, tokenAddr common.Address, account *common.Address) (*big.Int, error) {
-	client, auth, err := initClientConnection(ctx, network)
+	client, auth, _, err := initClientConnection(ctx, network)
 	if err != nil {
 		return big.NewInt(0), nil
 	}
@@ -480,7 +482,7 @@ var (
 	l1Client *ethclient.Client
 )
 
-func initClientConnection(ctx context.Context, network string) (*ethclient.Client, *bind.TransactOpts, error) {
+func initClientConnection(ctx context.Context, network string) (*ethclient.Client, *bind.TransactOpts, *bind.TransactOpts, error) {
 	var (
 		client *ethclient.Client
 		err error
@@ -493,7 +495,7 @@ func initClientConnection(ctx context.Context, network string) (*ethclient.Clien
 			log.Info("Connecting...")
 			client, err = ethclient.Dial(l2NetworkURL)
 			if err != nil {
-				return nil, nil, err
+				return nil, nil, nil, err
 			}
 			l2Client = client
 		}
@@ -505,7 +507,7 @@ func initClientConnection(ctx context.Context, network string) (*ethclient.Clien
 			log.Info("Connecting...")
 			client, err = ethclient.Dial(l1NetworkURL)
 			if err != nil {
-				return nil, nil, err
+				return nil, nil, nil, err
 			}
 			l1Client = client
 		}
@@ -515,7 +517,7 @@ func initClientConnection(ctx context.Context, network string) (*ethclient.Clien
 	log.Infof("Getting chainID")
 	chainID, err := client.NetworkID(ctx)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 
 	}
 
@@ -523,13 +525,25 @@ func initClientConnection(ctx context.Context, network string) (*ethclient.Clien
 	log.Infof("Preparing authorization")
 	privateKey, err := crypto.HexToECDSA(strings.TrimPrefix(l1AccHexPrivateKey, "0x"))
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 	auth, err := bind.NewKeyedTransactorWithChainID(privateKey, chainID)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
-	return client, auth, nil
+
+	// Preparing l2 acc info
+	log.Infof("Preparing authorization")
+	privateKey2, err := crypto.HexToECDSA(strings.TrimPrefix(l2AccHexPrivateKey, "0x"))
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	auth2, err := bind.NewKeyedTransactorWithChainID(privateKey2, chainID)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	return client, auth, auth2, nil
 }
 
 func (m *Manager) GetClaimData(networkID, depositCount uint) ([][bridgectrl.KeyLen]byte, *etherman.GlobalExitRoot, error) {
@@ -537,7 +551,7 @@ func (m *Manager) GetClaimData(networkID, depositCount uint) ([][bridgectrl.KeyL
 }
 
 func (m *Manager) GetBridgeInfoByDestAddr(ctx context.Context, addr *common.Address) ([]*pb.Deposit, error) {
-	_, auth, err := initClientConnection(ctx, "l2")
+	_, auth, _, err := initClientConnection(ctx, "l2")
 	if err != nil {
 		return []*pb.Deposit{}, err
 	}
@@ -555,7 +569,7 @@ func (m *Manager) GetBridgeInfoByDestAddr(ctx context.Context, addr *common.Addr
 }
 
 func (m *Manager) SendL1Claim(ctx context.Context, deposit *pb.Deposit, smtProof [][32]byte, globalExitRoot *etherman.GlobalExitRoot) error {
-	client, auth, err := initClientConnection(ctx, "l1")
+	client, auth, _, err := initClientConnection(ctx, "l1")
 	if err != nil {
 		return err
 	}
@@ -580,7 +594,7 @@ func (m *Manager) SendL1Claim(ctx context.Context, deposit *pb.Deposit, smtProof
 }
 
 func (m *Manager) SendL2Claim(ctx context.Context, deposit *pb.Deposit, smtProof [][32]byte, globalExitRoot *etherman.GlobalExitRoot) error {
-	client, auth, err := initClientConnection(ctx, "l2")
+	client, _, auth, err := initClientConnection(ctx, "l2")
 	if err != nil {
 		return err
 	}
@@ -616,7 +630,7 @@ func (m *Manager) GetCurrentGlobalExitRootSynced(ctx context.Context) (*etherman
 }
 
 func (m *Manager) GetCurrentGlobalExitRootFromSmc(ctx context.Context) (*etherman.GlobalExitRoot, error) {
-	client, _, err := initClientConnection(ctx, "l1")
+	client, _, _, err := initClientConnection(ctx, "l1")
 	if err != nil {
 		return nil, err
 	}
@@ -654,7 +668,7 @@ func (m *Manager) GetCurrentGlobalExitRootFromSmc(ctx context.Context) (*etherma
 func (m *Manager) ForceBatchProposal(ctx context.Context) error {
 	// Eth client
 	log.Infof("Connecting to l1")
-	client, auth, err := initClientConnection(ctx, "l1")
+	client, auth, _, err := initClientConnection(ctx, "l1")
 	if err != nil {
 		return err
 	}

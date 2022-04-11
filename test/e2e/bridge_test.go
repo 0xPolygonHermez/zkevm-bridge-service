@@ -66,7 +66,7 @@ func TestE2E(t *testing.T) {
 			// tokenAddr := common.HexToAddress(operations.MaticTokenAddress)
 			tokenAddr := common.Address{} // This means is eth
 			destAddr := common.HexToAddress("0xc949254d682d8c9ad5682521675b8f43b102aec4")
-			opsman.SendL1Deposit(ctx, tokenAddr, amount, destNetwork, &destAddr)
+			err = opsman.SendL1Deposit(ctx, tokenAddr, amount, destNetwork, &destAddr)
 			require.NoError(t, err)
 			// globalExitRoot, err := opsman.GetCurrentGlobalExitRootSynced(ctx)
 			// if err != nil {
