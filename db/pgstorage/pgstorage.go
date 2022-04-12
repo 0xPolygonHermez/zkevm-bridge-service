@@ -29,11 +29,11 @@ const (
 	resetConsolidationSQL  = "UPDATE sync.batch SET aggregator = '\x0000000000000000000000000000000000000000', consolidated_tx_hash = '\x0000000000000000000000000000000000000000000000000000000000000000', consolidated_at = null WHERE consolidated_at > $1 AND network_id = $2"
 	addGlobalExitRootSQL   = "INSERT INTO sync.exit_root (block_num, global_exit_root_num, mainnet_exit_root, rollup_exit_root, block_id) VALUES ($1, $2, $3, $4, $5)"
 	getExitRootSQL         = "SELECT block_id, block_num, global_exit_root_num, mainnet_exit_root, rollup_exit_root FROM sync.exit_root ORDER BY global_exit_root_num DESC LIMIT 1"
-	addClaimSQL            = "INSERT INTO sync.claim (index, orig_net, token_addr, amount, dest_addr, block_num, dest_net, block_id, network_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)"
-	getClaimSQL            = "SELECT index, orig_net, token_addr, amount, dest_addr, block_num, dest_net, block_id, network_id FROM sync.claim WHERE index = $1 AND network_id = $2"
-	getClaimsSQL           = "SELECT index, orig_net, token_addr, amount, dest_addr, block_num, dest_net, block_id, network_id FROM sync.claim WHERE dest_addr = $1 ORDER BY block_id DESC LIMIT $2 OFFSET $3"
-	addTokenWrappedSQL     = "INSERT INTO sync.token_wrapped (orig_net, orig_token_addr, wrapped_token_addr, block_num, dest_net, block_id, network_id) VALUES ($1, $2, $3, $4, $5, $6, $7)"
-	getTokenWrappedSQL     = "SELECT orig_net, orig_token_addr, wrapped_token_addr, block_num, dest_net, block_id, network_id FROM sync.token_wrapped WHERE orig_net = $1 AND orig_token_addr = $2" // nolint
+	addClaimSQL            = "INSERT INTO sync.claim (index, orig_net, token_addr, amount, dest_addr, block_num, block_id, network_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"
+	getClaimSQL            = "SELECT index, orig_net, token_addr, amount, dest_addr, block_num, block_id, network_id FROM sync.claim WHERE index = $1 AND network_id = $2"
+	getClaimsSQL           = "SELECT index, orig_net, token_addr, amount, dest_addr, block_num, block_id, network_id FROM sync.claim WHERE dest_addr = $1 ORDER BY block_id DESC LIMIT $2 OFFSET $3"
+	addTokenWrappedSQL     = "INSERT INTO sync.token_wrapped (orig_net, orig_token_addr, wrapped_token_addr, block_num, block_id, network_id) VALUES ($1, $2, $3, $4, $5, $6)"
+	getTokenWrappedSQL     = "SELECT orig_net, orig_token_addr, wrapped_token_addr, block_num, block_id, network_id FROM sync.token_wrapped WHERE orig_net = $1 AND orig_token_addr = $2" // nolint
 	consolidateBatchSQL    = "UPDATE sync.batch SET consolidated_tx_hash = $1, consolidated_at = $2, aggregator = $3 WHERE batch_num = $4 AND network_id = $5"
 	addBatchSQL            = "INSERT INTO sync.batch (batch_num, batch_hash, block_num, sequencer, aggregator, consolidated_tx_hash, header, uncles, received_at, chain_id, global_exit_root, block_id, network_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)"
 	getBatchByNumberSQL    = "SELECT block_num, sequencer, aggregator, consolidated_tx_hash, header, uncles, chain_id, global_exit_root, received_at, consolidated_at, block_id, network_id FROM sync.batch WHERE batch_num = $1 AND network_id = $2"
@@ -268,7 +268,7 @@ func (s *PostgresStorage) GetLatestExitRoot(ctx context.Context) (*etherman.Glob
 // AddClaim adds a new claim to the db
 func (s *PostgresStorage) AddClaim(ctx context.Context, claim *etherman.Claim) error {
 	_, err := s.db.Exec(ctx, addClaimSQL, claim.Index, claim.OriginalNetwork, claim.Token, claim.Amount.String(),
-		claim.DestinationAddress, claim.BlockNumber, claim.DestinationNetwork, claim.BlockID, claim.NetworkID)
+		claim.DestinationAddress, claim.BlockNumber, claim.BlockID, claim.NetworkID)
 	return err
 }
 
@@ -279,7 +279,7 @@ func (s *PostgresStorage) GetClaim(ctx context.Context, depositCounterUser uint,
 		amount string
 	)
 	err := s.db.QueryRow(ctx, getClaimSQL, depositCounterUser, networkID).Scan(&claim.Index, &claim.OriginalNetwork, &claim.Token,
-		&amount, &claim.DestinationAddress, &claim.BlockNumber, &claim.DestinationNetwork, &claim.BlockID, &claim.NetworkID)
+		&amount, &claim.DestinationAddress, &claim.BlockNumber, &claim.BlockID, &claim.NetworkID)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, gerror.ErrStorageNotFound
 	} else if err != nil {
@@ -306,7 +306,7 @@ func (s *PostgresStorage) GetClaims(ctx context.Context, destAddr string, limit 
 			amount string
 		)
 		err := rows.Scan(&claim.Index, &claim.OriginalNetwork, &claim.Token, &amount, &claim.DestinationAddress, &claim.BlockNumber,
-			&claim.DestinationNetwork, &claim.BlockID, &claim.NetworkID)
+			&claim.BlockID, &claim.NetworkID)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, gerror.ErrStorageNotFound
 		} else if err != nil {
@@ -322,7 +322,7 @@ func (s *PostgresStorage) GetClaims(ctx context.Context, destAddr string, limit 
 // AddTokenWrapped adds a new claim to the db
 func (s *PostgresStorage) AddTokenWrapped(ctx context.Context, tokeWrapped *etherman.TokenWrapped) error {
 	_, err := s.db.Exec(ctx, addTokenWrappedSQL, tokeWrapped.OriginalNetwork, tokeWrapped.OriginalTokenAddress,
-		tokeWrapped.WrappedTokenAddress, tokeWrapped.BlockNumber, tokeWrapped.DestinationNetwork, tokeWrapped.BlockID, tokeWrapped.NetworkID)
+		tokeWrapped.WrappedTokenAddress, tokeWrapped.BlockNumber, tokeWrapped.BlockID, tokeWrapped.NetworkID)
 	return err
 }
 
@@ -330,7 +330,7 @@ func (s *PostgresStorage) AddTokenWrapped(ctx context.Context, tokeWrapped *ethe
 func (s *PostgresStorage) GetTokenWrapped(ctx context.Context, originalNetwork uint, originalTokenAddress common.Address) (*etherman.TokenWrapped, error) {
 	var token etherman.TokenWrapped
 	err := s.db.QueryRow(ctx, getTokenWrappedSQL, originalNetwork, originalTokenAddress).Scan(&token.OriginalNetwork, &token.OriginalTokenAddress,
-		&token.WrappedTokenAddress, &token.BlockNumber, &token.DestinationNetwork, &token.BlockID, &token.NetworkID)
+		&token.WrappedTokenAddress, &token.BlockNumber, &token.BlockID, &token.NetworkID)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, gerror.ErrStorageNotFound
 	} else if err != nil {

@@ -66,12 +66,12 @@ func TestExitRootStore(t *testing.T) {
 		DestinationAddress: common.HexToAddress("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9fc"),
 		BlockNumber:        1,
 		BlockID:            id,
-		DestinationNetwork: 2,
+		NetworkID: 2,
 	}
 	err = storage.AddClaim(ctx, &claim)
 	require.NoError(t, err)
 
-	claimStored, err := storage.GetClaim(ctx, claim.Index, claim.OriginalNetwork)
+	claimStored, err := storage.GetClaim(ctx, claim.Index, claim.NetworkID)
 	require.NoError(t, err)
 	assert.Equal(t, claim.Amount, claimStored.Amount)
 	assert.Equal(t, claim.BlockNumber, claimStored.BlockNumber)
@@ -94,7 +94,7 @@ func TestExitRootStore(t *testing.T) {
 	err = storage.AddDeposit(ctx, &deposit)
 	require.NoError(t, err)
 
-	depositStored, err := storage.GetDeposit(ctx, deposit.DepositCount, deposit.OriginalNetwork)
+	depositStored, err := storage.GetDeposit(ctx, deposit.DepositCount, deposit.NetworkID)
 	require.NoError(t, err)
 	assert.Equal(t, deposit.Amount, depositStored.Amount)
 	assert.Equal(t, deposit.BlockNumber, depositStored.BlockNumber)
@@ -110,7 +110,7 @@ func TestExitRootStore(t *testing.T) {
 		WrappedTokenAddress:  common.HexToAddress("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9fc"),
 		BlockNumber:          1,
 		BlockID:              id,
-		DestinationNetwork:   2,
+		NetworkID:   2,
 	}
 	err = storage.AddTokenWrapped(ctx, &tokenWrapped)
 	require.NoError(t, err)

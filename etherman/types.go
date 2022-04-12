@@ -73,7 +73,6 @@ type Claim struct {
 	OriginalNetwork    uint
 	Token              common.Address
 	Amount             *big.Int
-	DestinationNetwork uint
 	DestinationAddress common.Address
 	BlockID            uint64
 	BlockNumber        uint64
@@ -84,7 +83,6 @@ type Claim struct {
 type TokenWrapped struct {
 	OriginalNetwork      uint
 	OriginalTokenAddress common.Address
-	DestinationNetwork   uint
 	WrappedTokenAddress  common.Address
 	BlockID              uint64
 	BlockNumber          uint64

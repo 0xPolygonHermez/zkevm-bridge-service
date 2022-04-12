@@ -208,6 +208,7 @@ func (s *ClientSynchronizer) processBlockRange(blocks []etherman.Block, order ma
 				log.Warn("Block: ", blocks[i].BlockNumber)
 				deposit := &blocks[i].Deposits[element.Pos]
 				deposit.BlockID = blockID
+				deposit.NetworkID = s.networkID
 				err := s.storage.AddDeposit(ctx, deposit)
 				if err != nil {
 					rollbackErr := s.storage.Rollback(ctx)
@@ -233,14 +234,14 @@ func (s *ClientSynchronizer) processBlockRange(blocks []etherman.Block, order ma
 					log.Fatal("NetworkID: %d, error storing new globalExitRoot in Block: %d, ExitRoot: %+v, err: %v", s.networkID, blocks[i].BlockNumber, exitRoot, err)
 				}
 
-				// err = s.bridgeCtrl.CheckExitRoot(exitRoot)
-				// if err != nil {
-				// 	log.Fatal("error checking new globalExitRoot in Block: %d, ExitRoot: %+v, err: %v", blocks[i].BlockNumber, exitRoot, err)
-				// }
+				err = s.bridgeCtrl.CheckExitRoot(exitRoot)
+				if err != nil {
+					log.Fatal("error checking new globalExitRoot in Block: %d, ExitRoot: %+v, err: %v", blocks[i].BlockNumber, exitRoot, err)
+				}
 			} else if element.Name == etherman.ClaimsOrder {
 				claim := blocks[i].Claims[element.Pos]
 				claim.BlockID = blockID
-				claim.DestinationNetwork = s.networkID
+				claim.NetworkID = s.networkID
 				err := s.storage.AddClaim(ctx, &claim)
 				if err != nil {
 					rollbackErr := s.storage.Rollback(ctx)
@@ -252,7 +253,7 @@ func (s *ClientSynchronizer) processBlockRange(blocks []etherman.Block, order ma
 			} else if element.Name == etherman.TokensOrder {
 				tokenWrapped := blocks[i].Tokens[element.Pos]
 				tokenWrapped.BlockID = blockID
-				tokenWrapped.DestinationNetwork = s.networkID
+				tokenWrapped.NetworkID = s.networkID
 				err := s.storage.AddTokenWrapped(ctx, &tokenWrapped)
 				if err != nil {
 					rollbackErr := s.storage.Rollback(ctx)

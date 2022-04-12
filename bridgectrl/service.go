@@ -72,7 +72,7 @@ func (s *bridgeService) GetClaims(ctx context.Context, req *pb.GetClaimsRequest)
 			OrigNet:   uint32(claim.OriginalNetwork),
 			TokenAddr: claim.Token.Hex(),
 			Amount:    claim.Amount.String(),
-			DestNet:   uint32(claim.DestinationNetwork),
+			DestNet:   uint32(claim.NetworkID),
 			DestAddr:  claim.DestinationAddress.Hex(),
 			BlockNum:  claim.BlockNumber,
 		})
