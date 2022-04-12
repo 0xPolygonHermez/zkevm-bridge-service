@@ -44,6 +44,7 @@ CREATE TABLE sync.batch
 
 CREATE TABLE sync.deposit
 (
+    network_id  INTEGER,
     orig_net    INTEGER,
     token_addr  BYTEA NOT NULL,
     amount      VARCHAR,
@@ -52,11 +53,12 @@ CREATE TABLE sync.deposit
     block_id    BIGINT NOT NULL REFERENCES sync.block (id) ON DELETE CASCADE,
     block_num   BIGINT NOT NULL,
     deposit_cnt BIGINT,
-    PRIMARY KEY (orig_net, deposit_cnt)
+    PRIMARY KEY (network_id, deposit_cnt)
 );
 
 CREATE TABLE sync.claim
 (
+    network_id  INTEGER,
     index       BIGINT, -- deposit count
     orig_net    integer,
     token_addr  BYTEA NOT NULL,
@@ -65,12 +67,13 @@ CREATE TABLE sync.claim
     dest_addr   BYTEA NOT NULL,
     block_id    BIGINT NOT NULL REFERENCES sync.block (id) ON DELETE CASCADE,
     block_num   BIGINT NOT NULL,
-    PRIMARY KEY (orig_net, index)
+    PRIMARY KEY (network_id, index)
 );
 
 CREATE TABLE sync.token_wrapped
 (
     item_id            SERIAL PRIMARY KEY,
+    network_id         INTEGER,
     orig_net           integer,
     orig_token_addr    BYTEA NOT NULL,
     dest_net           INTEGER NOT NULL,

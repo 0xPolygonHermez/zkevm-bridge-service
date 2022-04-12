@@ -32,7 +32,7 @@ type Order struct {
 
 // Block struct
 type Block struct {
-	BlockID         uint64
+	Id              uint64
 	BlockNumber     uint64
 	BlockHash       common.Hash
 	ParentHash      common.Hash
@@ -56,6 +56,7 @@ type Deposit struct {
 	DepositCount       uint
 	BlockID            uint64
 	BlockNumber        uint64
+	NetworkID          uint
 }
 
 // GlobalExitRoot struct
@@ -76,6 +77,7 @@ type Claim struct {
 	DestinationAddress common.Address
 	BlockID            uint64
 	BlockNumber        uint64
+	NetworkID          uint
 }
 
 // TokenWrapped struct
@@ -86,6 +88,7 @@ type TokenWrapped struct {
 	WrappedTokenAddress  common.Address
 	BlockID              uint64
 	BlockNumber          uint64
+	NetworkID            uint
 }
 
 // Batch represents a batch

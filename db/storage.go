@@ -16,7 +16,7 @@ type Storage interface {
 	GetPreviousBlock(ctx context.Context, networkID uint, offset uint64) (*etherman.Block, error)
 	Reset(ctx context.Context, block *etherman.Block, networkID uint) error
 	AddDeposit(ctx context.Context, deposit *etherman.Deposit) error
-	GetDeposit(ctx context.Context, depositCounterUser uint, origNetwork uint) (*etherman.Deposit, error)
+	GetDeposit(ctx context.Context, depositCounterUser uint, networkID uint) (*etherman.Deposit, error)
 	Rollback(ctx context.Context) error
 	BeginDBTransaction(ctx context.Context) error
 	Commit(ctx context.Context) error
@@ -27,9 +27,9 @@ type Storage interface {
 	GetTokenWrapped(ctx context.Context, originalNetwork uint, originalTokenAddress common.Address) (*etherman.TokenWrapped, error)
 	ConsolidateBatch(ctx context.Context, batch *etherman.Batch) error
 	AddBatch(ctx context.Context, batch *etherman.Batch) error
-	GetClaim(ctx context.Context, depositCounterUser uint, originalNetwork uint) (*etherman.Claim, error)
+	GetClaim(ctx context.Context, depositCounterUser uint, networkID uint) (*etherman.Claim, error)
 	GetBatchByNumber(ctx context.Context, batchNumber uint64, networkID uint) (*etherman.Batch, error)
-	GetNumberDeposits(ctx context.Context, origNetworkID uint) (uint64, error)
+	GetNumberDeposits(ctx context.Context, networkID uint) (uint64, error)
 }
 
 // NewStorage creates a new Storage
