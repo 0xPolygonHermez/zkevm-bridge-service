@@ -91,11 +91,11 @@ func NewManager(ctx context.Context, cfg *Config) (*Manager, error) {
 		wait: NewWait(),
 	}
 	//Init storage and mt
-	pgst, err := pgstorage.NewPostgresStorage(dbConfig)
+	pgst, err := pgstorage.NewPostgresStorage(dbConfig, 0)
 	if err != nil {
 		return nil, err
 	}
-	st, err := db.NewStorage(cfg.Storage)
+	st, err := db.NewStorage(cfg.Storage, 0)
 	if err != nil {
 		return nil, err
 	}
@@ -158,6 +158,12 @@ func (m *Manager) SendL2Deposit(ctx context.Context, tokenAddr common.Address, a
 	if err != nil {
 		return err
 	}
+	log.Warn("gas: ", auth.GasLimit)
+	auth.GasLimit = 234480
+	log.Warn("gasPrice: ", auth.GasPrice)
+	log.Warn("nonce 1: ", auth.Nonce)
+	n, _ := client.NonceAt(ctx, auth.From, nil)
+	log.Warn("Nonce 2: ",n)
 	emptyAddr := common.Address{}
 	if tokenAddr == emptyAddr {
 		auth.Value = amount
@@ -174,10 +180,13 @@ func (m *Manager) SendL2Deposit(ctx context.Context, tokenAddr common.Address, a
 		return err
 	}
 
-	// wait transfer to be forged
-	log.Infof("Waiting tx to be mined")
+	// wait transfer to be included in a batch
+	log.Infof("Waiting tx to be included in a new batch proposal")
 	const txTimeout = 15 * time.Second
 	_, err = m.WaitTxToBeMined(ctx, client, tx.Hash(), txTimeout)
+
+	// Wait until the batch that includes the tx is consolidated
+	time.Sleep(45 * time.Second)
 	return err
 }
 

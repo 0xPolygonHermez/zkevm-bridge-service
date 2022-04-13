@@ -29,7 +29,8 @@ func TestExitRootStore(t *testing.T) {
 		Host:     cfg.Host,
 		Port:     cfg.Port,
 	}
-	storage, err := NewStorage(storageCfg)
+	var networksNumber uint = 2
+	storage, err := NewStorage(storageCfg, networksNumber)
 	require.NoError(t, err)
 	var networkID uint = 1
 	_, err = storage.GetLatestExitRoot(ctx)

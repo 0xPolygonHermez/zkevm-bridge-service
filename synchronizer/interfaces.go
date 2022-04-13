@@ -19,9 +19,9 @@ type localEtherMan interface {
 // storageInterface gathers the methods required to interact with the state.
 type storageInterface interface {
 	GetLastBlock(ctx context.Context, networkID uint) (*etherman.Block, error)
-	Rollback(ctx context.Context) error
-	BeginDBTransaction(ctx context.Context) error
-	Commit(ctx context.Context) error
+	Rollback(ctx context.Context, index uint) error
+	BeginDBTransaction(ctx context.Context, index uint) error
+	Commit(ctx context.Context, index uint) error
 	AddBlock(ctx context.Context, block *etherman.Block) (uint64, error)
 	ConsolidateBatch(ctx context.Context, batch *etherman.Batch) error
 	AddBatch(ctx context.Context, batch *etherman.Batch) error

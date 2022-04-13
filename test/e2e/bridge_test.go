@@ -68,12 +68,6 @@ func TestE2E(t *testing.T) {
 			destAddr := common.HexToAddress("0xc949254d682d8c9ad5682521675b8f43b102aec4")
 			err = opsman.SendL1Deposit(ctx, tokenAddr, amount, destNetwork, &destAddr)
 			require.NoError(t, err)
-			// globalExitRoot, err := opsman.GetCurrentGlobalExitRootSynced(ctx)
-			// if err != nil {
-			// 	fmt.Println("err: ", err)
-			// 	panic(err)
-			// }
-			// require.NoError(t, err)
 			// Check globalExitRoot
 			globalExitRoot2, err := opsman.GetCurrentGlobalExitRootSynced(ctx)
 			require.NoError(t, err)
@@ -84,7 +78,6 @@ func TestE2E(t *testing.T) {
 			t.Logf("globalExitRootSMC.rollup: %v, globalExitRoot2.rollup: %v", globalExitRootSMC.ExitRoots[1], globalExitRoot2.ExitRoots[1])
 			assert.Equal(t, globalExitRootSMC.ExitRoots[1], globalExitRoot2.ExitRoots[1])
 			assert.Equal(t, common.HexToHash("0x843cb84814162b93794ad9087a037a1948f9aff051838ba3a93db0ac92b9f719"), globalExitRoot2.ExitRoots[0])
-
 			// Wait until a new batch proposal appears
 			t.Log("time1: ", time.Now())
 			time.Sleep(15 * time.Second)
@@ -102,16 +95,11 @@ func TestE2E(t *testing.T) {
 			// Get the claim data
 			smtProof, globaExitRoot, err := opsman.GetClaimData(uint(deposits[0].OrigNet), uint(deposits[0].DepositCnt))
 			require.NoError(t, err)
-			t.Log("param: ", testCase.Txs[0].Params[5])
 			proof := testCase.Txs[0].Params[5].([]interface{})
 			assert.Equal(t, len(proof), len(smtProof))
-			for i, s := range smtProof {
-				t.Log("Smt element: ", hex.EncodeToString(s[:]))
-				t.Log("proof: ", proof[i].(string))
-				assert.Equal(t, proof[i].(string), "0x"+hex.EncodeToString(s[:]))
+			for i,s := range smtProof {
+				assert.Equal(t, proof[i].(string), "0x" + hex.EncodeToString(s[:]))
 			}
-			t.Log("smt: ", smtProof)
-			t.Logf("globalExitRoot: %+v", globaExitRoot)
 			// Force to propose a new batch
 			err = opsman.ForceBatchProposal(ctx)
 			require.NoError(t, err)
@@ -124,25 +112,30 @@ func TestE2E(t *testing.T) {
 			require.NoError(t, err)
 			fmt.Println("Balance: ", balance, balance2)
 			assert.NotEqual(t, balance, balance2)
-			panic(1)
+
+
+
+
+
 
 			// Check globalExitRoot
 			globalExitRoot3, err := opsman.GetCurrentGlobalExitRootSynced(ctx)
 			require.NoError(t, err)
 			// Send L2 Deposit to withdraw the some funds
 			destNetwork = 0
-			amount = new(big.Int).SetUint64(500000000000000000)
-			opsman.SendL2Deposit(ctx, tokenAddr, amount, destNetwork, nil)
+			amount = new(big.Int).SetUint64(1000000000000000000)
+			err = opsman.SendL2Deposit(ctx, tokenAddr, amount, destNetwork, &destAddr)
 			require.NoError(t, err)
-			// Wait until the batch that includes the tx is consolidated
-			time.Sleep(30 * time.Second)
+			panic(1)
 			// Get Bridge Info By DestAddr
 			deposits, err = opsman.GetBridgeInfoByDestAddr(ctx, nil)
 			require.NoError(t, err)
-			fmt.Println(deposits)
+			t.Log("Deposits 2: ", deposits)
 			// Check globalExitRoot
 			globalExitRoot4, err := opsman.GetCurrentGlobalExitRootSynced(ctx)
 			require.NoError(t, err)
+			t.Logf("Global3 %+v: ", globalExitRoot3)
+			t.Logf("Global4 %+v: ", globalExitRoot4)
 			assert.NotEqual(t, globalExitRoot3.GlobalExitRootNum, globalExitRoot4.GlobalExitRootNum)
 			assert.NotEqual(t, globalExitRoot3.ExitRoots[1], globalExitRoot4.ExitRoots[1])
 			assert.Equal(t, globalExitRoot3.ExitRoots[0], globalExitRoot4.ExitRoots[0])

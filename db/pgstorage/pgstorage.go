@@ -5,6 +5,7 @@ import (
 	"errors"
 	"math/big"
 	"strings"
+	"fmt"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/hermez-bridge/etherman"
@@ -47,16 +48,17 @@ var (
 // PostgresStorage implements the Storage interface
 type PostgresStorage struct {
 	db   *pgxpool.Pool
-	dbTx pgx.Tx
+	dbTx []pgx.Tx
 }
 
 // NewPostgresStorage creates a new Storage DB
-func NewPostgresStorage(cfg Config) (*PostgresStorage, error) {
+func NewPostgresStorage(cfg Config, dbTxSize uint) (*PostgresStorage, error) {
 	db, err := pgxpool.Connect(context.Background(), "postgres://"+cfg.User+":"+cfg.Password+"@"+cfg.Host+":"+cfg.Port+"/"+cfg.Name)
 	if err != nil {
 		return nil, err
 	}
-	return &PostgresStorage{db: db}, nil
+	dbTx := make([]pgx.Tx, dbTxSize)
+	return &PostgresStorage{db: db, dbTx: dbTx}, nil
 }
 
 // GetLastBlock gets the latest block
@@ -210,10 +212,10 @@ func (s *PostgresStorage) Reset(ctx context.Context, block *etherman.Block, netw
 }
 
 // Rollback rollbacks a db transaction
-func (s *PostgresStorage) Rollback(ctx context.Context) error {
-	if s.dbTx != nil {
-		err := s.dbTx.Rollback(ctx)
-		s.dbTx = nil
+func (s *PostgresStorage) Rollback(ctx context.Context, index uint) error {
+	if s.dbTx[index] != nil {
+		err := s.dbTx[index].Rollback(ctx)
+		s.dbTx[index] = nil
 		return err
 	}
 
@@ -221,22 +223,25 @@ func (s *PostgresStorage) Rollback(ctx context.Context) error {
 }
 
 // Commit commits a db transaction
-func (s *PostgresStorage) Commit(ctx context.Context) error {
-	if s.dbTx != nil {
-		err := s.dbTx.Commit(ctx)
-		s.dbTx = nil
+func (s *PostgresStorage) Commit(ctx context.Context, index uint) error {
+	if s.dbTx[index] != nil {
+		err := s.dbTx[index].Commit(ctx)
+		s.dbTx[index] = nil
 		return err
 	}
 	return gerror.ErrNilDBTransaction
 }
 
 // BeginDBTransaction starts a transaction block
-func (s *PostgresStorage) BeginDBTransaction(ctx context.Context) error {
+func (s *PostgresStorage) BeginDBTransaction(ctx context.Context, index uint) error {
+	if s.dbTx[index] != nil {                                                                                                                                                                          
+		return fmt.Errorf("db tx already ongoing!. networkID: %d", index)                                                                                                                                               
+	}    
 	dbTx, err := s.db.Begin(ctx)
 	if err != nil {
 		return err
 	}
-	s.dbTx = dbTx
+	s.dbTx[index] = dbTx
 	return nil
 }
 
