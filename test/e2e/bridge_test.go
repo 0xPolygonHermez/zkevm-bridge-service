@@ -35,17 +35,17 @@ func TestE2E(t *testing.T) {
 		t.Run("Test id "+strconv.FormatUint(uint64(testCase.ID), 10), func(t *testing.T) {
 			ctx := context.Background()
 
-			opsCfg := &operations.Config {
-				Storage: db.Config {
+			opsCfg := &operations.Config{
+				Storage: db.Config{
 					Database: "postgres",
-					Name: "test_db",
-					User: "test_user",
+					Name:     "test_db",
+					User:     "test_user",
 					Password: "test_password",
-					Host: "localhost",
-					Port: "5433",
+					Host:     "localhost",
+					Port:     "5433",
 				},
-				BT: bridgectrl.Config {
-					Store: "postgres",
+				BT: bridgectrl.Config{
+					Store:  "postgres",
 					Height: uint8(32),
 				},
 			}
@@ -57,7 +57,7 @@ func TestE2E(t *testing.T) {
 
 			// Check initial globalExitRoot. Must fail because at the beggining, no globalExitRoot event is thrown.
 			globalExitRootSMC, err := opsman.GetCurrentGlobalExitRootFromSmc(ctx)
-			require.NoError(t, err)			
+			require.NoError(t, err)
 			t.Logf("initial globalExitRootSMC.GlobalExitRootNum: %+v,", globalExitRootSMC)
 
 			// Send L1 deposit
@@ -118,7 +118,6 @@ func TestE2E(t *testing.T) {
 
 
 
-
 			// Check globalExitRoot
 			globalExitRoot3, err := opsman.GetCurrentGlobalExitRootSynced(ctx)
 			require.NoError(t, err)
@@ -145,7 +144,7 @@ func TestE2E(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, big.NewInt(0), balance)
 			// Get the claim data
-			smtProof, globaExitRoot, err = opsman.GetClaimData(uint(deposits[1].OrigNet), uint(deposits[1].DepositCnt))
+			smtProof, globaExitRoot, err = opsman.GetClaimData(uint(deposits[1].NetworkId), uint(deposits[1].DepositCnt))
 			require.NoError(t, err)
 			t.Log("smt2: ", smtProof)
 			// Claim funds in L1

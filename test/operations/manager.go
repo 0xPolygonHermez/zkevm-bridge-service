@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math/big"
 	"os"
+
 	// "encoding/hex"
 	"os/exec"
 	"strings"
@@ -21,14 +22,14 @@ import (
 	"github.com/hermeznetwork/hermez-bridge/bridgectrl/pb"
 	"github.com/hermeznetwork/hermez-bridge/db"
 	"github.com/hermeznetwork/hermez-bridge/db/pgstorage"
+	"github.com/hermeznetwork/hermez-bridge/etherman"
 	"github.com/hermeznetwork/hermez-core/encoding"
-	"github.com/hermeznetwork/hermez-core/log"
-	"github.com/hermeznetwork/hermez-core/test/operations"
 	"github.com/hermeznetwork/hermez-core/etherman/smartcontracts/bridge"
 	"github.com/hermeznetwork/hermez-core/etherman/smartcontracts/globalexitrootmanager"
-	"github.com/hermeznetwork/hermez-core/etherman/smartcontracts/proofofefficiency"
 	erc20 "github.com/hermeznetwork/hermez-core/etherman/smartcontracts/matic"
-	"github.com/hermeznetwork/hermez-bridge/etherman"
+	"github.com/hermeznetwork/hermez-core/etherman/smartcontracts/proofofefficiency"
+	"github.com/hermeznetwork/hermez-core/log"
+	"github.com/hermeznetwork/hermez-core/test/operations"
 )
 
 const (
@@ -45,7 +46,7 @@ const (
 
 	l2AccHexPrivateKey = "0xdfd01798f92667dbf91df722434e8fbe96af0211d4d1b82bbbbc8f1def7a814f"
 
-	sequencerAddress    = "0x617b3a3528F9cDd6630fd3301B9c8911F7Bf063D"
+	sequencerAddress = "0x617b3a3528F9cDd6630fd3301B9c8911F7Bf063D"
 
 	makeCmd = "make"
 	cmdDir  = "../.."
@@ -53,9 +54,8 @@ const (
 
 var (
 	dbConfig = pgstorage.NewConfigFromEnv()
-	networks = []uint{0,1}
+	networks = []uint{0, 1}
 )
-
 
 // Config is the main Manager configuration.
 type Config struct {
@@ -114,7 +114,7 @@ func NewManager(ctx context.Context, cfg *Config) (*Manager, error) {
 // SendL1Deposit sends a deposit from l1 to l2
 func (m *Manager) SendL1Deposit(ctx context.Context, tokenAddr common.Address, amount *big.Int,
 	destNetwork uint32, destAddr *common.Address,
-	) error {
+) error {
 	client, auth, _, err := initClientConnection(ctx, "l1")
 	if err != nil {
 		log.Error(1)
@@ -153,7 +153,7 @@ func (m *Manager) SendL1Deposit(ctx context.Context, tokenAddr common.Address, a
 // SendL2Deposit sends a deposit from l2 to l1
 func (m *Manager) SendL2Deposit(ctx context.Context, tokenAddr common.Address, amount *big.Int,
 	destNetwork uint32, destAddr *common.Address,
-	) error {
+) error {
 	client, _, auth, err := initClientConnection(ctx, "l2")
 	if err != nil {
 		return err
@@ -315,7 +315,7 @@ func (m *Manager) AddFunds(ctx context.Context) error {
 func Teardown() error {
 	err := stopBridge()
 	if err != nil {
-		return err  
+		return err
 	}
 
 	err = stopCore()
@@ -332,7 +332,6 @@ func Teardown() error {
 	if err != nil {
 		return err
 	}
-
 
 	return nil
 }
@@ -494,7 +493,7 @@ var (
 func initClientConnection(ctx context.Context, network string) (*ethclient.Client, *bind.TransactOpts, *bind.TransactOpts, error) {
 	var (
 		client *ethclient.Client
-		err error
+		err    error
 	)
 	if network == "l2" || network == "L2" {
 		if l2Client != nil {
@@ -568,7 +567,7 @@ func (m *Manager) GetBridgeInfoByDestAddr(ctx context.Context, addr *common.Addr
 		addr = &auth.From
 	}
 	req := pb.GetBridgesRequest{
-		EtherAddr: addr.String(),
+		DestAddr: addr.String(),
 	}
 	res, err := m.bridgeService.GetBridges(ctx, &req)
 	if err != nil {
@@ -588,8 +587,8 @@ func (m *Manager) SendL1Claim(ctx context.Context, deposit *pb.Deposit, smtProof
 	}
 	amount, _ := new(big.Int).SetString(deposit.Amount, encoding.Base10)
 	tx, err := br.Claim(auth, common.HexToAddress(deposit.TokenAddr), amount, deposit.OrigNet, deposit.DestNet,
-	common.HexToAddress(deposit.DestAddr), smtProof, uint32(deposit.DepositCnt), globalExitRoot.GlobalExitRootNum,
-	globalExitRoot.ExitRoots[0], globalExitRoot.ExitRoots[1])
+		common.HexToAddress(deposit.DestAddr), smtProof, uint32(deposit.DepositCnt), globalExitRoot.GlobalExitRootNum,
+		globalExitRoot.ExitRoots[0], globalExitRoot.ExitRoots[1])
 	if err != nil {
 		return err
 	}
@@ -614,11 +613,11 @@ func (m *Manager) SendL2Claim(ctx context.Context, deposit *pb.Deposit, smtProof
 	}
 	amount, _ := new(big.Int).SetString(deposit.Amount, encoding.Base10)
 	tx, err := br.Claim(auth, common.HexToAddress(deposit.TokenAddr), amount, deposit.OrigNet, deposit.DestNet,
-	common.HexToAddress(deposit.DestAddr), smtProof, uint32(deposit.DepositCnt), globalExitRoot.GlobalExitRootNum,
-	globalExitRoot.ExitRoots[0], globalExitRoot.ExitRoots[1])
+		common.HexToAddress(deposit.DestAddr), smtProof, uint32(deposit.DepositCnt), globalExitRoot.GlobalExitRootNum,
+		globalExitRoot.ExitRoots[0], globalExitRoot.ExitRoots[1])
 	log.Warn(common.HexToAddress(deposit.TokenAddr), amount, deposit.OrigNet, deposit.DestNet,
-	common.HexToAddress(deposit.DestAddr), uint32(deposit.DepositCnt), globalExitRoot.GlobalExitRootNum,
-	globalExitRoot.ExitRoots[0], globalExitRoot.ExitRoots[1])
+		common.HexToAddress(deposit.DestAddr), uint32(deposit.DepositCnt), globalExitRoot.GlobalExitRootNum,
+		globalExitRoot.ExitRoots[0], globalExitRoot.ExitRoots[1])
 	if err != nil {
 		return err
 	}
@@ -667,9 +666,9 @@ func (m *Manager) GetCurrentGlobalExitRootFromSmc(ctx context.Context) (*etherma
 	if err != nil {
 		return nil, err
 	}
-	result := etherman.GlobalExitRoot {
+	result := etherman.GlobalExitRoot{
 		GlobalExitRootNum: gNum,
-		ExitRoots: []common.Hash{gMainnet, gRollup},
+		ExitRoots:         []common.Hash{gMainnet, gRollup},
 	}
 	return &result, nil
 }

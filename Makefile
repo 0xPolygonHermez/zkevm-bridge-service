@@ -146,5 +146,5 @@ stop-mockserver: ## Stops the mock bridge service
 
 .PHONY: proto-gen
 proto-gen:
-	protoc --proto_path=proto/hermez/bridge/v1 --proto_path=third_party --go_out=bridgetree/pb --go-grpc_out=bridgetree/pb  --go_opt=paths=source_relative --go-grpc_opt=paths=source_relative query.proto
-	protoc --proto_path=proto/hermez/bridge/v1 --proto_path=third_party --grpc-gateway_out=logtostderr=true:bridgetree/pb --grpc-gateway_opt=paths=source_relative query.proto
+	protoc --proto_path=proto/hermez/bridge/v1 --proto_path=third_party --go_out=bridgectrl/pb --go-grpc_out=bridgectrl/pb  --go_opt=paths=source_relative --go-grpc_opt=paths=source_relative query.proto
+	protoc --proto_path=proto/hermez/bridge/v1 --proto_path=third_party --grpc-gateway_out=logtostderr=true:bridgectrl/pb --grpc-gateway_opt=paths=source_relative query.proto
