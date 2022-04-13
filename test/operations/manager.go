@@ -91,11 +91,11 @@ func NewManager(ctx context.Context, cfg *Config) (*Manager, error) {
 		wait: NewWait(),
 	}
 	//Init storage and mt
-	pgst, err := pgstorage.NewPostgresStorage(dbConfig)
+	pgst, err := pgstorage.NewPostgresStorage(dbConfig, 0)
 	if err != nil {
 		return nil, err
 	}
-	st, err := db.NewStorage(cfg.Storage)
+	st, err := db.NewStorage(cfg.Storage, 0)
 	if err != nil {
 		return nil, err
 	}

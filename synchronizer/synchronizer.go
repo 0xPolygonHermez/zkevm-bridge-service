@@ -165,24 +165,19 @@ func (s *ClientSynchronizer) syncBlocks(lastBlockSynced *etherman.Block) (*ether
 func (s *ClientSynchronizer) processBlockRange(blocks []etherman.Block, order map[common.Hash][]etherman.Order) {
 	// New info has to be included into the db using the state
 	for i := range blocks {
-		log.Warn("dentro del for")
 		ctx := context.Background()
 		blocks[i].NetworkID = s.networkID
-		log.Warn("networkId: ", blocks[i].NetworkID)
 		// Begin db transaction
-		err := s.storage.BeginDBTransaction(ctx)
+		err := s.storage.BeginDBTransaction(ctx, s.networkID)
 		if err != nil {
 			log.Fatal("NetworkID: ", s.networkID, ", error createing db transaction to store block. BlockNumber: ", blocks[i].BlockNumber)
 		}
-		log.Warn("after begin db tx")
 		// Add block information
 		blockID, err := s.storage.AddBlock(ctx, &blocks[i])
 		if err != nil {
 			log.Fatal("NetworkID: ", s.networkID, ", error storing block. BlockNumber: ", blocks[i].BlockNumber)
 		}
-		log.Warn("Before loop elements")
 		for _, element := range order[blocks[i].BlockHash] {
-			log.Warn("inside second loop")
 			if element.Name == etherman.BatchesOrder {
 				batch := &blocks[i].Batches[element.Pos]
 				batch.BlockID = blockID
@@ -192,7 +187,7 @@ func (s *ClientSynchronizer) processBlockRange(blocks []etherman.Block, order ma
 				if batch.ConsolidatedTxHash.String() != emptyHash.String() {
 					err = s.storage.ConsolidateBatch(ctx, batch)
 					if err != nil {
-						rollbackErr := s.storage.Rollback(ctx)
+						rollbackErr := s.storage.Rollback(ctx, s.networkID)
 						if rollbackErr != nil {
 							log.Fatal("NetworkID: %d, error rolling back state to store block. BlockNumber: %d, rollbackErr: %v, err: %v", s.networkID, blocks[i].BlockNumber, rollbackErr, err)
 						}
@@ -201,7 +196,7 @@ func (s *ClientSynchronizer) processBlockRange(blocks []etherman.Block, order ma
 				} else {
 					err = s.storage.AddBatch(ctx, batch)
 					if err != nil {
-						rollbackErr := s.storage.Rollback(ctx)
+						rollbackErr := s.storage.Rollback(ctx, s.networkID)
 						if rollbackErr != nil {
 							log.Fatal("NetworkID: %d, error rolling back state to store block. BlockNumber: %d, rollbackErr: %v, err: %v", s.networkID, blocks[i].BlockNumber, rollbackErr, err)
 						}
@@ -209,13 +204,12 @@ func (s *ClientSynchronizer) processBlockRange(blocks []etherman.Block, order ma
 					}
 				}
 			} else if element.Name == etherman.DepositsOrder {
-				log.Warn("Block: ", blocks[i].BlockNumber)
 				deposit := &blocks[i].Deposits[element.Pos]
 				deposit.BlockID = blockID
 				deposit.NetworkID = s.networkID
 				err := s.storage.AddDeposit(ctx, deposit)
 				if err != nil {
-					rollbackErr := s.storage.Rollback(ctx)
+					rollbackErr := s.storage.Rollback(ctx, s.networkID)
 					if rollbackErr != nil {
 						log.Fatal("NetworkID: %d, error rolling back state to store block. BlockNumber: %v, rollbackErr: %v, err: %v", s.networkID, blocks[i].BlockNumber, rollbackErr, err)
 					}
@@ -231,24 +225,24 @@ func (s *ClientSynchronizer) processBlockRange(blocks []etherman.Block, order ma
 				exitRoot.BlockID = blockID
 				err := s.storage.AddExitRoot(ctx, &exitRoot)
 				if err != nil {
-					rollbackErr := s.storage.Rollback(ctx)
+					rollbackErr := s.storage.Rollback(ctx, s.networkID)
 					if rollbackErr != nil {
 						log.Fatal("NetworkID: %d, error rolling back state to store block. BlockNumber: %d, rollbackErr: %v, err: %v", s.networkID, blocks[i].BlockNumber, rollbackErr, err)
 					}
 					log.Fatal("NetworkID: %d, error storing new globalExitRoot in Block: %d, ExitRoot: %+v, err: %v", s.networkID, blocks[i].BlockNumber, exitRoot, err)
 				}
 
-				// err = s.bridgeCtrl.CheckExitRoot(exitRoot)
-				// if err != nil {
-				// 	log.Fatal("error checking new globalExitRoot in Block: %d, ExitRoot: %+v, err: %v", blocks[i].BlockNumber, exitRoot, err)
-				// }
+				err = s.bridgeCtrl.CheckExitRoot(exitRoot)
+				if err != nil {
+					log.Fatal("error checking new globalExitRoot in Block: %d, ExitRoot: %+v, err: %v", blocks[i].BlockNumber, exitRoot, err)
+				}
 			} else if element.Name == etherman.ClaimsOrder {
 				claim := blocks[i].Claims[element.Pos]
 				claim.BlockID = blockID
 				claim.NetworkID = s.networkID
 				err := s.storage.AddClaim(ctx, &claim)
 				if err != nil {
-					rollbackErr := s.storage.Rollback(ctx)
+					rollbackErr := s.storage.Rollback(ctx, s.networkID)
 					if rollbackErr != nil {
 						log.Fatal("NetworkID: %d, error rolling back state to store block. BlockNumber: %d, rollbackErr: %v, err: %v", s.networkID, blocks[i].BlockNumber, rollbackErr, err)
 					}
@@ -260,7 +254,7 @@ func (s *ClientSynchronizer) processBlockRange(blocks []etherman.Block, order ma
 				tokenWrapped.NetworkID = s.networkID
 				err := s.storage.AddTokenWrapped(ctx, &tokenWrapped)
 				if err != nil {
-					rollbackErr := s.storage.Rollback(ctx)
+					rollbackErr := s.storage.Rollback(ctx, s.networkID)
 					if rollbackErr != nil {
 						log.Fatal("NetworkID: %d, error rolling back state to store block. BlockNumber: %d, rollbackErr: %v, err: %v", s.networkID, blocks[i].BlockNumber, rollbackErr, err)
 					}
@@ -270,20 +264,24 @@ func (s *ClientSynchronizer) processBlockRange(blocks []etherman.Block, order ma
 				log.Fatal("NetworkID: ", s.networkID, ", error: invalid order element")
 			}
 		}
+		err = s.storage.Commit(ctx, s.networkID)
+		if err != nil {
+			log.Fatal("error committing state to store block. BlockNumber: ", blocks[i].BlockNumber)
+		}
 	}
 }
 
 // This function allows reset the state until an specific block
 func (s *ClientSynchronizer) resetState(block *etherman.Block) error {
 	log.Debug("NetworkID: ", s.networkID, ". Reverting synchronization to block: ", block.BlockNumber)
-	err := s.storage.BeginDBTransaction(s.ctx)
+	err := s.storage.BeginDBTransaction(s.ctx, s.networkID)
 	if err != nil {
 		log.Error("NetworkID: ", s.networkID, ", error starting a db transaction to reset the state. Error: ", err)
 		return err
 	}
 	err = s.storage.Reset(s.ctx, block, s.networkID)
 	if err != nil {
-		rollbackErr := s.storage.Rollback(s.ctx)
+		rollbackErr := s.storage.Rollback(s.ctx, s.networkID)
 		if rollbackErr != nil {
 			log.Errorf("NetworkID: %d, error rolling back state to store block. BlockNumber: %d, rollbackErr: %v, error : %v", s.networkID, block.BlockNumber, rollbackErr, err)
 			return rollbackErr
@@ -291,9 +289,9 @@ func (s *ClientSynchronizer) resetState(block *etherman.Block) error {
 		log.Error("NetworkID: ", s.networkID, ", error resetting the state. Error: ", err)
 		return err
 	}
-	err = s.storage.Commit(s.ctx)
+	err = s.storage.Commit(s.ctx, s.networkID)
 	if err != nil {
-		rollbackErr := s.storage.Rollback(s.ctx)
+		rollbackErr := s.storage.Rollback(s.ctx, s.networkID)
 		if rollbackErr != nil {
 			log.Errorf("NetworkID: %d, error rolling back state to store block. BlockNumber: %d, rollbackErr: %v, error : %v", s.networkID, block.BlockNumber, rollbackErr, err)
 			return rollbackErr

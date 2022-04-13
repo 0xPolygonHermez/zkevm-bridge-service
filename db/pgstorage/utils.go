@@ -34,7 +34,7 @@ func RunMigrations(cfg Config) error {
 // will reset all the known data and rerun the migrations
 func InitOrReset(cfg Config) error {
 	// connect to database
-	pgStorage, err := NewPostgresStorage(cfg)
+	pgStorage, err := NewPostgresStorage(cfg, 0)
 	if err != nil {
 		return err
 	}

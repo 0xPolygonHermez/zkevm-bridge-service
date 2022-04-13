@@ -5,6 +5,7 @@ import (
 	"errors"
 	"math/big"
 	"strings"
+	"fmt"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/hermez-bridge/etherman"
@@ -12,7 +13,6 @@ import (
 	"github.com/jackc/pgx/v4"
 	"github.com/jackc/pgx/v4/pgxpool"
 	"github.com/lib/pq"
-	"github.com/hermeznetwork/hermez-core/log"
 )
 
 const (
@@ -48,16 +48,17 @@ var (
 // PostgresStorage implements the Storage interface
 type PostgresStorage struct {
 	db   *pgxpool.Pool
-	dbTx pgx.Tx
+	dbTx []pgx.Tx
 }
 
 // NewPostgresStorage creates a new Storage DB
-func NewPostgresStorage(cfg Config) (*PostgresStorage, error) {
+func NewPostgresStorage(cfg Config, dbTxSize uint) (*PostgresStorage, error) {
 	db, err := pgxpool.Connect(context.Background(), "postgres://"+cfg.User+":"+cfg.Password+"@"+cfg.Host+":"+cfg.Port+"/"+cfg.Name)
 	if err != nil {
 		return nil, err
 	}
-	return &PostgresStorage{db: db}, nil
+	dbTx := make([]pgx.Tx, dbTxSize)
+	return &PostgresStorage{db: db, dbTx: dbTx}, nil
 }
 
 // GetLastBlock gets the latest block
@@ -68,7 +69,6 @@ func (s *PostgresStorage) GetLastBlock(ctx context.Context, networkID uint) (*et
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, gerror.ErrStorageNotFound
 	} else if err != nil {
-		log.Warn("Error raro", networkID)
 		return nil, err
 	}
 
@@ -84,10 +84,8 @@ func (s *PostgresStorage) AddBlock(ctx context.Context, block *etherman.Block) (
 
 // AddDeposit adds a new block to the db
 func (s *PostgresStorage) AddDeposit(ctx context.Context, deposit *etherman.Deposit) error {
-	log.Warnf("Adding deposit to db: %+v", deposit)
 	_, err := s.db.Exec(ctx, addDepositSQL, deposit.OriginalNetwork, deposit.TokenAddress, deposit.Amount.String(), deposit.DestinationNetwork,
 		deposit.DestinationAddress, deposit.BlockNumber, deposit.DepositCount, deposit.BlockID, deposit.NetworkID)
-	log.Warn("error: ", err)
 	return err
 }
 
@@ -214,10 +212,10 @@ func (s *PostgresStorage) Reset(ctx context.Context, block *etherman.Block, netw
 }
 
 // Rollback rollbacks a db transaction
-func (s *PostgresStorage) Rollback(ctx context.Context) error {
-	if s.dbTx != nil {
-		err := s.dbTx.Rollback(ctx)
-		s.dbTx = nil
+func (s *PostgresStorage) Rollback(ctx context.Context, index uint) error {
+	if s.dbTx[index] != nil {
+		err := s.dbTx[index].Rollback(ctx)
+		s.dbTx[index] = nil
 		return err
 	}
 
@@ -225,22 +223,25 @@ func (s *PostgresStorage) Rollback(ctx context.Context) error {
 }
 
 // Commit commits a db transaction
-func (s *PostgresStorage) Commit(ctx context.Context) error {
-	if s.dbTx != nil {
-		err := s.dbTx.Commit(ctx)
-		s.dbTx = nil
+func (s *PostgresStorage) Commit(ctx context.Context, index uint) error {
+	if s.dbTx[index] != nil {
+		err := s.dbTx[index].Commit(ctx)
+		s.dbTx[index] = nil
 		return err
 	}
 	return gerror.ErrNilDBTransaction
 }
 
 // BeginDBTransaction starts a transaction block
-func (s *PostgresStorage) BeginDBTransaction(ctx context.Context) error {
+func (s *PostgresStorage) BeginDBTransaction(ctx context.Context, index uint) error {
+	if s.dbTx[index] != nil {                                                                                                                                                                          
+		return fmt.Errorf("db tx already ongoing!. networkID: %d", index)                                                                                                                                               
+	}    
 	dbTx, err := s.db.Begin(ctx)
 	if err != nil {
 		return err
 	}
-	s.dbTx = dbTx
+	s.dbTx[index] = dbTx
 	return nil
 }
 
@@ -266,7 +267,6 @@ func (s *PostgresStorage) GetLatestExitRoot(ctx context.Context) (*etherman.Glob
 	}
 	exitRoot.GlobalExitRootNum = new(big.Int).SetUint64(globalNum)
 	exitRoot.ExitRoots = []common.Hash{mainnetExitRoot, rollupExitRoot}
-	log.Warn("GlobalExitRoot from db: ", exitRoot)
 	return &exitRoot, nil
 }
 
