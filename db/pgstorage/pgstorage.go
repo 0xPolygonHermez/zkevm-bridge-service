@@ -12,6 +12,7 @@ import (
 	"github.com/jackc/pgx/v4"
 	"github.com/jackc/pgx/v4/pgxpool"
 	"github.com/lib/pq"
+	"github.com/hermeznetwork/hermez-core/log"
 )
 
 const (
@@ -67,6 +68,7 @@ func (s *PostgresStorage) GetLastBlock(ctx context.Context, networkID uint) (*et
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, gerror.ErrStorageNotFound
 	} else if err != nil {
+		log.Warn("Error raro", networkID)
 		return nil, err
 	}
 
@@ -82,8 +84,10 @@ func (s *PostgresStorage) AddBlock(ctx context.Context, block *etherman.Block) (
 
 // AddDeposit adds a new block to the db
 func (s *PostgresStorage) AddDeposit(ctx context.Context, deposit *etherman.Deposit) error {
+	log.Warnf("Adding deposit to db: %+v", deposit)
 	_, err := s.db.Exec(ctx, addDepositSQL, deposit.OriginalNetwork, deposit.TokenAddress, deposit.Amount.String(), deposit.DestinationNetwork,
 		deposit.DestinationAddress, deposit.BlockNumber, deposit.DepositCount, deposit.BlockID, deposit.NetworkID)
+	log.Warn("error: ", err)
 	return err
 }
 
@@ -262,6 +266,7 @@ func (s *PostgresStorage) GetLatestExitRoot(ctx context.Context) (*etherman.Glob
 	}
 	exitRoot.GlobalExitRootNum = new(big.Int).SetUint64(globalNum)
 	exitRoot.ExitRoots = []common.Hash{mainnetExitRoot, rollupExitRoot}
+	log.Warn("GlobalExitRoot from db: ", exitRoot)
 	return &exitRoot, nil
 }
 

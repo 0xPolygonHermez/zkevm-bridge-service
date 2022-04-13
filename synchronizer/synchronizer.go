@@ -55,53 +55,52 @@ func NewSynchronizer(storage storageInterface, bridge *bridgectrl.BridgeControll
 // Sync function will read the last state synced and will continue from that point.
 // Sync() will read blockchain events to detect bridge updates
 func (s *ClientSynchronizer) Sync() error {
-	go func() {
-		// If there is no lastBlock means that sync from the beginning is necessary. If not, it continues from the retrieved block
-		// Get the latest synced block. If there is no block on db, use genesis block
-		var (
-			err             error
-			lastBlockSynced *etherman.Block
-		)
-		log.Info("NetworkID: ", s.networkID, ", Synchronization started")
-		lastBlockSynced, err = s.storage.GetLastBlock(s.ctx, s.networkID)
-		if err != nil {
-			if err == gerror.ErrStorageNotFound {
-				lastBlockSynced = &etherman.Block{
-					BlockNumber: s.genBlockNumber,
-					NetworkID:   s.networkID,
-				}
-				log.Warn("NetworkID: ", s.networkID, ", error getting the latest block. No data stored. Setting genesis block: ", lastBlockSynced, ". Error: ", err)
-			} else {
-				log.Fatal("NetworkID: ", s.networkID, ", unexpected error getting the latest block. Error: ", err)
+	// If there is no lastBlock means that sync from the beginning is necessary. If not, it continues from the retrieved block
+	// Get the latest synced block. If there is no block on db, use genesis block
+	var (
+		err             error
+		lastBlockSynced *etherman.Block
+	)
+	log.Info("NetworkID: ", s.networkID, ", Synchronization started")
+	lastBlockSynced, err = s.storage.GetLastBlock(s.ctx, s.networkID)
+	if err != nil {
+		if err == gerror.ErrStorageNotFound {
+			lastBlockSynced = &etherman.Block{
+				BlockNumber: s.genBlockNumber,
+				NetworkID:   s.networkID,
 			}
+			log.Warn("NetworkID: ", s.networkID, ", error getting the latest block. No data stored. Setting genesis block: ", lastBlockSynced, ". Error: ", err)
+		} else {
+			log.Fatal("NetworkID: ", s.networkID, ", unexpected error getting the latest block. Error: ", err)
 		}
-		waitDuration := time.Duration(0)
-		for {
-			select {
-			case <-s.ctx.Done():
-				return
-			case <-time.After(waitDuration):
-				if lastBlockSynced, err = s.syncBlocks(lastBlockSynced); err != nil {
-					if s.ctx.Err() != nil {
-						continue
-					}
-				}
-				if waitDuration != s.cfg.SyncInterval.Duration {
-					// Check latest Block
-					header, err := s.etherMan.HeaderByNumber(s.ctx, nil)
-					if err != nil {
-						log.Warn("NetworkID: ", s.networkID, ", error getting latest block from. Error: ", err)
-						continue
-					}
-					lastKnownBlock := header.Number
-					if lastBlockSynced.BlockNumber == lastKnownBlock.Uint64() {
-						waitDuration = s.cfg.SyncInterval.Duration
-					}
+	}
+	waitDuration := time.Duration(0)
+	for {
+		select {
+		case <-s.ctx.Done():
+			log.Debug("synchronizer ctx done. NetworkID: ", s.networkID)
+			return nil
+		case <-time.After(waitDuration):
+			if lastBlockSynced, err = s.syncBlocks(lastBlockSynced); err != nil {
+				if s.ctx.Err() != nil {
+					log.Errorf("synchronizer ctx error: %s. NetworkID: %d", s.ctx.Err().Error(), s.networkID)
+					continue
 				}
 			}
+			if waitDuration != s.cfg.SyncInterval.Duration {
+				// Check latest Block
+				header, err := s.etherMan.HeaderByNumber(s.ctx, nil)
+				if err != nil {
+					log.Warn("NetworkID: ", s.networkID, ", error getting latest block from. Error: ", err)
+					continue
+				}
+				lastKnownBlock := header.Number
+				if lastBlockSynced.BlockNumber == lastKnownBlock.Uint64() {
+					waitDuration = s.cfg.SyncInterval.Duration
+				}
+			}
 		}
-	}()
-	return nil
+	}
 }
 
 // Stop function stops the synchronizer
@@ -166,19 +165,24 @@ func (s *ClientSynchronizer) syncBlocks(lastBlockSynced *etherman.Block) (*ether
 func (s *ClientSynchronizer) processBlockRange(blocks []etherman.Block, order map[common.Hash][]etherman.Order) {
 	// New info has to be included into the db using the state
 	for i := range blocks {
+		log.Warn("dentro del for")
 		ctx := context.Background()
 		blocks[i].NetworkID = s.networkID
+		log.Warn("networkId: ", blocks[i].NetworkID)
 		// Begin db transaction
 		err := s.storage.BeginDBTransaction(ctx)
 		if err != nil {
 			log.Fatal("NetworkID: ", s.networkID, ", error createing db transaction to store block. BlockNumber: ", blocks[i].BlockNumber)
 		}
+		log.Warn("after begin db tx")
 		// Add block information
 		blockID, err := s.storage.AddBlock(ctx, &blocks[i])
 		if err != nil {
 			log.Fatal("NetworkID: ", s.networkID, ", error storing block. BlockNumber: ", blocks[i].BlockNumber)
 		}
+		log.Warn("Before loop elements")
 		for _, element := range order[blocks[i].BlockHash] {
+			log.Warn("inside second loop")
 			if element.Name == etherman.BatchesOrder {
 				batch := &blocks[i].Batches[element.Pos]
 				batch.BlockID = blockID
@@ -234,10 +238,10 @@ func (s *ClientSynchronizer) processBlockRange(blocks []etherman.Block, order ma
 					log.Fatal("NetworkID: %d, error storing new globalExitRoot in Block: %d, ExitRoot: %+v, err: %v", s.networkID, blocks[i].BlockNumber, exitRoot, err)
 				}
 
-				err = s.bridgeCtrl.CheckExitRoot(exitRoot)
-				if err != nil {
-					log.Fatal("error checking new globalExitRoot in Block: %d, ExitRoot: %+v, err: %v", blocks[i].BlockNumber, exitRoot, err)
-				}
+				// err = s.bridgeCtrl.CheckExitRoot(exitRoot)
+				// if err != nil {
+				// 	log.Fatal("error checking new globalExitRoot in Block: %d, ExitRoot: %+v, err: %v", blocks[i].BlockNumber, exitRoot, err)
+				// }
 			} else if element.Name == etherman.ClaimsOrder {
 				claim := blocks[i].Claims[element.Pos]
 				claim.BlockID = blockID
