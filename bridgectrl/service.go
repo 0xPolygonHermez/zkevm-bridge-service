@@ -35,7 +35,7 @@ func (s *bridgeService) CheckAPI(ctx context.Context, req *pb.CheckAPIRequest) (
 
 // GetBridges returns bridges for the specific smart contract address both in L1 and L2.
 func (s *bridgeService) GetBridges(ctx context.Context, req *pb.GetBridgesRequest) (*pb.GetBridgesResponse, error) {
-	deposits, err := s.storage.GetDeposits(ctx, req.EtherAddr, limit, uint(req.Offset))
+	deposits, err := s.storage.GetDeposits(ctx, req.DestAddr, limit, uint(req.Offset))
 	if err != nil {
 		return nil, err
 	}
@@ -50,6 +50,7 @@ func (s *bridgeService) GetBridges(ctx context.Context, req *pb.GetBridgesReques
 			DestAddr:   deposit.DestinationAddress.Hex(),
 			BlockNum:   deposit.BlockNumber,
 			DepositCnt: uint64(deposit.DepositCount),
+			NetworkId:  uint32(deposit.NetworkID),
 		})
 	}
 
@@ -60,7 +61,7 @@ func (s *bridgeService) GetBridges(ctx context.Context, req *pb.GetBridgesReques
 
 // GetClaims returns claims for the specific smart contract address both in L1 and L2.
 func (s *bridgeService) GetClaims(ctx context.Context, req *pb.GetClaimsRequest) (*pb.GetClaimsResponse, error) {
-	claims, err := s.storage.GetClaims(ctx, req.EtherAddr, limit, uint(req.Offset)) //nolint:gomnd
+	claims, err := s.storage.GetClaims(ctx, req.DestAddr, limit, uint(req.Offset)) //nolint:gomnd
 	if err != nil {
 		return nil, err
 	}
@@ -72,7 +73,7 @@ func (s *bridgeService) GetClaims(ctx context.Context, req *pb.GetClaimsRequest)
 			OrigNet:   uint32(claim.OriginalNetwork),
 			TokenAddr: claim.Token.Hex(),
 			Amount:    claim.Amount.String(),
-			DestNet:   uint32(claim.NetworkID),
+			NetworkId: uint32(claim.NetworkID),
 			DestAddr:  claim.DestinationAddress.Hex(),
 			BlockNum:  claim.BlockNumber,
 		})
@@ -85,7 +86,7 @@ func (s *bridgeService) GetClaims(ctx context.Context, req *pb.GetClaimsRequest)
 
 // GetProof returns the merkle proof for the specific deposit.
 func (s *bridgeService) GetProof(ctx context.Context, req *pb.GetProofRequest) (*pb.GetProofResponse, error) {
-	merkleProof, exitRoot, err := s.bridgeCtrl.GetClaim(uint(req.OrigNet), uint(req.DepositCnt))
+	merkleProof, exitRoot, err := s.bridgeCtrl.GetClaim(uint(req.NetId), uint(req.DepositCnt))
 	if err != nil {
 		return nil, err
 	}
@@ -112,7 +113,7 @@ func (s *bridgeService) GetClaimStatus(ctx context.Context, req *pb.GetClaimStat
 		return nil, err
 	}
 
-	tID := s.bridgeCtrl.networkIDs[uint(req.OrigNet)]
+	tID := s.bridgeCtrl.networkIDs[uint(req.NetId)]
 	ctx = context.WithValue(ctx, contextKeyNetwork, tID) //nolint
 	tID--
 	depositCnt, err := s.bridgeCtrl.exitTrees[tID].getDepositCntByRoot(ctx, exitRoot.ExitRoots[tID])

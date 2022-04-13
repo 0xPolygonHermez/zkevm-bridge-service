@@ -21,7 +21,7 @@ service BridgeService {
     /// Get bridges for the specific smart contract address both in L1 and L2
     rpc GetBridges(GetBridgesRequest) returns (GetBridgesResponse) {
         option (google.api.http) = {
-            get: "/bridges/{ether_addr}"
+            get: "/bridges/{dest_addr}"
         };
     }
 
@@ -42,7 +42,7 @@ service BridgeService {
     /// Get claims for the specific smart contract address both in L1 and L2
     rpc GetClaims(GetClaimsRequest) returns (GetClaimsResponse) {
         option (google.api.http) = {
-            get: "/claims/{ether_addr}"
+            get: "/claims/{dest_addr}"
         };
     }
 }
@@ -56,6 +56,7 @@ message Deposit {
     string dest_addr = 5;
     uint64 block_num = 6;
     uint64 deposit_cnt = 7;
+    uint32 network_id = 8;
 }
 
 // Claim message
@@ -64,7 +65,7 @@ message Claim {
     uint32 orig_net = 2;
     string token_addr = 3;
     string amount = 4;
-    uint32 dest_net = 5;
+    uint32 network_id = 5;
     string dest_addr = 6;
     uint64 block_num = 7;
 }
@@ -82,22 +83,22 @@ message Proof {
 message CheckAPIRequest {}
 
 message GetBridgesRequest {
-    string ether_addr = 1;
+    string dest_addr = 1;
     uint64 offset = 2;
 }
 
 message GetProofRequest {
-    uint32 orig_net = 1;
+    uint32 net_id = 1;
     uint64 deposit_cnt = 2;
 }
 
 message GetClaimStatusRequest {
-    uint32 orig_net = 1;
+    uint32 net_id = 1;
     uint64 deposit_cnt = 2;
 }
 
 message GetClaimsRequest {
-    string ether_addr = 1;
+    string dest_addr = 1;
     uint64 offset = 2;
 }
 
