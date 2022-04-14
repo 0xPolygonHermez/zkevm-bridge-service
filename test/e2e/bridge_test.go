@@ -3,7 +3,6 @@ package e2e
 import (
 	"context"
 	"encoding/hex"
-	"fmt"
 	"math/big"
 	"strconv"
 	"testing"
@@ -14,6 +13,7 @@ import (
 	"github.com/hermeznetwork/hermez-bridge/db"
 	"github.com/hermeznetwork/hermez-bridge/test/operations"
 	"github.com/hermeznetwork/hermez-bridge/test/vectors"
+	// "github.com/hermeznetwork/hermez-core/encoding"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -78,6 +78,7 @@ func TestE2E(t *testing.T) {
 			t.Logf("globalExitRootSMC.rollup: %v, globalExitRoot2.rollup: %v", globalExitRootSMC.ExitRoots[1], globalExitRoot2.ExitRoots[1])
 			assert.Equal(t, globalExitRootSMC.ExitRoots[1], globalExitRoot2.ExitRoots[1])
 			assert.Equal(t, common.HexToHash("0x843cb84814162b93794ad9087a037a1948f9aff051838ba3a93db0ac92b9f719"), globalExitRoot2.ExitRoots[0])
+			assert.Equal(t, common.HexToHash("0x0000000000000000000000000000000000000000000000000000000000000000"), globalExitRoot2.ExitRoots[1])
 			// Wait until a new batch proposal appears
 			t.Log("time1: ", time.Now())
 			time.Sleep(15 * time.Second)
@@ -110,13 +111,8 @@ func TestE2E(t *testing.T) {
 			// Check L2 funds to see if the amount has been increased
 			balance2, err := opsman.CheckAccountBalance(ctx, "l2", &destAddr)
 			require.NoError(t, err)
-			fmt.Println("Balance: ", balance, balance2)
 			assert.NotEqual(t, balance, balance2)
-
-
-
-
-
+			assert.Equal(t, amount, balance2)
 
 			// Check globalExitRoot
 			globalExitRoot3, err := opsman.GetCurrentGlobalExitRootSynced(ctx)
@@ -126,9 +122,8 @@ func TestE2E(t *testing.T) {
 			amount = new(big.Int).SetUint64(1000000000000000000)
 			err = opsman.SendL2Deposit(ctx, tokenAddr, amount, destNetwork, &destAddr)
 			require.NoError(t, err)
-			panic(1)
 			// Get Bridge Info By DestAddr
-			deposits, err = opsman.GetBridgeInfoByDestAddr(ctx, nil)
+			deposits, err = opsman.GetBridgeInfoByDestAddr(ctx, &destAddr)
 			require.NoError(t, err)
 			t.Log("Deposits 2: ", deposits)
 			// Check globalExitRoot
@@ -138,28 +133,29 @@ func TestE2E(t *testing.T) {
 			t.Logf("Global4 %+v: ", globalExitRoot4)
 			assert.NotEqual(t, globalExitRoot3.GlobalExitRootNum, globalExitRoot4.GlobalExitRootNum)
 			assert.NotEqual(t, globalExitRoot3.ExitRoots[1], globalExitRoot4.ExitRoots[1])
-			assert.Equal(t, globalExitRoot3.ExitRoots[0], globalExitRoot4.ExitRoots[0])
+			assert.Equal(t, common.HexToHash("0x843cb84814162b93794ad9087a037a1948f9aff051838ba3a93db0ac92b9f719"), globalExitRoot3.ExitRoots[0])
+			assert.Equal(t, common.HexToHash("0x0000000000000000000000000000000000000000000000000000000000000000"), globalExitRoot3.ExitRoots[1])
+			assert.Equal(t, common.HexToHash("0x843cb84814162b93794ad9087a037a1948f9aff051838ba3a93db0ac92b9f719"), globalExitRoot4.ExitRoots[0])
+			assert.Equal(t, common.HexToHash("0x073fa0ba2dd56dc954a3cf098d42ec5fa9d9f996d7429ac0b6b13c9d7ee489c3"), globalExitRoot4.ExitRoots[1])
 			// Check L1 funds
-			balance, err = opsman.CheckAccountBalance(ctx, "l1", nil)
+			balance, err = opsman.CheckAccountBalance(ctx, "l1", &destAddr)
 			require.NoError(t, err)
-			assert.Equal(t, big.NewInt(0), balance)
+			assert.Equal(t, 0, big.NewInt(0).Cmp(balance))
 			// Get the claim data
-			smtProof, globaExitRoot, err = opsman.GetClaimData(uint(deposits[1].NetworkId), uint(deposits[1].DepositCnt))
+			smtProof, globaExitRoot, err = opsman.GetClaimData(uint(deposits[0].NetworkId), uint(deposits[0].DepositCnt))
 			require.NoError(t, err)
 			t.Log("smt2: ", smtProof)
 			// Claim funds in L1
-			opsman.SendL1Claim(ctx, deposits[1], smtProof, globaExitRoot)
+			err = opsman.SendL1Claim(ctx, deposits[0], smtProof, globaExitRoot)
+			require.NoError(t, err)
 			// Check L1 funds to see if the amount has been increased
-			balance, err = opsman.CheckAccountBalance(ctx, "l1", nil)
+			balance, err = opsman.CheckAccountBalance(ctx, "l1", &destAddr)
 			require.NoError(t, err)
-			assert.NotEqual(t, big.NewInt(0), balance)
+			assert.NotEqual(t, big.NewInt(0).Add(big.NewInt(0), big.NewInt(1000000000000000000)), balance)
 			// Check L2 funds to see that the amount has been reduced
-			balance, err = opsman.CheckAccountBalance(ctx, "l2", nil)
+			balance, err = opsman.CheckAccountBalance(ctx, "l2", &destAddr)
 			require.NoError(t, err)
-			assert.Equal(t, big.NewInt(0), balance)
-
-			assert.Equal(t, 1, 1)
-
+			assert.Equal(t, big.NewInt(9000000000000000000), balance)
 			require.NoError(t, operations.Teardown())
 		})
 	}

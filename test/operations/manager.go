@@ -158,12 +158,10 @@ func (m *Manager) SendL2Deposit(ctx context.Context, tokenAddr common.Address, a
 	if err != nil {
 		return err
 	}
-	log.Warn("gas: ", auth.GasLimit)
+
+	// TODO Remove gas hardcoded when gas estimatios is fixed
 	auth.GasLimit = 234480
-	log.Warn("gasPrice: ", auth.GasPrice)
-	log.Warn("nonce 1: ", auth.Nonce)
-	n, _ := client.NonceAt(ctx, auth.From, nil)
-	log.Warn("Nonce 2: ",n)
+
 	emptyAddr := common.Address{}
 	if tokenAddr == emptyAddr {
 		auth.Value = amount
@@ -597,6 +595,10 @@ func (m *Manager) SendL1Claim(ctx context.Context, deposit *pb.Deposit, smtProof
 	log.Infof("Waiting tx to be mined")
 	const txTimeout = 15 * time.Second
 	_, err = m.WaitTxToBeMined(ctx, client, tx.Hash(), txTimeout)
+
+	//Wait for the bridge sync
+	time.Sleep(30 * time.Second)
+
 	return err
 
 }
@@ -614,9 +616,6 @@ func (m *Manager) SendL2Claim(ctx context.Context, deposit *pb.Deposit, smtProof
 	amount, _ := new(big.Int).SetString(deposit.Amount, encoding.Base10)
 	tx, err := br.Claim(auth, common.HexToAddress(deposit.TokenAddr), amount, deposit.OrigNet, deposit.DestNet,
 		common.HexToAddress(deposit.DestAddr), smtProof, uint32(deposit.DepositCnt), globalExitRoot.GlobalExitRootNum,
-		globalExitRoot.ExitRoots[0], globalExitRoot.ExitRoots[1])
-	log.Warn(common.HexToAddress(deposit.TokenAddr), amount, deposit.OrigNet, deposit.DestNet,
-		common.HexToAddress(deposit.DestAddr), uint32(deposit.DepositCnt), globalExitRoot.GlobalExitRootNum,
 		globalExitRoot.ExitRoots[0], globalExitRoot.ExitRoots[1])
 	if err != nil {
 		return err
