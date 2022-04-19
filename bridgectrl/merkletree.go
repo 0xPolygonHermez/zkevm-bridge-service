@@ -26,6 +26,12 @@ func init() {
 // NewMerkleTree creates new MerkleTree.
 func NewMerkleTree(ctx context.Context, store merkleTreeStore, height uint8) (*MerkleTree, error) {
 	for h := uint8(0); h < height; h++ {
+		if h == 0 {
+			err := store.Set(ctx, zeroHashes[h][:], [][]byte{zeroHashes[h][:], zeroHashes[h][:]}, 0, h)
+			if err != nil {
+				return nil, err
+			}
+		}
 		err := store.Set(ctx, zeroHashes[h+1][:], [][]byte{zeroHashes[h][:], zeroHashes[h][:]}, 0, h)
 		if err != nil {
 			return nil, err
