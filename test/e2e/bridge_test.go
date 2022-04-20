@@ -151,11 +151,11 @@ func TestE2E(t *testing.T) {
 			// Check L1 funds to see if the amount has been increased
 			balance, err = opsman.CheckAccountBalance(ctx, "l1", &destAddr)
 			require.NoError(t, err)
-			assert.NotEqual(t, big.NewInt(0).Add(big.NewInt(0), big.NewInt(1000000000000000000)), balance)
+			assert.Equal(t, big.NewInt(1000000000000000000), balance)
 			// Check L2 funds to see that the amount has been reduced
 			balance, err = opsman.CheckAccountBalance(ctx, "l2", &destAddr)
 			require.NoError(t, err)
-			assert.Equal(t, big.NewInt(9000000000000000000), balance)
+			assert.Equal(t, big.NewInt(8999979000000000000), balance)
 			require.NoError(t, operations.Teardown())
 		})
 	}
