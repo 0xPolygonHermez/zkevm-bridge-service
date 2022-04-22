@@ -12,7 +12,7 @@ services:
       - POSTGRES_USER=test_user
       - POSTGRES_PASSWORD=test_password
       - POSTGRES_DB=test_db
-    command: -p 5433
+    command: -p 5433 -N 500
     
   hez-bridge-mock:
     container_name: hez-bridge

@@ -3,12 +3,14 @@ package pgstorage
 import (
 	"context"
 	"errors"
+	"fmt"
 	"math/big"
 	"strings"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/hermez-bridge/etherman"
 	"github.com/hermeznetwork/hermez-bridge/gerror"
+	"github.com/hermeznetwork/hermez-core/log"
 	"github.com/jackc/pgx/v4"
 	"github.com/jackc/pgx/v4/pgxpool"
 	"github.com/lib/pq"
@@ -52,8 +54,15 @@ type PostgresStorage struct {
 
 // NewPostgresStorage creates a new Storage DB
 func NewPostgresStorage(cfg Config) (*PostgresStorage, error) {
-	db, err := pgxpool.Connect(context.Background(), "postgres://"+cfg.User+":"+cfg.Password+"@"+cfg.Host+":"+cfg.Port+"/"+cfg.Name)
+	log.Debugf("Create PostgresStorage with Config: %v\n", cfg)
+	config, err := pgxpool.ParseConfig(fmt.Sprintf("postgres://%s:%s@%s:%s/%s?pool_max_conns=%d", cfg.User, cfg.Password, cfg.Host, cfg.Port, cfg.Name, cfg.MaxConns))
 	if err != nil {
+		log.Errorf("Unable to parse DB config: %v\n", err)
+		return nil, err
+	}
+	db, err := pgxpool.ConnectConfig(context.Background(), config)
+	if err != nil {
+		log.Errorf("Unable to connect to database: %v\n", err)
 		return nil, err
 	}
 	return &PostgresStorage{db: db}, nil

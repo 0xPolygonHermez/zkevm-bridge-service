@@ -19,4 +19,7 @@ type Config struct {
 
 	// Port Number
 	Port string `mapstructure:"Port"`
+
+	// MaxConns is the maximum number of connections in the pool.
+	MaxConns int `mapstructure:"MaxConns"`
 }

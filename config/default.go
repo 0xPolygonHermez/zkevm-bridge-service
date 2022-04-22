@@ -13,6 +13,7 @@ Password = "test_password"
 Name = "test_db"
 Host = "localhost"
 Port = "5433"
+MaxConns = 200
 
 [Etherman]
 L1URL = "http://localhost"

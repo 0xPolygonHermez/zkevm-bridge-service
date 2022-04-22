@@ -41,6 +41,7 @@ func NewStorage(cfg Config) (Storage, error) {
 			Password: cfg.Password,
 			Host:     cfg.Host,
 			Port:     cfg.Port,
+			MaxConns: cfg.MaxConns,
 		})
 	}
 	return nil, gerror.ErrStorageNotRegister

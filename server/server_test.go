@@ -32,7 +32,7 @@ func init() {
 }
 
 func TestBridgeMock(t *testing.T) {
-	err := RunMockServer()
+	_, err := RunMockServer()
 	require.NoError(t, err)
 
 	err = operations.WaitGRPCHealthy("0.0.0.0:" + grpcPort)

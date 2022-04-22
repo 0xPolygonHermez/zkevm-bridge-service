@@ -28,6 +28,7 @@ func TestExitRootStore(t *testing.T) {
 		Password: cfg.Password,
 		Host:     cfg.Host,
 		Port:     cfg.Port,
+		MaxConns: 20,
 	}
 	storage, err := NewStorage(storageCfg)
 	require.NoError(t, err)

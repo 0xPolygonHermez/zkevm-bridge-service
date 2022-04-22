@@ -2,6 +2,7 @@ package bridgectrl
 
 import (
 	"context"
+	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/hermez-bridge/etherman"
@@ -80,10 +81,7 @@ func (bt *BridgeController) GetClaim(networkID uint, index uint) ([][KeyLen]byte
 		return proof, nil, err
 	}
 
-	return proof, &etherman.GlobalExitRoot{
-		GlobalExitRootNum: globalExitRoot.GlobalExitRootNum,
-		ExitRoots:         []common.Hash{bt.exitTrees[0].root, bt.exitTrees[1].root},
-	}, err
+	return proof, globalExitRoot, err
 }
 
 // ReorgMT reorg the specific merkle tree.
@@ -105,4 +103,18 @@ func (bt *BridgeController) CheckExitRoot(globalExitRoot etherman.GlobalExitRoot
 	}
 
 	return nil
+}
+
+// MockAddDeposit adds deposit information to the bridge tree with globalExitRoot.
+func (bt *BridgeController) MockAddDeposit(deposit *etherman.Deposit) error {
+	err := bt.AddDeposit(deposit)
+	if err != nil {
+		return err
+	}
+	return bt.storage.AddExitRoot(context.TODO(), &etherman.GlobalExitRoot{
+		BlockNumber:       0,
+		GlobalExitRootNum: big.NewInt(int64(deposit.DepositCount)),
+		ExitRoots:         []common.Hash{common.BytesToHash(bt.exitTrees[0].root[:]), common.BytesToHash(bt.exitTrees[1].root[:])},
+		BlockID:           deposit.BlockID,
+	})
 }
