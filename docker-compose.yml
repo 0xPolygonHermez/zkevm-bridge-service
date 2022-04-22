@@ -27,7 +27,7 @@ services:
 
   hez-core:
     container_name: hez-core
-    image: hermeznetwork/hermez-node-zkevm@sha256:a792b78dfde5baf2fb831fb4e3831778137c5a53f466f0ea5c19e60a28687837
+    image: hermeznetwork/hermez-node-zkevm@sha256:47334d60e128902638b8c48d1ee3d37228adbffb060aabd8af52610b1f38bf7f
     ports:
       - 8123:8123
     environment:
@@ -53,7 +53,7 @@ services:
 
   hez-prover:
     container_name: hez-prover
-    image: hermeznetwork/hez-mock-prover@sha256:c878fcc434685c5f8a096e84fc0a7895354a115046a3ff41d5396db583846268
+    image: hermeznetwork/hez-mock-prover@sha256:881e53ef74542d3dfe9086ae8a027ab8f1737ac5f4776b8b360b6d515201b245
     ports:
       - 50051:50051
     environment:
