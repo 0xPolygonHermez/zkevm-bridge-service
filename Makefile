@@ -65,7 +65,7 @@ install-linter: ## Installs the linter
 
 .PHONY: build-docker
 build-docker: ## Builds a docker image with the core binary
-	docker build -t hezbridge -f ./Dockerfile . --build-arg PRIVATE_TOKEN=${PRIVATE_TOKEN}
+	docker build -t hermeznetwork/hermez-bridge -f ./Dockerfile --build-arg PRIVATE_TOKEN=${PRIVATE_TOKEN} .
 
 .PHONY: run-db-core
 run-db-core: ## Runs the node database

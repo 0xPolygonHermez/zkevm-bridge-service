@@ -78,10 +78,6 @@ func TestE2E(t *testing.T) {
 			assert.Equal(t, globalExitRootSMC.ExitRoots[1], globalExitRoot2.ExitRoots[1])
 			assert.Equal(t, common.HexToHash("0x843cb84814162b93794ad9087a037a1948f9aff051838ba3a93db0ac92b9f719"), globalExitRoot2.ExitRoots[0])
 			assert.Equal(t, common.HexToHash("0x0000000000000000000000000000000000000000000000000000000000000000"), globalExitRoot2.ExitRoots[1])
-			// Wait until a new batch proposal appears
-			// t.Log("time1: ", time.Now())
-			// time.Sleep(15 * time.Second)
-			// t.Log("time2: ", time.Now())
 			// Get Bridge Info By DestAddr
 			deposits, err := opsman.GetBridgeInfoByDestAddr(ctx, &destAddr)
 			require.NoError(t, err)
