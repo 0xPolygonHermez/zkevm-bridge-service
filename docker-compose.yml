@@ -27,7 +27,7 @@ services:
 
   hez-core:
     container_name: hez-core
-    image: hermeznetwork/hermez-node-zkevm@sha256:1a4b02f16b1cfd2daf2591f6ecc1ad7460af0da97aca56f2fb4e00692012926f
+    image: hermeznetwork/hermez-node-zkevm@sha256:a792b78dfde5baf2fb831fb4e3831778137c5a53f466f0ea5c19e60a28687837
     ports:
       - 8123:8123
     environment:
