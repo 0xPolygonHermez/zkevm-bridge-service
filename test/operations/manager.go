@@ -688,10 +688,6 @@ func (m *Manager) ForceBatchProposal(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	// callData, err := hex.DecodeString("00")
-	// if err != nil {
-	// 	return err
-	// }
 	matic, err := erc20.NewMatic(common.HexToAddress(MaticTokenAddress), client)
 	if err != nil {
 		return err
@@ -706,7 +702,6 @@ func (m *Manager) ForceBatchProposal(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	// time.Sleep(30 * time.Second)
 	tx, err := poe.SendBatch(auth, []byte{}, maticAmount)
 	if err != nil {
 		return err
@@ -718,6 +713,5 @@ func (m *Manager) ForceBatchProposal(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	// time.Sleep(30 * time.Second)
 	return nil
 }

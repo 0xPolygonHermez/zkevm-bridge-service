@@ -6,7 +6,6 @@ import (
 	"math/big"
 	"strconv"
 	"testing"
-	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/hermez-bridge/bridgectrl"
@@ -80,9 +79,9 @@ func TestE2E(t *testing.T) {
 			assert.Equal(t, common.HexToHash("0x843cb84814162b93794ad9087a037a1948f9aff051838ba3a93db0ac92b9f719"), globalExitRoot2.ExitRoots[0])
 			assert.Equal(t, common.HexToHash("0x0000000000000000000000000000000000000000000000000000000000000000"), globalExitRoot2.ExitRoots[1])
 			// Wait until a new batch proposal appears
-			t.Log("time1: ", time.Now())
-			time.Sleep(15 * time.Second)
-			t.Log("time2: ", time.Now())
+			// t.Log("time1: ", time.Now())
+			// time.Sleep(15 * time.Second)
+			// t.Log("time2: ", time.Now())
 			// Get Bridge Info By DestAddr
 			deposits, err := opsman.GetBridgeInfoByDestAddr(ctx, &destAddr)
 			require.NoError(t, err)
@@ -91,8 +90,8 @@ func TestE2E(t *testing.T) {
 			require.NoError(t, err)
 			initL2Balance := big.NewInt(0)
 			assert.Equal(t, 0, balance.Cmp(initL2Balance))
-			t.Log(deposits)
-			t.Log("Before getClaimData: ", deposits[0].OrigNet, deposits[0].DepositCnt)
+			t.Log("Deposits: ", deposits)
+			t.Log("deposits[0].OrigNet: ", deposits[0].OrigNet, ". deposits[0].OrigNet: ", deposits[0].DepositCnt)
 			// Get the claim data
 			smtProof, globaExitRoot, err := opsman.GetClaimData(uint(deposits[0].OrigNet), uint(deposits[0].DepositCnt))
 			require.NoError(t, err)
@@ -106,7 +105,6 @@ func TestE2E(t *testing.T) {
 			require.NoError(t, err)
 			// Claim funds in L1
 			err = opsman.SendL2Claim(ctx, deposits[0], smtProof, globaExitRoot)
-			t.Log("Error claiming l2 funds: ", err)
 			require.NoError(t, err)
 			// Check L2 funds to see if the amount has been increased
 			balance2, err := opsman.CheckAccountBalance(ctx, "l2", &destAddr)
