@@ -12,7 +12,6 @@ import (
 	"github.com/hermeznetwork/hermez-bridge/db"
 	"github.com/hermeznetwork/hermez-bridge/test/operations"
 	"github.com/hermeznetwork/hermez-bridge/test/vectors"
-	// "github.com/hermeznetwork/hermez-core/encoding"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -54,7 +53,7 @@ func TestE2E(t *testing.T) {
 			//Run environment
 			require.NoError(t, opsman.Setup())
 
-			// Check initial globalExitRoot. Must fail because at the beggining, no globalExitRoot event is thrown.
+			// Check initial globalExitRoot. Must fail because at the beginning, no globalExitRoot event is thrown.
 			globalExitRootSMC, err := opsman.GetCurrentGlobalExitRootFromSmc(ctx)
 			require.NoError(t, err)
 			t.Logf("initial globalExitRootSMC.GlobalExitRootNum: %+v,", globalExitRootSMC)
@@ -93,8 +92,8 @@ func TestE2E(t *testing.T) {
 			require.NoError(t, err)
 			proof := testCase.Txs[0].Params[5].([]interface{})
 			assert.Equal(t, len(proof), len(smtProof))
-			for i,s := range smtProof {
-				assert.Equal(t, proof[i].(string), "0x" + hex.EncodeToString(s[:]))
+			for i, s := range smtProof {
+				assert.Equal(t, proof[i].(string), "0x"+hex.EncodeToString(s[:]))
 			}
 			// Force to propose a new batch
 			err = opsman.ForceBatchProposal(ctx)

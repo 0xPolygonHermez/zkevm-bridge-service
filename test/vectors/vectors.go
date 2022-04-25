@@ -9,13 +9,13 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
-// E2ETestCase holds the metadata needed to run a etherman test
+// E2ETestVectors holds the metadata needed to run a etherman test
 type E2ETestVectors struct {
 	// TODO Define the field of the e2e test vector
 	ID               uint            `json:"id"`
 	BridgeDeployed   bool            `json:"bridgeDeployed"`
-	ChainIdSequencer uint            `json:"chainIdSequencer"`
-	DefaultChainId   uint            `json:"defaultChainId"`
+	ChainIDSequencer uint            `json:"chainIdSequencer"`
+	DefaultChainID   uint            `json:"defaultChainId"`
 	SequencerAddress common.Address  `json:"sequencerAddress"`
 	SequencerPvtKey  string          `json:"sequencerPvtKey"`
 	Genesis          []interface{}   `json:"genesis"`
@@ -32,6 +32,7 @@ type E2ETestVectors struct {
 	Timestamp        uint64          `json:"timestamp"`
 }
 
+// Leaf represents a mt leaf
 type Leaf struct {
 	Balance argBigInt         `json:"balance"`
 	Nonce   argBigInt         `json:"nonce"`

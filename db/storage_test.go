@@ -67,7 +67,7 @@ func TestExitRootStore(t *testing.T) {
 		DestinationAddress: common.HexToAddress("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9fc"),
 		BlockNumber:        1,
 		BlockID:            id,
-		NetworkID: 2,
+		NetworkID:          2,
 	}
 	err = storage.AddClaim(ctx, &claim)
 	require.NoError(t, err)
@@ -111,7 +111,7 @@ func TestExitRootStore(t *testing.T) {
 		WrappedTokenAddress:  common.HexToAddress("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9fc"),
 		BlockNumber:          1,
 		BlockID:              id,
-		NetworkID:   2,
+		NetworkID:            2,
 	}
 	err = storage.AddTokenWrapped(ctx, &tokenWrapped)
 	require.NoError(t, err)

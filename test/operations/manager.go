@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"math/big"
 	"os"
-
-	// "encoding/hex"
 	"os/exec"
 	"strings"
 	"time"
@@ -36,7 +34,8 @@ const (
 	l1NetworkURL = "http://localhost:8545"
 	l2NetworkURL = "http://localhost:8123"
 
-	poeAddress        = "0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9"
+	poeAddress = "0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9"
+	// MaticTokenAddress token address
 	MaticTokenAddress = "0x5FbDB2315678afecb367f032d93F642f64180aa3" //nolint:gosec
 	l1BridgeAddr      = "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9"
 	l2BridgeAddr      = "0x9d98deabc42dd696deb9e40b4f1cab7ddbf55988"
@@ -117,7 +116,6 @@ func (m *Manager) SendL1Deposit(ctx context.Context, tokenAddr common.Address, a
 ) error {
 	client, auth, _, err := initClientConnection(ctx, "l1")
 	if err != nil {
-		log.Error(1)
 		return err
 	}
 	emptyAddr := common.Address{}
@@ -129,12 +127,10 @@ func (m *Manager) SendL1Deposit(ctx context.Context, tokenAddr common.Address, a
 	}
 	br, err := bridge.NewBridge(common.HexToAddress(l1BridgeAddr), client)
 	if err != nil {
-		log.Error(2)
 		return nil
 	}
 	tx, err := br.Bridge(auth, tokenAddr, amount, destNetwork, *destAddr)
 	if err != nil {
-		log.Error(3, err)
 		return err
 	}
 
@@ -146,7 +142,8 @@ func (m *Manager) SendL1Deposit(ctx context.Context, tokenAddr common.Address, a
 		return err
 	}
 	//Wait to process tx and sync it
-	time.Sleep(20 * time.Second)
+	const t time.Duration = 20
+	time.Sleep(t * time.Second)
 	return nil
 }
 
@@ -184,7 +181,8 @@ func (m *Manager) SendL2Deposit(ctx context.Context, tokenAddr common.Address, a
 	_, err = m.WaitTxToBeMined(ctx, client, tx.Hash(), txTimeout)
 
 	// Wait until the batch that includes the tx is consolidated
-	time.Sleep(45 * time.Second)
+	const t time.Duration = 45
+	time.Sleep(t * time.Second)
 	return err
 }
 
@@ -206,7 +204,8 @@ func (m *Manager) Setup() error {
 	if err != nil {
 		return err
 	}
-	time.Sleep(5 * time.Second)
+	const t time.Duration = 5
+	time.Sleep(t * time.Second)
 
 	// Start prover container
 	err = m.startProver()
@@ -226,7 +225,7 @@ func (m *Manager) Setup() error {
 		return err
 	}
 	//Wait for set the genesis and sync
-	time.Sleep(5 * time.Second)
+	time.Sleep(t * time.Second)
 
 	// Run bridge container
 	err = m.startBridge()
@@ -235,7 +234,8 @@ func (m *Manager) Setup() error {
 	}
 
 	//Wait for sync
-	time.Sleep(15 * time.Second)
+	const t2 time.Duration = 15
+	time.Sleep(t2 * time.Second)
 	return nil
 }
 
@@ -524,7 +524,6 @@ func initClientConnection(ctx context.Context, network string) (*ethclient.Clien
 	chainID, err := client.NetworkID(ctx)
 	if err != nil {
 		return nil, nil, nil, err
-
 	}
 
 	// Preparing l1 acc info
@@ -552,10 +551,12 @@ func initClientConnection(ctx context.Context, network string) (*ethclient.Clien
 	return client, auth, auth2, nil
 }
 
+// GetClaimData gets the claim data
 func (m *Manager) GetClaimData(networkID, depositCount uint) ([][bridgectrl.KeyLen]byte, *etherman.GlobalExitRoot, error) {
 	return m.bridgetree.GetClaim(networkID, depositCount)
 }
 
+// GetBridgeInfoByDestAddr gets the bridge info
 func (m *Manager) GetBridgeInfoByDestAddr(ctx context.Context, addr *common.Address) ([]*pb.Deposit, error) {
 	_, auth, _, err := initClientConnection(ctx, "l2")
 	if err != nil {
@@ -574,6 +575,7 @@ func (m *Manager) GetBridgeInfoByDestAddr(ctx context.Context, addr *common.Addr
 	return res.Deposits, nil
 }
 
+// SendL1Claim send an L1 claim
 func (m *Manager) SendL1Claim(ctx context.Context, deposit *pb.Deposit, smtProof [][32]byte, globalExitRoot *etherman.GlobalExitRoot) error {
 	client, auth, _, err := initClientConnection(ctx, "l1")
 	if err != nil {
@@ -597,12 +599,13 @@ func (m *Manager) SendL1Claim(ctx context.Context, deposit *pb.Deposit, smtProof
 	_, err = m.WaitTxToBeMined(ctx, client, tx.Hash(), txTimeout)
 
 	//Wait for the bridge sync
-	time.Sleep(30 * time.Second)
+	const t time.Duration = 30
+	time.Sleep(t * time.Second)
 
 	return err
-
 }
 
+// SendL2Claim send an L2 claim
 func (m *Manager) SendL2Claim(ctx context.Context, deposit *pb.Deposit, smtProof [][32]byte, globalExitRoot *etherman.GlobalExitRoot) error {
 	client, _, auth, err := initClientConnection(ctx, "l2")
 	if err != nil {
@@ -627,15 +630,17 @@ func (m *Manager) SendL2Claim(ctx context.Context, deposit *pb.Deposit, smtProof
 	_, err = m.WaitTxToBeMined(ctx, client, tx.Hash(), txTimeout)
 
 	//Wait for the consolidation
-	time.Sleep(30 * time.Second)
+	const t time.Duration = 30
+	time.Sleep(t * time.Second)
 	return err
-
 }
 
+// GetCurrentGlobalExitRootSynced reads the globalexitroot from db
 func (m *Manager) GetCurrentGlobalExitRootSynced(ctx context.Context) (*etherman.GlobalExitRoot, error) {
 	return m.storage.GetLatestExitRoot(ctx)
 }
 
+// GetCurrentGlobalExitRootFromSmc reads the globalexitroot from the smc
 func (m *Manager) GetCurrentGlobalExitRootFromSmc(ctx context.Context) (*etherman.GlobalExitRoot, error) {
 	client, _, _, err := initClientConnection(ctx, "l1")
 	if err != nil {
@@ -672,6 +677,7 @@ func (m *Manager) GetCurrentGlobalExitRootFromSmc(ctx context.Context) (*etherma
 	return &result, nil
 }
 
+// ForceBatchProposal propose an empty batch
 func (m *Manager) ForceBatchProposal(ctx context.Context) error {
 	// Eth client
 	log.Infof("Connecting to l1")
@@ -696,7 +702,7 @@ func (m *Manager) ForceBatchProposal(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	//wait to proccess approve
+	//wait to process approve
 	const txETHTransferTimeout = 20 * time.Second
 	_, err = m.WaitTxToBeMined(ctx, client, txApprove.Hash(), txETHTransferTimeout)
 	if err != nil {

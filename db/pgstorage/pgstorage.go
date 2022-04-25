@@ -3,9 +3,9 @@ package pgstorage
 import (
 	"context"
 	"errors"
+	"fmt"
 	"math/big"
 	"strings"
-	"fmt"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/hermez-bridge/etherman"
@@ -64,7 +64,7 @@ func NewPostgresStorage(cfg Config, dbTxSize uint) (*PostgresStorage, error) {
 // GetLastBlock gets the latest block
 func (s *PostgresStorage) GetLastBlock(ctx context.Context, networkID uint) (*etherman.Block, error) {
 	var block etherman.Block
-	err := s.db.QueryRow(ctx, getLastBlockSQL, networkID).Scan(&block.Id, &block.BlockNumber, &block.BlockHash, &block.ParentHash, &block.NetworkID, &block.ReceivedAt)
+	err := s.db.QueryRow(ctx, getLastBlockSQL, networkID).Scan(&block.ID, &block.BlockNumber, &block.BlockHash, &block.ParentHash, &block.NetworkID, &block.ReceivedAt)
 
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, gerror.ErrStorageNotFound
@@ -190,7 +190,7 @@ func (s *PostgresStorage) ResetMT(ctx context.Context, depositCnt uint) error {
 // GetPreviousBlock gets the offset previous block respect to latest
 func (s *PostgresStorage) GetPreviousBlock(ctx context.Context, networkID uint, offset uint64) (*etherman.Block, error) {
 	var block etherman.Block
-	err := s.db.QueryRow(ctx, getPreviousBlockSQL, networkID, offset).Scan(&block.Id, &block.BlockNumber, &block.BlockHash, &block.ParentHash, &block.NetworkID, &block.ReceivedAt)
+	err := s.db.QueryRow(ctx, getPreviousBlockSQL, networkID, offset).Scan(&block.ID, &block.BlockNumber, &block.BlockHash, &block.ParentHash, &block.NetworkID, &block.ReceivedAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, gerror.ErrStorageNotFound
 	} else if err != nil {
@@ -234,9 +234,9 @@ func (s *PostgresStorage) Commit(ctx context.Context, index uint) error {
 
 // BeginDBTransaction starts a transaction block
 func (s *PostgresStorage) BeginDBTransaction(ctx context.Context, index uint) error {
-	if s.dbTx[index] != nil {                                                                                                                                                                          
-		return fmt.Errorf("db tx already ongoing!. networkID: %d", index)                                                                                                                                               
-	}    
+	if s.dbTx[index] != nil {
+		return fmt.Errorf("db tx already ongoing!. networkID: %d", index)
+	}
 	dbTx, err := s.db.Begin(ctx)
 	if err != nil {
 		return err

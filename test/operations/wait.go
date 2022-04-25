@@ -15,16 +15,14 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/hermeznetwork/hermez-core/proverclient"
-	// bridgeclient "github.com/hermeznetwork/hermez-bridge/bridgectrl/pb"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/health/grpc_health_v1"
 )
 
 const (
-	defaultInterval        = 2 * time.Second
-	defaultDeadline        = 45 * time.Second
-	defaultTxMinedDeadline = 5 * time.Second
+	defaultInterval = 2 * time.Second
+	defaultDeadline = 45 * time.Second
 )
 
 // Wait handles polliing until conditions are met.
@@ -232,13 +230,13 @@ func bridgeUpCondition() (done bool, err error) {
 
 	// return done, nil
 	res, err := http.Get("http://localhost:8080/healthz")
-    if err != nil {
-        return false, err
-    }
+	if err != nil {
+		return false, err
+	}
 
 	if res.Body != nil {
-		defer func() error {
-			return res.Body.Close()
+		defer func() {
+			err = res.Body.Close()
 		}()
 	}
 

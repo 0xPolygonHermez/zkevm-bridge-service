@@ -32,7 +32,7 @@ type Order struct {
 
 // Block struct
 type Block struct {
-	Id              uint64
+	ID              uint64
 	BlockNumber     uint64
 	BlockHash       common.Hash
 	ParentHash      common.Hash
