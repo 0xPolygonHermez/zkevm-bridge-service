@@ -61,11 +61,11 @@ type Deposit struct {
 
 // GlobalExitRoot struct
 type GlobalExitRoot struct {
-	BlockID            uint64
-	BlockNumber        uint64
-	GlobalExitRootNum  *big.Int
+	BlockID             uint64
+	BlockNumber         uint64
+	GlobalExitRootNum   *big.Int
 	GlobalExitRootL2Num *big.Int
-	ExitRoots          []common.Hash
+	ExitRoots           []common.Hash
 }
 
 // Claim struct

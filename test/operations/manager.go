@@ -27,8 +27,8 @@ import (
 	erc20 "github.com/hermeznetwork/hermez-core/etherman/smartcontracts/matic"
 	"github.com/hermeznetwork/hermez-core/etherman/smartcontracts/proofofefficiency"
 	"github.com/hermeznetwork/hermez-core/log"
-	"github.com/hermeznetwork/hermez-core/test/operations"
 	"github.com/hermeznetwork/hermez-core/test/contracts/bin/ERC20"
+	"github.com/hermeznetwork/hermez-core/test/operations"
 )
 
 const (
@@ -723,6 +723,7 @@ func (m *Manager) ForceBatchProposal(ctx context.Context) error {
 	return nil
 }
 
+// DeployERC20 deploys erc20 smc
 func (m *Manager) DeployERC20(ctx context.Context, name, symbol, network string) (common.Address, *ERC20.ERC20, error) {
 	client, auth, auth2, err := initClientConnection(ctx, network)
 	if err != nil {
@@ -741,6 +742,7 @@ func (m *Manager) DeployERC20(ctx context.Context, name, symbol, network string)
 	return addr, instance, err
 }
 
+// MintERC20 mint erc20 tokens
 func (m *Manager) MintERC20(ctx context.Context, erc20sc *ERC20.ERC20, amount *big.Int, network string) (*types.Transaction, error) {
 	client, auth, auth2, err := initClientConnection(ctx, network)
 	if err != nil {
@@ -755,16 +757,19 @@ func (m *Manager) MintERC20(ctx context.Context, erc20sc *ERC20.ERC20, amount *b
 	}
 	const txMinedTimeoutLimit = 20 * time.Second
 	_, err = m.WaitTxToBeMined(ctx, client, tx.Hash(), txMinedTimeoutLimit)
-
+	if err != nil {
+		return nil, err
+	}
 	err = m.ApproveERC20(ctx, erc20sc, common.HexToAddress(l2BridgeAddr), amount, network)
 	if err != nil {
 		return nil, err
 	}
-	time.Sleep(30 * time.Second)
-	
+	const t time.Duration = 30
+	time.Sleep(t * time.Second)
 	return tx, err
 }
 
+// ApproveERC20 approves erc20 tokens
 func (m *Manager) ApproveERC20(ctx context.Context, erc20sc *ERC20.ERC20, routerAddr common.Address, amount *big.Int, network string) error {
 	client, auth, auth2, err := initClientConnection(ctx, network)
 	if err != nil {
@@ -782,6 +787,7 @@ func (m *Manager) ApproveERC20(ctx context.Context, erc20sc *ERC20.ERC20, router
 	return err
 }
 
+// GetTokenWrapped get token wrapped info
 func (m *Manager) GetTokenWrapped(ctx context.Context, originNetwork uint, originalTokenAddr common.Address) (*etherman.TokenWrapped, error) {
 	return m.storage.GetTokenWrapped(ctx, originNetwork, originalTokenAddr)
 }
