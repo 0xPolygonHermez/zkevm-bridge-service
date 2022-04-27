@@ -82,7 +82,7 @@ services:
 
   hez-bridge-mock:
     container_name: hez-bridge-mock
-    image: hezbridge
+    image: hermeznetwork/hermez-bridge
     ports:
       - 8080:8080
       - 9090:9090

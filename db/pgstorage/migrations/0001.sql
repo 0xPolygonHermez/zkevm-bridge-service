@@ -15,11 +15,12 @@ CREATE TABLE sync.block
 
 CREATE TABLE sync.exit_root
 (
-    block_id             BIGINT NOT NULL REFERENCES sync.block (id) ON DELETE CASCADE,
-    block_num            BIGINT NOT NULL,
-    global_exit_root_num BIGINT,
-    mainnet_exit_root    BYTEA,
-    rollup_exit_root     BYTEA
+    block_id                BIGINT NOT NULL REFERENCES sync.block (id) ON DELETE CASCADE,
+    block_num               BIGINT NOT NULL,
+    global_exit_root_num    BIGINT,
+    global_exit_root_l2_num BIGINT,
+    mainnet_exit_root       BYTEA,
+    rollup_exit_root        BYTEA
 );
 
 CREATE TABLE sync.batch

@@ -28,6 +28,7 @@ import (
 	"github.com/hermeznetwork/hermez-core/etherman/smartcontracts/proofofefficiency"
 	"github.com/hermeznetwork/hermez-core/log"
 	"github.com/hermeznetwork/hermez-core/test/operations"
+	"github.com/hermeznetwork/hermez-core/test/contracts/bin/ERC20"
 )
 
 const (
@@ -618,7 +619,7 @@ func (m *Manager) SendL2Claim(ctx context.Context, deposit *pb.Deposit, smtProof
 	}
 	amount, _ := new(big.Int).SetString(deposit.Amount, encoding.Base10)
 	tx, err := br.Claim(auth, common.HexToAddress(deposit.TokenAddr), amount, deposit.OrigNet, deposit.DestNet,
-		common.HexToAddress(deposit.DestAddr), smtProof, uint32(deposit.DepositCnt), globalExitRoot.GlobalExitRootNum,
+		common.HexToAddress(deposit.DestAddr), smtProof, uint32(deposit.DepositCnt), globalExitRoot.GlobalExitRootL2Num,
 		globalExitRoot.ExitRoots[0], globalExitRoot.ExitRoots[1])
 	if err != nil {
 		return err
@@ -720,4 +721,67 @@ func (m *Manager) ForceBatchProposal(ctx context.Context) error {
 		return err
 	}
 	return nil
+}
+
+func (m *Manager) DeployERC20(ctx context.Context, name, symbol, network string) (common.Address, *ERC20.ERC20, error) {
+	client, auth, auth2, err := initClientConnection(ctx, network)
+	if err != nil {
+		return common.Address{}, nil, err
+	}
+	if network == "l2" {
+		auth = auth2
+	}
+	const txMinedTimeoutLimit = 20 * time.Second
+	addr, tx, instance, err := ERC20.DeployERC20(auth, client, name, symbol)
+	if err != nil {
+		return common.Address{}, nil, err
+	}
+	_, err = m.WaitTxToBeMined(ctx, client, tx.Hash(), txMinedTimeoutLimit)
+
+	return addr, instance, err
+}
+
+func (m *Manager) MintERC20(ctx context.Context, erc20sc *ERC20.ERC20, amount *big.Int, network string) (*types.Transaction, error) {
+	client, auth, auth2, err := initClientConnection(ctx, network)
+	if err != nil {
+		return nil, err
+	}
+	if network == "l2" {
+		auth = auth2
+	}
+	tx, err := erc20sc.Mint(auth, amount)
+	if err != nil {
+		return nil, err
+	}
+	const txMinedTimeoutLimit = 20 * time.Second
+	_, err = m.WaitTxToBeMined(ctx, client, tx.Hash(), txMinedTimeoutLimit)
+
+	err = m.ApproveERC20(ctx, erc20sc, common.HexToAddress(l2BridgeAddr), amount, network)
+	if err != nil {
+		return nil, err
+	}
+	time.Sleep(30 * time.Second)
+	
+	return tx, err
+}
+
+func (m *Manager) ApproveERC20(ctx context.Context, erc20sc *ERC20.ERC20, routerAddr common.Address, amount *big.Int, network string) error {
+	client, auth, auth2, err := initClientConnection(ctx, network)
+	if err != nil {
+		return err
+	}
+	if network == "l2" {
+		auth = auth2
+	}
+	tx, err := erc20sc.Approve(auth, routerAddr, amount)
+	if err != nil {
+		return err
+	}
+	const txMinedTimeoutLimit = 20 * time.Second
+	_, err = m.WaitTxToBeMined(ctx, client, tx.Hash(), txMinedTimeoutLimit)
+	return err
+}
+
+func (m *Manager) GetTokenWrapped(ctx context.Context, originNetwork uint, originalTokenAddr common.Address) (*etherman.TokenWrapped, error) {
+	return m.storage.GetTokenWrapped(ctx, originNetwork, originalTokenAddr)
 }
