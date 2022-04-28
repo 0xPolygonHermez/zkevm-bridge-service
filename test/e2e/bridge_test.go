@@ -356,7 +356,7 @@ func TestE2E(t *testing.T) {
 		// Check L1 funds to see if the amount has been increased
 		balance, err = opsman.CheckAccountTokenBalance(ctx, "l1", tokenAddr, &destAddr)
 		require.NoError(t, err)
-		assert.NotEqual(t, big.NewInt(800000000000000000), balance)
+		assert.Equal(t, big.NewInt(8000000000000000000), balance)
 		// Check L2 funds to see that the amount has been reduced
 		balance, err = opsman.CheckAccountTokenBalance(ctx, "l2", tokenWrapped.WrappedTokenAddress, &destAddr)
 		require.NoError(t, err)
