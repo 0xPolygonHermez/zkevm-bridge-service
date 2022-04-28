@@ -302,7 +302,7 @@ func TestE2E(t *testing.T) {
 		smtProof, globaExitRoot, err := opsman.GetClaimData(uint(deposits[0].NetworkId), uint(deposits[0].DepositCnt))
 		require.NoError(t, err)
 		for _, s := range smtProof {
-			t.Log("smt: 0x"+hex.EncodeToString(s[:]))
+			t.Log("smt: 0x" + hex.EncodeToString(s[:]))
 		}
 		// Force to propose a new batch
 		err = opsman.ForceBatchProposal(ctx)
