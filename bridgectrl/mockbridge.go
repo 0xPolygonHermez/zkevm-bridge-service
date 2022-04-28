@@ -94,7 +94,7 @@ func MockBridgeCtrl(store *pgstorage.PostgresStorage) (*BridgeController, error)
 			OriginalNetwork:    testClaimVectors[i].OriginalNetwork,
 			Token:              common.HexToAddress(testClaimVectors[i].Token),
 			Amount:             amount,
-			DestinationNetwork: testClaimVectors[i].DestinationNetwork,
+			NetworkID:          testClaimVectors[i].DestinationNetwork,
 			DestinationAddress: common.HexToAddress(testClaimVectors[i].DestinationAddress),
 			BlockID:            id,
 			BlockNumber:        testClaimVectors[i].BlockNumber,

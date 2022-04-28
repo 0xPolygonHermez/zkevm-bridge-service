@@ -26,8 +26,8 @@ func init() {
 // NewMerkleTree creates new MerkleTree.
 func NewMerkleTree(ctx context.Context, store merkleTreeStore, height uint8) (*MerkleTree, error) {
 	for h := uint8(0); h < height; h++ {
-		if h == 0 { // store zero value for the empty state
-			err := store.Set(ctx, zeroHashes[h][:], [][]byte{zeroHashes[h][:], zeroHashes[h][:]}, 0, height)
+		if h == 0 {
+			err := store.Set(ctx, zeroHashes[h][:], [][]byte{zeroHashes[h][:], zeroHashes[h][:]}, 0, h)
 			if err != nil {
 				return nil, err
 			}
@@ -61,10 +61,6 @@ func (mt *MerkleTree) getSiblings(ctx context.Context, index uint, root [KeyLen]
 
 		copy(left[:], value[0])
 		copy(right[:], value[1])
-
-		if err != nil {
-			return nil, err
-		}
 
 		if index&(1<<h) > 0 {
 			siblings = append(siblings, left)
