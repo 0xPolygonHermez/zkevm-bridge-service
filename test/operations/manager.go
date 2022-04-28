@@ -159,7 +159,7 @@ func (m *Manager) SendL2Deposit(ctx context.Context, tokenAddr common.Address, a
 
 	// TODO Remove gas hardcoded when gas estimatios is fixed
 	auth.GasLimit = 234480
-
+	auth.GasPrice = big.NewInt(0) //BOrrar
 	emptyAddr := common.Address{}
 	if tokenAddr == emptyAddr {
 		auth.Value = amount
@@ -473,6 +473,8 @@ func (m *Manager) CheckAccountTokenBalance(ctx context.Context, network string, 
 	if account == nil {
 		account = &auth.From
 	}
+	b, _:= client.BalanceAt(ctx, *account, nil)
+	log.Warn("balance ethers: ", b)
 	erc20Token, err := erc20.NewMatic(tokenAddr, client)
 	if err != nil {
 		return big.NewInt(0), nil
@@ -743,13 +745,19 @@ func (m *Manager) DeployERC20(ctx context.Context, name, symbol, network string)
 }
 
 // MintERC20 mint erc20 tokens
-func (m *Manager) MintERC20(ctx context.Context, erc20sc *ERC20.ERC20, amount *big.Int, network string) (*types.Transaction, error) {
+func (m *Manager) MintERC20(ctx context.Context, erc20Addr common.Address, amount *big.Int, network string) (*types.Transaction, error) {
 	client, auth, auth2, err := initClientConnection(ctx, network)
 	if err != nil {
 		return nil, err
 	}
+	var bridgeAddress = l1BridgeAddr
 	if network == "l2" {
 		auth = auth2
+		bridgeAddress = l2BridgeAddr
+	}
+	erc20sc, err := ERC20.NewERC20(erc20Addr, client)
+	if err != nil {
+		return nil, err
 	}
 	tx, err := erc20sc.Mint(auth, amount)
 	if err != nil {
@@ -760,7 +768,7 @@ func (m *Manager) MintERC20(ctx context.Context, erc20sc *ERC20.ERC20, amount *b
 	if err != nil {
 		return nil, err
 	}
-	err = m.ApproveERC20(ctx, erc20sc, common.HexToAddress(l2BridgeAddr), amount, network)
+	err = m.ApproveERC20(ctx, erc20Addr, common.HexToAddress(bridgeAddress), amount, network)
 	if err != nil {
 		return nil, err
 	}
@@ -770,15 +778,20 @@ func (m *Manager) MintERC20(ctx context.Context, erc20sc *ERC20.ERC20, amount *b
 }
 
 // ApproveERC20 approves erc20 tokens
-func (m *Manager) ApproveERC20(ctx context.Context, erc20sc *ERC20.ERC20, routerAddr common.Address, amount *big.Int, network string) error {
+func (m *Manager) ApproveERC20(ctx context.Context, erc20Addr, bridgeAddr common.Address, amount *big.Int, network string) error {
 	client, auth, auth2, err := initClientConnection(ctx, network)
 	if err != nil {
 		return err
 	}
 	if network == "l2" {
 		auth = auth2
+		auth.GasPrice = big.NewInt(0)
 	}
-	tx, err := erc20sc.Approve(auth, routerAddr, amount)
+	erc20sc, err := ERC20.NewERC20(erc20Addr, client)
+	if err != nil {
+		return err
+	}
+	tx, err := erc20sc.Approve(auth, bridgeAddr, amount)
 	if err != nil {
 		return err
 	}
