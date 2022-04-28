@@ -159,7 +159,6 @@ func (m *Manager) SendL2Deposit(ctx context.Context, tokenAddr common.Address, a
 
 	// TODO Remove gas hardcoded when gas estimatios is fixed
 	auth.GasLimit = 234480
-	auth.GasPrice = big.NewInt(0) //BOrrar
 	emptyAddr := common.Address{}
 	if tokenAddr == emptyAddr {
 		auth.Value = amount
@@ -473,8 +472,6 @@ func (m *Manager) CheckAccountTokenBalance(ctx context.Context, network string, 
 	if account == nil {
 		account = &auth.From
 	}
-	b, _:= client.BalanceAt(ctx, *account, nil)
-	log.Warn("balance ethers: ", b)
 	erc20Token, err := erc20.NewMatic(tokenAddr, client)
 	if err != nil {
 		return big.NewInt(0), nil
