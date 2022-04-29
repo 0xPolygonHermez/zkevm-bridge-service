@@ -2,15 +2,12 @@ package operations
 
 import (
 	"context"
-	"errors"
-	"fmt"
 	"math/big"
 	"os"
 	"os/exec"
 	"strings"
 	"time"
 
-	ethereum "github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -73,7 +70,6 @@ type Manager struct {
 	storage       db.Storage
 	bridgetree    *bridgectrl.BridgeController
 	bridgeService pb.BridgeServiceServer
-	wait          *Wait
 }
 
 // NewManager returns a manager ready to be used and a potential error caused
@@ -88,7 +84,6 @@ func NewManager(ctx context.Context, cfg *Config) (*Manager, error) {
 	opsman := &Manager{
 		cfg:  cfg,
 		ctx:  ctx,
-		wait: NewWait(),
 	}
 	//Init storage and mt
 	pgst, err := pgstorage.NewPostgresStorage(dbConfig, 0)
@@ -138,7 +133,7 @@ func (m *Manager) SendL1Deposit(ctx context.Context, tokenAddr common.Address, a
 	// wait matic transfer to be mined
 	log.Infof("Waiting L1Deposit to be mined")
 	const txTimeout = 15 * time.Second
-	_, err = m.WaitTxToBeMined(ctx, client, tx.Hash(), txTimeout)
+	err = WaitTxToBeMined(ctx, client, tx.Hash(), txTimeout)
 	if err != nil {
 		return err
 	}
@@ -178,7 +173,7 @@ func (m *Manager) SendL2Deposit(ctx context.Context, tokenAddr common.Address, a
 	// wait transfer to be included in a batch
 	log.Infof("Waiting tx to be included in a new batch proposal")
 	const txTimeout = 15 * time.Second
-	_, err = m.WaitTxToBeMined(ctx, client, tx.Hash(), txTimeout)
+	err = WaitTxToBeMined(ctx, client, tx.Hash(), txTimeout)
 
 	// Wait until the batch that includes the tx is consolidated
 	const t time.Duration = 45
@@ -278,7 +273,7 @@ func (m *Manager) AddFunds(ctx context.Context) error {
 	// Wait eth transfer to be mined
 	log.Infof("Waiting tx to be mined")
 	const txETHTransferTimeout = 5 * time.Second
-	_, err = m.WaitTxToBeMined(ctx, client, signedTx.Hash(), txETHTransferTimeout)
+	err = WaitTxToBeMined(ctx, client, signedTx.Hash(), txETHTransferTimeout)
 	if err != nil {
 		return err
 	}
@@ -302,7 +297,7 @@ func (m *Manager) AddFunds(ctx context.Context) error {
 	// wait matic transfer to be mined
 	log.Infof("Waiting tx to be mined")
 	const txMaticTransferTimeout = 5 * time.Second
-	_, err = m.WaitTxToBeMined(ctx, client, tx.Hash(), txMaticTransferTimeout)
+	err = WaitTxToBeMined(ctx, client, tx.Hash(), txMaticTransferTimeout)
 	if err != nil {
 		return err
 	}
@@ -344,7 +339,7 @@ func (m *Manager) startNetwork() error {
 		return err
 	}
 	// Wait network to be ready
-	return m.wait.Poll(defaultInterval, defaultDeadline, networkUpCondition)
+	return poll(defaultInterval, defaultDeadline, networkUpCondition)
 }
 
 func stopNetwork() error {
@@ -362,7 +357,7 @@ func (m *Manager) startCore() error {
 		return err
 	}
 	// Wait core to be ready
-	return m.wait.Poll(defaultInterval, defaultDeadline, coreUpCondition)
+	return poll(defaultInterval, defaultDeadline, coreUpCondition)
 }
 
 func stopCore() error {
@@ -380,7 +375,7 @@ func (m *Manager) startProver() error {
 		return err
 	}
 	// Wait prover to be ready
-	return m.wait.Poll(defaultInterval, defaultDeadline, proverUpCondition)
+	return poll(defaultInterval, defaultDeadline, proverUpCondition)
 }
 
 func stopProver() error {
@@ -405,46 +400,12 @@ func (m *Manager) startBridge() error {
 		return err
 	}
 	// Wait bridge to be ready
-	return m.wait.Poll(defaultInterval, defaultDeadline, bridgeUpCondition)
+	return poll(defaultInterval, defaultDeadline, bridgeUpCondition)
 }
 
 func stopBridge() error {
 	cmd := exec.Command(makeCmd, "stop-bridge")
 	return runCmd(cmd)
-}
-
-//WaitTxToBeMined waits until a tx is mined or forged
-func (m *Manager) WaitTxToBeMined(ctx context.Context, client *ethclient.Client, hash common.Hash, timeout time.Duration) (*types.Receipt, error) {
-	start := time.Now()
-	for {
-		if time.Since(start) > timeout {
-			return nil, errors.New("timeout exceed")
-		}
-
-		time.Sleep(1 * time.Second)
-
-		_, isPending, err := client.TransactionByHash(ctx, hash)
-		if err == ethereum.NotFound {
-			continue
-		}
-
-		if err != nil {
-			return nil, err
-		}
-
-		if !isPending {
-			r, err := client.TransactionReceipt(ctx, hash)
-			if err != nil {
-				return nil, err
-			}
-
-			if r.Status == types.ReceiptStatusFailed {
-				return nil, fmt.Errorf("transaction has failed: %s", string(r.PostState))
-			}
-
-			return r, nil
-		}
-	}
 }
 
 // CheckAccountBalance checks the balance by address
@@ -596,7 +557,7 @@ func (m *Manager) SendL1Claim(ctx context.Context, deposit *pb.Deposit, smtProof
 	// wait matic transfer to be mined
 	log.Infof("Waiting tx to be mined")
 	const txTimeout = 15 * time.Second
-	_, err = m.WaitTxToBeMined(ctx, client, tx.Hash(), txTimeout)
+	err = WaitTxToBeMined(ctx, client, tx.Hash(), txTimeout)
 
 	//Wait for the bridge sync
 	const t time.Duration = 30
@@ -627,7 +588,7 @@ func (m *Manager) SendL2Claim(ctx context.Context, deposit *pb.Deposit, smtProof
 	// wait matic transfer to be mined
 	log.Infof("Waiting tx to be mined")
 	const txTimeout = 15 * time.Second
-	_, err = m.WaitTxToBeMined(ctx, client, tx.Hash(), txTimeout)
+	err = WaitTxToBeMined(ctx, client, tx.Hash(), txTimeout)
 
 	//Wait for the consolidation
 	const t time.Duration = 30
@@ -704,7 +665,7 @@ func (m *Manager) ForceBatchProposal(ctx context.Context) error {
 	}
 	//wait to process approve
 	const txETHTransferTimeout = 20 * time.Second
-	_, err = m.WaitTxToBeMined(ctx, client, txApprove.Hash(), txETHTransferTimeout)
+	err = WaitTxToBeMined(ctx, client, txApprove.Hash(), txETHTransferTimeout)
 	if err != nil {
 		return err
 	}
@@ -715,7 +676,7 @@ func (m *Manager) ForceBatchProposal(ctx context.Context) error {
 
 	// Wait eth transfer to be mined
 	log.Infof("Waiting tx to be mined")
-	_, err = m.WaitTxToBeMined(ctx, client, tx.Hash(), txETHTransferTimeout)
+	err = WaitTxToBeMined(ctx, client, tx.Hash(), txETHTransferTimeout)
 	if err != nil {
 		return err
 	}
@@ -736,7 +697,7 @@ func (m *Manager) DeployERC20(ctx context.Context, name, symbol, network string)
 	if err != nil {
 		return common.Address{}, nil, err
 	}
-	_, err = m.WaitTxToBeMined(ctx, client, tx.Hash(), txMinedTimeoutLimit)
+	err = WaitTxToBeMined(ctx, client, tx.Hash(), txMinedTimeoutLimit)
 
 	return addr, instance, err
 }
@@ -761,7 +722,7 @@ func (m *Manager) MintERC20(ctx context.Context, erc20Addr common.Address, amoun
 		return nil, err
 	}
 	const txMinedTimeoutLimit = 20 * time.Second
-	_, err = m.WaitTxToBeMined(ctx, client, tx.Hash(), txMinedTimeoutLimit)
+	err = WaitTxToBeMined(ctx, client, tx.Hash(), txMinedTimeoutLimit)
 	if err != nil {
 		return nil, err
 	}
@@ -793,7 +754,7 @@ func (m *Manager) ApproveERC20(ctx context.Context, erc20Addr, bridgeAddr common
 		return err
 	}
 	const txMinedTimeoutLimit = 20 * time.Second
-	_, err = m.WaitTxToBeMined(ctx, client, tx.Hash(), txMinedTimeoutLimit)
+	err = WaitTxToBeMined(ctx, client, tx.Hash(), txMinedTimeoutLimit)
 	return err
 }
 

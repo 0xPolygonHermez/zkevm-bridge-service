@@ -6,7 +6,7 @@ require (
 	github.com/ethereum/go-ethereum v1.10.17
 	github.com/gobuffalo/packr/v2 v2.8.3
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.10.0
-	github.com/hermeznetwork/hermez-core v0.0.0-20220425155107-8bfad9f2918f
+	github.com/hermeznetwork/hermez-core v0.0.0-20220429110518-466c8220204a
 	github.com/iden3/go-iden3-crypto v0.0.14-0.20220413123345-edc36bfa5247
 	github.com/jackc/pgx/v4 v4.16.0
 	github.com/lib/pq v1.10.2
@@ -14,7 +14,7 @@ require (
 	github.com/rubenv/sql-migrate v0.0.0-20211023115951-9f02b1e13857
 	github.com/spf13/viper v1.11.0
 	github.com/stretchr/testify v1.7.1
-	github.com/urfave/cli/v2 v2.4.8
+	github.com/urfave/cli/v2 v2.5.0
 	golang.org/x/crypto v0.0.0-20220411220226-7b82a4e95df4
 	google.golang.org/genproto v0.0.0-20220407144326-9054f6ed7bac
 	google.golang.org/grpc v1.46.0

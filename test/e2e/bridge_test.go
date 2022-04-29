@@ -55,8 +55,7 @@ func TestE2E(t *testing.T) {
 			// Check initial globalExitRoot. Must fail because at the beginning, no globalExitRoot event is thrown.
 			globalExitRootSMC, err := opsman.GetCurrentGlobalExitRootFromSmc(ctx)
 			require.NoError(t, err)
-			t.Logf("initial globalExitRootSMC.GlobalExitRootNum: %+v,", globalExitRootSMC)
-
+			t.Logf("initial globalExitRootSMC: %+v,", globalExitRootSMC)
 			// Send L1 deposit
 			var destNetwork uint32 = 1
 			amount := new(big.Int).SetUint64(10000000000000000000)
@@ -155,7 +154,7 @@ func TestE2E(t *testing.T) {
 		// Check initial globalExitRoot.
 		globalExitRootSMC, err := opsman.GetCurrentGlobalExitRootFromSmc(ctx)
 		require.NoError(t, err)
-		t.Logf("initial globalExitRootSMC.GlobalExitRootNum: %+v,", globalExitRootSMC)
+		t.Logf("initial globalExitRootSMC: %+v,", globalExitRootSMC)
 
 		// Send L1 deposit
 		var destNetwork uint32 = 0
@@ -268,8 +267,7 @@ func TestE2E(t *testing.T) {
 		// Check initial globalExitRoot.
 		globalExitRootSMC, err := opsman.GetCurrentGlobalExitRootFromSmc(ctx)
 		require.NoError(t, err)
-		t.Logf("initial globalExitRootSMC.GlobalExitRootNum: %+v,", globalExitRootSMC)
-
+		t.Logf("initial globalExitRootSMC: %+v,", globalExitRootSMC)
 		// Send L1 deposit
 		var destNetwork uint32 = 1
 		amount := new(big.Int).SetUint64(10000000000000000000)
