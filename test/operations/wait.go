@@ -41,8 +41,6 @@ func WaitGRPCHealthy(address string) error {
 	return ops.WaitGRPCHealthy(address)
 }
 
-type conditionFunc func() (done bool, err error)
-
 func networkUpCondition() (bool, error) {
 	return ops.NodeUpCondition(l1NetworkURL)
 }

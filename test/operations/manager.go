@@ -82,8 +82,8 @@ func NewManager(ctx context.Context, cfg *Config) (*Manager, error) {
 	}
 
 	opsman := &Manager{
-		cfg:  cfg,
-		ctx:  ctx,
+		cfg: cfg,
+		ctx: ctx,
 	}
 	//Init storage and mt
 	pgst, err := pgstorage.NewPostgresStorage(dbConfig, 0)
