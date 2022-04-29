@@ -274,7 +274,7 @@ func RegisterBridgeServiceHandlerServer(ctx context.Context, mux *runtime.ServeM
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
-		ctx, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/hermez.bridge.v1.BridgeService/CheckAPI", runtime.WithHTTPPathPattern("/api"))
+		ctx, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/bridge.v1.BridgeService/CheckAPI", runtime.WithHTTPPathPattern("/api"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -298,7 +298,7 @@ func RegisterBridgeServiceHandlerServer(ctx context.Context, mux *runtime.ServeM
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
-		ctx, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/hermez.bridge.v1.BridgeService/GetBridges", runtime.WithHTTPPathPattern("/bridges/{dest_addr}"))
+		ctx, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/bridge.v1.BridgeService/GetBridges", runtime.WithHTTPPathPattern("/bridges/{dest_addr}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -322,7 +322,7 @@ func RegisterBridgeServiceHandlerServer(ctx context.Context, mux *runtime.ServeM
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
-		ctx, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/hermez.bridge.v1.BridgeService/GetProof", runtime.WithHTTPPathPattern("/merkle-proofs"))
+		ctx, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/bridge.v1.BridgeService/GetProof", runtime.WithHTTPPathPattern("/merkle-proofs"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -346,7 +346,7 @@ func RegisterBridgeServiceHandlerServer(ctx context.Context, mux *runtime.ServeM
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
-		ctx, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/hermez.bridge.v1.BridgeService/GetClaimStatus", runtime.WithHTTPPathPattern("/claim-status"))
+		ctx, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/bridge.v1.BridgeService/GetClaimStatus", runtime.WithHTTPPathPattern("/claim-status"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -370,7 +370,7 @@ func RegisterBridgeServiceHandlerServer(ctx context.Context, mux *runtime.ServeM
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
-		ctx, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/hermez.bridge.v1.BridgeService/GetClaims", runtime.WithHTTPPathPattern("/claims/{dest_addr}"))
+		ctx, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/bridge.v1.BridgeService/GetClaims", runtime.WithHTTPPathPattern("/claims/{dest_addr}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -433,7 +433,7 @@ func RegisterBridgeServiceHandlerClient(ctx context.Context, mux *runtime.ServeM
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
-		ctx, err = runtime.AnnotateContext(ctx, mux, req, "/hermez.bridge.v1.BridgeService/CheckAPI", runtime.WithHTTPPathPattern("/api"))
+		ctx, err = runtime.AnnotateContext(ctx, mux, req, "/bridge.v1.BridgeService/CheckAPI", runtime.WithHTTPPathPattern("/api"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -454,7 +454,7 @@ func RegisterBridgeServiceHandlerClient(ctx context.Context, mux *runtime.ServeM
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
-		ctx, err = runtime.AnnotateContext(ctx, mux, req, "/hermez.bridge.v1.BridgeService/GetBridges", runtime.WithHTTPPathPattern("/bridges/{dest_addr}"))
+		ctx, err = runtime.AnnotateContext(ctx, mux, req, "/bridge.v1.BridgeService/GetBridges", runtime.WithHTTPPathPattern("/bridges/{dest_addr}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -475,7 +475,7 @@ func RegisterBridgeServiceHandlerClient(ctx context.Context, mux *runtime.ServeM
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
-		ctx, err = runtime.AnnotateContext(ctx, mux, req, "/hermez.bridge.v1.BridgeService/GetProof", runtime.WithHTTPPathPattern("/merkle-proofs"))
+		ctx, err = runtime.AnnotateContext(ctx, mux, req, "/bridge.v1.BridgeService/GetProof", runtime.WithHTTPPathPattern("/merkle-proofs"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -496,7 +496,7 @@ func RegisterBridgeServiceHandlerClient(ctx context.Context, mux *runtime.ServeM
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
-		ctx, err = runtime.AnnotateContext(ctx, mux, req, "/hermez.bridge.v1.BridgeService/GetClaimStatus", runtime.WithHTTPPathPattern("/claim-status"))
+		ctx, err = runtime.AnnotateContext(ctx, mux, req, "/bridge.v1.BridgeService/GetClaimStatus", runtime.WithHTTPPathPattern("/claim-status"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -517,7 +517,7 @@ func RegisterBridgeServiceHandlerClient(ctx context.Context, mux *runtime.ServeM
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
-		ctx, err = runtime.AnnotateContext(ctx, mux, req, "/hermez.bridge.v1.BridgeService/GetClaims", runtime.WithHTTPPathPattern("/claims/{dest_addr}"))
+		ctx, err = runtime.AnnotateContext(ctx, mux, req, "/bridge.v1.BridgeService/GetClaims", runtime.WithHTTPPathPattern("/claims/{dest_addr}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return

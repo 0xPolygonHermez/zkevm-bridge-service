@@ -41,7 +41,7 @@ func NewBridgeServiceClient(cc grpc.ClientConnInterface) BridgeServiceClient {
 
 func (c *bridgeServiceClient) CheckAPI(ctx context.Context, in *CheckAPIRequest, opts ...grpc.CallOption) (*CheckAPIResponse, error) {
 	out := new(CheckAPIResponse)
-	err := c.cc.Invoke(ctx, "/hermez.bridge.v1.BridgeService/CheckAPI", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/bridge.v1.BridgeService/CheckAPI", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -50,7 +50,7 @@ func (c *bridgeServiceClient) CheckAPI(ctx context.Context, in *CheckAPIRequest,
 
 func (c *bridgeServiceClient) GetBridges(ctx context.Context, in *GetBridgesRequest, opts ...grpc.CallOption) (*GetBridgesResponse, error) {
 	out := new(GetBridgesResponse)
-	err := c.cc.Invoke(ctx, "/hermez.bridge.v1.BridgeService/GetBridges", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/bridge.v1.BridgeService/GetBridges", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -59,7 +59,7 @@ func (c *bridgeServiceClient) GetBridges(ctx context.Context, in *GetBridgesRequ
 
 func (c *bridgeServiceClient) GetProof(ctx context.Context, in *GetProofRequest, opts ...grpc.CallOption) (*GetProofResponse, error) {
 	out := new(GetProofResponse)
-	err := c.cc.Invoke(ctx, "/hermez.bridge.v1.BridgeService/GetProof", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/bridge.v1.BridgeService/GetProof", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -68,7 +68,7 @@ func (c *bridgeServiceClient) GetProof(ctx context.Context, in *GetProofRequest,
 
 func (c *bridgeServiceClient) GetClaimStatus(ctx context.Context, in *GetClaimStatusRequest, opts ...grpc.CallOption) (*GetClaimStatusResponse, error) {
 	out := new(GetClaimStatusResponse)
-	err := c.cc.Invoke(ctx, "/hermez.bridge.v1.BridgeService/GetClaimStatus", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/bridge.v1.BridgeService/GetClaimStatus", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -77,7 +77,7 @@ func (c *bridgeServiceClient) GetClaimStatus(ctx context.Context, in *GetClaimSt
 
 func (c *bridgeServiceClient) GetClaims(ctx context.Context, in *GetClaimsRequest, opts ...grpc.CallOption) (*GetClaimsResponse, error) {
 	out := new(GetClaimsResponse)
-	err := c.cc.Invoke(ctx, "/hermez.bridge.v1.BridgeService/GetClaims", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/bridge.v1.BridgeService/GetClaims", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -144,7 +144,7 @@ func _BridgeService_CheckAPI_Handler(srv interface{}, ctx context.Context, dec f
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/hermez.bridge.v1.BridgeService/CheckAPI",
+		FullMethod: "/bridge.v1.BridgeService/CheckAPI",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(BridgeServiceServer).CheckAPI(ctx, req.(*CheckAPIRequest))
@@ -162,7 +162,7 @@ func _BridgeService_GetBridges_Handler(srv interface{}, ctx context.Context, dec
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/hermez.bridge.v1.BridgeService/GetBridges",
+		FullMethod: "/bridge.v1.BridgeService/GetBridges",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(BridgeServiceServer).GetBridges(ctx, req.(*GetBridgesRequest))
@@ -180,7 +180,7 @@ func _BridgeService_GetProof_Handler(srv interface{}, ctx context.Context, dec f
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/hermez.bridge.v1.BridgeService/GetProof",
+		FullMethod: "/bridge.v1.BridgeService/GetProof",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(BridgeServiceServer).GetProof(ctx, req.(*GetProofRequest))
@@ -198,7 +198,7 @@ func _BridgeService_GetClaimStatus_Handler(srv interface{}, ctx context.Context,
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/hermez.bridge.v1.BridgeService/GetClaimStatus",
+		FullMethod: "/bridge.v1.BridgeService/GetClaimStatus",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(BridgeServiceServer).GetClaimStatus(ctx, req.(*GetClaimStatusRequest))
@@ -216,7 +216,7 @@ func _BridgeService_GetClaims_Handler(srv interface{}, ctx context.Context, dec 
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/hermez.bridge.v1.BridgeService/GetClaims",
+		FullMethod: "/bridge.v1.BridgeService/GetClaims",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(BridgeServiceServer).GetClaims(ctx, req.(*GetClaimsRequest))
@@ -228,7 +228,7 @@ func _BridgeService_GetClaims_Handler(srv interface{}, ctx context.Context, dec 
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
 var BridgeService_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "hermez.bridge.v1.BridgeService",
+	ServiceName: "bridge.v1.BridgeService",
 	HandlerType: (*BridgeServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{

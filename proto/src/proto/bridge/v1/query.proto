@@ -3,7 +3,7 @@
 **/
 
 syntax = "proto3";
-package hermez.bridge.v1;
+package bridge.v1;
 
 import "google/api/annotations.proto";
 

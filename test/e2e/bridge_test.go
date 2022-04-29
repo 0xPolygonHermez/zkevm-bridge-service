@@ -26,7 +26,7 @@ func TestE2E(t *testing.T) {
 		require.NoError(t, operations.Teardown())
 	}()
 
-	testCases, err := vectors.LoadE2ETestVectors("./../vectors/e2e-test.json")
+	testCases, err := vectors.LoadE2ETestVectors("./../vectors/src/e2e-test.json")
 	require.NoError(t, err)
 
 	ctx := context.Background()

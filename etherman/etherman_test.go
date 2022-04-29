@@ -157,7 +157,7 @@ func TestSCEvents(t *testing.T) {
 
 func readTests() []vectors.TxEventsSendBatchTestCase {
 	// Load test vectors
-	txEventsSendBatchTestCases, err := vectors.LoadTxEventsSendBatchTestCases("../test/vectors/smc-txevents-sendbatch-test-vector.json")
+	txEventsSendBatchTestCases, err := vectors.LoadTxEventsSendBatchTestCases("../test/vectors/src/smc-txevents-sendbatch-test-vector.json")
 	if err != nil {
 		log.Fatal(err)
 	}
