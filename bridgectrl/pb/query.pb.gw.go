@@ -50,7 +50,7 @@ func local_request_BridgeService_CheckAPI_0(ctx context.Context, marshaler runti
 }
 
 var (
-	filter_BridgeService_GetBridges_0 = &utilities.DoubleArray{Encoding: map[string]int{"ether_addr": 0}, Base: []int{1, 1, 0}, Check: []int{0, 1, 2}}
+	filter_BridgeService_GetBridges_0 = &utilities.DoubleArray{Encoding: map[string]int{"dest_addr": 0}, Base: []int{1, 1, 0}, Check: []int{0, 1, 2}}
 )
 
 func request_BridgeService_GetBridges_0(ctx context.Context, marshaler runtime.Marshaler, client BridgeServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
@@ -64,14 +64,14 @@ func request_BridgeService_GetBridges_0(ctx context.Context, marshaler runtime.M
 		_   = err
 	)
 
-	val, ok = pathParams["ether_addr"]
+	val, ok = pathParams["dest_addr"]
 	if !ok {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "ether_addr")
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "dest_addr")
 	}
 
-	protoReq.EtherAddr, err = runtime.String(val)
+	protoReq.DestAddr, err = runtime.String(val)
 	if err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "ether_addr", err)
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "dest_addr", err)
 	}
 
 	if err := req.ParseForm(); err != nil {
@@ -97,14 +97,14 @@ func local_request_BridgeService_GetBridges_0(ctx context.Context, marshaler run
 		_   = err
 	)
 
-	val, ok = pathParams["ether_addr"]
+	val, ok = pathParams["dest_addr"]
 	if !ok {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "ether_addr")
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "dest_addr")
 	}
 
-	protoReq.EtherAddr, err = runtime.String(val)
+	protoReq.DestAddr, err = runtime.String(val)
 	if err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "ether_addr", err)
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "dest_addr", err)
 	}
 
 	if err := req.ParseForm(); err != nil {
@@ -192,7 +192,7 @@ func local_request_BridgeService_GetClaimStatus_0(ctx context.Context, marshaler
 }
 
 var (
-	filter_BridgeService_GetClaims_0 = &utilities.DoubleArray{Encoding: map[string]int{"ether_addr": 0}, Base: []int{1, 1, 0}, Check: []int{0, 1, 2}}
+	filter_BridgeService_GetClaims_0 = &utilities.DoubleArray{Encoding: map[string]int{"dest_addr": 0}, Base: []int{1, 1, 0}, Check: []int{0, 1, 2}}
 )
 
 func request_BridgeService_GetClaims_0(ctx context.Context, marshaler runtime.Marshaler, client BridgeServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
@@ -206,14 +206,14 @@ func request_BridgeService_GetClaims_0(ctx context.Context, marshaler runtime.Ma
 		_   = err
 	)
 
-	val, ok = pathParams["ether_addr"]
+	val, ok = pathParams["dest_addr"]
 	if !ok {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "ether_addr")
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "dest_addr")
 	}
 
-	protoReq.EtherAddr, err = runtime.String(val)
+	protoReq.DestAddr, err = runtime.String(val)
 	if err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "ether_addr", err)
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "dest_addr", err)
 	}
 
 	if err := req.ParseForm(); err != nil {
@@ -239,14 +239,14 @@ func local_request_BridgeService_GetClaims_0(ctx context.Context, marshaler runt
 		_   = err
 	)
 
-	val, ok = pathParams["ether_addr"]
+	val, ok = pathParams["dest_addr"]
 	if !ok {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "ether_addr")
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "dest_addr")
 	}
 
-	protoReq.EtherAddr, err = runtime.String(val)
+	protoReq.DestAddr, err = runtime.String(val)
 	if err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "ether_addr", err)
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "dest_addr", err)
 	}
 
 	if err := req.ParseForm(); err != nil {
@@ -274,7 +274,7 @@ func RegisterBridgeServiceHandlerServer(ctx context.Context, mux *runtime.ServeM
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
-		ctx, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/hermez.bridge.v1.BridgeService/CheckAPI", runtime.WithHTTPPathPattern("/api"))
+		ctx, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/bridge.v1.BridgeService/CheckAPI", runtime.WithHTTPPathPattern("/api"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -298,7 +298,7 @@ func RegisterBridgeServiceHandlerServer(ctx context.Context, mux *runtime.ServeM
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
-		ctx, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/hermez.bridge.v1.BridgeService/GetBridges", runtime.WithHTTPPathPattern("/bridges/{ether_addr}"))
+		ctx, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/bridge.v1.BridgeService/GetBridges", runtime.WithHTTPPathPattern("/bridges/{dest_addr}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -322,7 +322,7 @@ func RegisterBridgeServiceHandlerServer(ctx context.Context, mux *runtime.ServeM
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
-		ctx, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/hermez.bridge.v1.BridgeService/GetProof", runtime.WithHTTPPathPattern("/merkle-proofs"))
+		ctx, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/bridge.v1.BridgeService/GetProof", runtime.WithHTTPPathPattern("/merkle-proofs"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -346,7 +346,7 @@ func RegisterBridgeServiceHandlerServer(ctx context.Context, mux *runtime.ServeM
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
-		ctx, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/hermez.bridge.v1.BridgeService/GetClaimStatus", runtime.WithHTTPPathPattern("/claim-status"))
+		ctx, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/bridge.v1.BridgeService/GetClaimStatus", runtime.WithHTTPPathPattern("/claim-status"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -370,7 +370,7 @@ func RegisterBridgeServiceHandlerServer(ctx context.Context, mux *runtime.ServeM
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
-		ctx, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/hermez.bridge.v1.BridgeService/GetClaims", runtime.WithHTTPPathPattern("/claims/{ether_addr}"))
+		ctx, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/bridge.v1.BridgeService/GetClaims", runtime.WithHTTPPathPattern("/claims/{dest_addr}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -433,7 +433,7 @@ func RegisterBridgeServiceHandlerClient(ctx context.Context, mux *runtime.ServeM
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
-		ctx, err = runtime.AnnotateContext(ctx, mux, req, "/hermez.bridge.v1.BridgeService/CheckAPI", runtime.WithHTTPPathPattern("/api"))
+		ctx, err = runtime.AnnotateContext(ctx, mux, req, "/bridge.v1.BridgeService/CheckAPI", runtime.WithHTTPPathPattern("/api"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -454,7 +454,7 @@ func RegisterBridgeServiceHandlerClient(ctx context.Context, mux *runtime.ServeM
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
-		ctx, err = runtime.AnnotateContext(ctx, mux, req, "/hermez.bridge.v1.BridgeService/GetBridges", runtime.WithHTTPPathPattern("/bridges/{ether_addr}"))
+		ctx, err = runtime.AnnotateContext(ctx, mux, req, "/bridge.v1.BridgeService/GetBridges", runtime.WithHTTPPathPattern("/bridges/{dest_addr}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -475,7 +475,7 @@ func RegisterBridgeServiceHandlerClient(ctx context.Context, mux *runtime.ServeM
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
-		ctx, err = runtime.AnnotateContext(ctx, mux, req, "/hermez.bridge.v1.BridgeService/GetProof", runtime.WithHTTPPathPattern("/merkle-proofs"))
+		ctx, err = runtime.AnnotateContext(ctx, mux, req, "/bridge.v1.BridgeService/GetProof", runtime.WithHTTPPathPattern("/merkle-proofs"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -496,7 +496,7 @@ func RegisterBridgeServiceHandlerClient(ctx context.Context, mux *runtime.ServeM
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
-		ctx, err = runtime.AnnotateContext(ctx, mux, req, "/hermez.bridge.v1.BridgeService/GetClaimStatus", runtime.WithHTTPPathPattern("/claim-status"))
+		ctx, err = runtime.AnnotateContext(ctx, mux, req, "/bridge.v1.BridgeService/GetClaimStatus", runtime.WithHTTPPathPattern("/claim-status"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -517,7 +517,7 @@ func RegisterBridgeServiceHandlerClient(ctx context.Context, mux *runtime.ServeM
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
-		ctx, err = runtime.AnnotateContext(ctx, mux, req, "/hermez.bridge.v1.BridgeService/GetClaims", runtime.WithHTTPPathPattern("/claims/{ether_addr}"))
+		ctx, err = runtime.AnnotateContext(ctx, mux, req, "/bridge.v1.BridgeService/GetClaims", runtime.WithHTTPPathPattern("/claims/{dest_addr}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -539,13 +539,13 @@ func RegisterBridgeServiceHandlerClient(ctx context.Context, mux *runtime.ServeM
 var (
 	pattern_BridgeService_CheckAPI_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0}, []string{"api"}, ""))
 
-	pattern_BridgeService_GetBridges_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 1, 0, 4, 1, 5, 1}, []string{"bridges", "ether_addr"}, ""))
+	pattern_BridgeService_GetBridges_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 1, 0, 4, 1, 5, 1}, []string{"bridges", "dest_addr"}, ""))
 
 	pattern_BridgeService_GetProof_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0}, []string{"merkle-proofs"}, ""))
 
 	pattern_BridgeService_GetClaimStatus_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0}, []string{"claim-status"}, ""))
 
-	pattern_BridgeService_GetClaims_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 1, 0, 4, 1, 5, 1}, []string{"claims", "ether_addr"}, ""))
+	pattern_BridgeService_GetClaims_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 1, 0, 4, 1, 5, 1}, []string{"claims", "dest_addr"}, ""))
 )
 
 var (

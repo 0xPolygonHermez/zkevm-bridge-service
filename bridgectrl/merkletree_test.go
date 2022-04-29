@@ -14,7 +14,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/hermez-bridge/db/pgstorage"
 	"github.com/hermeznetwork/hermez-bridge/etherman"
-	"github.com/hermeznetwork/hermez-bridge/test"
+	"github.com/hermeznetwork/hermez-bridge/test/vectors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -45,10 +45,10 @@ func formatBytes32String(text string) ([KeyLen]byte, error) {
 }
 
 func TestLeafHash(t *testing.T) {
-	data, err := os.ReadFile("test/vectors/mt-bridge/leaf-vectors.json")
+	data, err := os.ReadFile("test/vectors/src/mt-bridge/leaf-vectors.json")
 	require.NoError(t, err)
 
-	var leafVectors []test.DepositVectorRaw
+	var leafVectors []vectors.DepositVectorRaw
 	err = json.Unmarshal(data, &leafVectors)
 	require.NoError(t, err)
 
@@ -73,10 +73,10 @@ func TestLeafHash(t *testing.T) {
 }
 
 func TestMTAddLeaf(t *testing.T) {
-	data, err := os.ReadFile("test/vectors/mt-bridge/root-vectors.json")
+	data, err := os.ReadFile("test/vectors/src/mt-bridge/root-vectors.json")
 	require.NoError(t, err)
 
-	var mtTestVectors []test.MTRootVectorRaw
+	var mtTestVectors []vectors.MTRootVectorRaw
 	err = json.Unmarshal(data, &mtTestVectors)
 	require.NoError(t, err)
 
@@ -89,7 +89,7 @@ func TestMTAddLeaf(t *testing.T) {
 			err = pgstorage.InitOrReset(dbCfg)
 			require.NoError(t, err)
 
-			store, err := pgstorage.NewPostgresStorage(dbCfg)
+			store, err := pgstorage.NewPostgresStorage(dbCfg, 0)
 			require.NoError(t, err)
 
 			mt, err := NewMerkleTree(ctx, store, uint8(32))
@@ -127,10 +127,10 @@ func TestMTAddLeaf(t *testing.T) {
 }
 
 func TestMTGetProof(t *testing.T) {
-	data, err := os.ReadFile("test/vectors/mt-bridge/claim-vectors.json")
+	data, err := os.ReadFile("test/vectors/src/mt-bridge/claim-vectors.json")
 	require.NoError(t, err)
 
-	var mtTestVectors []test.MTClaimVectorRaw
+	var mtTestVectors []vectors.MTClaimVectorRaw
 	err = json.Unmarshal(data, &mtTestVectors)
 	require.NoError(t, err)
 
@@ -143,7 +143,7 @@ func TestMTGetProof(t *testing.T) {
 			err = pgstorage.InitOrReset(dbCfg)
 			require.NoError(t, err)
 
-			store, err := pgstorage.NewPostgresStorage(dbCfg)
+			store, err := pgstorage.NewPostgresStorage(dbCfg, 0)
 			require.NoError(t, err)
 
 			mt, err := NewMerkleTree(ctx, store, uint8(32))

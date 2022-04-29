@@ -65,7 +65,7 @@ install-linter: ## Installs the linter
 
 .PHONY: build-docker
 build-docker: ## Builds a docker image with the core binary
-	docker build -t hezbridge -f ./Dockerfile . --build-arg PRIVATE_TOKEN=${PRIVATE_TOKEN}
+	docker build -t hermeznetwork/hermez-bridge -f ./Dockerfile --build-arg PRIVATE_TOKEN=${GITHUB_TOKEN} .
 
 .PHONY: run-db-core
 run-db-core: ## Runs the node database
@@ -136,7 +136,7 @@ run: ## runs all services
 
 .PHONY: run-mockserver
 run-mockserver: ## runs the mocked restful server
-	$(RUNDBBRDIGE)
+	$(RUNDBBRIDGE)
 	sleep 3
 	$(RUNMOCKBRIDGE)
 
@@ -148,3 +148,7 @@ update-external-dependencies: ## Updates external dependencies like images, test
 generate-code-from-proto:
 	cd proto/src/proto/bridge/v1 && protoc --proto_path=. --proto_path=../../../../../third_party --go_out=../../../../../bridgectrl/pb --go-grpc_out=../../../../../bridgectrl/pb  --go_opt=paths=source_relative --go-grpc_opt=paths=source_relative query.proto
 	cd proto/src/proto/bridge/v1 && protoc --proto_path=. --proto_path=../../../../../third_party --grpc-gateway_out=logtostderr=true:../../../../../bridgectrl/pb --grpc-gateway_opt=paths=source_relative query.proto
+
+.PHONY: stop-mockserver
+stop-mockserver: ## Stops the mock bridge service
+	$(STOPMOCKBRIDGE)

@@ -9,39 +9,39 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/hermez-bridge/db/pgstorage"
 	"github.com/hermeznetwork/hermez-bridge/etherman"
-	"github.com/hermeznetwork/hermez-bridge/test"
+	"github.com/hermeznetwork/hermez-bridge/test/vectors"
 )
 
 // MockBridgeCtrl prepares mock data in the bridge service
 func MockBridgeCtrl(store *pgstorage.PostgresStorage) (*BridgeController, error) {
-	data, err := os.ReadFile("test/vectors/block-raw.json")
+	data, err := os.ReadFile("test/vectors/src/block-raw.json")
 	if err != nil {
 		return nil, err
 	}
 
-	var testBlockVectors []test.BlockVectorRaw
+	var testBlockVectors []vectors.BlockVectorRaw
 	err = json.Unmarshal(data, &testBlockVectors)
 	if err != nil {
 		return nil, err
 	}
 
-	data, err = os.ReadFile("test/vectors/deposit-raw.json")
+	data, err = os.ReadFile("test/vectors/src/deposit-raw.json")
 	if err != nil {
 		return nil, err
 	}
 
-	var testDepositVectors []test.DepositVectorRaw
+	var testDepositVectors []vectors.DepositVectorRaw
 	err = json.Unmarshal(data, &testDepositVectors)
 	if err != nil {
 		return nil, err
 	}
 
-	data, err = os.ReadFile("test/vectors/claim-raw.json")
+	data, err = os.ReadFile("test/vectors/src/claim-raw.json")
 	if err != nil {
 		return nil, err
 	}
 
-	var testClaimVectors []test.ClaimVectorRaw
+	var testClaimVectors []vectors.ClaimVectorRaw
 	err = json.Unmarshal(data, &testClaimVectors)
 	if err != nil {
 		return nil, err
@@ -94,7 +94,7 @@ func MockBridgeCtrl(store *pgstorage.PostgresStorage) (*BridgeController, error)
 			OriginalNetwork:    testClaimVectors[i].OriginalNetwork,
 			Token:              common.HexToAddress(testClaimVectors[i].Token),
 			Amount:             amount,
-			DestinationNetwork: testClaimVectors[i].DestinationNetwork,
+			NetworkID:          testClaimVectors[i].DestinationNetwork,
 			DestinationAddress: common.HexToAddress(testClaimVectors[i].DestinationAddress),
 			BlockID:            id,
 			BlockNumber:        testClaimVectors[i].BlockNumber,

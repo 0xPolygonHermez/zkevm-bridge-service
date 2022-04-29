@@ -25,7 +25,7 @@ func updateDeps(ctx *cli.Context) error {
 			SourceRepo:    "https://github.com/hermeznetwork/comms-protocol.git",
 		},
 		TV: &dependencies.TVConfig{
-			TargetDirPath: filepath.Join(dir, "test/vectors"),
+			TargetDirPath: filepath.Join(dir, "test/vectors/src"),
 			SourceRepo:    "https://github.com/hermeznetwork/test-vectors.git",
 		},
 	}

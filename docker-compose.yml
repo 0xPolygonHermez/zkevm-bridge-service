@@ -1,5 +1,16 @@
 version: '3'
 services:
+  hez-postgres-core:
+    container_name: hez-postgres-core
+    image: postgres
+    ports:
+      - 5432:5432
+    environment:
+      # In order to update this values, you may need to run: docker rm -f -v postgres
+      - POSTGRES_USER=test_user
+      - POSTGRES_PASSWORD=test_password
+      - POSTGRES_DB=test_db
+
   hez-postgres-bridge:
     container_name: hez-postgres-bridge
     image: postgres
@@ -13,7 +24,7 @@ services:
       - POSTGRES_PASSWORD=test_password
       - POSTGRES_DB=test_db
     command: -p 5433
-  
+
   hez-core:
     container_name: hez-core
     image: hermeznetwork/hermez-node-zkevm@sha256:e89ba4b8df5918cc7ff08a8c512fabdb8d30f550b01ad0efd1732bcae8eaf20c
@@ -28,6 +39,7 @@ services:
       - HERMEZCORE_ETHERMAN_PRIVATEKEYPATH=/pk/keystore
     volumes:
       - ./test/test.keystore:/pk/keystore
+    #command: ["./hezcore", "run", "--network", "local", "--cfg", "/app/config.local.toml"]
     command: >
       sh -c "./hezcore register --cfg /app/config.local.toml --network local -y http://hez-core:8123 &&
              ./hezcore approve --cfg /app/config.local.toml --network local --amount 10000 -y &&
@@ -35,13 +47,13 @@ services:
 
   hez-network:
     container_name: hez-network
-    image: hermeznetwork/geth-zkevm-contracts@sha256:a7e54578bb87096f0d46aba47d2ebf3bb439b845bed38817a6c9e5be2129eb45
+    image: hermeznetwork/geth-zkevm-contracts@sha256:3474e0715f4d941e83098bb0087cb13a9a94a30080382825167f902b1a38967d
     ports:
       - 8545:8545
 
   hez-prover:
     container_name: hez-prover
-    image: hermeznetwork/hez-mock-prover@sha256:aef8f9630b7a93526ddfbd5753f608d0a53ad5eb8c43195aefbfeb8f56ffe49f
+    image: hermeznetwork/hez-mock-prover@sha256:dacb57cdffc8505cb897cb83970891acbaac6e5600372d7fe357a5bf66c13ebb
     ports:
       - 50051:50051
     environment:
@@ -52,12 +64,28 @@ services:
       - POSTGRES_PORT=5432
       - PROOF_TIME=1000
 
-  hez-bridge-mock:
+  hez-bridge:
     container_name: hez-bridge
-    image: hezbridge
+    image: hermeznetwork/hermez-bridge
     ports:
-      - 9090:9090
       - 8080:8080
+      - 9090:9090
+    environment:
+      - HERMEZBRIDGE_DATABASE_USER=test_user
+      - HERMEZBRIDGE_DATABASE_PASSWORD=test_password
+      - HERMEZBRIDGE_DATABASE_NAME=test_db
+      - HERMEZBRIDGE_DATABASE_HOST=hez-postgres-bridge
+      - HERMEZBRIDGE_DATABASE_PORT=5433
+    volumes:
+      - ./config/config.local.toml:/app/config.toml
+    command: ["./hezbridge", "run", "--network", "local", "--cfg", "/app/config.toml"]
+
+  hez-bridge-mock:
+    container_name: hez-bridge-mock
+    image: hermeznetwork/hermez-bridge
+    ports:
+      - 8080:8080
+      - 9090:9090
     environment:
       - HERMEZBRIDGE_DATABASE_USER=test_user
       - HERMEZBRIDGE_DATABASE_PASSWORD=test_password

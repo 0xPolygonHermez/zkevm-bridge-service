@@ -11,6 +11,7 @@ import (
 
 	"github.com/hermeznetwork/hermez-bridge/bridgectrl/pb"
 	"github.com/hermeznetwork/hermez-bridge/test/operations"
+	"github.com/hermeznetwork/hermez-core/log"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/encoding/protojson"
 )
@@ -86,10 +87,11 @@ func TestBridgeMock(t *testing.T) {
 
 	var claimResp pb.GetClaimsResponse
 	err = protojson.Unmarshal(bodyBytes, &claimResp)
+	log.Info(err)
 	require.NoError(t, err)
 	require.Equal(t, len(claimResp.Claims), 1)
 
-	resp, err = http.Get(fmt.Sprintf("%s%s?orig_net=%d&deposit_cnt=%d", address, "/merkle-proofs", 0, 2))
+	resp, err = http.Get(fmt.Sprintf("%s%s?net_id=%d&deposit_cnt=%d", address, "/merkle-proofs", 0, 2))
 	require.NoError(t, err)
 
 	bodyBytes, err = ioutil.ReadAll(resp.Body)
@@ -100,7 +102,7 @@ func TestBridgeMock(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, len(proofResp.Proof.MerkleProof), 32)
 
-	resp, err = http.Get(fmt.Sprintf("%s%s?orig_net=%d&deposit_cnt=%d", address, "/claim-status", 0, 2))
+	resp, err = http.Get(fmt.Sprintf("%s%s?net_id=%d&deposit_cnt=%d", address, "/claim-status", 0, 2))
 	require.NoError(t, err)
 
 	bodyBytes, err = ioutil.ReadAll(resp.Body)
