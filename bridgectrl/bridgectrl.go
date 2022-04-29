@@ -4,7 +4,6 @@ import (
 	"context"
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/hermez-bridge/etherman"
 )
 
@@ -54,7 +53,7 @@ func (bt *BridgeController) AddDeposit(deposit *etherman.Deposit) error {
 
 	leaf := hashDeposit(deposit)
 
-	tID := bt.networkIDs[deposit.OriginalNetwork]
+	tID := bt.networkIDs[deposit.NetworkID]
 	ctx = context.WithValue(context.TODO(), contextKeyNetwork, tID) //nolint
 	return bt.exitTrees[tID-1].addLeaf(ctx, leaf)
 }

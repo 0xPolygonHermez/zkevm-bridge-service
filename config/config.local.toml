@@ -7,12 +7,12 @@ Database = "postgres"
 User = "test_user"
 Password = "test_password"
 Name = "test_db"
-Host = "localhost"
+Host = "hez-postgres-bridge"
 Port = "5433"
 
 [Etherman]
-L1URL = "http://localhost:8545"
-L2URLs = ["http://localhost:8123"]
+L1URL = "http://hez-network:8545"
+L2URLs = ["http://hez-core:8123"]
 
 [Synchronizer]
 SyncInterval = "2s"

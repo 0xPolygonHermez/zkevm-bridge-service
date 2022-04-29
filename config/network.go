@@ -45,10 +45,10 @@ var (
 	internalTestnetConfig = NetworkConfig{
 		Arity:                 4,
 		GenBlockNumber:        6262429,
-		PoEAddr:               common.HexToAddress("0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"),
-		BridgeAddr:            common.HexToAddress("0xDb5bf4968b0026bbC5E6a270392F7A26f21d174f"),
-		GlobalExitRootManAddr: common.HexToAddress("0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"),
-		L2BridgeAddrs:         []common.Address{common.HexToAddress("0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF")},
+		PoEAddr:               common.HexToAddress("0x9a5a6dfD995F53676e41Ea0ec6d77b817C58513E"),
+		BridgeAddr:            common.HexToAddress("0x7eDc3cd854f0A5FE720Ebb42e0B39a2F33c2ec37"),
+		GlobalExitRootManAddr: common.HexToAddress("0x20B5C093d354b39348eE384dC77eD698Eabbf89f"),
+		L2BridgeAddrs:         []common.Address{common.HexToAddress("0x9d98deabc42dd696deb9e40b4f1cab7ddbf55988")},
 		L1ChainID:             5, //Goerli
 	}
 	localConfig = NetworkConfig{
@@ -57,7 +57,7 @@ var (
 		PoEAddr:               common.HexToAddress("0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9"),
 		BridgeAddr:            common.HexToAddress("0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9"),
 		GlobalExitRootManAddr: common.HexToAddress("0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0"),
-		L2BridgeAddrs:         []common.Address{common.HexToAddress("0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF")},
+		L2BridgeAddrs:         []common.Address{common.HexToAddress("0x9d98deabc42dd696deb9e40b4f1cab7ddbf55988")},
 		L1ChainID:             1337,
 	}
 )

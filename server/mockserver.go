@@ -13,7 +13,7 @@ func RunMockServer() (*bridgectrl.BridgeController, error) {
 		return nil, err
 	}
 
-	store, err := pgstorage.NewPostgresStorage(dbCfg)
+	store, err := pgstorage.NewPostgresStorage(dbCfg, 0)
 	if err != nil {
 		return nil, err
 	}
