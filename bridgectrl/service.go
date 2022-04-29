@@ -93,7 +93,7 @@ func (s *bridgeService) GetProof(ctx context.Context, req *pb.GetProofRequest) (
 
 	var proof []string
 	for i := 0; i < len(merkleProof); i++ {
-		proof = append(proof, hex.EncodeToString(merkleProof[i][:]))
+		proof = append(proof, "0x"+hex.EncodeToString(merkleProof[i][:]))
 	}
 
 	return &pb.GetProofResponse{
