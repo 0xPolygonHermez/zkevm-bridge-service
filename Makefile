@@ -152,3 +152,7 @@ generate-code-from-proto:
 .PHONY: stop-mockserver
 stop-mockserver: ## Stops the mock bridge service
 	$(STOPMOCKBRIDGE)
+
+.PHONY: performance-test
+performance-test: ## Performance test of rest api and db transaction
+	go run ./test/performance/... 1000

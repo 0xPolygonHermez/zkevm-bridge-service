@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"sync"
 	"time"
 
@@ -27,7 +28,7 @@ const (
 
 func main() {
 	var (
-		preDepositCount = 10000
+		preDepositCount = 1000
 		networkIds      = []uint{0, 1000}
 		depositAmount   = big.NewInt(1000000000000) //nolint:gomnd
 		addressList     = []common.Address{}
@@ -35,6 +36,10 @@ func main() {
 		requestCount    = 20
 		wg              sync.WaitGroup
 	)
+
+	if len(os.Args) > 1 {
+		preDepositCount, _ = strconv.Atoi(os.Args[1])
+	}
 
 	for i := 0; i < addressCount; i++ {
 		addressList = append(addressList, common.BigToAddress(big.NewInt(int64(i))))

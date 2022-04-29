@@ -30,13 +30,8 @@ func init() {
 	}
 }
 
-<<<<<<< HEAD
-func TestBridgeCtrl(t *testing.T) {
-	data, err := os.ReadFile("test/vectors/deposit-raw.json")
-=======
 func TestBridgeTree(t *testing.T) {
 	data, err := os.ReadFile("test/vectors/src/deposit-raw.json")
->>>>>>> main
 	require.NoError(t, err)
 
 	var testVectors []vectors.DepositVectorRaw
