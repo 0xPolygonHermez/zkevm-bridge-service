@@ -133,7 +133,8 @@ func runRestServer(ctx context.Context, grpcPort, httpPort string) error {
 	muxHealthOpt := runtime.WithHealthzEndpoint(grpc_health_v1.NewHealthClient(conn))
 	muxJSONOpt := runtime.WithMarshalerOption(runtime.MIMEWildcard, &runtime.JSONPb{
 		MarshalOptions: protojson.MarshalOptions{
-			UseProtoNames: true,
+			UseProtoNames:   true,
+			EmitUnpopulated: true,
 		},
 		UnmarshalOptions: protojson.UnmarshalOptions{
 			DiscardUnknown: true,

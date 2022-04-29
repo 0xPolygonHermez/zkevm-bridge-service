@@ -11,6 +11,7 @@ import (
 
 	"github.com/hermeznetwork/hermez-bridge/bridgectrl/pb"
 	"github.com/hermeznetwork/hermez-bridge/test/operations"
+	"github.com/hermeznetwork/hermez-core/log"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/encoding/protojson"
 )
@@ -86,6 +87,7 @@ func TestBridgeMock(t *testing.T) {
 
 	var claimResp pb.GetClaimsResponse
 	err = protojson.Unmarshal(bodyBytes, &claimResp)
+	log.Info(err)
 	require.NoError(t, err)
 	require.Equal(t, len(claimResp.Claims), 1)
 

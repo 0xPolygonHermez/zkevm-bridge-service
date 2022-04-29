@@ -14,7 +14,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/hermez-bridge/db/pgstorage"
 	"github.com/hermeznetwork/hermez-bridge/etherman"
-	"github.com/hermeznetwork/hermez-bridge/test"
+	"github.com/hermeznetwork/hermez-bridge/test/vectors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -30,11 +30,16 @@ func init() {
 	}
 }
 
+<<<<<<< HEAD
 func TestBridgeCtrl(t *testing.T) {
 	data, err := os.ReadFile("test/vectors/deposit-raw.json")
+=======
+func TestBridgeTree(t *testing.T) {
+	data, err := os.ReadFile("test/vectors/src/deposit-raw.json")
+>>>>>>> main
 	require.NoError(t, err)
 
-	var testVectors []test.DepositVectorRaw
+	var testVectors []vectors.DepositVectorRaw
 	err = json.Unmarshal(data, &testVectors)
 	require.NoError(t, err)
 
