@@ -51,6 +51,7 @@ func (s *bridgeService) GetBridges(ctx context.Context, req *pb.GetBridgesReques
 			BlockNum:   deposit.BlockNumber,
 			DepositCnt: uint64(deposit.DepositCount),
 			NetworkId:  uint32(deposit.NetworkID),
+			TxHash:     deposit.TxHash.String(),
 		})
 	}
 
@@ -76,6 +77,7 @@ func (s *bridgeService) GetClaims(ctx context.Context, req *pb.GetClaimsRequest)
 			NetworkId: uint32(claim.NetworkID),
 			DestAddr:  claim.DestinationAddress.Hex(),
 			BlockNum:  claim.BlockNumber,
+			TxHash:    claim.TxHash.String(),
 		})
 	}
 

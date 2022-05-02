@@ -304,6 +304,7 @@ func (etherMan *ClientEtherMan) processEvent(ctx context.Context, vLog types.Log
 		depositAux.DestinationNetwork = uint(deposit.DestinationNetwork)
 		depositAux.TokenAddress = deposit.TokenAddres
 		depositAux.DepositCount = uint(deposit.DepositCount)
+		depositAux.TxHash = vLog.TxHash
 		block.BlockHash = vLog.BlockHash
 		block.BlockNumber = vLog.BlockNumber
 		fullBlock, err := etherMan.EtherClient.BlockByHash(ctx, vLog.BlockHash)
@@ -353,6 +354,7 @@ func (etherMan *ClientEtherMan) processEvent(ctx context.Context, vLog types.Log
 		claimAux.OriginalNetwork = uint(claim.OriginalNetwork)
 		claimAux.Token = claim.Token
 		claimAux.BlockNumber = vLog.BlockNumber
+		claimAux.TxHash = vLog.TxHash
 		block.BlockHash = vLog.BlockHash
 		block.BlockNumber = vLog.BlockNumber
 		fullBlock, err := etherMan.EtherClient.BlockByHash(ctx, vLog.BlockHash)
