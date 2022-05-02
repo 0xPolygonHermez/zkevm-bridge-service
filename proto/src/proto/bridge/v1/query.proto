@@ -57,6 +57,7 @@ message Deposit {
     uint64 block_num = 6;
     uint64 deposit_cnt = 7;
     uint32 network_id = 8;
+    string tx_hash = 9;
 }
 
 // Claim message
@@ -68,6 +69,7 @@ message Claim {
     uint32 network_id = 5;
     string dest_addr = 6;
     uint64 block_num = 7;
+    string tx_hash = 8;
 }
 
 // Merkle Proof message
