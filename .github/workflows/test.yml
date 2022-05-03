@@ -5,6 +5,7 @@ on:
       - main
       - master
       - develop
+      - update-external-dependencies
   pull_request:
 jobs:
   test:
@@ -30,4 +31,4 @@ jobs:
     - name: download dependencies
       run: go mod vendor
     - name: Test
-      run: make test
+      run: make test-full
