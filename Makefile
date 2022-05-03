@@ -152,3 +152,18 @@ generate-code-from-proto:
 .PHONY: stop-mockserver
 stop-mockserver: ## Stops the mock bridge service
 	$(STOPMOCKBRIDGE)
+
+.PHONY: test-full
+test-full: build-docker ## Runs all tests checking race conditions
+	$(STOPDBS)
+	$(RUNDBS); sleep 7
+	trap '$(STOPDBS)' EXIT; MallocNanoZone=0 go test -race -p 1 -timeout 600s ./...
+
+.PHONY: validate
+validate: lint build test-full ## Validates the whole integrity of the code base
+
+.PHONY: help
+help: ## Prints this help
+		@grep -h -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
+		| sort \
+		| awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
