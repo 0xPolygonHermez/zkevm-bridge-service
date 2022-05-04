@@ -3,8 +3,8 @@ package bridgectrl
 import (
 	"context"
 
-	"github.com/hermeznetwork/hermez-bridge/etherman"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/hermeznetwork/hermez-bridge/etherman"
 )
 
 // merkleTreeStore interface for the Merkle Tree
