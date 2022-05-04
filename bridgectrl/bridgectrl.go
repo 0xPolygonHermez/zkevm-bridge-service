@@ -3,6 +3,7 @@ package bridgectrl
 import (
 	"context"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/hermez-bridge/etherman"
 )
 
@@ -101,4 +102,13 @@ func (bt *BridgeController) CheckExitRoot(globalExitRoot etherman.GlobalExitRoot
 	}
 
 	return nil
+}
+
+// GetTokenWrapped returns tokenWrapped information.
+func (bt *BridgeController) GetTokenWrapped(origNetwork uint, origTokenAddr common.Address) (*etherman.TokenWrapped, error) {
+	tokenWrapped, err := bt.storage.GetTokenWrapped(context.Background(), origNetwork, origTokenAddr)
+	if err != nil {
+		return nil, err
+	}
+	return tokenWrapped, err
 }

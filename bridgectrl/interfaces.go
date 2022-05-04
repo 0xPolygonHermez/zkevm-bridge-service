@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/hermeznetwork/hermez-bridge/etherman"
+	"github.com/ethereum/go-ethereum/common"
 )
 
 // merkleTreeStore interface for the Merkle Tree
@@ -17,6 +18,7 @@ type merkleTreeStore interface {
 // bridgeStorage interface for the Bridge Tree
 type bridgeStorage interface {
 	GetLatestExitRoot(ctx context.Context) (*etherman.GlobalExitRoot, error)
+	GetTokenWrapped(ctx context.Context, originalNetwork uint, originalTokenAddress common.Address) (*etherman.TokenWrapped, error)
 }
 
 // BridgeServiceStorage interface for the Bridge Service.
