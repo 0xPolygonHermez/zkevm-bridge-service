@@ -5,6 +5,7 @@ on:
       - main
       - master
       - develop
+      - update-external-dependencies
   pull_request:
 jobs:
   test:
@@ -24,10 +25,17 @@ jobs:
         GOARCH: ${{ matrix.goarch }}
     - name: Inject github insteadOf configuration
       env:
-        PRIVATE_GITHUB_TOKEN: ${{ secrets.GIT_TOKEN }}
+        GITHUB_TOKEN: ${{ secrets.GIT_TOKEN }}
       run: |
-        git config --global url."https://${PRIVATE_GITHUB_TOKEN}:x-oauth-basic@github.com/".insteadOf "https://github.com/"
+        git config --global url."https://${GITHUB_TOKEN}:x-oauth-basic@github.com/".insteadOf "https://github.com/"
     - name: download dependencies
       run: go mod vendor
+    - name: Login to DockerHub
+      uses: docker/login-action@v1
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
     - name: Test
-      run: make test
+      env:
+        GITHUB_TOKEN: ${{ secrets.GIT_TOKEN }}
+      run: make test-full
