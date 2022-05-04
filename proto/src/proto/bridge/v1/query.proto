@@ -76,8 +76,9 @@ message Claim {
 message Proof {
     repeated string merkle_proof = 1;
     uint64 exit_root_num = 2;
-    string main_exit_root = 3;
-    string rollup_exit_root = 4;
+    uint64 l2_exit_root_num = 3;
+    string main_exit_root = 4;
+    string rollup_exit_root = 5;
 }
 
 // Get requests
