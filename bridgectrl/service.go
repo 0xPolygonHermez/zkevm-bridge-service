@@ -102,6 +102,7 @@ func (s *bridgeService) GetProof(ctx context.Context, req *pb.GetProofRequest) (
 		Proof: &pb.Proof{
 			MerkleProof:    proof,
 			ExitRootNum:    exitRoot.GlobalExitRootNum.Uint64(),
+			L2ExitRootNum:  exitRoot.GlobalExitRootL2Num.Uint64(),
 			MainExitRoot:   exitRoot.ExitRoots[0].Hex(),
 			RollupExitRoot: exitRoot.ExitRoots[1].Hex(),
 		},
