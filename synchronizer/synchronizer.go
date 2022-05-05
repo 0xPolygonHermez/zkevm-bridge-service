@@ -131,7 +131,7 @@ func (s *ClientSynchronizer) syncBlocks(lastBlockSynced *etherman.Block) (*ether
 
 	header, err := s.etherMan.HeaderByNumber(s.ctx, nil)
 	if err != nil {
-		return nil, err
+		return lastBlockSynced, err
 	}
 	lastKnownBlock := header.Number
 
@@ -146,7 +146,7 @@ func (s *ClientSynchronizer) syncBlocks(lastBlockSynced *etherman.Block) (*ether
 		// array index where this value is.
 		blocks, order, err := s.etherMan.GetBridgeInfoByBlockRange(s.ctx, fromBlock, &toBlock)
 		if err != nil {
-			return nil, err
+			return lastBlockSynced, err
 		}
 		s.processBlockRange(blocks, order)
 		if len(blocks) > 0 {
