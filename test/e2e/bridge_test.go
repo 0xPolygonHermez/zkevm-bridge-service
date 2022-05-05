@@ -38,6 +38,7 @@ func TestE2E(t *testing.T) {
 			Password: "test_password",
 			Host:     "localhost",
 			Port:     "5433",
+			MaxConns: 10,
 		},
 		BT: bridgectrl.Config{
 			Store:  "postgres",
