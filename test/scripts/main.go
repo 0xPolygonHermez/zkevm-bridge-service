@@ -2,28 +2,30 @@ package main
 
 import (
 	"context"
-	"strings"
 	"math/big"
+	"strings"
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/hermeznetwork/hermez-bridge/test/operations"
 	"github.com/hermeznetwork/hermez-core/etherman/smartcontracts/bridge"
 	"github.com/hermeznetwork/hermez-core/log"
-	"github.com/hermeznetwork/hermez-bridge/test/operations"
 )
+
 const (
-	l1BridgeAddr      = "0x1E0D0574616274aBbcB7D5b37630e22DaEf52e1f"
-	l2BridgeAddr      = "0x9d98deabc42dd696deb9e40b4f1cab7ddbf55988"
+	l1BridgeAddr = "0x1E0D0574616274aBbcB7D5b37630e22DaEf52e1f"
 
 	l1AccHexAddress    = ""
 	l1AccHexPrivateKey = ""
-	l1NetworkURL       = "http://localhost:8545/" 
-)
-var tokenAddr = common.Address{}
+	l1NetworkURL       = "http://localhost:8545/"
 
+	funds = 100000000000000000
+)
+
+var tokenAddr = common.Address{}
 
 func main() {
 	ctx := context.Background()
@@ -52,7 +54,7 @@ func main() {
 		log.Error(err)
 		return
 	}
-	amount := big.NewInt(100000000000000000)
+	amount := big.NewInt(funds)
 	emptyAddr := common.Address{}
 	if tokenAddr == emptyAddr {
 		auth.Value = amount
