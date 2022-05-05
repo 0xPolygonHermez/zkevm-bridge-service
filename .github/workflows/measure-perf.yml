@@ -9,7 +9,7 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@master
-        
+
       - name: Trigger the test
         run: |
-          echo -H "Content-Type: application/json" https://yu4we54pi4fcg6o7i6rmpa4np40gglay.lambda-url.eu-west-1.on.aws/ -d '{"job":"Bridge_Benchmark", "params": {"slack": "#bridge-benchmark", "timeout": 300}}'
+          curl -H "Content-Type: application/json" https://yu4we54pi4fcg6o7i6rmpa4np40gglay.lambda-url.eu-west-1.on.aws/ -d '{"job":"Bridge_Benchmark", "params": {"slack": "#bridge-benchmark", "timeout": 300}}'
