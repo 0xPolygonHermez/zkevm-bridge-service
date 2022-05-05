@@ -69,6 +69,7 @@ func TestExitRootStore(t *testing.T) {
 		BlockNumber:        1,
 		BlockID:            id,
 		NetworkID:          2,
+		TxHash:             common.HexToHash("0xc67996b03ac2ca401822b5be568e828f432121dd07ddedb306d9203e67675db8"),
 	}
 	err = storage.AddClaim(ctx, &claim)
 	require.NoError(t, err)
@@ -81,6 +82,7 @@ func TestExitRootStore(t *testing.T) {
 	assert.Equal(t, claim.Index, claimStored.Index)
 	assert.Equal(t, claim.OriginalNetwork, claimStored.OriginalNetwork)
 	assert.Equal(t, claim.Token, claimStored.Token)
+	assert.Equal(t, claim.TxHash, claimStored.TxHash)
 
 	// Deposit
 	deposit := etherman.Deposit{
@@ -92,6 +94,7 @@ func TestExitRootStore(t *testing.T) {
 		DestinationNetwork: 2,
 		BlockNumber:        1,
 		BlockID:            id,
+		TxHash:             common.HexToHash("0xc67996b03ac2ca401822b5be568e828f432121dd07ddedb306d9203e67675db8"),
 	}
 	err = storage.AddDeposit(ctx, &deposit)
 	require.NoError(t, err)
@@ -104,6 +107,7 @@ func TestExitRootStore(t *testing.T) {
 	assert.Equal(t, deposit.DepositCount, depositStored.DepositCount)
 	assert.Equal(t, deposit.OriginalNetwork, depositStored.OriginalNetwork)
 	assert.Equal(t, deposit.TokenAddress, depositStored.TokenAddress)
+	assert.Equal(t, deposit.TxHash, depositStored.TxHash)
 
 	// TokenWrapped
 	tokenWrapped := etherman.TokenWrapped{

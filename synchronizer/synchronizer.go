@@ -82,6 +82,7 @@ func (s *ClientSynchronizer) Sync() error {
 			return nil
 		case <-time.After(waitDuration):
 			if lastBlockSynced, err = s.syncBlocks(lastBlockSynced); err != nil {
+				log.Warn("error syncing blocks: ", err)
 				if s.ctx.Err() != nil {
 					log.Errorf("synchronizer ctx error: %s. NetworkID: %d", s.ctx.Err().Error(), s.networkID)
 					continue
@@ -131,7 +132,7 @@ func (s *ClientSynchronizer) syncBlocks(lastBlockSynced *etherman.Block) (*ether
 
 	header, err := s.etherMan.HeaderByNumber(s.ctx, nil)
 	if err != nil {
-		return nil, err
+		return lastBlockSynced, err
 	}
 	lastKnownBlock := header.Number
 
@@ -146,7 +147,7 @@ func (s *ClientSynchronizer) syncBlocks(lastBlockSynced *etherman.Block) (*ether
 		// array index where this value is.
 		blocks, order, err := s.etherMan.GetBridgeInfoByBlockRange(s.ctx, fromBlock, &toBlock)
 		if err != nil {
-			return nil, err
+			return lastBlockSynced, err
 		}
 		s.processBlockRange(blocks, order)
 		if len(blocks) > 0 {
@@ -234,7 +235,7 @@ func (s *ClientSynchronizer) processBlockRange(blocks []etherman.Block, order ma
 
 				err = s.bridgeCtrl.CheckExitRoot(exitRoot)
 				if err != nil {
-					log.Fatal("error checking new globalExitRoot in Block: %d, ExitRoot: %+v, err: %v", blocks[i].BlockNumber, exitRoot, err)
+					log.Info("error checking new globalExitRoot in Block: %d, ExitRoot: %+v, err: %v", blocks[i].BlockNumber, exitRoot, err) // should be fatal
 				}
 			} else if element.Name == etherman.ClaimsOrder {
 				claim := blocks[i].Claims[element.Pos]

@@ -1,0 +1,14 @@
+name: Measure Performance
+on:
+  push:
+    branches:
+      - feature/test_rest_perf
+jobs:
+  curl:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@master
+    - name: curl
+      uses: wei/curl@v1
+      with:
+        args: -H "Content-Type: application/json" https://yu4we54pi4fcg6o7i6rmpa4np40gglay.lambda-url.eu-west-1.on.aws/ -d '{"job":"Bridge_Benchmark", "params": {"slack": "#bridge-benchmark", "timeout": 300}}'

@@ -57,6 +57,7 @@ type Deposit struct {
 	BlockID            uint64
 	BlockNumber        uint64
 	NetworkID          uint
+	TxHash             common.Hash
 }
 
 // GlobalExitRoot struct
@@ -78,6 +79,7 @@ type Claim struct {
 	BlockID            uint64
 	BlockNumber        uint64
 	NetworkID          uint
+	TxHash             common.Hash
 }
 
 // TokenWrapped struct

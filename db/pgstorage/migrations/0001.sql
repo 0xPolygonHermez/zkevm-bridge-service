@@ -54,6 +54,7 @@ CREATE TABLE sync.deposit
     block_id    BIGINT NOT NULL REFERENCES sync.block (id) ON DELETE CASCADE,
     block_num   BIGINT NOT NULL,
     deposit_cnt BIGINT,
+    tx_hash     BYTEA NOT NULL,
     PRIMARY KEY (network_id, deposit_cnt)
 );
 
@@ -67,6 +68,7 @@ CREATE TABLE sync.claim
     dest_addr   BYTEA NOT NULL,
     block_id    BIGINT NOT NULL REFERENCES sync.block (id) ON DELETE CASCADE,
     block_num   BIGINT NOT NULL,
+    tx_hash     BYTEA NOT NULL,
     PRIMARY KEY (network_id, index)
 );
 
