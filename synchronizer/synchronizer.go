@@ -284,7 +284,7 @@ func (s *ClientSynchronizer) resetState(block *etherman.Block) error {
 	if err != nil {
 		rollbackErr := s.storage.Rollback(s.ctx, s.networkID)
 		if rollbackErr != nil {
-			log.Errorf("NetworkID: %d, error rolling back state to store block. BlockNumber: %d, rollbackErr: %v, error : %v", s.networkID, block.BlockNumber, rollbackErr, err)
+			log.Errorf("NetworkID: %d, error rolling back state to store block. BlockNumber: %d, rollbackErr: %v, error : %s", s.networkID, block.BlockNumber, rollbackErr, err.Error())
 			return rollbackErr
 		}
 		log.Error("NetworkID: ", s.networkID, ", error resetting the state. Error: ", err)
@@ -294,7 +294,7 @@ func (s *ClientSynchronizer) resetState(block *etherman.Block) error {
 	if err != nil {
 		rollbackErr := s.storage.Rollback(s.ctx, s.networkID)
 		if rollbackErr != nil {
-			log.Errorf("NetworkID: %d, error rolling back state to store block. BlockNumber: %d, rollbackErr: %v, error : %v", s.networkID, block.BlockNumber, rollbackErr, err)
+			log.Errorf("NetworkID: %d, error rolling back state to store block. BlockNumber: %d, rollbackErr: %v, error : %s", s.networkID, block.BlockNumber, rollbackErr, err.Error())
 			return rollbackErr
 		}
 		log.Error("NetworkID: ", s.networkID, ", error committing the resetted state. Error: ", err)
