@@ -163,7 +163,7 @@ func TestE2E(t *testing.T) {
 		tokenAddr, _, err := opsman.DeployERC20(ctx, "A COIN", "ACO", "l2")
 		require.NoError(t, err)
 		//Mint tokens
-		_, err = opsman.MintERC20(ctx, tokenAddr, amount, "l2")
+		err = opsman.MintERC20(ctx, tokenAddr, amount, "l2")
 		require.NoError(t, err)
 		//Check balance
 		origAddr := common.HexToAddress("0xc949254d682d8c9ad5682521675b8f43b102aec4")
@@ -274,7 +274,7 @@ func TestE2E(t *testing.T) {
 		amount := new(big.Int).SetUint64(10000000000000000000)
 		tokenAddr, _, err := opsman.DeployERC20(ctx, "A COIN", "ACO", "l1")
 		require.NoError(t, err)
-		_, err = opsman.MintERC20(ctx, tokenAddr, amount, "l1")
+		err = opsman.MintERC20(ctx, tokenAddr, amount, "l1")
 		require.NoError(t, err)
 		origAddr := common.HexToAddress("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266")
 		balance, err := opsman.CheckAccountTokenBalance(ctx, "l1", tokenAddr, &origAddr)
