@@ -28,6 +28,7 @@ func TestExitRootStore(t *testing.T) {
 		Password: cfg.Password,
 		Host:     cfg.Host,
 		Port:     cfg.Port,
+		MaxConns: 20,
 	}
 	var networksNumber uint = 2
 	storage, err := NewStorage(storageCfg, networksNumber)

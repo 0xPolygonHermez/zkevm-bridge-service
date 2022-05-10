@@ -70,6 +70,7 @@ func start(ctx *cli.Context) error {
 			Name:     c.Database.Name,
 			Host:     c.Database.Host,
 			Port:     c.Database.Port,
+			MaxConns: c.Database.MaxConns,
 		}, uint(len(networkIDs)))
 		if err != nil {
 			log.Error(err)

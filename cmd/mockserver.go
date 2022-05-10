@@ -9,7 +9,7 @@ import (
 )
 
 func runMockServer(ctx *cli.Context) error {
-	err := server.RunMockServer()
+	_, err := server.RunMockServer()
 	if err != nil {
 		return err
 	}

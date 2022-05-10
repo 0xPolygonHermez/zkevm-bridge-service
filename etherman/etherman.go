@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"time"
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -240,13 +241,14 @@ func (etherMan *ClientEtherMan) processEvent(ctx context.Context, vLog types.Log
 		if err != nil {
 			return nil, fmt.Errorf("error getting hashParent. BlockNumber: %d. Error: %w", vLog.BlockNumber, err)
 		}
-		batch.ReceivedAt = fullBlock.ReceivedAt
+		t := time.Unix(int64(fullBlock.Time()), 0)
+		batch.ReceivedAt = t
 
 		var block Block
 		block.BlockNumber = vLog.BlockNumber
 		block.BlockHash = vLog.BlockHash
 		block.ParentHash = fullBlock.ParentHash()
-		block.ReceivedAt = fullBlock.ReceivedAt
+		block.ReceivedAt = t
 		block.Batches = append(block.Batches, batch)
 		return &block, nil
 	case consolidateBatchSignatureHash:
@@ -262,13 +264,14 @@ func (etherMan *ClientEtherMan) processEvent(ctx context.Context, vLog types.Log
 		if err != nil {
 			return nil, fmt.Errorf("error getting hashParent. BlockNumber: %d. Error: %w", vLog.BlockNumber, err)
 		}
-		batch.ConsolidatedAt = &fullBlock.ReceivedAt
+		t := time.Unix(int64(fullBlock.Time()), 0)
+		batch.ConsolidatedAt = &t
 
 		var block Block
 		block.BlockNumber = vLog.BlockNumber
 		block.BlockHash = vLog.BlockHash
 		block.ParentHash = fullBlock.ParentHash()
-		block.ReceivedAt = fullBlock.ReceivedAt
+		block.ReceivedAt = t
 		block.Batches = append(block.Batches, batch)
 
 		log.Debug("Consolidated tx hash: ", vLog.TxHash, batch.ConsolidatedTxHash)
@@ -312,7 +315,7 @@ func (etherMan *ClientEtherMan) processEvent(ctx context.Context, vLog types.Log
 			return nil, fmt.Errorf("error getting hashParent. BlockNumber: %d. Error: %w", block.BlockNumber, err)
 		}
 		block.ParentHash = fullBlock.ParentHash()
-		block.ReceivedAt = fullBlock.ReceivedAt
+		block.ReceivedAt = time.Unix(int64(fullBlock.Time()), 0)
 		block.Deposits = append(block.Deposits, depositAux)
 		return &block, nil
 	case updateGlobalExitRootEventSignatureHash:
@@ -335,7 +338,7 @@ func (etherMan *ClientEtherMan) processEvent(ctx context.Context, vLog types.Log
 			return nil, fmt.Errorf("error getting hashParent. BlockNumber: %d. Error: %w", block.BlockNumber, err)
 		}
 		block.ParentHash = fullBlock.ParentHash()
-		block.ReceivedAt = fullBlock.ReceivedAt
+		block.ReceivedAt = time.Unix(int64(fullBlock.Time()), 0)
 		block.GlobalExitRoots = append(block.GlobalExitRoots, gExitRoot)
 		return &block, nil
 	case claimEventSignatureHash:
@@ -362,7 +365,7 @@ func (etherMan *ClientEtherMan) processEvent(ctx context.Context, vLog types.Log
 			return nil, fmt.Errorf("error getting hashParent. BlockNumber: %d. Error: %w", block.BlockNumber, err)
 		}
 		block.ParentHash = fullBlock.ParentHash()
-		block.ReceivedAt = fullBlock.ReceivedAt
+		block.ReceivedAt = time.Unix(int64(fullBlock.Time()), 0)
 		block.Claims = append(block.Claims, claimAux)
 		return &block, nil
 	case newWrappedTokenEventSignatureHash:
@@ -384,7 +387,7 @@ func (etherMan *ClientEtherMan) processEvent(ctx context.Context, vLog types.Log
 			return nil, fmt.Errorf("error getting hashParent. BlockNumber: %d. Error: %w", block.BlockNumber, err)
 		}
 		block.ParentHash = fullBlock.ParentHash()
-		block.ReceivedAt = fullBlock.ReceivedAt
+		block.ReceivedAt = time.Unix(int64(fullBlock.Time()), 0)
 		block.Tokens = append(block.Tokens, newToken)
 		return &block, nil
 	}

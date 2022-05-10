@@ -21,6 +21,7 @@ type Storage interface {
 	BeginDBTransaction(ctx context.Context, index uint) error
 	Commit(ctx context.Context, index uint) error
 	AddExitRoot(ctx context.Context, exitRoot *etherman.GlobalExitRoot) error
+	GetLatestSyncedExitRoot(ctx context.Context) (*etherman.GlobalExitRoot, error)
 	GetLatestExitRoot(ctx context.Context) (*etherman.GlobalExitRoot, error)
 	AddClaim(ctx context.Context, claim *etherman.Claim) error
 	AddTokenWrapped(ctx context.Context, tokeWrapped *etherman.TokenWrapped) error
@@ -41,6 +42,7 @@ func NewStorage(cfg Config, networksNumber uint) (Storage, error) {
 			Password: cfg.Password,
 			Host:     cfg.Host,
 			Port:     cfg.Port,
+			MaxConns: cfg.MaxConns,
 		}, networksNumber)
 	}
 	return nil, gerror.ErrStorageNotRegister

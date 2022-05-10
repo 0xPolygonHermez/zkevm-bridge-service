@@ -9,6 +9,7 @@ Password = "test_password"
 Name = "test_db"
 Host = "hez-postgres-bridge"
 Port = "5433"
+MaxConns = 20
 
 [Etherman]
 L1URL = "http://hez-network:8545"

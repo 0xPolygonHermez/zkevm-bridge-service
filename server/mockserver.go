@@ -6,21 +6,21 @@ import (
 )
 
 // RunMockServer runs mock server
-func RunMockServer() error {
+func RunMockServer() (*bridgectrl.BridgeController, error) {
 	dbCfg := pgstorage.NewConfigFromEnv()
 	err := pgstorage.InitOrReset(dbCfg)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	store, err := pgstorage.NewPostgresStorage(dbCfg, 0)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	bt, err := bridgectrl.MockBridgeCtrl(store)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	cfg := Config{
@@ -28,5 +28,5 @@ func RunMockServer() error {
 		HTTPPort: "8080",
 	}
 
-	return RunServer(store, bt, cfg)
+	return bt, RunServer(store, bt, cfg)
 }

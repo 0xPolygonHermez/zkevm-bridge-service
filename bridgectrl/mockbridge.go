@@ -103,11 +103,10 @@ func MockBridgeCtrl(store *pgstorage.PostgresStorage) (*BridgeController, error)
 			return nil, err
 		}
 
-		err = bt.AddDeposit(deposit)
+		err = bt.MockAddDeposit(deposit)
 		if err != nil {
 			return nil, err
 		}
-
 		err = store.AddExitRoot(context.TODO(), &etherman.GlobalExitRoot{
 			BlockNumber:       0,
 			GlobalExitRootNum: big.NewInt(int64(i)),
