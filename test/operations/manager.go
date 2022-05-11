@@ -443,8 +443,13 @@ func (m *Manager) SendL2Claim(ctx context.Context, deposit *pb.Deposit, smtProof
 	return client.SendClaim(ctx, deposit, smtProof, globalExitRoot.GlobalExitRootL2Num, globalExitRoot, common.HexToAddress(l2BridgeAddr), auth)
 }
 
-// GetCurrentGlobalExitRootSynced reads the globalexitroot from db
+// GetCurrentGlobalExitRootSynced reads the latest globalexitroot of a batch proposal from db
 func (m *Manager) GetCurrentGlobalExitRootSynced(ctx context.Context) (*etherman.GlobalExitRoot, error) {
+	return m.storage.GetLatestSyncedExitRoot(ctx)
+}
+
+// GetLatestGlobalExitRootFromL1 reads the latest globalexitroot apperard in l1 from db
+func (m *Manager) GetLatestGlobalExitRootFromL1(ctx context.Context) (*etherman.GlobalExitRoot, error) {
 	return m.storage.GetLatestExitRoot(ctx)
 }
 
@@ -524,6 +529,9 @@ func (m *Manager) ForceBatchProposal(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	//Wait for sync
+	const t time.Duration = 30
+	time.Sleep(t * time.Second)
 	return nil
 }
 

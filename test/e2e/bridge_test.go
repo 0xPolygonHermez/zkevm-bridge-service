@@ -66,7 +66,7 @@ func TestE2E(t *testing.T) {
 			err = opsman.SendL1Deposit(ctx, tokenAddr, amount, destNetwork, &destAddr)
 			require.NoError(t, err)
 			// Check globalExitRoot
-			globalExitRoot2, err := opsman.GetCurrentGlobalExitRootSynced(ctx)
+			globalExitRoot2, err := opsman.GetLatestGlobalExitRootFromL1(ctx)
 			require.NoError(t, err)
 			t.Logf("globalExitRoot.GlobalExitRootNum: %d, globalExitRoot2.GlobalExitRootNum: %d", globalExitRootSMC.GlobalExitRootNum, globalExitRoot2.GlobalExitRootNum)
 			assert.NotEqual(t, globalExitRootSMC.GlobalExitRootNum, globalExitRoot2.GlobalExitRootNum)
@@ -86,6 +86,9 @@ func TestE2E(t *testing.T) {
 			assert.Equal(t, 0, balance.Cmp(initL2Balance))
 			t.Log("Deposits: ", deposits)
 			t.Log("deposits[0].OrigNet: ", deposits[0].OrigNet, ". deposits[0].OrigNet: ", deposits[0].DepositCnt)
+			// Force to propose a new batch
+			err = opsman.ForceBatchProposal(ctx)
+			require.NoError(t, err)
 			// Get the claim data
 			smtProof, globaExitRoot, err := opsman.GetClaimData(uint(deposits[0].OrigNet), uint(deposits[0].DepositCnt))
 			require.NoError(t, err)
@@ -94,9 +97,6 @@ func TestE2E(t *testing.T) {
 			for i, s := range smtProof {
 				assert.Equal(t, proof[i].(string), "0x"+hex.EncodeToString(s[:]))
 			}
-			// Force to propose a new batch
-			err = opsman.ForceBatchProposal(ctx)
-			require.NoError(t, err)
 			// Claim funds in L1
 			err = opsman.SendL2Claim(ctx, deposits[0], smtProof, globaExitRoot)
 			require.NoError(t, err)
@@ -284,7 +284,7 @@ func TestE2E(t *testing.T) {
 		err = opsman.SendL1Deposit(ctx, tokenAddr, amount, destNetwork, &destAddr)
 		require.NoError(t, err)
 		// Check globalExitRoot
-		globalExitRoot2, err := opsman.GetCurrentGlobalExitRootSynced(ctx)
+		globalExitRoot2, err := opsman.GetLatestGlobalExitRootFromL1(ctx)
 		require.NoError(t, err)
 		t.Logf("globalExitRoot.GlobalExitRootNum: %d, globalExitRoot2.GlobalExitRootNum: %d", globalExitRootSMC.GlobalExitRootNum, globalExitRoot2.GlobalExitRootNum)
 		assert.NotEqual(t, globalExitRootSMC.GlobalExitRootNum, globalExitRoot2.GlobalExitRootNum)
@@ -297,15 +297,15 @@ func TestE2E(t *testing.T) {
 		require.NoError(t, err)
 		t.Log("Deposits: ", deposits)
 		t.Log("Before getClaimData: ", deposits[0].NetworkId, deposits[0].DepositCnt)
+		// Force to propose a new batch
+		err = opsman.ForceBatchProposal(ctx)
+		require.NoError(t, err)
 		// Get the claim data
 		smtProof, globaExitRoot, err := opsman.GetClaimData(uint(deposits[0].NetworkId), uint(deposits[0].DepositCnt))
 		require.NoError(t, err)
 		for _, s := range smtProof {
 			t.Log("smt: 0x" + hex.EncodeToString(s[:]))
 		}
-		// Force to propose a new batch
-		err = opsman.ForceBatchProposal(ctx)
-		require.NoError(t, err)
 		// Claim funds in L1
 		err = opsman.SendL2Claim(ctx, deposits[0], smtProof, globaExitRoot)
 		require.NoError(t, err)

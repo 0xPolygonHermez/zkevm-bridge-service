@@ -161,7 +161,7 @@ performance-test: ## Performance test of rest api and db transaction
 test-full: build-docker ## Runs all tests checking race conditions
 	$(STOPDBS)
 	$(RUNDBS); sleep 7
-	trap '$(STOPDBS)' EXIT; MallocNanoZone=0 go test -race -p 1 -timeout 600s ./...
+	trap '$(STOPDBS)' EXIT; MallocNanoZone=0 go test -race -p 1 -timeout 1200s ./...
 
 .PHONY: validate
 validate: lint build test-full ## Validates the whole integrity of the code base

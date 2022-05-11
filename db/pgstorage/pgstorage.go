@@ -30,7 +30,9 @@ const (
 	resetSQL               = "DELETE FROM sync.block WHERE block_num > $1 AND network_id = $2"
 	resetConsolidationSQL  = "UPDATE sync.batch SET aggregator = decode('0000000000000000000000000000000000000000', 'hex'), consolidated_tx_hash = decode('0000000000000000000000000000000000000000000000000000000000000000', 'hex'), consolidated_at = null WHERE consolidated_at > $1 AND network_id = $2"
 	addGlobalExitRootSQL   = "INSERT INTO sync.exit_root (block_num, global_exit_root_num, mainnet_exit_root, rollup_exit_root, block_id, global_exit_root_l2_num) VALUES ($1, $2, $3, $4, $5, $6)"
-	getExitRootSQL         = "SELECT block_id, block_num, global_exit_root_num, mainnet_exit_root, rollup_exit_root, global_exit_root_l2_num FROM sync.exit_root ORDER BY global_exit_root_num DESC LIMIT 1"
+	getLatestExitRootSQL   = "SELECT block_id, block_num, global_exit_root_num, mainnet_exit_root, rollup_exit_root FROM sync.exit_root ORDER BY global_exit_root_num DESC LIMIT 1"
+	getExitRootSQL         = "SELECT block_id, block_num, global_exit_root_num, mainnet_exit_root, rollup_exit_root, global_exit_root_l2_num FROM sync.exit_root WHERE global_exit_root_l2_num IS NOT NULL ORDER BY global_exit_root_num DESC LIMIT 1"
+	getLatestMainnetRSQL   = "SELECT mainnet_exit_root FROM sync.exit_root ORDER BY global_exit_root_num DESC LIMIT 1"
 	addClaimSQL            = "INSERT INTO sync.claim (index, orig_net, token_addr, amount, dest_addr, block_num, block_id, network_id, tx_hash) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)"
 	getClaimSQL            = "SELECT index, orig_net, token_addr, amount, dest_addr, block_num, block_id, network_id, tx_hash FROM sync.claim WHERE index = $1 AND network_id = $2"
 	getClaimsSQL           = "SELECT index, orig_net, token_addr, amount, dest_addr, block_num, block_id, network_id, tx_hash FROM sync.claim WHERE dest_addr = $1 ORDER BY block_id DESC LIMIT $2 OFFSET $3"
@@ -261,13 +263,23 @@ func (s *PostgresStorage) AddExitRoot(ctx context.Context, exitRoot *etherman.Gl
 	if !errors.Is(err, pgx.ErrNoRows) && err != nil {
 		return err
 	}
-	batch++
-	_, err = s.db.Exec(ctx, addGlobalExitRootSQL, exitRoot.BlockNumber, exitRoot.GlobalExitRootNum.String(), exitRoot.ExitRoots[0], exitRoot.ExitRoots[1], exitRoot.BlockID, batch)
+	var mainnetExitRoot common.Hash
+	err = s.db.QueryRow(ctx, getLatestMainnetRSQL).Scan(&mainnetExitRoot)
+	if !errors.Is(err, pgx.ErrNoRows) && err != nil {
+		return err
+	}
+	var storeBatch *uint64
+	if mainnetExitRoot != exitRoot.ExitRoots[0] {
+		storeBatch = nil
+	} else {
+		storeBatch = &batch
+	}
+	_, err = s.db.Exec(ctx, addGlobalExitRootSQL, exitRoot.BlockNumber, exitRoot.GlobalExitRootNum.String(), exitRoot.ExitRoots[0], exitRoot.ExitRoots[1], exitRoot.BlockID, storeBatch)
 	return err
 }
 
-// GetLatestExitRoot get the latest ExitRoot stored
-func (s *PostgresStorage) GetLatestExitRoot(ctx context.Context) (*etherman.GlobalExitRoot, error) {
+// GetLatestSyncedExitRoot get the latest ExitRoot stored in l2
+func (s *PostgresStorage) GetLatestSyncedExitRoot(ctx context.Context) (*etherman.GlobalExitRoot, error) {
 	var (
 		exitRoot        etherman.GlobalExitRoot
 		globalNum       uint64
@@ -283,6 +295,25 @@ func (s *PostgresStorage) GetLatestExitRoot(ctx context.Context) (*etherman.Glob
 	}
 	exitRoot.GlobalExitRootNum = new(big.Int).SetUint64(globalNum)
 	exitRoot.GlobalExitRootL2Num = new(big.Int).SetUint64(globalL2Num)
+	exitRoot.ExitRoots = []common.Hash{mainnetExitRoot, rollupExitRoot}
+	return &exitRoot, nil
+}
+
+// GetLatestExitRoot get the latest ExitRoot stored
+func (s *PostgresStorage) GetLatestExitRoot(ctx context.Context) (*etherman.GlobalExitRoot, error) {
+	var (
+		exitRoot        etherman.GlobalExitRoot
+		globalNum       uint64
+		mainnetExitRoot common.Hash
+		rollupExitRoot  common.Hash
+	)
+	err := s.db.QueryRow(ctx, getLatestExitRootSQL).Scan(&exitRoot.BlockID, &exitRoot.BlockNumber, &globalNum, &mainnetExitRoot, &rollupExitRoot)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, gerror.ErrStorageNotFound
+	} else if err != nil {
+		return nil, err
+	}
+	exitRoot.GlobalExitRootNum = new(big.Int).SetUint64(globalNum)
 	exitRoot.ExitRoots = []common.Hash{mainnetExitRoot, rollupExitRoot}
 	return &exitRoot, nil
 }
