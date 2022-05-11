@@ -152,8 +152,6 @@ func (m *Manager) SendL2Deposit(ctx context.Context, tokenAddr common.Address, a
 		return err
 	}
 
-	// TODO Remove gas hardcoded when gas estimatios is fixed
-	auth.GasLimit = 234480
 	emptyAddr := common.Address{}
 	if tokenAddr == emptyAddr {
 		auth.Value = amount
