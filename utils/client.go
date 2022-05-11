@@ -18,6 +18,7 @@ import (
 	ops "github.com/hermeznetwork/hermez-core/test/operations"
 )
 
+// Client is the utillity client
 type Client struct {
 	// Client ethclient
 	*ethclient.Client

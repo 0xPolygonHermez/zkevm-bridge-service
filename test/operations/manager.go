@@ -118,7 +118,7 @@ func NewManager(ctx context.Context, cfg *Config) (*Manager, error) {
 	return opsman, nil
 }
 
-// SendL1Deposit sends a deposit from l1 to l2
+// SendL1Deposit sends a deposit from l1 to l2.
 func (m *Manager) SendL1Deposit(ctx context.Context, tokenAddr common.Address, amount *big.Int,
 	destNetwork uint32, destAddr *common.Address,
 ) error {
@@ -127,10 +127,11 @@ func (m *Manager) SendL1Deposit(ctx context.Context, tokenAddr common.Address, a
 	if err != nil {
 		return err
 	}
+
 	return client.SendBridge(ctx, tokenAddr, amount, destNetwork, destAddr, common.HexToAddress(l1BridgeAddr), auth)
 }
 
-// SendL2Deposit sends a deposit from l2 to l1
+// SendL2Deposit sends a deposit from l2 to l1.
 func (m *Manager) SendL2Deposit(ctx context.Context, tokenAddr common.Address, amount *big.Int,
 	destNetwork uint32, destAddr *common.Address,
 ) error {
@@ -139,8 +140,7 @@ func (m *Manager) SendL2Deposit(ctx context.Context, tokenAddr common.Address, a
 	if err != nil {
 		return err
 	}
-	// TODO Remove gas hardcoded when gas estimatios is fixed
-	auth.GasLimit = 234480
+
 	return client.SendBridge(ctx, tokenAddr, amount, destNetwork, destAddr, common.HexToAddress(l2BridgeAddr), auth)
 }
 

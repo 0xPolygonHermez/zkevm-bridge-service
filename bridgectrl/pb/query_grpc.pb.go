@@ -33,6 +33,8 @@ type BridgeServiceClient interface {
 	GetClaimStatus(ctx context.Context, in *GetClaimStatusRequest, opts ...grpc.CallOption) (*GetClaimStatusResponse, error)
 	/// Get claims for the specific smart contract address both in L1 and L2
 	GetClaims(ctx context.Context, in *GetClaimsRequest, opts ...grpc.CallOption) (*GetClaimsResponse, error)
+	/// Get token wrapped for the specific smart contract address both in L1 and L2
+	GetTokenWrapped(ctx context.Context, in *GetTokenWrappedRequest, opts ...grpc.CallOption) (*GetTokenWrappedResponse, error)
 }
 
 type bridgeServiceClient struct {
@@ -88,6 +90,15 @@ func (c *bridgeServiceClient) GetClaims(ctx context.Context, in *GetClaimsReques
 	return out, nil
 }
 
+func (c *bridgeServiceClient) GetTokenWrapped(ctx context.Context, in *GetTokenWrappedRequest, opts ...grpc.CallOption) (*GetTokenWrappedResponse, error) {
+	out := new(GetTokenWrappedResponse)
+	err := c.cc.Invoke(ctx, "/bridge.v1.BridgeService/GetTokenWrapped", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // BridgeServiceServer is the server API for BridgeService service.
 // All implementations must embed UnimplementedBridgeServiceServer
 // for forward compatibility
@@ -103,6 +114,8 @@ type BridgeServiceServer interface {
 	GetClaimStatus(context.Context, *GetClaimStatusRequest) (*GetClaimStatusResponse, error)
 	/// Get claims for the specific smart contract address both in L1 and L2
 	GetClaims(context.Context, *GetClaimsRequest) (*GetClaimsResponse, error)
+	/// Get token wrapped for the specific smart contract address both in L1 and L2
+	GetTokenWrapped(context.Context, *GetTokenWrappedRequest) (*GetTokenWrappedResponse, error)
 	mustEmbedUnimplementedBridgeServiceServer()
 }
 
@@ -124,6 +137,9 @@ func (UnimplementedBridgeServiceServer) GetClaimStatus(context.Context, *GetClai
 }
 func (UnimplementedBridgeServiceServer) GetClaims(context.Context, *GetClaimsRequest) (*GetClaimsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetClaims not implemented")
+}
+func (UnimplementedBridgeServiceServer) GetTokenWrapped(context.Context, *GetTokenWrappedRequest) (*GetTokenWrappedResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetTokenWrapped not implemented")
 }
 func (UnimplementedBridgeServiceServer) mustEmbedUnimplementedBridgeServiceServer() {}
 
@@ -228,6 +244,24 @@ func _BridgeService_GetClaims_Handler(srv interface{}, ctx context.Context, dec 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _BridgeService_GetTokenWrapped_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetTokenWrappedRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BridgeServiceServer).GetTokenWrapped(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/bridge.v1.BridgeService/GetTokenWrapped",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BridgeServiceServer).GetTokenWrapped(ctx, req.(*GetTokenWrappedRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // BridgeService_ServiceDesc is the grpc.ServiceDesc for BridgeService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -254,6 +288,10 @@ var BridgeService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetClaims",
 			Handler:    _BridgeService_GetClaims_Handler,
+		},
+		{
+			MethodName: "GetTokenWrapped",
+			Handler:    _BridgeService_GetTokenWrapped_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

@@ -15,11 +15,13 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 )
 
+// Client is for the outside test
 type Client struct {
 	clients   map[string]*utils.Client
 	bridgeURL string
 }
 
+// NewClient returns a new client.
 func NewClient(ctx context.Context, cfg Config) (*Client, error) {
 	l1Client, err := utils.NewClient(ctx, cfg.L1NodeURL)
 	if err != nil {
@@ -53,7 +55,7 @@ func (c Client) SendClaim(ctx context.Context, deposit *pb.Deposit, smtProof [][
 	return c.clients[network].SendClaim(ctx, deposit, smtProof, globalExitRooNum, globalExitRoot, bridgeSCAddr, auth)
 }
 
-// GetBridges returns bridge list for the specific destination address
+// GetBridges returns bridge list for the specific destination address.
 func (c Client) GetBridges(destAddr string, offset int) ([]*pb.Deposit, error) {
 	resp, err := http.Get(fmt.Sprintf("%s%s/%s?offset=%d", c.bridgeURL, "/bridges", destAddr, offset))
 	if err != nil {
@@ -71,7 +73,7 @@ func (c Client) GetBridges(destAddr string, offset int) ([]*pb.Deposit, error) {
 	return bridgeResp.Deposits, nil
 }
 
-// GetClaims returns claim list for the specific destination address
+// GetClaims returns claim list for the specific destination address.
 func (c Client) GetClaims(destAddr string, offset int) ([]*pb.Claim, error) {
 	resp, err := http.Get(fmt.Sprintf("%s%s/%s?offset=%d", c.bridgeURL, "/claims", destAddr, offset))
 	if err != nil {
