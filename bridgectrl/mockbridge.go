@@ -117,6 +117,17 @@ func MockBridgeCtrl(store *pgstorage.PostgresStorage) (*BridgeController, error)
 			return nil, err
 		}
 	}
+	err = store.AddTokenWrapped(context.TODO(), &etherman.TokenWrapped{
+		OriginalNetwork:      1,
+		OriginalTokenAddress: common.HexToAddress("0x0EF3B0BC8D6313AB7DC03CF7225C872071BE1E6D"),
+		WrappedTokenAddress:  common.HexToAddress("0xC2716D3537ECA4B318E60F3D7D6A48714F1F3335"),
+		BlockID:              1,
+		BlockNumber:          1,
+		NetworkID:            0,
+	})
+	if err != nil {
+		return nil, err
+	}
 
 	return bt, nil
 }

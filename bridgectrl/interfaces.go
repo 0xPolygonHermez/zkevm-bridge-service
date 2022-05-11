@@ -3,6 +3,7 @@ package bridgectrl
 import (
 	"context"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/hermez-bridge/etherman"
 )
 
@@ -19,6 +20,7 @@ type bridgeStorage interface {
 	GetLatestExitRoot(ctx context.Context) (*etherman.GlobalExitRoot, error)
 	GetLatestSyncedExitRoot(ctx context.Context) (*etherman.GlobalExitRoot, error)
 	AddExitRoot(ctx context.Context, globalExitRoot *etherman.GlobalExitRoot) error
+	GetTokenWrapped(ctx context.Context, originalNetwork uint, originalTokenAddress common.Address) (*etherman.TokenWrapped, error)
 }
 
 // BridgeServiceStorage interface for the Bridge Service.

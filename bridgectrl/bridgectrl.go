@@ -118,3 +118,12 @@ func (bt *BridgeController) MockAddDeposit(deposit *etherman.Deposit) error {
 		BlockID:           deposit.BlockID,
 	})
 }
+
+// GetTokenWrapped returns tokenWrapped information.
+func (bt *BridgeController) GetTokenWrapped(origNetwork uint, origTokenAddr common.Address) (*etherman.TokenWrapped, error) {
+	tokenWrapped, err := bt.storage.GetTokenWrapped(context.Background(), origNetwork, origTokenAddr)
+	if err != nil {
+		return nil, err
+	}
+	return tokenWrapped, err
+}

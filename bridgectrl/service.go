@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/hex"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/hermez-bridge/bridgectrl/pb"
 )
 
@@ -133,5 +134,21 @@ func (s *bridgeService) GetClaimStatus(ctx context.Context, req *pb.GetClaimStat
 
 	return &pb.GetClaimStatusResponse{
 		Ready: ready,
+	}, nil
+}
+
+// GetTokenWrapped returns the token wrapped created for a specific network
+func (s *bridgeService) GetTokenWrapped(ctx context.Context, req *pb.GetTokenWrappedRequest) (*pb.GetTokenWrappedResponse, error) {
+	tokenWrapped, err := s.bridgeCtrl.GetTokenWrapped(uint(req.OrigNet), common.HexToAddress(req.OrigTokenAddr))
+	if err != nil {
+		return nil, err
+	}
+	return &pb.GetTokenWrappedResponse{
+		Tokenwrapped: &pb.TokenWrapped{
+			OrigNet:           uint32(tokenWrapped.OriginalNetwork),
+			OriginalTokenAddr: tokenWrapped.OriginalTokenAddress.Hex(),
+			WrappedTokenAddr:  tokenWrapped.WrappedTokenAddress.Hex(),
+			NetworkId:         uint32(tokenWrapped.NetworkID),
+		},
 	}, nil
 }
