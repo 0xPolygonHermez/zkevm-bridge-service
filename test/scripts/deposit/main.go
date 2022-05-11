@@ -16,13 +16,13 @@ import (
 )
 
 const (
-	l1BridgeAddr = "0x1E0D0574616274aBbcB7D5b37630e22DaEf52e1f"
+	l1BridgeAddr = "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9"
 
-	l1AccHexAddress    = ""
-	l1AccHexPrivateKey = ""
-	l1NetworkURL       = "http://localhost:8545/"
+	l1AccHexAddress    = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
+	l1AccHexPrivateKey = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
+	l1NetworkURL       = "http://localhost:8545"
 
-	funds = 100000000000000000
+	funds = 90000000000000000
 )
 
 var tokenAddr = common.Address{}
