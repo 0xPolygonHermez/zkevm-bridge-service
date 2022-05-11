@@ -112,20 +112,20 @@ func (c Client) SendBridge(ctx context.Context, tokenAddr common.Address, amount
 		return err
 	}
 	// Wait until the batch that includes the tx is consolidated
-	const t time.Duration = 30
+	const t time.Duration = 45
 	time.Sleep(t * time.Second)
 	return nil
 }
 
 // SendClaim send a claim transaction.
-func (c Client) SendClaim(ctx context.Context, deposit *pb.Deposit, smtProof [][32]byte, globalExitRoot *etherman.GlobalExitRoot, bridgeSCAddr common.Address, auth *bind.TransactOpts) error {
+func (c Client) SendClaim(ctx context.Context, deposit *pb.Deposit, smtProof [][32]byte, globalExitRooNum *big.Int, globalExitRoot *etherman.GlobalExitRoot, bridgeSCAddr common.Address, auth *bind.TransactOpts) error {
 	br, err := bridge.NewBridge(bridgeSCAddr, c.Client)
 	if err != nil {
 		return err
 	}
 	amount, _ := new(big.Int).SetString(deposit.Amount, encoding.Base10)
 	tx, err := br.Claim(auth, common.HexToAddress(deposit.TokenAddr), amount, deposit.OrigNet, deposit.DestNet,
-		common.HexToAddress(deposit.DestAddr), smtProof, uint32(deposit.DepositCnt), globalExitRoot.GlobalExitRootL2Num,
+		common.HexToAddress(deposit.DestAddr), smtProof, uint32(deposit.DepositCnt), globalExitRooNum,
 		globalExitRoot.ExitRoots[0], globalExitRoot.ExitRoots[1])
 	if err != nil {
 		return err
