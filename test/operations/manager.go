@@ -26,6 +26,15 @@ import (
 	"github.com/hermeznetwork/hermez-core/test/operations"
 )
 
+// NetworkSID is used to identify the network.
+type NetworkSID string
+
+// NetworkSID constants
+const (
+	L1 NetworkSID = "l1"
+	L2 NetworkSID = "l2"
+)
+
 const (
 	l1NetworkURL = "http://localhost:8545"
 	l2NetworkURL = "http://localhost:8123"
@@ -47,9 +56,9 @@ const (
 var (
 	dbConfig          = pgstorage.NewConfigFromEnv()
 	networks          = []uint{0, 1}
-	accHexPrivateKeys = map[string]string{
-		"l1": "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",
-		"l2": "0xdfd01798f92667dbf91df722434e8fbe96af0211d4d1b82bbbbc8f1def7a814f", //0xc949254d682d8c9ad5682521675b8f43b102aec4
+	accHexPrivateKeys = map[NetworkSID]string{
+		L1: "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",
+		L2: "0xdfd01798f92667dbf91df722434e8fbe96af0211d4d1b82bbbbc8f1def7a814f", //0xc949254d682d8c9ad5682521675b8f43b102aec4
 	}
 )
 
@@ -70,7 +79,7 @@ type Manager struct {
 	bridgetree    *bridgectrl.BridgeController
 	bridgeService pb.BridgeServiceServer
 
-	clients map[string]*utils.Client
+	clients map[NetworkSID]*utils.Client
 }
 
 // NewManager returns a manager ready to be used and a potential error caused
@@ -111,9 +120,9 @@ func NewManager(ctx context.Context, cfg *Config) (*Manager, error) {
 	opsman.storage = st
 	opsman.bridgetree = bt
 	opsman.bridgeService = bService
-	opsman.clients = make(map[string]*utils.Client)
-	opsman.clients["l1"] = l1Client
-	opsman.clients["l2"] = l2Client
+	opsman.clients = make(map[NetworkSID]*utils.Client)
+	opsman.clients[L1] = l1Client
+	opsman.clients[L2] = l2Client
 
 	return opsman, nil
 }
@@ -122,8 +131,8 @@ func NewManager(ctx context.Context, cfg *Config) (*Manager, error) {
 func (m *Manager) SendL1Deposit(ctx context.Context, tokenAddr common.Address, amount *big.Int,
 	destNetwork uint32, destAddr *common.Address,
 ) error {
-	client := m.clients["l1"]
-	auth, err := client.GetSigner(ctx, accHexPrivateKeys["l1"])
+	client := m.clients[L1]
+	auth, err := client.GetSigner(ctx, accHexPrivateKeys[L1])
 	if err != nil {
 		return err
 	}
@@ -135,8 +144,8 @@ func (m *Manager) SendL1Deposit(ctx context.Context, tokenAddr common.Address, a
 func (m *Manager) SendL2Deposit(ctx context.Context, tokenAddr common.Address, amount *big.Int,
 	destNetwork uint32, destAddr *common.Address,
 ) error {
-	client := m.clients["l2"]
-	auth, err := client.GetSigner(ctx, accHexPrivateKeys["l2"])
+	client := m.clients[L2]
+	auth, err := client.GetSigner(ctx, accHexPrivateKeys[L2])
 	if err != nil {
 		return err
 	}
@@ -191,8 +200,8 @@ func (m *Manager) Setup() error {
 func (m *Manager) AddFunds(ctx context.Context) error {
 	// Eth client
 	log.Infof("Connecting to l1")
-	client := m.clients["l1"]
-	auth, err := client.GetSigner(ctx, accHexPrivateKeys["l1"])
+	client := m.clients[L1]
+	auth, err := client.GetSigner(ctx, accHexPrivateKeys[L1])
 	if err != nil {
 		return err
 	}
@@ -359,7 +368,7 @@ func stopBridge() error {
 }
 
 // CheckAccountBalance checks the balance by address
-func (m *Manager) CheckAccountBalance(ctx context.Context, network string, account *common.Address) (*big.Int, error) {
+func (m *Manager) CheckAccountBalance(ctx context.Context, network NetworkSID, account *common.Address) (*big.Int, error) {
 	client := m.clients[network]
 	auth, err := client.GetSigner(ctx, accHexPrivateKeys[network])
 	if err != nil {
@@ -377,7 +386,7 @@ func (m *Manager) CheckAccountBalance(ctx context.Context, network string, accou
 }
 
 // CheckAccountTokenBalance checks the balance by address
-func (m *Manager) CheckAccountTokenBalance(ctx context.Context, network string, tokenAddr common.Address, account *common.Address) (*big.Int, error) {
+func (m *Manager) CheckAccountTokenBalance(ctx context.Context, network NetworkSID, tokenAddr common.Address, account *common.Address) (*big.Int, error) {
 	client := m.clients[network]
 	auth, err := client.GetSigner(ctx, accHexPrivateKeys[network])
 	if err != nil {
@@ -405,7 +414,7 @@ func (m *Manager) GetClaimData(networkID, depositCount uint) ([][bridgectrl.KeyL
 
 // GetBridgeInfoByDestAddr gets the bridge info
 func (m *Manager) GetBridgeInfoByDestAddr(ctx context.Context, addr *common.Address) ([]*pb.Deposit, error) {
-	auth, err := m.clients["l2"].GetSigner(ctx, accHexPrivateKeys["l2"])
+	auth, err := m.clients[L2].GetSigner(ctx, accHexPrivateKeys[L2])
 	if err != nil {
 		return []*pb.Deposit{}, err
 	}
@@ -424,8 +433,8 @@ func (m *Manager) GetBridgeInfoByDestAddr(ctx context.Context, addr *common.Addr
 
 // SendL1Claim send an L1 claim
 func (m *Manager) SendL1Claim(ctx context.Context, deposit *pb.Deposit, smtProof [][32]byte, globalExitRoot *etherman.GlobalExitRoot) error {
-	client := m.clients["l1"]
-	auth, err := client.GetSigner(ctx, accHexPrivateKeys["l1"])
+	client := m.clients[L1]
+	auth, err := client.GetSigner(ctx, accHexPrivateKeys[L1])
 	if err != nil {
 		return err
 	}
@@ -434,8 +443,8 @@ func (m *Manager) SendL1Claim(ctx context.Context, deposit *pb.Deposit, smtProof
 
 // SendL2Claim send an L2 claim
 func (m *Manager) SendL2Claim(ctx context.Context, deposit *pb.Deposit, smtProof [][32]byte, globalExitRoot *etherman.GlobalExitRoot) error {
-	client := m.clients["l2"]
-	auth, err := client.GetSigner(ctx, accHexPrivateKeys["l2"])
+	client := m.clients[L2]
+	auth, err := client.GetSigner(ctx, accHexPrivateKeys[L2])
 	if err != nil {
 		return err
 	}
@@ -455,7 +464,7 @@ func (m *Manager) GetLatestGlobalExitRootFromL1(ctx context.Context) (*etherman.
 
 // GetCurrentGlobalExitRootFromSmc reads the globalexitroot from the smc
 func (m *Manager) GetCurrentGlobalExitRootFromSmc(ctx context.Context) (*etherman.GlobalExitRoot, error) {
-	client := m.clients["l1"]
+	client := m.clients[L1]
 	br, err := bridge.NewBridge(common.HexToAddress(l1BridgeAddr), client)
 	if err != nil {
 		return nil, err
@@ -490,8 +499,8 @@ func (m *Manager) GetCurrentGlobalExitRootFromSmc(ctx context.Context) (*etherma
 // ForceBatchProposal propose an empty batch
 func (m *Manager) ForceBatchProposal(ctx context.Context) error {
 	// Eth client
-	client := m.clients["l1"]
-	auth, err := client.GetSigner(ctx, accHexPrivateKeys["l1"])
+	client := m.clients[L1]
+	auth, err := client.GetSigner(ctx, accHexPrivateKeys[L1])
 	if err != nil {
 		return err
 	}
@@ -536,7 +545,7 @@ func (m *Manager) ForceBatchProposal(ctx context.Context) error {
 }
 
 // DeployERC20 deploys erc20 smc
-func (m *Manager) DeployERC20(ctx context.Context, name, symbol, network string) (common.Address, *ERC20.ERC20, error) {
+func (m *Manager) DeployERC20(ctx context.Context, name, symbol string, network NetworkSID) (common.Address, *ERC20.ERC20, error) {
 	client := m.clients[network]
 	auth, err := client.GetSigner(ctx, accHexPrivateKeys[network])
 	if err != nil {
@@ -547,7 +556,7 @@ func (m *Manager) DeployERC20(ctx context.Context, name, symbol, network string)
 }
 
 // MintERC20 mint erc20 tokens
-func (m *Manager) MintERC20(ctx context.Context, erc20Addr common.Address, amount *big.Int, network string) error {
+func (m *Manager) MintERC20(ctx context.Context, erc20Addr common.Address, amount *big.Int, network NetworkSID) error {
 	client := m.clients[network]
 	auth, err := client.GetSigner(ctx, accHexPrivateKeys[network])
 	if err != nil {
@@ -555,7 +564,7 @@ func (m *Manager) MintERC20(ctx context.Context, erc20Addr common.Address, amoun
 	}
 
 	var bridgeAddress = l1BridgeAddr
-	if network == "l2" {
+	if network == L2 {
 		bridgeAddress = l2BridgeAddr
 	}
 
@@ -568,13 +577,13 @@ func (m *Manager) MintERC20(ctx context.Context, erc20Addr common.Address, amoun
 }
 
 // ApproveERC20 approves erc20 tokens
-func (m *Manager) ApproveERC20(ctx context.Context, erc20Addr, bridgeAddr common.Address, amount *big.Int, network string) error {
+func (m *Manager) ApproveERC20(ctx context.Context, erc20Addr, bridgeAddr common.Address, amount *big.Int, network NetworkSID) error {
 	client := m.clients[network]
 	auth, err := client.GetSigner(ctx, accHexPrivateKeys[network])
 	if err != nil {
 		return err
 	}
-	if network == "l2" {
+	if network == L2 {
 		auth.GasPrice = big.NewInt(0)
 	}
 	return client.ApproveERC20(ctx, erc20Addr, bridgeAddr, amount, auth)

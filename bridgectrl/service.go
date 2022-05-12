@@ -112,7 +112,7 @@ func (s *bridgeService) GetProof(ctx context.Context, req *pb.GetProofRequest) (
 
 // GetClaimStatus returns the claim status whether it is able to send a claim transaction or not.
 func (s *bridgeService) GetClaimStatus(ctx context.Context, req *pb.GetClaimStatusRequest) (*pb.GetClaimStatusResponse, error) {
-	exitRoot, err := s.bridgeCtrl.storage.GetLatestExitRoot(ctx)
+	exitRoot, err := s.bridgeCtrl.storage.GetLatestSyncedExitRoot(ctx)
 	if err != nil {
 		return nil, err
 	}
