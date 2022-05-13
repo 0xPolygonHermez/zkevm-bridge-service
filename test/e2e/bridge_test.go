@@ -363,10 +363,10 @@ func TestE2E(t *testing.T) {
 	})
 	t.Run("Multi deposits tests", func(t *testing.T) {
 		/*
-		1. Do 3 deposits/bridges
-		2. Force a new batch proposal to sync the globalexitroot in L2
-		3. Do 2 more deposits (without proposing a new batch)
-		4. Claim the firs 3 deposits in L2
+			1. Do 3 deposits/bridges
+			2. Force a new batch proposal to sync the globalexitroot in L2
+			3. Do 2 more deposits (without proposing a new batch)
+			4. Claim the firs 3 deposits in L2
 		*/
 
 		// Check initial globalExitRoot.
@@ -472,9 +472,9 @@ func TestE2E(t *testing.T) {
 	})
 	t.Run("L1-L2 bridge tests", func(t *testing.T) {
 		/*
-		1. Bridge from L1 to L2.
-		2. Force a new batch proposal doing a bridge from L2 to L1
-		3. Claim the deposits in both layers
+			1. Bridge from L1 to L2.
+			2. Force a new batch proposal doing a bridge from L2 to L1
+			3. Claim the deposits in both layers
 		*/
 		// Check initial globalExitRoot.
 		globalExitRootSMC, err := opsman.GetCurrentGlobalExitRootFromSmc(ctx)
@@ -519,7 +519,6 @@ func TestE2E(t *testing.T) {
 		require.NoError(t, err)
 		t.Log("Init account balance l2: ", balance2)
 
-
 		// Second deposit
 		err = opsman.SendL1Deposit(ctx, tokenAddr, amount1, destNetwork, &destAddr)
 		require.NoError(t, err)
@@ -556,7 +555,6 @@ func TestE2E(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, big.NewInt(2000000000000000000), balance)
 
-		
 		// Get the claim data
 		smtProof, globaExitRoot, err = opsman.GetClaimData(uint(deposits[1].NetworkId), uint(deposits[1].DepositCnt))
 		require.NoError(t, err)
