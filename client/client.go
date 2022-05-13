@@ -53,6 +53,9 @@ func NewClient(ctx context.Context, cfg Config) (*Client, error) {
 		return nil, err
 	}
 	l2Client, err := utils.NewClient(ctx, cfg.L2NodeURL)
+	if err != nil {
+		return nil, err
+	}
 
 	clients := make(map[NetworkSID]*utils.Client)
 	clients[l1] = l1Client
@@ -65,7 +68,7 @@ func NewClient(ctx context.Context, cfg Config) (*Client, error) {
 		RestClient{
 			bridgeURL: cfg.BridgeURL,
 		},
-	}, err
+	}, nil
 }
 
 // SendBridge sends a bridge transaction.

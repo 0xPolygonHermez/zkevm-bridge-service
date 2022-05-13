@@ -11,6 +11,8 @@ import (
 const (
 	// KeyLen is the length of key and value in the Merkle Tree
 	KeyLen = 32
+	// MainNetworkID is the chain ID for the main network
+	MainNetworkID = uint(1)
 )
 
 // BridgeController struct
@@ -62,8 +64,10 @@ func (bt *BridgeController) AddDeposit(deposit *etherman.Deposit) error {
 // GetClaim returns claim information to the user.
 func (bt *BridgeController) GetClaim(networkID uint, index uint) ([][KeyLen]byte, *etherman.GlobalExitRoot, error) {
 	var (
-		ctx   context.Context
-		proof [][KeyLen]byte
+		ctx            context.Context
+		proof          [][KeyLen]byte
+		globalExitRoot *etherman.GlobalExitRoot
+		err            error
 	)
 
 	tID := bt.networkIDs[networkID]
@@ -71,7 +75,12 @@ func (bt *BridgeController) GetClaim(networkID uint, index uint) ([][KeyLen]byte
 	if tID != 0 {
 		tID--
 	}
-	globalExitRoot, err := bt.storage.GetLatestSyncedExitRoot(context.TODO())
+	if networkID == MainNetworkID {
+		globalExitRoot, err = bt.storage.GetLatestL1SyncedExitRoot(context.TODO())
+	} else {
+		globalExitRoot, err = bt.storage.GetLatestL2SyncedExitRoot(context.TODO())
+	}
+
 	if err != nil {
 		return proof, nil, err
 	}

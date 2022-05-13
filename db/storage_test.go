@@ -34,7 +34,7 @@ func TestExitRootStore(t *testing.T) {
 	storage, err := NewStorage(storageCfg, networksNumber)
 	require.NoError(t, err)
 	var networkID uint = 1
-	_, err = storage.GetLatestExitRoot(ctx)
+	_, err = storage.GetLatestL1SyncedExitRoot(ctx)
 	require.Error(t, err)
 
 	var exitRoot etherman.GlobalExitRoot

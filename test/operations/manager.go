@@ -454,7 +454,7 @@ func (m *Manager) SendL2Claim(ctx context.Context, deposit *pb.Deposit, smtProof
 
 // GetCurrentGlobalExitRootSynced reads the latest globalexitroot of a batch proposal from db
 func (m *Manager) GetCurrentGlobalExitRootSynced(ctx context.Context) (*etherman.GlobalExitRoot, error) {
-	return m.storage.GetLatestSyncedExitRoot(ctx)
+	return m.storage.GetLatestL2SyncedExitRoot(ctx)
 }
 
 // GetLatestGlobalExitRootFromL1 reads the latest globalexitroot apperard in l1 from db

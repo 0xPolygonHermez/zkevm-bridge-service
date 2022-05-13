@@ -21,8 +21,9 @@ type Storage interface {
 	BeginDBTransaction(ctx context.Context, index uint) error
 	Commit(ctx context.Context, index uint) error
 	AddExitRoot(ctx context.Context, exitRoot *etherman.GlobalExitRoot) error
-	GetLatestSyncedExitRoot(ctx context.Context) (*etherman.GlobalExitRoot, error)
 	GetLatestExitRoot(ctx context.Context) (*etherman.GlobalExitRoot, error)
+	GetLatestL1SyncedExitRoot(ctx context.Context) (*etherman.GlobalExitRoot, error)
+	GetLatestL2SyncedExitRoot(ctx context.Context) (*etherman.GlobalExitRoot, error)
 	AddClaim(ctx context.Context, claim *etherman.Claim) error
 	AddTokenWrapped(ctx context.Context, tokeWrapped *etherman.TokenWrapped) error
 	GetTokenWrapped(ctx context.Context, originalNetwork uint, originalTokenAddress common.Address) (*etherman.TokenWrapped, error)
