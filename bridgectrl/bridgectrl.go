@@ -12,7 +12,7 @@ const (
 	// KeyLen is the length of key and value in the Merkle Tree
 	KeyLen = 32
 	// MainNetworkID is the chain ID for the main network
-	MainNetworkID = uint(1)
+	MainNetworkID = uint(0)
 )
 
 // BridgeController struct
