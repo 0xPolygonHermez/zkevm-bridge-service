@@ -7,6 +7,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/hermez-bridge/bridgectrl/pb"
 	"github.com/hermeznetwork/hermez-bridge/etherman"
+	"github.com/hermeznetwork/hermez-bridge/utils/gerror"
 )
 
 const (
@@ -123,7 +124,11 @@ func (s *bridgeService) GetClaimStatus(ctx context.Context, req *pb.GetClaimStat
 		exitRoot, err = s.bridgeCtrl.storage.GetLatestL2SyncedExitRoot(ctx)
 	}
 
-	if err != nil {
+	if err == gerror.ErrStorageNotFound {
+		return &pb.GetClaimStatusResponse{
+			Ready: false,
+		}, nil
+	} else if err != nil {
 		return nil, err
 	}
 

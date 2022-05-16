@@ -5,8 +5,10 @@ import (
 	"encoding/json"
 	"math/big"
 	"os"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/hermeznetwork/hermez-bridge/db/pgstorage"
 	"github.com/hermeznetwork/hermez-bridge/etherman"
 	"github.com/hermeznetwork/hermez-bridge/test/vectors"
@@ -72,6 +74,26 @@ func MockBridgeCtrl(store *pgstorage.PostgresStorage) (*BridgeController, error)
 			return nil, err
 		}
 
+		head := types.Header{
+			TxHash:     common.Hash{},
+			Difficulty: big.NewInt(0),
+			Number:     new(big.Int).SetUint64(uint64(i + 1)),
+		}
+		batch := etherman.Batch{
+			BlockNumber:    1,
+			Sequencer:      common.HexToAddress("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9fe"),
+			ChainID:        big.NewInt(100),
+			GlobalExitRoot: common.HexToHash("0x30e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9fe"),
+			Header:         &head,
+			ReceivedAt:     time.Now(),
+			BlockID:        id,
+			NetworkID:      testDepositVectors[i].OriginalNetwork,
+		}
+		err = store.AddBatch(context.TODO(), &batch)
+		if err != nil {
+			return nil, err
+		}
+
 		amount, _ := new(big.Int).SetString(testDepositVectors[i].Amount, 10) //nolint:gomnd
 		deposit := &etherman.Deposit{
 			OriginalNetwork:    testDepositVectors[i].OriginalNetwork,
@@ -81,6 +103,7 @@ func MockBridgeCtrl(store *pgstorage.PostgresStorage) (*BridgeController, error)
 			DestinationAddress: common.HexToAddress(testDepositVectors[i].DestinationAddress),
 			DepositCount:       uint(i + 1),
 			BlockID:            id,
+			NetworkID:          testDepositVectors[i].OriginalNetwork,
 			BlockNumber:        0,
 		}
 		err = store.AddDeposit(context.TODO(), deposit)
@@ -108,10 +131,11 @@ func MockBridgeCtrl(store *pgstorage.PostgresStorage) (*BridgeController, error)
 			return nil, err
 		}
 		err = store.AddExitRoot(context.TODO(), &etherman.GlobalExitRoot{
-			BlockNumber:       0,
-			GlobalExitRootNum: big.NewInt(int64(i)),
-			ExitRoots:         []common.Hash{common.BytesToHash(bt.exitTrees[0].root[:]), common.BytesToHash(bt.exitTrees[1].root[:])},
-			BlockID:           id,
+			BlockNumber:         0,
+			GlobalExitRootNum:   big.NewInt(int64(i)),
+			GlobalExitRootL2Num: big.NewInt(int64(i)),
+			ExitRoots:           []common.Hash{common.BytesToHash(bt.exitTrees[0].root[:]), common.BytesToHash(bt.exitTrees[1].root[:])},
+			BlockID:             id,
 		})
 		if err != nil {
 			return nil, err
