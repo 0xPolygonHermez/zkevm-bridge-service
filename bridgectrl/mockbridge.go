@@ -82,7 +82,7 @@ func MockBridgeCtrl(store *pgstorage.PostgresStorage) (*BridgeController, error)
 		batch := etherman.Batch{
 			BlockNumber:    1,
 			Sequencer:      common.HexToAddress("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9fe"),
-			ChainID:        big.NewInt(100),
+			ChainID:        big.NewInt(0),
 			GlobalExitRoot: common.HexToHash("0x30e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9fe"),
 			Header:         &head,
 			ReceivedAt:     time.Now(),
