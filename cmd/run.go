@@ -10,9 +10,9 @@ import (
 	"github.com/hermeznetwork/hermez-bridge/db"
 	"github.com/hermeznetwork/hermez-bridge/db/pgstorage"
 	"github.com/hermeznetwork/hermez-bridge/etherman"
-	"github.com/hermeznetwork/hermez-bridge/gerror"
 	"github.com/hermeznetwork/hermez-bridge/server"
 	"github.com/hermeznetwork/hermez-bridge/synchronizer"
+	"github.com/hermeznetwork/hermez-bridge/utils/gerror"
 	"github.com/hermeznetwork/hermez-core/log"
 	"github.com/urfave/cli/v2"
 )

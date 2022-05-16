@@ -6,6 +6,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/hermez-bridge/bridgectrl/pb"
+	"github.com/hermeznetwork/hermez-bridge/etherman"
 )
 
 const (
@@ -112,7 +113,16 @@ func (s *bridgeService) GetProof(ctx context.Context, req *pb.GetProofRequest) (
 
 // GetClaimStatus returns the claim status whether it is able to send a claim transaction or not.
 func (s *bridgeService) GetClaimStatus(ctx context.Context, req *pb.GetClaimStatusRequest) (*pb.GetClaimStatusResponse, error) {
-	exitRoot, err := s.bridgeCtrl.storage.GetLatestExitRoot(ctx)
+	var (
+		exitRoot *etherman.GlobalExitRoot
+		err      error
+	)
+	if req.NetId == uint32(MainNetworkID) {
+		exitRoot, err = s.bridgeCtrl.storage.GetLatestL1SyncedExitRoot(ctx)
+	} else {
+		exitRoot, err = s.bridgeCtrl.storage.GetLatestL2SyncedExitRoot(ctx)
+	}
+
 	if err != nil {
 		return nil, err
 	}

@@ -80,7 +80,7 @@ func TestE2E(t *testing.T) {
 			deposits, err := opsman.GetBridgeInfoByDestAddr(ctx, &destAddr)
 			require.NoError(t, err)
 			// Check L2 funds
-			balance, err := opsman.CheckAccountBalance(ctx, "l2", &destAddr)
+			balance, err := opsman.CheckAccountBalance(ctx, operations.L2, &destAddr)
 			require.NoError(t, err)
 			initL2Balance := big.NewInt(0)
 			assert.Equal(t, 0, balance.Cmp(initL2Balance))
@@ -101,7 +101,7 @@ func TestE2E(t *testing.T) {
 			err = opsman.SendL2Claim(ctx, deposits[0], smtProof, globaExitRoot)
 			require.NoError(t, err)
 			// Check L2 funds to see if the amount has been increased
-			balance2, err := opsman.CheckAccountBalance(ctx, "l2", &destAddr)
+			balance2, err := opsman.CheckAccountBalance(ctx, operations.L2, &destAddr)
 			require.NoError(t, err)
 			assert.NotEqual(t, balance, balance2)
 			assert.Equal(t, amount, balance2)
@@ -130,7 +130,7 @@ func TestE2E(t *testing.T) {
 			assert.Equal(t, common.HexToHash("0x843cb84814162b93794ad9087a037a1948f9aff051838ba3a93db0ac92b9f719"), globalExitRoot4.ExitRoots[0])
 			assert.Equal(t, common.HexToHash("0x073fa0ba2dd56dc954a3cf098d42ec5fa9d9f996d7429ac0b6b13c9d7ee489c3"), globalExitRoot4.ExitRoots[1])
 			// Check L1 funds
-			balance, err = opsman.CheckAccountBalance(ctx, "l1", &destAddr)
+			balance, err = opsman.CheckAccountBalance(ctx, operations.L1, &destAddr)
 			require.NoError(t, err)
 			assert.Equal(t, 0, big.NewInt(0).Cmp(balance))
 			// Get the claim data
@@ -141,11 +141,11 @@ func TestE2E(t *testing.T) {
 			err = opsman.SendL1Claim(ctx, deposits[0], smtProof, globaExitRoot)
 			require.NoError(t, err)
 			// Check L1 funds to see if the amount has been increased
-			balance, err = opsman.CheckAccountBalance(ctx, "l1", &destAddr)
+			balance, err = opsman.CheckAccountBalance(ctx, operations.L1, &destAddr)
 			require.NoError(t, err)
 			assert.Equal(t, big.NewInt(1000000000000000000), balance)
 			// Check L2 funds to see that the amount has been reduced
-			balance, err = opsman.CheckAccountBalance(ctx, "l2", &destAddr)
+			balance, err = opsman.CheckAccountBalance(ctx, operations.L2, &destAddr)
 			require.NoError(t, err)
 			assert.Equal(t, big.NewInt(8999979000000000000), balance)
 		})
@@ -160,14 +160,14 @@ func TestE2E(t *testing.T) {
 		// Send L1 deposit
 		var destNetwork uint32 = 0
 		amount := new(big.Int).SetUint64(10000000000000000000)
-		tokenAddr, _, err := opsman.DeployERC20(ctx, "A COIN", "ACO", "l2")
+		tokenAddr, _, err := opsman.DeployERC20(ctx, "A COIN", "ACO", operations.L2)
 		require.NoError(t, err)
 		//Mint tokens
-		_, err = opsman.MintERC20(ctx, tokenAddr, amount, "l2")
+		err = opsman.MintERC20(ctx, tokenAddr, amount, operations.L2)
 		require.NoError(t, err)
 		//Check balance
 		origAddr := common.HexToAddress("0xc949254d682d8c9ad5682521675b8f43b102aec4")
-		balance, err := opsman.CheckAccountTokenBalance(ctx, "l2", tokenAddr, &origAddr)
+		balance, err := opsman.CheckAccountTokenBalance(ctx, operations.L2, tokenAddr, &origAddr)
 		require.NoError(t, err)
 		t.Log("Token balance: ", balance, ". tokenaddress: ", tokenAddr, ". account: ", origAddr)
 		destAddr := common.HexToAddress("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266")
@@ -187,7 +187,7 @@ func TestE2E(t *testing.T) {
 		deposits, err := opsman.GetBridgeInfoByDestAddr(ctx, &destAddr)
 		require.NoError(t, err)
 		// Check L2 funds
-		balance, err = opsman.CheckAccountTokenBalance(ctx, "l2", tokenAddr, &origAddr)
+		balance, err = opsman.CheckAccountTokenBalance(ctx, operations.L2, tokenAddr, &origAddr)
 		require.NoError(t, err)
 		assert.Equal(t, 0, balance.Cmp(big.NewInt(9000000000000000000)))
 		t.Log("Deposits: ", deposits)
@@ -208,7 +208,7 @@ func TestE2E(t *testing.T) {
 		tokenWrapped, err := opsman.GetTokenWrapped(ctx, 1, tokenAddr)
 		require.NoError(t, err)
 		// Check L2 funds to see if the amount has been increased
-		balance2, err := opsman.CheckAccountTokenBalance(ctx, "l1", tokenWrapped.WrappedTokenAddress, &destAddr)
+		balance2, err := opsman.CheckAccountTokenBalance(ctx, operations.L1, tokenWrapped.WrappedTokenAddress, &destAddr)
 		require.NoError(t, err)
 		t.Log("balance l1 account after claim funds: ", balance2)
 		assert.NotEqual(t, balance, balance2)
@@ -241,7 +241,7 @@ func TestE2E(t *testing.T) {
 		assert.Equal(t, common.HexToHash("0x2aa72f464625e0840e84434f142b38244c50c8e4e5c922205a42d6d735ee15a6"), globalExitRoot4.ExitRoots[0])
 		assert.Equal(t, common.HexToHash("0x0f11f43da2969b0f0d05d2908d7e1ea01e7198cbb98af50f9b0951298fa387f1"), globalExitRoot4.ExitRoots[1])
 		// Check L2 funds
-		balance, err = opsman.CheckAccountTokenBalance(ctx, "l2", tokenAddr, &destAddr)
+		balance, err = opsman.CheckAccountTokenBalance(ctx, operations.L2, tokenAddr, &destAddr)
 		require.NoError(t, err)
 		t.Log("balance: ", balance)
 		assert.Equal(t, 0, big.NewInt(0).Cmp(balance))
@@ -255,11 +255,11 @@ func TestE2E(t *testing.T) {
 		err = opsman.SendL2Claim(ctx, deposits[0], smtProof, globaExitRoot)
 		require.NoError(t, err)
 		// Check L2 funds to see if the amount has been increased
-		balance, err = opsman.CheckAccountTokenBalance(ctx, "l2", tokenAddr, &destAddr)
+		balance, err = opsman.CheckAccountTokenBalance(ctx, operations.L2, tokenAddr, &destAddr)
 		require.NoError(t, err)
 		assert.Equal(t, big.NewInt(600000000000000000), balance)
 		// Check L1 funds to see that the amount has been reduced
-		balance, err = opsman.CheckAccountTokenBalance(ctx, "l1", tokenWrapped.WrappedTokenAddress, &destAddr)
+		balance, err = opsman.CheckAccountTokenBalance(ctx, operations.L1, tokenWrapped.WrappedTokenAddress, &destAddr)
 		require.NoError(t, err)
 		assert.Equal(t, 0, big.NewInt(400000000000000000).Cmp(balance))
 	})
@@ -272,12 +272,12 @@ func TestE2E(t *testing.T) {
 		// Send L1 deposit
 		var destNetwork uint32 = 1
 		amount := new(big.Int).SetUint64(10000000000000000000)
-		tokenAddr, _, err := opsman.DeployERC20(ctx, "A COIN", "ACO", "l1")
+		tokenAddr, _, err := opsman.DeployERC20(ctx, "A COIN", "ACO", operations.L1)
 		require.NoError(t, err)
-		_, err = opsman.MintERC20(ctx, tokenAddr, amount, "l1")
+		err = opsman.MintERC20(ctx, tokenAddr, amount, operations.L1)
 		require.NoError(t, err)
 		origAddr := common.HexToAddress("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266")
-		balance, err := opsman.CheckAccountTokenBalance(ctx, "l1", tokenAddr, &origAddr)
+		balance, err := opsman.CheckAccountTokenBalance(ctx, operations.L1, tokenAddr, &origAddr)
 		require.NoError(t, err)
 		t.Log("Init account balance l1: ", balance)
 		destAddr := common.HexToAddress("0xc949254d682d8c9ad5682521675b8f43b102aec4")
@@ -313,7 +313,7 @@ func TestE2E(t *testing.T) {
 		require.NoError(t, err)
 		t.Log("TokenWrapped: ", tokenWrapped)
 		// Check L2 funds to see if the amount has been increased
-		balance2, err := opsman.CheckAccountTokenBalance(ctx, "l2", tokenWrapped.WrappedTokenAddress, &destAddr)
+		balance2, err := opsman.CheckAccountTokenBalance(ctx, operations.L2, tokenWrapped.WrappedTokenAddress, &destAddr)
 		require.NoError(t, err)
 		t.Log("Balance tokenWrapped: ", balance2)
 		assert.Equal(t, amount, balance2)
@@ -342,7 +342,7 @@ func TestE2E(t *testing.T) {
 		assert.Equal(t, common.HexToHash("0xce3bcee5b3730c2a5acbc8c5c90d5fca35d81548c05f9eef916fa6c1be8f7357"), globalExitRoot4.ExitRoots[0])
 		assert.Equal(t, common.HexToHash("0xd8076d8a9fbc049fd31ad074aaad7c90bd52407bb70f0d25c6bf4e4646bf0a84"), globalExitRoot4.ExitRoots[1])
 		// Check L1 funds
-		balance, err = opsman.CheckAccountTokenBalance(ctx, "l1", tokenAddr, &destAddr)
+		balance, err = opsman.CheckAccountTokenBalance(ctx, operations.L1, tokenAddr, &destAddr)
 		require.NoError(t, err)
 		assert.Equal(t, 0, big.NewInt(0).Cmp(balance))
 		// Get the claim data
@@ -353,11 +353,11 @@ func TestE2E(t *testing.T) {
 		err = opsman.SendL1Claim(ctx, deposits[0], smtProof, globaExitRoot)
 		require.NoError(t, err)
 		// Check L1 funds to see if the amount has been increased
-		balance, err = opsman.CheckAccountTokenBalance(ctx, "l1", tokenAddr, &destAddr)
+		balance, err = opsman.CheckAccountTokenBalance(ctx, operations.L1, tokenAddr, &destAddr)
 		require.NoError(t, err)
 		assert.Equal(t, big.NewInt(8000000000000000000), balance)
 		// Check L2 funds to see that the amount has been reduced
-		balance, err = opsman.CheckAccountTokenBalance(ctx, "l2", tokenWrapped.WrappedTokenAddress, &destAddr)
+		balance, err = opsman.CheckAccountTokenBalance(ctx, operations.L2, tokenWrapped.WrappedTokenAddress, &destAddr)
 		require.NoError(t, err)
 		assert.Equal(t, big.NewInt(2000000000000000000), balance)
 		require.NoError(t, operations.Teardown())
