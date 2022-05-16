@@ -555,14 +555,19 @@ func TestE2E(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, big.NewInt(2000000000000000000), balance)
 
+		deposits, err = opsman.GetBridgeInfoByDestAddr(ctx, &destAddr)
+		require.NoError(t, err)
 		// Get the claim data
-		smtProof, globaExitRoot, err = opsman.GetClaimData(uint(deposits[1].NetworkId), uint(deposits[1].DepositCnt))
+		smtProof, globaExitRoot, err = opsman.GetClaimData(uint(deposits[0].NetworkId), uint(deposits[0].DepositCnt))
 		require.NoError(t, err)
 		for _, s := range smtProof {
 			t.Log("smt: 0x" + hex.EncodeToString(s[:]))
 		}
+		t.Log("globalExitRoot:", globaExitRoot)
+		t.Log("deposit: ", deposits[0])
 		// Claim funds in L2
-		err = opsman.SendL2Claim(ctx, deposits[1], smtProof, globaExitRoot)
+		err = opsman.SendL2Claim(ctx, deposits[0], smtProof, globaExitRoot)
+		panic(err)
 		require.NoError(t, err)
 		// Check L2 funds to see if the amount has been increased
 		balance, err = opsman.CheckAccountTokenBalance(ctx, "l2", tokenWrapped.WrappedTokenAddress, &destAddr)
