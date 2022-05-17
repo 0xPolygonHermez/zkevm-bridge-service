@@ -7,6 +7,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/hermez-bridge/bridgectrl/pb"
 	"github.com/hermeznetwork/hermez-bridge/etherman"
+	"github.com/hermeznetwork/hermez-bridge/utils/gerror"
 )
 
 const (
@@ -127,7 +128,10 @@ func (s *bridgeService) GetClaimStatus(ctx context.Context, req *pb.GetClaimStat
 		return nil, err
 	}
 
-	tID := s.bridgeCtrl.networkIDs[uint(req.NetId)]
+	tID, found := s.bridgeCtrl.networkIDs[uint(req.NetId)]
+	if !found {
+		return nil, gerror.ErrNetworkNotRegister
+	}
 	ctx = context.WithValue(ctx, contextKeyNetwork, tID) //nolint
 	tID--
 	depositCnt, err := s.bridgeCtrl.exitTrees[tID].getDepositCntByRoot(ctx, exitRoot.ExitRoots[tID])

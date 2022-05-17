@@ -6,6 +6,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/hermez-bridge/etherman"
+	"github.com/hermeznetwork/hermez-bridge/utils/gerror"
 )
 
 const (
@@ -56,7 +57,10 @@ func (bt *BridgeController) AddDeposit(deposit *etherman.Deposit) error {
 
 	leaf := hashDeposit(deposit)
 
-	tID := bt.networkIDs[deposit.NetworkID]
+	tID, found := bt.networkIDs[deposit.NetworkID]
+	if !found {
+		return gerror.ErrNetworkNotRegister
+	}
 	ctx = context.WithValue(context.TODO(), contextKeyNetwork, tID) //nolint
 	return bt.exitTrees[tID-1].addLeaf(ctx, leaf)
 }
@@ -70,11 +74,12 @@ func (bt *BridgeController) GetClaim(networkID uint, index uint) ([][KeyLen]byte
 		err            error
 	)
 
-	tID := bt.networkIDs[networkID]
-	ctx = context.WithValue(context.TODO(), contextKeyNetwork, tID) //nolint
-	if tID != 0 {
-		tID--
+	tID, found := bt.networkIDs[networkID]
+	if !found {
+		return proof, nil, gerror.ErrNetworkNotRegister
 	}
+	ctx = context.WithValue(context.TODO(), contextKeyNetwork, tID) //nolint
+	tID--
 	if networkID == MainNetworkID {
 		globalExitRoot, err = bt.storage.GetLatestL1SyncedExitRoot(context.TODO())
 	} else {
@@ -83,6 +88,13 @@ func (bt *BridgeController) GetClaim(networkID uint, index uint) ([][KeyLen]byte
 
 	if err != nil {
 		return proof, nil, err
+	}
+	depositCnt, err := bt.exitTrees[tID].getDepositCntByRoot(ctx, globalExitRoot.ExitRoots[tID])
+	if err != nil {
+		return proof, nil, err
+	}
+	if depositCnt < index {
+		return proof, nil, gerror.ErrDepositNotSynced
 	}
 
 	proof, err = bt.exitTrees[tID].getSiblings(ctx, index, globalExitRoot.ExitRoots[tID])
@@ -96,7 +108,10 @@ func (bt *BridgeController) GetClaim(networkID uint, index uint) ([][KeyLen]byte
 // ReorgMT reorg the specific merkle tree.
 func (bt *BridgeController) ReorgMT(depositCount uint, networkID uint) error {
 	var ctx context.Context
-	tID := bt.networkIDs[networkID]
+	tID, found := bt.networkIDs[networkID]
+	if !found {
+		return gerror.ErrNetworkNotRegister
+	}
 	ctx = context.WithValue(context.TODO(), contextKeyNetwork, tID) //nolint
 	return bt.exitTrees[tID-1].resetLeaf(ctx, depositCount)
 }
