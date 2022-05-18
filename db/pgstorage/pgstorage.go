@@ -31,7 +31,7 @@ const (
 	resetConsolidationSQL  = "UPDATE sync.batch SET aggregator = decode('0000000000000000000000000000000000000000', 'hex'), consolidated_tx_hash = decode('0000000000000000000000000000000000000000000000000000000000000000', 'hex'), consolidated_at = null WHERE consolidated_at > $1 AND network_id = $2"
 	addGlobalExitRootSQL   = "INSERT INTO sync.exit_root (block_num, global_exit_root_num, mainnet_exit_root, rollup_exit_root, block_id, global_exit_root_l2_num) VALUES ($1, $2, $3, $4, $5, $6)"
 	getLatestExitRootSQL   = "SELECT block_id, block_num, global_exit_root_num, mainnet_exit_root, rollup_exit_root FROM sync.exit_root ORDER BY global_exit_root_num DESC LIMIT 1"
-	getLatestL1ExitRootSQL = "SELECT block_id, block_num, global_exit_root_num, mainnet_exit_root, rollup_exit_root, global_exit_root_l2_num FROM sync.exit_root WHERE global_exit_root_l2_num = $1 ORDER BY global_exit_root_num DESC LIMIT 1"
+	getLatestL1ExitRootSQL = "SELECT block_id, block_num, global_exit_root_num, mainnet_exit_root, rollup_exit_root FROM sync.exit_root WHERE global_exit_root_l2_num IS NULL ORDER BY global_exit_root_num DESC LIMIT 1"
 	getLatestL2ExitRootSQL = "SELECT block_id, block_num, global_exit_root_num, mainnet_exit_root, rollup_exit_root, global_exit_root_l2_num FROM sync.exit_root WHERE global_exit_root_l2_num IS NOT NULL ORDER BY global_exit_root_num DESC LIMIT 1"
 	getLatestMainnetRSQL   = "SELECT mainnet_exit_root FROM sync.exit_root ORDER BY global_exit_root_num DESC LIMIT 1"
 	addClaimSQL            = "INSERT INTO sync.claim (index, orig_net, token_addr, amount, dest_addr, block_num, block_id, network_id, tx_hash) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)"
@@ -282,30 +282,19 @@ func (s *PostgresStorage) AddExitRoot(ctx context.Context, exitRoot *etherman.Gl
 // GetLatestL1SyncedExitRoot get the latest ExitRoot stored that fully synced the rollup exit root in L1.
 func (s *PostgresStorage) GetLatestL1SyncedExitRoot(ctx context.Context) (*etherman.GlobalExitRoot, error) {
 	var (
-		batch           uint64
 		exitRoot        etherman.GlobalExitRoot
 		globalNum       uint64
-		globalL2Num     uint64
 		mainnetExitRoot common.Hash
 		rollupExitRoot  common.Hash
 	)
-	err := s.db.QueryRow(ctx, getLastBatchNumberSQL).Scan(&batch)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return nil, gerror.ErrStorageNotFound
-	} else if err != nil {
-		return nil, err
-	} else if batch == uint64(0) {
-		return nil, gerror.ErrStorageNotFound
-	}
-
-	err = s.db.QueryRow(ctx, getLatestL1ExitRootSQL, batch-1).Scan(&exitRoot.BlockID, &exitRoot.BlockNumber, &globalNum, &mainnetExitRoot, &rollupExitRoot, &globalL2Num)
+	err := s.db.QueryRow(ctx, getLatestL1ExitRootSQL).Scan(&exitRoot.BlockID, &exitRoot.BlockNumber, &globalNum, &mainnetExitRoot, &rollupExitRoot)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, gerror.ErrStorageNotFound
 	} else if err != nil {
 		return nil, err
 	}
 	exitRoot.GlobalExitRootNum = new(big.Int).SetUint64(globalNum)
-	exitRoot.GlobalExitRootL2Num = new(big.Int).SetUint64(globalL2Num)
+	exitRoot.GlobalExitRootL2Num = new(big.Int).SetUint64(0)
 	exitRoot.ExitRoots = []common.Hash{mainnetExitRoot, rollupExitRoot}
 	return &exitRoot, nil
 }

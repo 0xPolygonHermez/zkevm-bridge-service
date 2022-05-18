@@ -14,7 +14,7 @@ import (
 	"github.com/hermeznetwork/hermez-bridge/db/pgstorage"
 	"github.com/hermeznetwork/hermez-bridge/etherman"
 	"github.com/hermeznetwork/hermez-bridge/test/vectors"
-	"github.com/hermeznetwork/hermez-bridge/utils/gerror"
+	"github.com/hermeznetwork/hermez-core/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -88,13 +88,15 @@ func TestBridgeTree(t *testing.T) {
 				ExitRoots:         []common.Hash{common.BytesToHash(bt.exitTrees[0].root[:]), common.BytesToHash(bt.exitTrees[1].root[:])},
 				BlockID:           id,
 			})
-
 			require.NoError(t, err)
 		}
 
 		for i, testVector := range testVectors {
-			_, _, err := bt.GetClaim(testVector.OriginalNetwork, uint(i+1))
-			require.EqualError(t, err, gerror.ErrStorageNotFound.Error())
+			merkleProof, globalExitRoot, err := bt.GetClaim(testVector.OriginalNetwork, uint(i+1))
+			require.NoError(t, err)
+
+			log.Info("globalExitRoot: ", globalExitRoot)
+			log.Info("merkleProof: ", merkleProof)
 		}
 
 		for i := len(testVectors) - 1; i >= 0; i-- {
