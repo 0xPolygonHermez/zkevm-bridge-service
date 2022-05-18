@@ -303,7 +303,7 @@ func (s *PostgresStorage) GetLatestL1SyncedExitRoot(ctx context.Context) (*ether
 		return nil, err
 	}
 	exitRoot.GlobalExitRootNum = new(big.Int).SetUint64(globalNum)
-	exitRoot.GlobalExitRootL2Num = new(big.Int).SetUint64(batch - 1)
+	exitRoot.GlobalExitRootL2Num = new(big.Int).SetUint64(batch)
 	exitRoot.ExitRoots = []common.Hash{mainnetExitRoot, rollupExitRoot}
 	return &exitRoot, nil
 }
