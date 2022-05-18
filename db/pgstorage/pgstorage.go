@@ -282,19 +282,28 @@ func (s *PostgresStorage) AddExitRoot(ctx context.Context, exitRoot *etherman.Gl
 // GetLatestL1SyncedExitRoot get the latest ExitRoot stored that fully synced the rollup exit root in L1.
 func (s *PostgresStorage) GetLatestL1SyncedExitRoot(ctx context.Context) (*etherman.GlobalExitRoot, error) {
 	var (
+		batch           uint64
 		exitRoot        etherman.GlobalExitRoot
 		globalNum       uint64
 		mainnetExitRoot common.Hash
 		rollupExitRoot  common.Hash
 	)
-	err := s.db.QueryRow(ctx, getLatestL1ExitRootSQL).Scan(&exitRoot.BlockID, &exitRoot.BlockNumber, &globalNum, &mainnetExitRoot, &rollupExitRoot)
+	err := s.db.QueryRow(ctx, getLastBatchNumberSQL).Scan(&batch)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, gerror.ErrStorageNotFound
+	} else if err != nil {
+		return nil, err
+	} else if batch == uint64(0) {
+		return nil, gerror.ErrStorageNotFound
+	}
+	err = s.db.QueryRow(ctx, getLatestL1ExitRootSQL).Scan(&exitRoot.BlockID, &exitRoot.BlockNumber, &globalNum, &mainnetExitRoot, &rollupExitRoot)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, gerror.ErrStorageNotFound
 	} else if err != nil {
 		return nil, err
 	}
 	exitRoot.GlobalExitRootNum = new(big.Int).SetUint64(globalNum)
-	exitRoot.GlobalExitRootL2Num = new(big.Int).SetUint64(0)
+	exitRoot.GlobalExitRootL2Num = new(big.Int).SetUint64(batch - 1)
 	exitRoot.ExitRoots = []common.Hash{mainnetExitRoot, rollupExitRoot}
 	return &exitRoot, nil
 }
