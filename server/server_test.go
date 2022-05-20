@@ -61,7 +61,7 @@ func TestBridgeMock(t *testing.T) {
 
 	ready, err := restClient.GetClaimStatus(0, 2)
 	require.NoError(t, err)
-	require.Equal(t, ready, true)
+	require.Equal(t, ready, false)
 
 	wrappedToken, err := restClient.GetWrappedToken(1, "0x0EF3B0BC8D6313AB7DC03CF7225C872071BE1E6D")
 	require.NoError(t, err)
