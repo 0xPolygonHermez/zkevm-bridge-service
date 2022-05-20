@@ -144,7 +144,7 @@ func (s *bridgeService) GetClaimStatus(ctx context.Context, req *pb.GetClaimStat
 	}
 
 	var ready bool
-	if depositCnt >= uint(req.DepositCnt) {
+	if depositCnt >= uint(req.DepositCnt+1) {
 		ready = true
 	} else {
 		ready = false
