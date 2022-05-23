@@ -303,10 +303,16 @@ func (s *ClientSynchronizer) resetState(block *etherman.Block) error {
 
 	depositCnt, err := s.storage.GetNumberDeposits(s.ctx, s.networkID, block.BlockNumber)
 	if err != nil {
+		log.Error("NetworkID: ", s.networkID, ", error GetNumberDeposits: ", err)
 		return err
 	}
 
-	return s.bridgeCtrl.ReorgMT(uint(depositCnt), s.networkID)
+	err = s.bridgeCtrl.ReorgMT(uint(depositCnt), s.networkID)
+	if err != nil {
+		log.Error("NetworkID: ", s.networkID, ", error ReorgMT: ", err)
+		return err
+	}
+	return nil
 }
 
 /*
