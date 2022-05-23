@@ -301,7 +301,7 @@ func (s *ClientSynchronizer) resetState(block *etherman.Block) error {
 		return err
 	}
 
-	depositCnt, err := s.storage.GetNumberDeposits(s.ctx, s.networkID)
+	depositCnt, err := s.storage.GetNumberDeposits(s.ctx, s.networkID, block.BlockNumber)
 	if err != nil {
 		return err
 	}

@@ -42,7 +42,7 @@ const (
 	consolidateBatchSQL    = "UPDATE sync.batch SET consolidated_tx_hash = $1, consolidated_at = $2, aggregator = $3 WHERE batch_num = $4 AND network_id = $5"
 	addBatchSQL            = "INSERT INTO sync.batch (batch_num, batch_hash, block_num, sequencer, aggregator, consolidated_tx_hash, header, uncles, received_at, chain_id, global_exit_root, block_id, network_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)"
 	getBatchByNumberSQL    = "SELECT block_num, sequencer, aggregator, consolidated_tx_hash, header, uncles, chain_id, global_exit_root, received_at, consolidated_at, block_id, network_id FROM sync.batch WHERE batch_num = $1 AND network_id = $2"
-	getNumDepositsSQL      = "SELECT MAX(deposit_cnt) FROM sync.deposit WHERE network_id = $1"
+	getNumDepositsSQL      = "SELECT coalesce(MAX(deposit_cnt), 0) FROM sync.deposit WHERE network_id = $1 AND block_num <= $2"
 	getLastBatchNumberSQL  = "SELECT coalesce(max(batch_num),0) as batch FROM sync.batch"
 )
 
@@ -456,9 +456,9 @@ func (s *PostgresStorage) GetBatchByNumber(ctx context.Context, batchNumber uint
 }
 
 // GetNumberDeposits gets the number of  deposits
-func (s *PostgresStorage) GetNumberDeposits(ctx context.Context, networkID uint) (uint64, error) {
+func (s *PostgresStorage) GetNumberDeposits(ctx context.Context, networkID uint, blockNumber uint64) (uint64, error) {
 	var nDeposits uint64
-	err := s.db.QueryRow(ctx, getNumDepositsSQL, networkID).Scan(&nDeposits)
+	err := s.db.QueryRow(ctx, getNumDepositsSQL, networkID, blockNumber).Scan(&nDeposits)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return 0, gerror.ErrStorageNotFound
 	} else if err != nil {
