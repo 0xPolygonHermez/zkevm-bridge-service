@@ -42,7 +42,7 @@ const (
 	consolidateBatchSQL    = "UPDATE sync.batch SET consolidated_tx_hash = $1, consolidated_at = $2, aggregator = $3 WHERE batch_num = $4 AND network_id = $5"
 	addBatchSQL            = "INSERT INTO sync.batch (batch_num, batch_hash, block_num, sequencer, aggregator, consolidated_tx_hash, header, uncles, received_at, chain_id, global_exit_root, block_id, network_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)"
 	getBatchByNumberSQL    = "SELECT block_num, sequencer, aggregator, consolidated_tx_hash, header, uncles, chain_id, global_exit_root, received_at, consolidated_at, block_id, network_id FROM sync.batch WHERE batch_num = $1 AND network_id = $2"
-	getNumDepositsSQL      = "SELECT coalesce(MAX(deposit_cnt), 0) FROM sync.deposit WHERE network_id = $1 AND block_num <= $2"
+	getNumDepositsSQL      = "SELECT MAX(deposit_cnt) FROM sync.deposit WHERE network_id = $1 AND block_num <= $2"
 	getLastBatchNumberSQL  = "SELECT coalesce(max(batch_num),0) as batch FROM sync.batch"
 )
 
@@ -460,9 +460,10 @@ func (s *PostgresStorage) GetNumberDeposits(ctx context.Context, networkID uint,
 	var nDeposits uint64
 	err := s.db.QueryRow(ctx, getNumDepositsSQL, networkID, blockNumber).Scan(&nDeposits)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return 0, gerror.ErrStorageNotFound
+		return 0, nil
 	} else if err != nil {
 		return 0, err
 	}
-	return nDeposits, nil
+	// 0-index in deposit table, 1-index in MT table
+	return nDeposits + 1, nil
 }
