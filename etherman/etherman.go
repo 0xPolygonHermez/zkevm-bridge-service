@@ -2,9 +2,9 @@ package etherman
 
 import (
 	"context"
+	"encoding/hex"
 	"errors"
 	"fmt"
-	"encoding/hex"
 	"math/big"
 	"time"
 
@@ -16,9 +16,9 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/hermeznetwork/hermez-core/etherman/smartcontracts/bridge"
 	"github.com/hermeznetwork/hermez-core/etherman/smartcontracts/globalexitrootmanager"
+	"github.com/hermeznetwork/hermez-core/etherman/smartcontracts/matic"
 	"github.com/hermeznetwork/hermez-core/etherman/smartcontracts/proofofefficiency"
 	"github.com/hermeznetwork/hermez-core/log"
-	"github.com/hermeznetwork/hermez-core/etherman/smartcontracts/matic"
 )
 
 var (
@@ -48,7 +48,7 @@ type ClientEtherMan struct {
 	Bridge                *bridge.Bridge
 	GlobalExitRootManager *globalexitrootmanager.Globalexitrootmanager
 	SCAddresses           []common.Address
-	maticAddr              common.Address
+	maticAddr             common.Address
 	matic                 *matic.Matic
 
 	auth *bind.TransactOpts
@@ -432,6 +432,7 @@ func (etherMan *ClientEtherMan) GetNetworkID(ctx context.Context) (uint, error) 
 	return uint(networkID), nil
 }
 
+// ForceBatch function forces an empty batch
 func (etherMan *ClientEtherMan) ForceBatch(ctx context.Context) error {
 	maticAmount, err := etherMan.PoE.CalculateSequencerCollateral(&bind.CallOpts{Pending: false})
 	if err != nil {
