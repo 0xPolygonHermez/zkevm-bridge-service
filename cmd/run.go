@@ -2,9 +2,14 @@ package main
 
 import (
 	"context"
+	"io/ioutil"
+	"math/big"
 	"os"
 	"os/signal"
+	"path/filepath"
 
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/hermeznetwork/hermez-bridge/bridgectrl"
 	"github.com/hermeznetwork/hermez-bridge/config"
 	"github.com/hermeznetwork/hermez-bridge/db"
@@ -111,7 +116,11 @@ func setupLog(c log.Config) {
 }
 
 func newEthermans(c config.Config) (*etherman.ClientEtherMan, []*etherman.ClientEtherMan, error) {
-	l1Etherman, err := etherman.NewEtherman(c.Etherman, c.NetworkConfig.PoEAddr, c.NetworkConfig.BridgeAddr, c.NetworkConfig.GlobalExitRootManAddr)
+	auth, err := newAuthFromKeystore(c.Etherman.PrivateKeyPath, c.Etherman.PrivateKeyPassword, c.NetworkConfig.L1ChainID)
+	if err != nil {
+		return nil, nil, err
+	}
+	l1Etherman, err := etherman.NewEtherman(c.Etherman, c.NetworkConfig.PoEAddr, c.NetworkConfig.BridgeAddr, c.NetworkConfig.GlobalExitRootManAddr, auth, c.NetworkConfig.MaticAddr)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -137,4 +146,32 @@ func runSynchronizer(genBlockNumber uint64, brdigeCtrl *bridgectrl.BridgeControl
 	if err := sy.Sync(); err != nil {
 		log.Fatal(err)
 	}
+}
+
+func newKeyFromKeystore(path, password string) (*keystore.Key, error) {
+	if path == "" && password == "" {
+		return nil, nil
+	}
+	keystoreEncrypted, err := ioutil.ReadFile(filepath.Clean(path))
+	if err != nil {
+		return nil, err
+	}
+	key, err := keystore.DecryptKey(keystoreEncrypted, password)
+	if err != nil {
+		return nil, err
+	}
+	return key, nil
+}
+
+func newAuthFromKeystore(path, password string, chainID uint64) (*bind.TransactOpts, error) {
+	key, err := newKeyFromKeystore(path, password)
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Info("addr: ", key.Address.Hex())
+	auth, err := bind.NewKeyedTransactorWithChainID(key.PrivateKey, new(big.Int).SetUint64(chainID))
+	if err != nil {
+		log.Fatal(err)
+	}
+	return auth, nil
 }

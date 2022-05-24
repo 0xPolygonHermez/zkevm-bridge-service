@@ -76,7 +76,9 @@ services:
       - HERMEZBRIDGE_DATABASE_NAME=test_db
       - HERMEZBRIDGE_DATABASE_HOST=hez-postgres-bridge
       - HERMEZBRIDGE_DATABASE_PORT=5433
+      - HERMEZBRIDGE_ETHERMAN_PRIVATEKEYPATH=/pk/keystore
     volumes:
+      - ./test/test.keystore:/pk/keystore
       - ./config/config.local.toml:/app/config.toml
     command: ["./hezbridge", "run", "--network", "local", "--cfg", "/app/config.toml"]
 
