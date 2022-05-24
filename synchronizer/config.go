@@ -24,4 +24,7 @@ type Config struct {
 
 	// SyncChunkSize is the number of blocks to sync on each chunk
 	SyncChunkSize uint64 `mapstructure:"SyncChunkSize"`
+
+	//ForceBatch allows the bridge service to force a batch everytime it detects an L1 deposit
+	ForceBatch bool `mapstructure:"ForceBatch"`
 }

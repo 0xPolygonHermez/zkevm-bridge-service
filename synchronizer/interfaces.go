@@ -14,6 +14,7 @@ type localEtherMan interface {
 	HeaderByNumber(ctx context.Context, number *big.Int) (*types.Header, error)
 	BlockByNumber(ctx context.Context, blockNumber uint64) (*types.Block, error)
 	GetNetworkID(ctx context.Context) (uint, error)
+	ForceBatch(ctx context.Context) error
 }
 
 // storageInterface gathers the methods required to interact with the state.

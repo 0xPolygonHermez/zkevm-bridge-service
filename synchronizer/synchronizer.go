@@ -221,6 +221,13 @@ func (s *ClientSynchronizer) processBlockRange(blocks []etherman.Block, order ma
 				if err != nil {
 					log.Fatalf("NetworkID: %d, failed to store new deposit in the bridge tree, block: %d, Deposit: %+v err: %v", s.networkID, &blocks[i].BlockNumber, deposit, err)
 				}
+				//Force a batch to sync deposit in L2
+				if s.networkID == 0 && s.cfg.ForceBatch {
+					err = s.etherMan.ForceBatch(s.ctx)
+					if err != nil {
+						log.Error("Error forcing the batch: ", err)
+					}
+				}
 			} else if element.Name == etherman.GlobalExitRootsOrder {
 				exitRoot := blocks[i].GlobalExitRoots[element.Pos]
 				exitRoot.BlockID = blockID

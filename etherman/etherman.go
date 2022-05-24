@@ -2,6 +2,7 @@ package etherman
 
 import (
 	"context"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"math/big"
@@ -15,6 +16,7 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/hermeznetwork/hermez-core/etherman/smartcontracts/bridge"
 	"github.com/hermeznetwork/hermez-core/etherman/smartcontracts/globalexitrootmanager"
+	"github.com/hermeznetwork/hermez-core/etherman/smartcontracts/matic"
 	"github.com/hermeznetwork/hermez-core/etherman/smartcontracts/proofofefficiency"
 	"github.com/hermeznetwork/hermez-core/log"
 )
@@ -46,10 +48,14 @@ type ClientEtherMan struct {
 	Bridge                *bridge.Bridge
 	GlobalExitRootManager *globalexitrootmanager.Globalexitrootmanager
 	SCAddresses           []common.Address
+	maticAddr             common.Address
+	matic                 *matic.Matic
+
+	auth *bind.TransactOpts
 }
 
 // NewEtherman creates a new etherman.
-func NewEtherman(cfg Config, poeAddr common.Address, bridgeAddr common.Address, globalExitRootManAddr common.Address) (*ClientEtherMan, error) {
+func NewEtherman(cfg Config, poeAddr common.Address, bridgeAddr common.Address, globalExitRootManAddr common.Address, auth *bind.TransactOpts, maticAddr common.Address) (*ClientEtherMan, error) {
 	// Connect to ethereum node
 	ethClient, err := ethclient.Dial(cfg.L1URL)
 	if err != nil {
@@ -69,9 +75,13 @@ func NewEtherman(cfg Config, poeAddr common.Address, bridgeAddr common.Address, 
 	if err != nil {
 		return nil, err
 	}
+	matic, err := matic.NewMatic(maticAddr, ethClient)
+	if err != nil {
+		return nil, err
+	}
 	scAddresses := []common.Address{poeAddr, bridgeAddr, globalExitRootManAddr}
 
-	return &ClientEtherMan{EtherClient: ethClient, PoE: poe, Bridge: bridge, GlobalExitRootManager: globalExitRoot, SCAddresses: scAddresses}, nil
+	return &ClientEtherMan{EtherClient: ethClient, PoE: poe, Bridge: bridge, GlobalExitRootManager: globalExitRoot, SCAddresses: scAddresses, auth: auth, matic: matic, maticAddr: maticAddr}, nil
 }
 
 // NewL2Etherman creates a new etherman.
@@ -420,4 +430,61 @@ func (etherMan *ClientEtherMan) GetNetworkID(ctx context.Context) (uint, error) 
 		return 0, err
 	}
 	return uint(networkID), nil
+}
+
+// ForceBatch function forces an empty batch
+func (etherMan *ClientEtherMan) ForceBatch(ctx context.Context) error {
+	maticAmount, err := etherMan.PoE.CalculateSequencerCollateral(&bind.CallOpts{Pending: false})
+	if err != nil {
+		return fmt.Errorf("Error getting collateral amount from smc: %s", err.Error())
+	}
+	txApprove, err := etherMan.matic.Approve(etherMan.auth, etherMan.SCAddresses[0], maticAmount)
+	if err != nil {
+		return fmt.Errorf("Error approving matics: %s", err.Error())
+	}
+	//wait to process approve
+	const txETHTransferTimeout = 30 * time.Second
+	err = etherMan.txToBeMined(ctx, txApprove.Hash(), txETHTransferTimeout)
+	if err != nil {
+		return fmt.Errorf("Error: %s", err.Error())
+	}
+	tx, err := etherMan.PoE.SendBatch(etherMan.auth, []byte{}, maticAmount)
+	if err != nil {
+		return fmt.Errorf("Error sending the batch: %s", err.Error())
+	}
+	log.Info("New Empty batch proposal sent! ", tx.Hash())
+	return nil
+}
+
+func (etherMan *ClientEtherMan) txToBeMined(ctx context.Context, hash common.Hash, timeout time.Duration) error {
+	start := time.Now()
+	for {
+		if time.Since(start) > timeout {
+			return errors.New("timeout exceed")
+		}
+
+		time.Sleep(1 * time.Second)
+
+		_, isPending, err := etherMan.EtherClient.TransactionByHash(ctx, hash)
+		if err == ethereum.NotFound {
+			continue
+		}
+
+		if err != nil {
+			return err
+		}
+
+		if !isPending {
+			r, err := etherMan.EtherClient.TransactionReceipt(ctx, hash)
+			if err != nil {
+				return err
+			}
+
+			if r.Status == types.ReceiptStatusFailed {
+				return fmt.Errorf("transaction has failed: %s", hex.EncodeToString(r.PostState))
+			}
+
+			return nil
+		}
+	}
 }
