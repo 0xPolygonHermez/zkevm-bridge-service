@@ -108,7 +108,7 @@ func (c Client) SendBridge(ctx context.Context, tokenAddr common.Address, amount
 
 	// wait transfer to be included in a batch
 	const txTimeout = 15 * time.Second
-	err = WaitTxToBeMined(ctx, c.Client, tx.Hash(), txTimeout)
+	return WaitTxToBeMined(ctx, c.Client, tx.Hash(), txTimeout)
 	if err != nil {
 		return err
 	}
@@ -134,7 +134,7 @@ func (c Client) SendClaim(ctx context.Context, deposit *pb.Deposit, smtProof [][
 
 	// wait transfer to be mined
 	const txTimeout = 15 * time.Second
-	err = WaitTxToBeMined(ctx, c.Client, tx.Hash(), txTimeout)
+	return WaitTxToBeMined(ctx, c.Client, tx.Hash(), txTimeout)
 	if err != nil {
 		return err
 	}

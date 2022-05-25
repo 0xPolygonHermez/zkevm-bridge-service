@@ -150,7 +150,11 @@ func (m *Manager) SendL2Deposit(ctx context.Context, tokenAddr common.Address, a
 		return err
 	}
 
-	return client.SendBridge(ctx, tokenAddr, amount, destNetwork, destAddr, common.HexToAddress(l2BridgeAddr), auth)
+	err = client.SendBridge(ctx, tokenAddr, amount, destNetwork, destAddr, common.HexToAddress(l2BridgeAddr), auth)
+	if err != nil {
+		return err
+	}
+	return m.WaitBatchToBeConsolidated(ctx, false)
 }
 
 // Setup creates all the required components and initializes them according to
@@ -449,7 +453,11 @@ func (m *Manager) SendL2Claim(ctx context.Context, deposit *pb.Deposit, smtProof
 		return err
 	}
 	auth.GasPrice = big.NewInt(0)
-	return client.SendClaim(ctx, deposit, smtProof, globalExitRoot.GlobalExitRootL2Num, globalExitRoot, common.HexToAddress(l2BridgeAddr), auth)
+	err = client.SendClaim(ctx, deposit, smtProof, globalExitRoot.GlobalExitRootL2Num, globalExitRoot, common.HexToAddress(l2BridgeAddr), auth)
+	if err != nil {
+		return err
+	}
+	return m.WaitBatchToBeConsolidated(ctx, false)
 }
 
 // GetCurrentGlobalExitRootSynced reads the latest globalexitroot of a batch proposal from db
@@ -521,7 +529,7 @@ func (m *Manager) ForceBatchProposal(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	//wait to process approve
+	// wait to process approve
 	const txETHTransferTimeout = 20 * time.Second
 	err = WaitTxToBeMined(ctx, client.Client, txApprove.Hash(), txETHTransferTimeout)
 	if err != nil {
@@ -532,16 +540,14 @@ func (m *Manager) ForceBatchProposal(ctx context.Context) error {
 		return err
 	}
 
-	// Wait eth transfer to be mined
+	// wait eth transfer to be mined
 	log.Infof("Waiting tx to be mined")
 	err = WaitTxToBeMined(ctx, client.Client, tx.Hash(), txETHTransferTimeout)
 	if err != nil {
 		return err
 	}
-	//Wait for sync
-	const t time.Duration = 30
-	time.Sleep(t * time.Second)
-	return nil
+	// wait for sync
+	return m.WaitBatchToBeConsolidated(ctx, true)
 }
 
 // DeployERC20 deploys erc20 smc
@@ -592,4 +598,26 @@ func (m *Manager) ApproveERC20(ctx context.Context, erc20Addr, bridgeAddr common
 // GetTokenWrapped get token wrapped info
 func (m *Manager) GetTokenWrapped(ctx context.Context, originNetwork uint, originalTokenAddr common.Address) (*etherman.TokenWrapped, error) {
 	return m.storage.GetTokenWrapped(ctx, originNetwork, originalTokenAddr)
+}
+
+// WaitBatchToBeConsolidated waits until new batch is verified
+func (m *Manager) WaitBatchToBeConsolidated(ctx context.Context, isCreated bool) error {
+	orgBatchNumber, orgVerified, err := m.storage.GetLastBatchState(ctx)
+	if err != nil {
+		return err
+	}
+	if isCreated && orgVerified {
+		return nil
+	}
+	w := operations.NewWait()
+	return w.Poll(defaultInterval, defaultDeadline, func() (bool, error) {
+		batchNumber, verified, err := m.storage.GetLastBatchState(ctx)
+		if !verified {
+			return false, err
+		}
+		if isCreated || !orgVerified {
+			return true, nil
+		}
+		return batchNumber > orgBatchNumber, nil
+	})
 }

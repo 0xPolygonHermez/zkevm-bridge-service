@@ -44,6 +44,7 @@ const (
 	getBatchByNumberSQL    = "SELECT block_num, sequencer, aggregator, consolidated_tx_hash, header, uncles, chain_id, global_exit_root, received_at, consolidated_at, block_id, network_id FROM sync.batch WHERE batch_num = $1 AND network_id = $2"
 	getNumDepositsSQL      = "SELECT coalesce(MAX(deposit_cnt),-1) FROM sync.deposit WHERE network_id = $1 AND block_num <= $2"
 	getLastBatchNumberSQL  = "SELECT coalesce(max(batch_num),0) as batch FROM sync.batch"
+	getLastBatchStateSQL   = "SELECT batch_num, CASE WHEN consolidated_at IS NULL THEN false ELSE true END AS verified FROM sync.batch ORDER BY batch_num DESC LIMIT 1;"
 )
 
 var (
@@ -466,4 +467,19 @@ func (s *PostgresStorage) GetNumberDeposits(ctx context.Context, networkID uint,
 	}
 	// 0-index in deposit table, 1-index in MT table
 	return uint64(nDeposits + 1), nil
+}
+
+// GetLastBatchState returns the lates verified batch number.
+func (s *PostgresStorage) GetLastBatchState(ctx context.Context) (uint64, bool, error) {
+	var (
+		batchNumber   uint64
+		batchVerified bool
+	)
+	err := s.db.QueryRow(ctx, getLastBatchStateSQL).Scan(&batchNumber, &batchVerified)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return 0, false, nil
+	} else if err != nil {
+		return 0, false, err
+	}
+	return batchNumber, batchVerified, err
 }

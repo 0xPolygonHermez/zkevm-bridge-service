@@ -78,7 +78,7 @@ func bridgeUpCondition() (done bool, err error) {
 	return done, nil
 }
 
-//WaitTxToBeMined waits until a tx is mined or forged
+// WaitTxToBeMined waits until a tx is mined or forged.
 func WaitTxToBeMined(ctx context.Context, client *ethclient.Client, hash common.Hash, timeout time.Duration) error {
 	w := ops.NewWait()
 	return w.TxToBeMined(client, hash, timeout)
