@@ -24,6 +24,7 @@ const (
 	getDepositsSQL         = "SELECT orig_net, token_addr, amount, dest_net, dest_addr, block_num, deposit_cnt, block_id, network_id, tx_hash FROM sync.deposit WHERE dest_addr = $1 ORDER BY block_id DESC LIMIT $2 OFFSET $3"
 	getNodeByKeySQL        = "SELECT value, deposit_cnt FROM merkletree.rht WHERE key = $1 AND network = $2"
 	getRootByDepositCntSQL = "SELECT key FROM merkletree.rht WHERE deposit_cnt = $1 AND depth = $2 AND network = $3"
+	getLastDepositCntSQL   = "SELECT coalesce(MAX(deposit_cnt), 0) FROM merkletree.rht WHERE network = $1"
 	setNodeByKeySQL        = "INSERT INTO merkletree.rht (key, value, network, deposit_cnt, depth) VALUES ($1, $2, $3, $4, $5)"
 	resetNodeByKeySQL      = "DELETE FROM merkletree.rht WHERE deposit_cnt > $1 AND network = $2"
 	getPreviousBlockSQL    = "SELECT id, block_num, block_hash, parent_hash, network_id, received_at FROM sync.block WHERE network_id = $1 ORDER BY block_num DESC LIMIT 1 OFFSET $2"
@@ -177,6 +178,17 @@ func (s *PostgresStorage) GetRoot(ctx context.Context, depositCnt uint, depth ui
 		return nil, err
 	}
 	return root, nil
+}
+
+// GetLastDepositCount gets the last deposit count from the merkle tree
+func (s *PostgresStorage) GetLastDepositCount(ctx context.Context) (uint, error) {
+	var depositCnt uint
+	err := s.db.QueryRow(ctx, getLastDepositCntSQL, string(ctx.Value(contextKeyNetwork).(uint8))).Scan(&depositCnt)
+	if err != nil {
+		return 0, err
+	}
+
+	return depositCnt, nil
 }
 
 // Set inserts a key-value pair into the db.
