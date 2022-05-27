@@ -218,9 +218,12 @@ func (s *PostgresStorage) Reset(ctx context.Context, block *etherman.Block, netw
 		return err
 	}
 
-	//Remove consolidations
-	_, err := s.db.Exec(ctx, resetConsolidationSQL, block.ReceivedAt, networkID)
-	return err
+	if block.BlockNumber != 0 { // if its zero, everything is removed so there is no consolidations
+		//Remove consolidations
+		_, err := s.db.Exec(ctx, resetConsolidationSQL, block.ReceivedAt, networkID)
+		return err
+	}
+	return nil
 }
 
 // Rollback rollbacks a db transaction

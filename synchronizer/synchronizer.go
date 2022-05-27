@@ -31,6 +31,7 @@ type ClientSynchronizer struct {
 	genBlockNumber uint64
 	cfg            Config
 	networkID      uint
+	synced		   bool
 }
 
 // NewSynchronizer creates and initializes an instance of Synchronizer
@@ -88,7 +89,7 @@ func (s *ClientSynchronizer) Sync() error {
 					continue
 				}
 			}
-			if waitDuration != s.cfg.SyncInterval.Duration {
+			if !s.synced {
 				// Check latest Block
 				header, err := s.etherMan.HeaderByNumber(s.ctx, nil)
 				if err != nil {
@@ -98,6 +99,7 @@ func (s *ClientSynchronizer) Sync() error {
 				lastKnownBlock := header.Number
 				if lastBlockSynced.BlockNumber == lastKnownBlock.Uint64() {
 					waitDuration = s.cfg.SyncInterval.Duration
+					s.synced = true
 				}
 			}
 		}
@@ -156,6 +158,7 @@ func (s *ClientSynchronizer) syncBlocks(lastBlockSynced *etherman.Block) (*ether
 		fromBlock = toBlock + 1
 
 		if lastKnownBlock.Cmp(new(big.Int).SetUint64(fromBlock)) < 1 {
+			s.synced = true
 			break
 		}
 	}
@@ -222,7 +225,7 @@ func (s *ClientSynchronizer) processBlockRange(blocks []etherman.Block, order ma
 					log.Fatalf("NetworkID: %d, failed to store new deposit in the bridge tree, block: %d, Deposit: %+v err: %v", s.networkID, &blocks[i].BlockNumber, deposit, err)
 				}
 				//Force a batch to sync deposit in L2
-				if s.networkID == 0 && s.cfg.ForceBatch {
+				if s.networkID == 0 && s.cfg.ForceBatch && s.synced {
 					err = s.etherMan.ForceBatch(s.ctx)
 					if err != nil {
 						log.Error("Error forcing the batch: ", err)
@@ -297,6 +300,29 @@ func (s *ClientSynchronizer) resetState(block *etherman.Block) error {
 		log.Error("NetworkID: ", s.networkID, ", error resetting the state. Error: ", err)
 		return err
 	}
+
+	depositCnt, err := s.storage.GetNumberDeposits(s.ctx, s.networkID, block.BlockNumber)
+	if err != nil {
+		rollbackErr := s.storage.Rollback(s.ctx, s.networkID)
+		if rollbackErr != nil {
+			log.Errorf("NetworkID: %d, error rolling back state to store block. BlockNumber: %d, rollbackErr: %v, error : %s", s.networkID, block.BlockNumber, rollbackErr, err.Error())
+			return rollbackErr
+		}
+		log.Error("NetworkID: ", s.networkID, ", error getting GetNumberDeposits. Error: ", err)
+		return err
+	}
+
+	err = s.bridgeCtrl.ReorgMT(uint(depositCnt), s.networkID)
+	if err != nil {
+		rollbackErr := s.storage.Rollback(s.ctx, s.networkID)
+		if rollbackErr != nil {
+			log.Errorf("NetworkID: %d, error rolling back state to store block. BlockNumber: %d, rollbackErr: %v, error : %s", s.networkID, block.BlockNumber, rollbackErr, err.Error())
+			return rollbackErr
+		}
+		log.Error("NetworkID: ", s.networkID, ", error resetting ReorgMT the state. Error: ", err)
+		return err
+	}
+
 	err = s.storage.Commit(s.ctx, s.networkID)
 	if err != nil {
 		rollbackErr := s.storage.Rollback(s.ctx, s.networkID)
@@ -305,18 +331,6 @@ func (s *ClientSynchronizer) resetState(block *etherman.Block) error {
 			return rollbackErr
 		}
 		log.Error("NetworkID: ", s.networkID, ", error committing the resetted state. Error: ", err)
-		return err
-	}
-
-	depositCnt, err := s.storage.GetNumberDeposits(s.ctx, s.networkID, block.BlockNumber)
-	if err != nil {
-		log.Error("NetworkID: ", s.networkID, ", error GetNumberDeposits: ", err)
-		return err
-	}
-
-	err = s.bridgeCtrl.ReorgMT(uint(depositCnt), s.networkID)
-	if err != nil {
-		log.Error("NetworkID: ", s.networkID, ", error ReorgMT: ", err)
 		return err
 	}
 	return nil
@@ -364,7 +378,7 @@ func (s *ClientSynchronizer) checkReorg(latestBlock *etherman.Block) (*etherman.
 			latestBlock, err = s.storage.GetPreviousBlock(s.ctx, s.networkID, depth)
 			if errors.Is(err, gerror.ErrStorageNotFound) {
 				log.Warn("error checking reorg: previous block not found in db: ", err)
-				return nil, nil
+				return &etherman.Block{}, nil
 			} else if err != nil {
 				return nil, err
 			}
