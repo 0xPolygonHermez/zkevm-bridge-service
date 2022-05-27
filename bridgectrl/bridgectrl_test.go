@@ -82,6 +82,19 @@ func TestBridgeTree(t *testing.T) {
 
 			err = bt.AddDeposit(deposit)
 			require.NoError(t, err)
+
+			// test reorg
+			ctx := context.WithValue(context.TODO(), contextKeyNetwork, uint8(1)) //nolint
+			orgRoot, err := bt.exitTrees[0].store.GetRoot(ctx, uint(i+1), cfg.Height-1)
+			require.NoError(t, err)
+			err = bt.ReorgMT(uint(i), testVectors[i].OriginalNetwork)
+			require.NoError(t, err)
+			err = bt.AddDeposit(deposit)
+			require.NoError(t, err)
+			newRoot, err := bt.exitTrees[0].store.GetRoot(ctx, uint(i+1), cfg.Height-1)
+			require.NoError(t, err)
+			assert.Equal(t, orgRoot, newRoot)
+
 			err = store.AddExitRoot(context.TODO(), &etherman.GlobalExitRoot{
 				BlockNumber:       0,
 				GlobalExitRootNum: big.NewInt(int64(i)),
@@ -95,11 +108,6 @@ func TestBridgeTree(t *testing.T) {
 		for i, testVector := range testVectors {
 			_, _, err := bt.GetClaim(testVector.OriginalNetwork, uint(i+1))
 			require.EqualError(t, err, gerror.ErrStorageNotFound.Error())
-		}
-
-		for i := len(testVectors) - 1; i >= 0; i-- {
-			err := bt.ReorgMT(uint(i+1), testVectors[i].OriginalNetwork)
-			require.NoError(t, err)
 		}
 	})
 }

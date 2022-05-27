@@ -37,11 +37,23 @@ func NewMerkleTree(ctx context.Context, store merkleTreeStore, height uint8) (*M
 			return nil, err
 		}
 	}
+
+	depositCnt, err := store.GetLastDepositCount(ctx)
+	if err != nil {
+		return nil, err
+	}
+	var mtRoot [KeyLen]byte
+	root, err := store.GetRoot(ctx, depositCnt, height-1)
+	if err != nil {
+		return nil, err
+	}
+	copy(mtRoot[:], root)
+
 	return &MerkleTree{
 		store:  store,
 		height: height,
-		count:  0,
-		root:   zeroHashes[height],
+		count:  depositCnt,
+		root:   mtRoot,
 	}, nil
 }
 
