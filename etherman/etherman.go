@@ -442,12 +442,14 @@ func (etherMan *ClientEtherMan) ForceBatch(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("Error approving matics: %s", err.Error())
 	}
+	log.Debug("txApprove: ", txApprove.Hash())
 	//wait to process approve
-	const txETHTransferTimeout = 30 * time.Second
+	const txETHTransferTimeout = 120 * time.Second
 	err = etherMan.txToBeMined(ctx, txApprove.Hash(), txETHTransferTimeout)
 	if err != nil {
 		return fmt.Errorf("Error: %s", err.Error())
 	}
+	log.Debug("Sending force batch")
 	tx, err := etherMan.PoE.SendBatch(etherMan.auth, []byte{}, maticAmount)
 	if err != nil {
 		return fmt.Errorf("Error sending the batch: %s", err.Error())
