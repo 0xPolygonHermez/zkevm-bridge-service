@@ -442,6 +442,7 @@ func (etherMan *ClientEtherMan) ForceBatch(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("Error approving matics: %s", err.Error())
 	}
+	log.Debug("txApprove: ", txApprove.Hash())
 	//wait to process approve
 	const txETHTransferTimeout = 120 * time.Second
 	err = etherMan.txToBeMined(ctx, txApprove.Hash(), txETHTransferTimeout)

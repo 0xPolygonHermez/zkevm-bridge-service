@@ -31,7 +31,7 @@ type ClientSynchronizer struct {
 	genBlockNumber uint64
 	cfg            Config
 	networkID      uint
-	synced		   bool
+	synced         bool
 }
 
 // NewSynchronizer creates and initializes an instance of Synchronizer
@@ -52,6 +52,8 @@ func NewSynchronizer(storage storageInterface, bridge *bridgectrl.BridgeControll
 		networkID:      networkID,
 	}, nil
 }
+
+var waitDuration = time.Duration(0)
 
 // Sync function will read the last state synced and will continue from that point.
 // Sync() will read blockchain events to detect bridge updates
@@ -75,7 +77,6 @@ func (s *ClientSynchronizer) Sync() error {
 			log.Fatal("NetworkID: ", s.networkID, ", unexpected error getting the latest block. Error: ", err)
 		}
 	}
-	waitDuration := time.Duration(0)
 	for {
 		select {
 		case <-s.ctx.Done():
@@ -159,6 +160,7 @@ func (s *ClientSynchronizer) syncBlocks(lastBlockSynced *etherman.Block) (*ether
 
 		if lastKnownBlock.Cmp(new(big.Int).SetUint64(fromBlock)) < 1 {
 			s.synced = true
+			waitDuration = s.cfg.SyncInterval.Duration
 			break
 		}
 	}
