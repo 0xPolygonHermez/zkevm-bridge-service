@@ -1,4 +1,7 @@
 version: '3'
+networks:
+  default:
+    name: hermez
 services:
   hez-postgres-core:
     container_name: hez-postgres-core
@@ -41,7 +44,7 @@ services:
       - ./test/test.keystore:/pk/keystore
     #command: ["./hezcore", "run", "--network", "local", "--cfg", "/app/config.local.toml"]
     command: >
-      sh -c "./hezcore register --cfg /app/config.local.toml --network local -y http://hez-core:8123 &&
+      sh -c "./hezcore register --cfg /app/config.local.toml --network local -y http://hez-core-rpc:8123 &&
              ./hezcore approve --cfg /app/config.local.toml --network local --amount 10000 -y &&
              ./hezcore run --network local --cfg /app/config.local.toml"
 
