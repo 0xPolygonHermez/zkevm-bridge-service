@@ -16,6 +16,7 @@ import (
 	"github.com/hermeznetwork/hermez-bridge/db/pgstorage"
 	"github.com/hermeznetwork/hermez-bridge/etherman"
 	"github.com/hermeznetwork/hermez-bridge/utils"
+	"github.com/hermeznetwork/hermez-bridge/utils/gerror"
 	"github.com/hermeznetwork/hermez-core/encoding"
 	"github.com/hermeznetwork/hermez-core/etherman/smartcontracts/bridge"
 	"github.com/hermeznetwork/hermez-core/etherman/smartcontracts/globalexitrootmanager"
@@ -54,8 +55,11 @@ const (
 )
 
 var (
-	dbConfig          = pgstorage.NewConfigFromEnv()
-	networks          = []uint{0, 1}
+	dbConfig = pgstorage.NewConfigFromEnv()
+	networks = map[NetworkSID]uint{
+		L1: 0,
+		L2: 1,
+	}
 	accHexPrivateKeys = map[NetworkSID]string{
 		L1: "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",
 		L2: "0xdfd01798f92667dbf91df722434e8fbe96af0211d4d1b82bbbbc8f1def7a814f", //0xc949254d682d8c9ad5682521675b8f43b102aec4
@@ -104,7 +108,7 @@ func NewManager(ctx context.Context, cfg *Config) (*Manager, error) {
 	if err != nil {
 		return nil, err
 	}
-	bt, err := bridgectrl.NewBridgeController(cfg.BT, networks, pgst, pgst)
+	bt, err := bridgectrl.NewBridgeController(cfg.BT, []uint{0, 1}, pgst, pgst)
 	if err != nil {
 		return nil, err
 	}
@@ -137,7 +141,23 @@ func (m *Manager) SendL1Deposit(ctx context.Context, tokenAddr common.Address, a
 		return err
 	}
 
-	return client.SendBridge(ctx, tokenAddr, amount, destNetwork, destAddr, common.HexToAddress(l1BridgeAddr), auth)
+	var lastBlockID uint64 = 0
+	lastBlock, err := m.storage.GetLastBlock(ctx, networks[L1])
+	if err != nil {
+		if err != gerror.ErrStorageNotFound {
+			return err
+		}
+	} else {
+		lastBlockID = lastBlock.ID
+	}
+
+	err = client.SendBridge(ctx, tokenAddr, amount, destNetwork, destAddr, common.HexToAddress(l1BridgeAddr), auth)
+	if err != nil {
+		return err
+	}
+
+	// sync for new exit root
+	return m.WaitExitRootToBeSynced(ctx, lastBlockID+1, false)
 }
 
 // SendL2Deposit sends a deposit from l2 to l1.
@@ -150,11 +170,18 @@ func (m *Manager) SendL2Deposit(ctx context.Context, tokenAddr common.Address, a
 		return err
 	}
 
+	lastBlockID, err := m.getLastBlockID(ctx)
+	if err != nil {
+		return err
+	}
+
 	err = client.SendBridge(ctx, tokenAddr, amount, destNetwork, destAddr, common.HexToAddress(l2BridgeAddr), auth)
 	if err != nil {
 		return err
 	}
-	return m.WaitBatchToBeConsolidated(ctx, false)
+
+	// sync for new exit root
+	return m.WaitExitRootToBeSynced(ctx, lastBlockID+1, true)
 }
 
 // Setup creates all the required components and initializes them according to
@@ -197,6 +224,7 @@ func (m *Manager) Setup() error {
 	//Wait for sync
 	const t2 time.Duration = 15
 	time.Sleep(t2 * time.Second)
+
 	return nil
 }
 
@@ -457,7 +485,7 @@ func (m *Manager) SendL2Claim(ctx context.Context, deposit *pb.Deposit, smtProof
 	if err != nil {
 		return err
 	}
-	return m.WaitBatchToBeConsolidated(ctx, false)
+	return m.WaitBatchToBeConsolidated(ctx)
 }
 
 // GetCurrentGlobalExitRootSynced reads the latest globalexitroot of a batch proposal from db
@@ -547,7 +575,17 @@ func (m *Manager) ForceBatchProposal(ctx context.Context) error {
 		return err
 	}
 	// wait for sync
-	return m.WaitBatchToBeConsolidated(ctx, true)
+	err = m.WaitBatchToBeConsolidated(ctx)
+	if err != nil {
+		return err
+	}
+	// wait for new exit root
+	_, blockID, _, err := m.storage.GetLastBatchState(ctx)
+	if err != nil {
+		return err
+	}
+
+	return m.WaitExitRootToBeSynced(ctx, blockID, false)
 }
 
 // DeployERC20 deploys erc20 smc
@@ -596,28 +634,94 @@ func (m *Manager) ApproveERC20(ctx context.Context, erc20Addr, bridgeAddr common
 }
 
 // GetTokenWrapped get token wrapped info
-func (m *Manager) GetTokenWrapped(ctx context.Context, originNetwork uint, originalTokenAddr common.Address) (*etherman.TokenWrapped, error) {
+func (m *Manager) GetTokenWrapped(ctx context.Context, originNetwork uint, originalTokenAddr common.Address, isCreated bool) (*etherman.TokenWrapped, error) {
+	if isCreated {
+		w := operations.NewWait()
+		blockID, err := m.getLastBlockID(ctx)
+		if err != nil {
+			return nil, err
+		}
+
+		err = w.Poll(defaultInterval, defaultDeadline, func() (bool, error) {
+			wrappedToken, err := m.storage.GetTokenWrapped(ctx, originNetwork, originalTokenAddr)
+			if err != nil {
+				return false, err
+			}
+			return wrappedToken.BlockID >= blockID, nil
+		})
+		if err != nil {
+			return nil, err
+		}
+	}
 	return m.storage.GetTokenWrapped(ctx, originNetwork, originalTokenAddr)
 }
 
 // WaitBatchToBeConsolidated waits until new batch is verified
-func (m *Manager) WaitBatchToBeConsolidated(ctx context.Context, isCreated bool) error {
-	orgBatchNumber, orgVerified, err := m.storage.GetLastBatchState(ctx)
+func (m *Manager) WaitBatchToBeConsolidated(ctx context.Context) error {
+	orgBatchNumber, _, orgVerified, err := m.storage.GetLastBatchState(ctx)
 	if err != nil {
 		return err
 	}
-	if isCreated && orgVerified {
-		return nil
-	}
+
 	w := operations.NewWait()
 	return w.Poll(defaultInterval, defaultDeadline, func() (bool, error) {
-		batchNumber, verified, err := m.storage.GetLastBatchState(ctx)
+		batchNumber, _, verified, err := m.storage.GetLastBatchState(ctx)
 		if !verified {
 			return false, err
 		}
-		if isCreated || !orgVerified {
+		if !orgVerified {
 			return true, nil
 		}
 		return batchNumber > orgBatchNumber, nil
 	})
+}
+
+// WaitExitRootToBeSynced waits unitl new exit root is synced.
+func (m *Manager) WaitExitRootToBeSynced(ctx context.Context, blockID uint64, isRollup bool) error {
+	log.Debugf("WaitExitRootToBeSynced: %d\n", blockID)
+	orgExitRoot, err := m.storage.GetLatestExitRoot(ctx)
+	if err != nil && err != gerror.ErrStorageNotFound {
+		return err
+	}
+	w := operations.NewWait()
+	return w.Poll(defaultInterval, defaultDeadline, func() (bool, error) {
+		exitRoot, err := m.storage.GetLatestExitRoot(ctx)
+		if err != nil {
+			if err == gerror.ErrStorageNotFound {
+				return false, nil
+			}
+			return false, err
+		}
+		if exitRoot.BlockID < blockID {
+			return false, nil
+		}
+		if !isRollup {
+			return true, nil
+		}
+		return exitRoot.ExitRoots[1] != orgExitRoot.ExitRoots[1], nil
+	})
+}
+
+func (m *Manager) getLastBlockID(ctx context.Context) (uint64, error) {
+	var lastBlockID uint64 = 0
+
+	lastBlock, err := m.storage.GetLastBlock(ctx, networks[L1])
+	if err != nil {
+		if err != gerror.ErrStorageNotFound {
+			return 0, err
+		}
+	} else if lastBlock.ID > lastBlockID {
+		lastBlockID = lastBlock.ID
+	}
+
+	lastBlock, err = m.storage.GetLastBlock(ctx, networks[L2])
+	if err != nil {
+		if err != gerror.ErrStorageNotFound {
+			return 0, err
+		}
+	} else if lastBlock.ID > lastBlockID {
+		lastBlockID = lastBlock.ID
+	}
+
+	return lastBlockID, nil
 }

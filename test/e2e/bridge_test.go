@@ -205,7 +205,7 @@ func TestE2E(t *testing.T) {
 		require.NoError(t, err)
 		// Get tokenWrappedAddr
 		t.Log("token Address:", tokenAddr)
-		tokenWrapped, err := opsman.GetTokenWrapped(ctx, 1, tokenAddr)
+		tokenWrapped, err := opsman.GetTokenWrapped(ctx, 1, tokenAddr, true)
 		require.NoError(t, err)
 		// Check L2 funds to see if the amount has been increased
 		balance2, err := opsman.CheckAccountTokenBalance(ctx, operations.L1, tokenWrapped.WrappedTokenAddress, &destAddr)
@@ -309,7 +309,7 @@ func TestE2E(t *testing.T) {
 		// Claim funds in L2
 		err = opsman.SendL2Claim(ctx, deposits[0], smtProof, globaExitRoot)
 		require.NoError(t, err)
-		tokenWrapped, err := opsman.GetTokenWrapped(ctx, 0, tokenAddr)
+		tokenWrapped, err := opsman.GetTokenWrapped(ctx, 0, tokenAddr, false)
 		require.NoError(t, err)
 		t.Log("TokenWrapped: ", tokenWrapped)
 		// Check L2 funds to see if the amount has been increased
@@ -431,7 +431,7 @@ func TestE2E(t *testing.T) {
 		// Claim funds in L2
 		err = opsman.SendL2Claim(ctx, deposits[2], smtProof, globaExitRoot)
 		require.NoError(t, err)
-		tokenWrapped, err := opsman.GetTokenWrapped(ctx, 0, tokenAddr)
+		tokenWrapped, err := opsman.GetTokenWrapped(ctx, 0, tokenAddr, false)
 		require.NoError(t, err)
 		t.Log("TokenWrapped: ", tokenWrapped)
 		// Check L2 funds to see if the amount has been increased
@@ -513,7 +513,7 @@ func TestE2E(t *testing.T) {
 		// Claim funds in L2
 		err = opsman.SendL2Claim(ctx, deposits[0], smtProof, globaExitRoot)
 		require.NoError(t, err)
-		tokenWrapped, err := opsman.GetTokenWrapped(ctx, 0, tokenAddr)
+		tokenWrapped, err := opsman.GetTokenWrapped(ctx, 0, tokenAddr, false)
 		require.NoError(t, err)
 		balance2, err := opsman.CheckAccountTokenBalance(ctx, "l2", tokenWrapped.WrappedTokenAddress, &destAddr)
 		require.NoError(t, err)
