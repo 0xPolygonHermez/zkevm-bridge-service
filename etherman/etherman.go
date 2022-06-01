@@ -2,7 +2,6 @@ package etherman
 
 import (
 	"context"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"math/big"
@@ -438,17 +437,6 @@ func (etherMan *ClientEtherMan) ForceBatch(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("Error getting collateral amount from smc: %s", err.Error())
 	}
-	txApprove, err := etherMan.matic.Approve(etherMan.auth, etherMan.SCAddresses[0], maticAmount)
-	if err != nil {
-		return fmt.Errorf("Error approving matics: %s", err.Error())
-	}
-	log.Debug("txApprove: ", txApprove.Hash())
-	//wait to process approve
-	const txETHTransferTimeout = 120 * time.Second
-	err = etherMan.txToBeMined(ctx, txApprove.Hash(), txETHTransferTimeout)
-	if err != nil {
-		return fmt.Errorf("Error: %s", err.Error())
-	}
 	log.Debug("Sending force batch")
 	tx, err := etherMan.PoE.SendBatch(etherMan.auth, []byte{}, maticAmount)
 	if err != nil {
@@ -456,37 +444,4 @@ func (etherMan *ClientEtherMan) ForceBatch(ctx context.Context) error {
 	}
 	log.Info("New Empty batch proposal sent! ", tx.Hash())
 	return nil
-}
-
-func (etherMan *ClientEtherMan) txToBeMined(ctx context.Context, hash common.Hash, timeout time.Duration) error {
-	start := time.Now()
-	for {
-		if time.Since(start) > timeout {
-			return errors.New("timeout exceed")
-		}
-
-		time.Sleep(1 * time.Second)
-
-		_, isPending, err := etherMan.EtherClient.TransactionByHash(ctx, hash)
-		if err == ethereum.NotFound {
-			continue
-		}
-
-		if err != nil {
-			return err
-		}
-
-		if !isPending {
-			r, err := etherMan.EtherClient.TransactionReceipt(ctx, hash)
-			if err != nil {
-				return err
-			}
-
-			if r.Status == types.ReceiptStatusFailed {
-				return fmt.Errorf("transaction has failed: %s", hex.EncodeToString(r.PostState))
-			}
-
-			return nil
-		}
-	}
 }
