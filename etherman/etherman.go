@@ -244,7 +244,6 @@ func (etherMan *ClientEtherMan) processEvent(ctx context.Context, vLog types.Log
 		batch.Sequencer = batchEvent.Sequencer
 		batch.ChainID = new(big.Int).SetUint64(uint64(batchEvent.BatchChainID))
 		batch.GlobalExitRoot = batchEvent.LastGlobalExitRoot
-		batch.Header = &head
 		batch.BlockNumber = vLog.BlockNumber
 		fullBlock, err := etherMan.EtherClient.BlockByHash(ctx, vLog.BlockHash)
 		if err != nil {
@@ -252,6 +251,8 @@ func (etherMan *ClientEtherMan) processEvent(ctx context.Context, vLog types.Log
 		}
 		t := time.Unix(int64(fullBlock.Time()), 0)
 		batch.ReceivedAt = t
+		head.Time = fullBlock.Time()
+		batch.Header = &head
 
 		var block Block
 		block.BlockNumber = vLog.BlockNumber
