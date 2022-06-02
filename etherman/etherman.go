@@ -230,17 +230,16 @@ func (etherMan *ClientEtherMan) readEvents(ctx context.Context, query ethereum.F
 func (etherMan *ClientEtherMan) processEvent(ctx context.Context, vLog types.Log) (*Block, error) {
 	switch vLog.Topics[0] {
 	case newBatchEventSignatureHash:
+		log.Debug("New Batch proposal")
 		batchEvent, err := etherMan.PoE.ParseSendBatch(vLog)
 		if err != nil {
 			return nil, err
 		}
-		// Indexed parameters using topics
-		var head types.Header
-		head.TxHash = vLog.TxHash
-		head.Difficulty = big.NewInt(0)
-		head.Number = new(big.Int).SetUint64(uint64(batchEvent.NumBatch))
+		log.Debug("Batch number: ", batchEvent.NumBatch)
 
 		var batch Batch
+		batch.BatchNumber = batchEvent.NumBatch
+		batch.TxHash = vLog.TxHash
 		batch.Sequencer = batchEvent.Sequencer
 		batch.ChainID = new(big.Int).SetUint64(uint64(batchEvent.BatchChainID))
 		batch.GlobalExitRoot = batchEvent.LastGlobalExitRoot
@@ -251,8 +250,6 @@ func (etherMan *ClientEtherMan) processEvent(ctx context.Context, vLog types.Log
 		}
 		t := time.Unix(int64(fullBlock.Time()), 0)
 		batch.ReceivedAt = t
-		head.Time = fullBlock.Time()
-		batch.Header = &head
 
 		var block Block
 		block.BlockNumber = vLog.BlockNumber
@@ -262,11 +259,10 @@ func (etherMan *ClientEtherMan) processEvent(ctx context.Context, vLog types.Log
 		block.Batches = append(block.Batches, batch)
 		return &block, nil
 	case consolidateBatchSignatureHash:
-		var head types.Header
-		head.Number = new(big.Int).SetBytes(vLog.Topics[1][:])
-
+		batchNum := new(big.Int).SetBytes(vLog.Topics[1][:])
+		log.Debug("Batch Consolidated: ", batchNum)
 		var batch Batch
-		batch.Header = &head
+		batch.BatchNumber = batchNum.Uint64()
 		batch.BlockNumber = vLog.BlockNumber
 		batch.Aggregator = common.BytesToAddress(vLog.Topics[2].Bytes())
 		batch.ConsolidatedTxHash = vLog.TxHash
@@ -379,6 +375,7 @@ func (etherMan *ClientEtherMan) processEvent(ctx context.Context, vLog types.Log
 		block.Claims = append(block.Claims, claimAux)
 		return &block, nil
 	case newWrappedTokenEventSignatureHash:
+		log.Debug("TokenWrapped event detected")
 		tokenWrapped, err := etherMan.Bridge.ParseNewWrappedToken(vLog)
 		if err != nil {
 			return nil, err
