@@ -9,7 +9,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/hermez-bridge/etherman"
-	"github.com/hermeznetwork/hermez-bridge/gerror"
+	"github.com/hermeznetwork/hermez-bridge/utils/gerror"
 	"github.com/hermeznetwork/hermez-core/log"
 	"github.com/jackc/pgx/v4"
 	"github.com/jackc/pgx/v4/pgxpool"
@@ -24,6 +24,7 @@ const (
 	getDepositsSQL         = "SELECT orig_net, token_addr, amount, dest_net, dest_addr, block_num, deposit_cnt, block_id, network_id, tx_hash FROM sync.deposit WHERE dest_addr = $1 ORDER BY block_id DESC LIMIT $2 OFFSET $3"
 	getNodeByKeySQL        = "SELECT value, deposit_cnt FROM merkletree.rht WHERE key = $1 AND network = $2"
 	getRootByDepositCntSQL = "SELECT key FROM merkletree.rht WHERE deposit_cnt = $1 AND depth = $2 AND network = $3"
+	getLastDepositCntSQL   = "SELECT coalesce(MAX(deposit_cnt), 0) FROM merkletree.rht WHERE network = $1"
 	setNodeByKeySQL        = "INSERT INTO merkletree.rht (key, value, network, deposit_cnt, depth) VALUES ($1, $2, $3, $4, $5)"
 	resetNodeByKeySQL      = "DELETE FROM merkletree.rht WHERE deposit_cnt > $1 AND network = $2"
 	getPreviousBlockSQL    = "SELECT id, block_num, block_hash, parent_hash, network_id, received_at FROM sync.block WHERE network_id = $1 ORDER BY block_num DESC LIMIT 1 OFFSET $2"
@@ -31,7 +32,8 @@ const (
 	resetConsolidationSQL  = "UPDATE sync.batch SET aggregator = decode('0000000000000000000000000000000000000000', 'hex'), consolidated_tx_hash = decode('0000000000000000000000000000000000000000000000000000000000000000', 'hex'), consolidated_at = null WHERE consolidated_at > $1 AND network_id = $2"
 	addGlobalExitRootSQL   = "INSERT INTO sync.exit_root (block_num, global_exit_root_num, mainnet_exit_root, rollup_exit_root, block_id, global_exit_root_l2_num) VALUES ($1, $2, $3, $4, $5, $6)"
 	getLatestExitRootSQL   = "SELECT block_id, block_num, global_exit_root_num, mainnet_exit_root, rollup_exit_root FROM sync.exit_root ORDER BY global_exit_root_num DESC LIMIT 1"
-	getExitRootSQL         = "SELECT block_id, block_num, global_exit_root_num, mainnet_exit_root, rollup_exit_root, global_exit_root_l2_num FROM sync.exit_root WHERE global_exit_root_l2_num IS NOT NULL ORDER BY global_exit_root_num DESC LIMIT 1"
+	getLatestL1ExitRootSQL = "SELECT block_id, block_num, global_exit_root_num, mainnet_exit_root, rollup_exit_root FROM sync.exit_root WHERE global_exit_root_num = (SELECT MAX(global_exit_root_num)-1 FROM sync.exit_root WHERE global_exit_root_l2_num IS NOT NULL)"
+	getLatestL2ExitRootSQL = "SELECT block_id, block_num, global_exit_root_num, mainnet_exit_root, rollup_exit_root, global_exit_root_l2_num FROM sync.exit_root WHERE global_exit_root_l2_num IS NOT NULL ORDER BY global_exit_root_num DESC LIMIT 1"
 	getLatestMainnetRSQL   = "SELECT mainnet_exit_root FROM sync.exit_root ORDER BY global_exit_root_num DESC LIMIT 1"
 	addClaimSQL            = "INSERT INTO sync.claim (index, orig_net, token_addr, amount, dest_addr, block_num, block_id, network_id, tx_hash) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)"
 	getClaimSQL            = "SELECT index, orig_net, token_addr, amount, dest_addr, block_num, block_id, network_id, tx_hash FROM sync.claim WHERE index = $1 AND network_id = $2"
@@ -39,9 +41,9 @@ const (
 	addTokenWrappedSQL     = "INSERT INTO sync.token_wrapped (orig_net, orig_token_addr, wrapped_token_addr, block_num, block_id, network_id) VALUES ($1, $2, $3, $4, $5, $6)"
 	getTokenWrappedSQL     = "SELECT orig_net, orig_token_addr, wrapped_token_addr, block_num, block_id, network_id FROM sync.token_wrapped WHERE orig_net = $1 AND orig_token_addr = $2" // nolint
 	consolidateBatchSQL    = "UPDATE sync.batch SET consolidated_tx_hash = $1, consolidated_at = $2, aggregator = $3 WHERE batch_num = $4 AND network_id = $5"
-	addBatchSQL            = "INSERT INTO sync.batch (batch_num, batch_hash, block_num, sequencer, aggregator, consolidated_tx_hash, header, uncles, received_at, chain_id, global_exit_root, block_id, network_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)"
-	getBatchByNumberSQL    = "SELECT block_num, sequencer, aggregator, consolidated_tx_hash, header, uncles, chain_id, global_exit_root, received_at, consolidated_at, block_id, network_id FROM sync.batch WHERE batch_num = $1 AND network_id = $2"
-	getNumDepositsSQL      = "SELECT MAX(deposit_cnt) FROM sync.deposit WHERE network_id = $1"
+	addBatchSQL            = "INSERT INTO sync.batch (batch_num, block_num, sequencer, aggregator, consolidated_tx_hash, tx_hash, uncles, received_at, chain_id, global_exit_root, block_id, network_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)"
+	getBatchByNumberSQL    = "SELECT batch_num, block_num, sequencer, aggregator, consolidated_tx_hash, tx_hash, uncles, chain_id, global_exit_root, received_at, consolidated_at, block_id, network_id FROM sync.batch WHERE batch_num = $1 AND network_id = $2"
+	getNumDepositsSQL      = "SELECT coalesce(MAX(deposit_cnt),-1) FROM sync.deposit WHERE network_id = $1 AND block_num <= $2"
 	getLastBatchNumberSQL  = "SELECT coalesce(max(batch_num),0) as batch FROM sync.batch"
 )
 
@@ -178,6 +180,17 @@ func (s *PostgresStorage) GetRoot(ctx context.Context, depositCnt uint, depth ui
 	return root, nil
 }
 
+// GetLastDepositCount gets the last deposit count from the merkle tree
+func (s *PostgresStorage) GetLastDepositCount(ctx context.Context) (uint, error) {
+	var depositCnt uint
+	err := s.db.QueryRow(ctx, getLastDepositCntSQL, string(ctx.Value(contextKeyNetwork).(uint8))).Scan(&depositCnt)
+	if err != nil {
+		return 0, err
+	}
+
+	return depositCnt, nil
+}
+
 // Set inserts a key-value pair into the db.
 // If record with such a key already exists its assumed that the value is correct,
 // because it's a reverse hash table, and the key is a hash of the value
@@ -217,9 +230,12 @@ func (s *PostgresStorage) Reset(ctx context.Context, block *etherman.Block, netw
 		return err
 	}
 
-	//Remove consolidations
-	_, err := s.db.Exec(ctx, resetConsolidationSQL, block.ReceivedAt, networkID)
-	return err
+	if block.BlockNumber != 0 { // if its zero, everything is removed so there is no consolidations
+		//Remove consolidations
+		_, err := s.db.Exec(ctx, resetConsolidationSQL, block.ReceivedAt, networkID)
+		return err
+	}
+	return nil
 }
 
 // Rollback rollbacks a db transaction
@@ -278,8 +294,37 @@ func (s *PostgresStorage) AddExitRoot(ctx context.Context, exitRoot *etherman.Gl
 	return err
 }
 
-// GetLatestSyncedExitRoot get the latest ExitRoot stored in l2
-func (s *PostgresStorage) GetLatestSyncedExitRoot(ctx context.Context) (*etherman.GlobalExitRoot, error) {
+// GetLatestL1SyncedExitRoot get the latest ExitRoot stored that fully synced the rollup exit root in L1.
+func (s *PostgresStorage) GetLatestL1SyncedExitRoot(ctx context.Context) (*etherman.GlobalExitRoot, error) {
+	var (
+		batch           uint64
+		exitRoot        etherman.GlobalExitRoot
+		globalNum       uint64
+		mainnetExitRoot common.Hash
+		rollupExitRoot  common.Hash
+	)
+	err := s.db.QueryRow(ctx, getLastBatchNumberSQL).Scan(&batch)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, gerror.ErrStorageNotFound
+	} else if err != nil {
+		return nil, err
+	} else if batch == uint64(0) {
+		return nil, gerror.ErrStorageNotFound
+	}
+	err = s.db.QueryRow(ctx, getLatestL1ExitRootSQL).Scan(&exitRoot.BlockID, &exitRoot.BlockNumber, &globalNum, &mainnetExitRoot, &rollupExitRoot)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, gerror.ErrStorageNotFound
+	} else if err != nil {
+		return nil, err
+	}
+	exitRoot.GlobalExitRootNum = new(big.Int).SetUint64(globalNum)
+	exitRoot.GlobalExitRootL2Num = new(big.Int).SetUint64(batch)
+	exitRoot.ExitRoots = []common.Hash{mainnetExitRoot, rollupExitRoot}
+	return &exitRoot, nil
+}
+
+// GetLatestL2SyncedExitRoot get the latest ExitRoot stored in L2.
+func (s *PostgresStorage) GetLatestL2SyncedExitRoot(ctx context.Context) (*etherman.GlobalExitRoot, error) {
 	var (
 		exitRoot        etherman.GlobalExitRoot
 		globalNum       uint64
@@ -287,7 +332,7 @@ func (s *PostgresStorage) GetLatestSyncedExitRoot(ctx context.Context) (*etherma
 		mainnetExitRoot common.Hash
 		rollupExitRoot  common.Hash
 	)
-	err := s.db.QueryRow(ctx, getExitRootSQL).Scan(&exitRoot.BlockID, &exitRoot.BlockNumber, &globalNum, &mainnetExitRoot, &rollupExitRoot, &globalL2Num)
+	err := s.db.QueryRow(ctx, getLatestL2ExitRootSQL).Scan(&exitRoot.BlockID, &exitRoot.BlockNumber, &globalNum, &mainnetExitRoot, &rollupExitRoot, &globalL2Num)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, gerror.ErrStorageNotFound
 	} else if err != nil {
@@ -299,7 +344,7 @@ func (s *PostgresStorage) GetLatestSyncedExitRoot(ctx context.Context) (*etherma
 	return &exitRoot, nil
 }
 
-// GetLatestExitRoot get the latest ExitRoot stored
+// GetLatestExitRoot get the latest ExitRoot from L1.
 func (s *PostgresStorage) GetLatestExitRoot(ctx context.Context) (*etherman.GlobalExitRoot, error) {
 	var (
 		exitRoot        etherman.GlobalExitRoot
@@ -394,14 +439,14 @@ func (s *PostgresStorage) GetTokenWrapped(ctx context.Context, originalNetwork u
 
 // ConsolidateBatch changes the virtual status of a batch
 func (s *PostgresStorage) ConsolidateBatch(ctx context.Context, batch *etherman.Batch) error {
-	_, err := s.db.Exec(ctx, consolidateBatchSQL, batch.ConsolidatedTxHash, batch.ConsolidatedAt, batch.Aggregator, batch.Number().Uint64(), batch.NetworkID)
+	_, err := s.db.Exec(ctx, consolidateBatchSQL, batch.ConsolidatedTxHash, batch.ConsolidatedAt, batch.Aggregator, batch.BatchNumber, batch.NetworkID)
 	return err
 }
 
 // AddBatch adds a new batch to the db
 func (s *PostgresStorage) AddBatch(ctx context.Context, batch *etherman.Batch) error {
-	_, err := s.db.Exec(ctx, addBatchSQL, batch.Number().Uint64(), batch.Hash(), batch.BlockNumber, batch.Sequencer, batch.Aggregator,
-		batch.ConsolidatedTxHash, batch.Header, batch.Uncles, batch.ReceivedAt, batch.ChainID.String(), batch.GlobalExitRoot, batch.BlockID, batch.NetworkID)
+	_, err := s.db.Exec(ctx, addBatchSQL, batch.BatchNumber, batch.BlockNumber, batch.Sequencer, batch.Aggregator,
+		batch.ConsolidatedTxHash, batch.TxHash, batch.Uncles, batch.ReceivedAt, batch.ChainID.String(), batch.GlobalExitRoot, batch.BlockID, batch.NetworkID)
 	return err
 }
 
@@ -412,8 +457,8 @@ func (s *PostgresStorage) GetBatchByNumber(ctx context.Context, batchNumber uint
 		chain uint64
 	)
 	err := s.db.QueryRow(ctx, getBatchByNumberSQL, batchNumber, networkID).Scan(
-		&batch.BlockNumber, &batch.Sequencer, &batch.Aggregator, &batch.ConsolidatedTxHash,
-		&batch.Header, &batch.Uncles, &chain, &batch.GlobalExitRoot, &batch.ReceivedAt,
+		&batch.BatchNumber, &batch.BlockNumber, &batch.Sequencer, &batch.Aggregator, &batch.ConsolidatedTxHash,
+		&batch.TxHash, &batch.Uncles, &chain, &batch.GlobalExitRoot, &batch.ReceivedAt,
 		&batch.ConsolidatedAt, &batch.BlockID, &batch.NetworkID)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, gerror.ErrStorageNotFound
@@ -426,13 +471,14 @@ func (s *PostgresStorage) GetBatchByNumber(ctx context.Context, batchNumber uint
 }
 
 // GetNumberDeposits gets the number of  deposits
-func (s *PostgresStorage) GetNumberDeposits(ctx context.Context, networkID uint) (uint64, error) {
-	var nDeposits uint64
-	err := s.db.QueryRow(ctx, getNumDepositsSQL, networkID).Scan(&nDeposits)
+func (s *PostgresStorage) GetNumberDeposits(ctx context.Context, networkID uint, blockNumber uint64) (uint64, error) {
+	var nDeposits int64
+	err := s.db.QueryRow(ctx, getNumDepositsSQL, networkID, blockNumber).Scan(&nDeposits)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return 0, gerror.ErrStorageNotFound
+		return 0, nil
 	} else if err != nil {
 		return 0, err
 	}
-	return nDeposits, nil
+	// 0-index in deposit table, 1-index in MT table
+	return uint64(nDeposits + 1), nil
 }

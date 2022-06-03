@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/hermeznetwork/hermez-bridge/db/pgstorage"
 	"github.com/hermeznetwork/hermez-bridge/etherman"
 	"github.com/stretchr/testify/assert"
@@ -34,7 +33,7 @@ func TestExitRootStore(t *testing.T) {
 	storage, err := NewStorage(storageCfg, networksNumber)
 	require.NoError(t, err)
 	var networkID uint = 1
-	_, err = storage.GetLatestExitRoot(ctx)
+	_, err = storage.GetLatestL1SyncedExitRoot(ctx)
 	require.Error(t, err)
 
 	var exitRoot etherman.GlobalExitRoot
@@ -129,17 +128,13 @@ func TestExitRootStore(t *testing.T) {
 	assert.Equal(t, tokenWrapped.WrappedTokenAddress, tokenWrappedStored.WrappedTokenAddress)
 
 	// Batch
-	head := types.Header{
-		TxHash:     common.Hash{},
-		Difficulty: big.NewInt(0),
-		Number:     new(big.Int).SetUint64(1),
-	}
 	batch := etherman.Batch{
 		BlockNumber:    1,
 		Sequencer:      common.HexToAddress("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9fe"),
 		ChainID:        big.NewInt(100),
 		GlobalExitRoot: common.HexToHash("0x30e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9fe"),
-		Header:         &head,
+		TxHash:         common.Hash{},
+		BatchNumber:    1,
 		ReceivedAt:     time.Now(),
 		BlockID:        id,
 		NetworkID:      networkID,
@@ -147,13 +142,13 @@ func TestExitRootStore(t *testing.T) {
 	err = storage.AddBatch(ctx, &batch)
 	require.NoError(t, err)
 
-	batchStored, err := storage.GetBatchByNumber(ctx, batch.Number().Uint64(), networkID)
+	batchStored, err := storage.GetBatchByNumber(ctx, batch.BatchNumber, networkID)
 	require.NoError(t, err)
 	assert.Equal(t, batch.BlockNumber, batchStored.BlockNumber)
 	assert.Equal(t, batch.Sequencer, batchStored.Sequencer)
 	assert.Equal(t, batch.ChainID, batchStored.ChainID)
 	assert.Equal(t, batch.GlobalExitRoot, batchStored.GlobalExitRoot)
-	assert.Equal(t, batch.Number(), batchStored.Number())
+	assert.Equal(t, batch.BatchNumber, batchStored.BatchNumber)
 	assert.Equal(t, common.Hash{}, batchStored.ConsolidatedTxHash)
 
 	batch.Aggregator = common.HexToAddress("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9fc")
@@ -162,13 +157,13 @@ func TestExitRootStore(t *testing.T) {
 	batch.ConsolidatedTxHash = common.HexToHash("0x31e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9fe")
 	err = storage.ConsolidateBatch(ctx, &batch)
 	require.NoError(t, err)
-	batchStored2, err := storage.GetBatchByNumber(ctx, batch.Number().Uint64(), networkID)
+	batchStored2, err := storage.GetBatchByNumber(ctx, batch.BatchNumber, networkID)
 	require.NoError(t, err)
 	assert.Equal(t, batch.BlockNumber, batchStored2.BlockNumber)
 	assert.Equal(t, batch.Sequencer, batchStored2.Sequencer)
 	assert.Equal(t, batch.ChainID, batchStored2.ChainID)
 	assert.Equal(t, batch.GlobalExitRoot, batchStored2.GlobalExitRoot)
-	assert.Equal(t, batch.Number(), batchStored2.Number())
+	assert.Equal(t, batch.BatchNumber, batchStored2.BatchNumber)
 	assert.Equal(t, common.HexToHash("0x31e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9fe"), batchStored2.ConsolidatedTxHash)
 	assert.Equal(t, common.HexToAddress("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9fc"), batchStored2.Aggregator)
 }

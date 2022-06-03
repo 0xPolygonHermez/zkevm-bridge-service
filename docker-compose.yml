@@ -27,7 +27,7 @@ services:
 
   hez-core:
     container_name: hez-core
-    image: hermeznetwork/hermez-node-zkevm:develop@sha256:60cad347b357447577363880943385906f39cdae75b292475aa77f81b0e7f6c5
+    image: hermeznetwork/hermez-node-zkevm:develop@sha256:3516d304ef50d819802a9b30d248a3ffb339991014c33148f51d89664257a657
     ports:
       - 8123:8123
     environment:
@@ -53,7 +53,7 @@ services:
 
   hez-prover:
     container_name: hez-prover
-    image: hermeznetwork/hez-mock-prover@sha256:dacb57cdffc8505cb897cb83970891acbaac6e5600372d7fe357a5bf66c13ebb
+    image: hermeznetwork/hez-mock-prover@sha256:987bc82cbcbb594448cc029749a519aeecffd5a358f5bd47e0b11b8f05052c87
     ports:
       - 50051:50051
     environment:
@@ -76,7 +76,9 @@ services:
       - HERMEZBRIDGE_DATABASE_NAME=test_db
       - HERMEZBRIDGE_DATABASE_HOST=hez-postgres-bridge
       - HERMEZBRIDGE_DATABASE_PORT=5433
+      - HERMEZBRIDGE_ETHERMAN_PRIVATEKEYPATH=/pk/keystore
     volumes:
+      - ./test/test.keystore:/pk/keystore
       - ./config/config.local.toml:/app/config.toml
     command: ["./hezbridge", "run", "--network", "local", "--cfg", "/app/config.toml"]
 

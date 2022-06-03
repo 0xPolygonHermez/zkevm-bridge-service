@@ -96,25 +96,15 @@ type TokenWrapped struct {
 type Batch struct {
 	BlockID            uint64
 	BlockNumber        uint64
+	BatchNumber        uint64
 	NetworkID          uint
 	Sequencer          common.Address
 	Aggregator         common.Address
 	ConsolidatedTxHash common.Hash
 	ChainID            *big.Int
 	GlobalExitRoot     common.Hash
-	Header             *types.Header
 	Uncles             []*types.Header
+	TxHash             common.Hash
 	ReceivedAt         time.Time
 	ConsolidatedAt     *time.Time
-}
-
-// Number is a helper function to get the batch number from the header
-func (b *Batch) Number() *big.Int {
-	return b.Header.Number
-}
-
-// Hash returns the batch hash of the header, which is simply the keccak256 hash of its
-// RLP encoding.
-func (b *Batch) Hash() common.Hash {
-	return b.Header.Hash()
 }

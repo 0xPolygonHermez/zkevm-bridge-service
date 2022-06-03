@@ -14,7 +14,7 @@ import (
 	"github.com/hermeznetwork/hermez-bridge/db/pgstorage"
 	"github.com/hermeznetwork/hermez-bridge/etherman"
 	"github.com/hermeznetwork/hermez-bridge/test/vectors"
-	"github.com/hermeznetwork/hermez-core/log"
+	"github.com/hermeznetwork/hermez-bridge/utils/gerror"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -82,32 +82,32 @@ func TestBridgeTree(t *testing.T) {
 
 			err = bt.AddDeposit(deposit)
 			require.NoError(t, err)
+
+			// test reorg
+			ctx := context.WithValue(context.TODO(), contextKeyNetwork, uint8(1)) //nolint
+			orgRoot, err := bt.exitTrees[0].store.GetRoot(ctx, uint(i+1), cfg.Height-1)
+			require.NoError(t, err)
+			err = bt.ReorgMT(uint(i), testVectors[i].OriginalNetwork)
+			require.NoError(t, err)
+			err = bt.AddDeposit(deposit)
+			require.NoError(t, err)
+			newRoot, err := bt.exitTrees[0].store.GetRoot(ctx, uint(i+1), cfg.Height-1)
+			require.NoError(t, err)
+			assert.Equal(t, orgRoot, newRoot)
+
 			err = store.AddExitRoot(context.TODO(), &etherman.GlobalExitRoot{
 				BlockNumber:       0,
 				GlobalExitRootNum: big.NewInt(int64(i)),
 				ExitRoots:         []common.Hash{common.BytesToHash(bt.exitTrees[0].root[:]), common.BytesToHash(bt.exitTrees[1].root[:])},
 				BlockID:           id,
 			})
-			err = store.AddExitRoot(context.TODO(), &etherman.GlobalExitRoot{
-				BlockNumber:       0,
-				GlobalExitRootNum: big.NewInt(int64(i)),
-				ExitRoots:         []common.Hash{common.BytesToHash(bt.exitTrees[0].root[:]), common.BytesToHash(bt.exitTrees[1].root[:])},
-				BlockID:           id,
-			})
+
 			require.NoError(t, err)
 		}
 
 		for i, testVector := range testVectors {
-			merkleProof, globalExitRoot, err := bt.GetClaim(testVector.OriginalNetwork, uint(i+1))
-			require.NoError(t, err)
-
-			log.Info("globalExitRoot: ", globalExitRoot)
-			log.Info("merkleProof: ", merkleProof)
-		}
-
-		for i := len(testVectors) - 1; i >= 0; i-- {
-			err := bt.ReorgMT(uint(i+1), testVectors[i].OriginalNetwork)
-			require.NoError(t, err)
+			_, _, err := bt.GetClaim(testVector.OriginalNetwork, uint(i+1))
+			require.EqualError(t, err, gerror.ErrStorageNotFound.Error())
 		}
 	})
 }

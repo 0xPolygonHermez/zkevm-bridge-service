@@ -6,11 +6,14 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/hermez-bridge/etherman"
+	"github.com/hermeznetwork/hermez-bridge/utils/gerror"
 )
 
 const (
 	// KeyLen is the length of key and value in the Merkle Tree
 	KeyLen = 32
+	// MainNetworkID is the chain ID for the main network
+	MainNetworkID = uint(0)
 )
 
 // BridgeController struct
@@ -54,7 +57,10 @@ func (bt *BridgeController) AddDeposit(deposit *etherman.Deposit) error {
 
 	leaf := hashDeposit(deposit)
 
-	tID := bt.networkIDs[deposit.NetworkID]
+	tID, found := bt.networkIDs[deposit.NetworkID]
+	if !found {
+		return gerror.ErrNetworkNotRegister
+	}
 	ctx = context.WithValue(context.TODO(), contextKeyNetwork, tID) //nolint
 	return bt.exitTrees[tID-1].addLeaf(ctx, leaf)
 }
@@ -62,18 +68,33 @@ func (bt *BridgeController) AddDeposit(deposit *etherman.Deposit) error {
 // GetClaim returns claim information to the user.
 func (bt *BridgeController) GetClaim(networkID uint, index uint) ([][KeyLen]byte, *etherman.GlobalExitRoot, error) {
 	var (
-		ctx   context.Context
-		proof [][KeyLen]byte
+		ctx            context.Context
+		proof          [][KeyLen]byte
+		globalExitRoot *etherman.GlobalExitRoot
+		err            error
 	)
 
-	tID := bt.networkIDs[networkID]
-	ctx = context.WithValue(context.TODO(), contextKeyNetwork, tID) //nolint
-	if tID != 0 {
-		tID--
+	tID, found := bt.networkIDs[networkID]
+	if !found {
+		return proof, nil, gerror.ErrNetworkNotRegister
 	}
-	globalExitRoot, err := bt.storage.GetLatestSyncedExitRoot(context.TODO())
+	ctx = context.WithValue(context.TODO(), contextKeyNetwork, tID) //nolint
+	tID--
+	if networkID == MainNetworkID {
+		globalExitRoot, err = bt.storage.GetLatestL1SyncedExitRoot(context.TODO())
+	} else {
+		globalExitRoot, err = bt.storage.GetLatestL2SyncedExitRoot(context.TODO())
+	}
+
 	if err != nil {
 		return proof, nil, err
+	}
+	depositCnt, err := bt.exitTrees[tID].getDepositCntByRoot(ctx, globalExitRoot.ExitRoots[tID])
+	if err != nil {
+		return proof, nil, err
+	}
+	if depositCnt < index {
+		return proof, nil, gerror.ErrDepositNotSynced
 	}
 
 	proof, err = bt.exitTrees[tID].getSiblings(ctx, index, globalExitRoot.ExitRoots[tID])
@@ -87,7 +108,10 @@ func (bt *BridgeController) GetClaim(networkID uint, index uint) ([][KeyLen]byte
 // ReorgMT reorg the specific merkle tree.
 func (bt *BridgeController) ReorgMT(depositCount uint, networkID uint) error {
 	var ctx context.Context
-	tID := bt.networkIDs[networkID]
+	tID, found := bt.networkIDs[networkID]
+	if !found {
+		return gerror.ErrNetworkNotRegister
+	}
 	ctx = context.WithValue(context.TODO(), contextKeyNetwork, tID) //nolint
 	return bt.exitTrees[tID-1].resetLeaf(ctx, depositCount)
 }
@@ -117,4 +141,13 @@ func (bt *BridgeController) MockAddDeposit(deposit *etherman.Deposit) error {
 		ExitRoots:         []common.Hash{common.BytesToHash(bt.exitTrees[0].root[:]), common.BytesToHash(bt.exitTrees[1].root[:])},
 		BlockID:           deposit.BlockID,
 	})
+}
+
+// GetTokenWrapped returns tokenWrapped information.
+func (bt *BridgeController) GetTokenWrapped(origNetwork uint, origTokenAddr common.Address) (*etherman.TokenWrapped, error) {
+	tokenWrapped, err := bt.storage.GetTokenWrapped(context.Background(), origNetwork, origTokenAddr)
+	if err != nil {
+		return nil, err
+	}
+	return tokenWrapped, err
 }

@@ -14,6 +14,7 @@ type localEtherMan interface {
 	HeaderByNumber(ctx context.Context, number *big.Int) (*types.Header, error)
 	BlockByNumber(ctx context.Context, blockNumber uint64) (*types.Block, error)
 	GetNetworkID(ctx context.Context) (uint, error)
+	ForceBatch(ctx context.Context) error
 }
 
 // storageInterface gathers the methods required to interact with the state.
@@ -31,5 +32,5 @@ type storageInterface interface {
 	AddTokenWrapped(ctx context.Context, tokeWrapped *etherman.TokenWrapped) error
 	Reset(ctx context.Context, block *etherman.Block, networkID uint) error
 	GetPreviousBlock(ctx context.Context, networkID uint, offset uint64) (*etherman.Block, error)
-	GetNumberDeposits(ctx context.Context, origNetworkID uint) (uint64, error)
+	GetNumberDeposits(ctx context.Context, origNetworkID uint, blockNumber uint64) (uint64, error)
 }

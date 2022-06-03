@@ -4,7 +4,10 @@ import (
 	"context"
 	"encoding/hex"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/hermez-bridge/bridgectrl/pb"
+	"github.com/hermeznetwork/hermez-bridge/etherman"
+	"github.com/hermeznetwork/hermez-bridge/utils/gerror"
 )
 
 const (
@@ -111,12 +114,28 @@ func (s *bridgeService) GetProof(ctx context.Context, req *pb.GetProofRequest) (
 
 // GetClaimStatus returns the claim status whether it is able to send a claim transaction or not.
 func (s *bridgeService) GetClaimStatus(ctx context.Context, req *pb.GetClaimStatusRequest) (*pb.GetClaimStatusResponse, error) {
-	exitRoot, err := s.bridgeCtrl.storage.GetLatestExitRoot(ctx)
-	if err != nil {
+	var (
+		exitRoot *etherman.GlobalExitRoot
+		err      error
+	)
+	if req.NetId == uint32(MainNetworkID) {
+		exitRoot, err = s.bridgeCtrl.storage.GetLatestL1SyncedExitRoot(ctx)
+	} else {
+		exitRoot, err = s.bridgeCtrl.storage.GetLatestL2SyncedExitRoot(ctx)
+	}
+
+	if err == gerror.ErrStorageNotFound {
+		return &pb.GetClaimStatusResponse{
+			Ready: false,
+		}, nil
+	} else if err != nil {
 		return nil, err
 	}
 
-	tID := s.bridgeCtrl.networkIDs[uint(req.NetId)]
+	tID, found := s.bridgeCtrl.networkIDs[uint(req.NetId)]
+	if !found {
+		return nil, gerror.ErrNetworkNotRegister
+	}
 	ctx = context.WithValue(ctx, contextKeyNetwork, tID) //nolint
 	tID--
 	depositCnt, err := s.bridgeCtrl.exitTrees[tID].getDepositCntByRoot(ctx, exitRoot.ExitRoots[tID])
@@ -125,7 +144,7 @@ func (s *bridgeService) GetClaimStatus(ctx context.Context, req *pb.GetClaimStat
 	}
 
 	var ready bool
-	if depositCnt >= uint(req.DepositCnt) {
+	if depositCnt >= uint(req.DepositCnt+1) {
 		ready = true
 	} else {
 		ready = false
@@ -133,5 +152,21 @@ func (s *bridgeService) GetClaimStatus(ctx context.Context, req *pb.GetClaimStat
 
 	return &pb.GetClaimStatusResponse{
 		Ready: ready,
+	}, nil
+}
+
+// GetTokenWrapped returns the token wrapped created for a specific network
+func (s *bridgeService) GetTokenWrapped(ctx context.Context, req *pb.GetTokenWrappedRequest) (*pb.GetTokenWrappedResponse, error) {
+	tokenWrapped, err := s.bridgeCtrl.GetTokenWrapped(uint(req.OrigNet), common.HexToAddress(req.OrigTokenAddr))
+	if err != nil {
+		return nil, err
+	}
+	return &pb.GetTokenWrappedResponse{
+		Tokenwrapped: &pb.TokenWrapped{
+			OrigNet:           uint32(tokenWrapped.OriginalNetwork),
+			OriginalTokenAddr: tokenWrapped.OriginalTokenAddress.Hex(),
+			WrappedTokenAddr:  tokenWrapped.WrappedTokenAddress.Hex(),
+			NetworkId:         uint32(tokenWrapped.NetworkID),
+		},
 	}, nil
 }

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"math/big"
 	"os"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/hermez-bridge/db/pgstorage"
@@ -72,6 +73,22 @@ func MockBridgeCtrl(store *pgstorage.PostgresStorage) (*BridgeController, error)
 			return nil, err
 		}
 
+		batch := etherman.Batch{
+			BlockNumber:    1,
+			Sequencer:      common.HexToAddress("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9fe"),
+			ChainID:        big.NewInt(0),
+			GlobalExitRoot: common.HexToHash("0x30e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9fe"),
+			BatchNumber:    uint64(i + 1),
+			TxHash:         common.Hash{},
+			ReceivedAt:     time.Now(),
+			BlockID:        id,
+			NetworkID:      testDepositVectors[i].OriginalNetwork,
+		}
+		err = store.AddBatch(context.TODO(), &batch)
+		if err != nil {
+			return nil, err
+		}
+
 		amount, _ := new(big.Int).SetString(testDepositVectors[i].Amount, 10) //nolint:gomnd
 		deposit := &etherman.Deposit{
 			OriginalNetwork:    testDepositVectors[i].OriginalNetwork,
@@ -81,6 +98,7 @@ func MockBridgeCtrl(store *pgstorage.PostgresStorage) (*BridgeController, error)
 			DestinationAddress: common.HexToAddress(testDepositVectors[i].DestinationAddress),
 			DepositCount:       uint(i + 1),
 			BlockID:            id,
+			NetworkID:          testDepositVectors[i].OriginalNetwork,
 			BlockNumber:        0,
 		}
 		err = store.AddDeposit(context.TODO(), deposit)
@@ -108,14 +126,26 @@ func MockBridgeCtrl(store *pgstorage.PostgresStorage) (*BridgeController, error)
 			return nil, err
 		}
 		err = store.AddExitRoot(context.TODO(), &etherman.GlobalExitRoot{
-			BlockNumber:       0,
-			GlobalExitRootNum: big.NewInt(int64(i)),
-			ExitRoots:         []common.Hash{common.BytesToHash(bt.exitTrees[0].root[:]), common.BytesToHash(bt.exitTrees[1].root[:])},
-			BlockID:           id,
+			BlockNumber:         0,
+			GlobalExitRootNum:   big.NewInt(int64(i)),
+			GlobalExitRootL2Num: big.NewInt(int64(i)),
+			ExitRoots:           []common.Hash{common.BytesToHash(bt.exitTrees[0].root[:]), common.BytesToHash(bt.exitTrees[1].root[:])},
+			BlockID:             id,
 		})
 		if err != nil {
 			return nil, err
 		}
+	}
+	err = store.AddTokenWrapped(context.TODO(), &etherman.TokenWrapped{
+		OriginalNetwork:      1,
+		OriginalTokenAddress: common.HexToAddress("0x0EF3B0BC8D6313AB7DC03CF7225C872071BE1E6D"),
+		WrappedTokenAddress:  common.HexToAddress("0xC2716D3537ECA4B318E60F3D7D6A48714F1F3335"),
+		BlockID:              1,
+		BlockNumber:          1,
+		NetworkID:            0,
+	})
+	if err != nil {
+		return nil, err
 	}
 
 	return bt, nil

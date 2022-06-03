@@ -6,7 +6,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/hermeznetwork/hermez-bridge/db/pgstorage"
 	"github.com/hermeznetwork/hermez-bridge/etherman"
-	"github.com/hermeznetwork/hermez-bridge/gerror"
+	"github.com/hermeznetwork/hermez-bridge/utils/gerror"
 )
 
 // Storage interface
@@ -21,8 +21,9 @@ type Storage interface {
 	BeginDBTransaction(ctx context.Context, index uint) error
 	Commit(ctx context.Context, index uint) error
 	AddExitRoot(ctx context.Context, exitRoot *etherman.GlobalExitRoot) error
-	GetLatestSyncedExitRoot(ctx context.Context) (*etherman.GlobalExitRoot, error)
 	GetLatestExitRoot(ctx context.Context) (*etherman.GlobalExitRoot, error)
+	GetLatestL1SyncedExitRoot(ctx context.Context) (*etherman.GlobalExitRoot, error)
+	GetLatestL2SyncedExitRoot(ctx context.Context) (*etherman.GlobalExitRoot, error)
 	AddClaim(ctx context.Context, claim *etherman.Claim) error
 	AddTokenWrapped(ctx context.Context, tokeWrapped *etherman.TokenWrapped) error
 	GetTokenWrapped(ctx context.Context, originalNetwork uint, originalTokenAddress common.Address) (*etherman.TokenWrapped, error)
@@ -30,7 +31,7 @@ type Storage interface {
 	AddBatch(ctx context.Context, batch *etherman.Batch) error
 	GetClaim(ctx context.Context, depositCounterUser uint, networkID uint) (*etherman.Claim, error)
 	GetBatchByNumber(ctx context.Context, batchNumber uint64, networkID uint) (*etherman.Batch, error)
-	GetNumberDeposits(ctx context.Context, networkID uint) (uint64, error)
+	GetNumberDeposits(ctx context.Context, networkID uint, blockNumber uint64) (uint64, error)
 }
 
 // NewStorage creates a new Storage

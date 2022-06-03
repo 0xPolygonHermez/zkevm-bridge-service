@@ -15,6 +15,7 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/hermeznetwork/hermez-core/etherman/smartcontracts/bridge"
 	"github.com/hermeznetwork/hermez-core/etherman/smartcontracts/globalexitrootmanager"
+	"github.com/hermeznetwork/hermez-core/etherman/smartcontracts/matic"
 	"github.com/hermeznetwork/hermez-core/etherman/smartcontracts/proofofefficiency"
 	"github.com/hermeznetwork/hermez-core/log"
 )
@@ -46,10 +47,14 @@ type ClientEtherMan struct {
 	Bridge                *bridge.Bridge
 	GlobalExitRootManager *globalexitrootmanager.Globalexitrootmanager
 	SCAddresses           []common.Address
+	maticAddr             common.Address
+	matic                 *matic.Matic
+
+	auth *bind.TransactOpts
 }
 
 // NewEtherman creates a new etherman.
-func NewEtherman(cfg Config, poeAddr common.Address, bridgeAddr common.Address, globalExitRootManAddr common.Address) (*ClientEtherMan, error) {
+func NewEtherman(cfg Config, poeAddr common.Address, bridgeAddr common.Address, globalExitRootManAddr common.Address, auth *bind.TransactOpts, maticAddr common.Address) (*ClientEtherMan, error) {
 	// Connect to ethereum node
 	ethClient, err := ethclient.Dial(cfg.L1URL)
 	if err != nil {
@@ -69,9 +74,13 @@ func NewEtherman(cfg Config, poeAddr common.Address, bridgeAddr common.Address, 
 	if err != nil {
 		return nil, err
 	}
+	matic, err := matic.NewMatic(maticAddr, ethClient)
+	if err != nil {
+		return nil, err
+	}
 	scAddresses := []common.Address{poeAddr, bridgeAddr, globalExitRootManAddr}
 
-	return &ClientEtherMan{EtherClient: ethClient, PoE: poe, Bridge: bridge, GlobalExitRootManager: globalExitRoot, SCAddresses: scAddresses}, nil
+	return &ClientEtherMan{EtherClient: ethClient, PoE: poe, Bridge: bridge, GlobalExitRootManager: globalExitRoot, SCAddresses: scAddresses, auth: auth, matic: matic, maticAddr: maticAddr}, nil
 }
 
 // NewL2Etherman creates a new etherman.
@@ -123,8 +132,8 @@ func (etherMan *ClientEtherMan) readEvents(ctx context.Context, query ethereum.F
 	for _, vLog := range logs {
 		block, err := etherMan.processEvent(ctx, vLog)
 		if err != nil {
-			log.Warnf("error processing event. Retrying... Error: %w. vLog: %+v", err, vLog)
-			break
+			log.Warnf("error processing event. Retrying... Error: %s. vLog: %+v", err.Error(), vLog)
+			return nil, nil, err
 		}
 		if block == nil {
 			continue
@@ -221,21 +230,19 @@ func (etherMan *ClientEtherMan) readEvents(ctx context.Context, query ethereum.F
 func (etherMan *ClientEtherMan) processEvent(ctx context.Context, vLog types.Log) (*Block, error) {
 	switch vLog.Topics[0] {
 	case newBatchEventSignatureHash:
+		log.Debug("New Batch proposal")
 		batchEvent, err := etherMan.PoE.ParseSendBatch(vLog)
 		if err != nil {
 			return nil, err
 		}
-		// Indexed parameters using topics
-		var head types.Header
-		head.TxHash = vLog.TxHash
-		head.Difficulty = big.NewInt(0)
-		head.Number = new(big.Int).SetUint64(uint64(batchEvent.NumBatch))
+		log.Debug("Batch number: ", batchEvent.NumBatch)
 
 		var batch Batch
+		batch.BatchNumber = batchEvent.NumBatch
+		batch.TxHash = vLog.TxHash
 		batch.Sequencer = batchEvent.Sequencer
 		batch.ChainID = new(big.Int).SetUint64(uint64(batchEvent.BatchChainID))
 		batch.GlobalExitRoot = batchEvent.LastGlobalExitRoot
-		batch.Header = &head
 		batch.BlockNumber = vLog.BlockNumber
 		fullBlock, err := etherMan.EtherClient.BlockByHash(ctx, vLog.BlockHash)
 		if err != nil {
@@ -252,11 +259,10 @@ func (etherMan *ClientEtherMan) processEvent(ctx context.Context, vLog types.Log
 		block.Batches = append(block.Batches, batch)
 		return &block, nil
 	case consolidateBatchSignatureHash:
-		var head types.Header
-		head.Number = new(big.Int).SetBytes(vLog.Topics[1][:])
-
+		batchNum := new(big.Int).SetBytes(vLog.Topics[1][:])
+		log.Debug("Batch Consolidated: ", batchNum)
 		var batch Batch
-		batch.Header = &head
+		batch.BatchNumber = batchNum.Uint64()
 		batch.BlockNumber = vLog.BlockNumber
 		batch.Aggregator = common.BytesToAddress(vLog.Topics[2].Bytes())
 		batch.ConsolidatedTxHash = vLog.TxHash
@@ -369,6 +375,7 @@ func (etherMan *ClientEtherMan) processEvent(ctx context.Context, vLog types.Log
 		block.Claims = append(block.Claims, claimAux)
 		return &block, nil
 	case newWrappedTokenEventSignatureHash:
+		log.Debug("TokenWrapped event detected")
 		tokenWrapped, err := etherMan.Bridge.ParseNewWrappedToken(vLog)
 		if err != nil {
 			return nil, err
@@ -420,4 +427,19 @@ func (etherMan *ClientEtherMan) GetNetworkID(ctx context.Context) (uint, error) 
 		return 0, err
 	}
 	return uint(networkID), nil
+}
+
+// ForceBatch function forces an empty batch
+func (etherMan *ClientEtherMan) ForceBatch(ctx context.Context) error {
+	maticAmount, err := etherMan.PoE.CalculateSequencerCollateral(&bind.CallOpts{Pending: false})
+	if err != nil {
+		return fmt.Errorf("Error getting collateral amount from smc: %s", err.Error())
+	}
+	log.Debug("Sending force batch")
+	tx, err := etherMan.PoE.SendBatch(etherMan.auth, []byte{}, maticAmount)
+	if err != nil {
+		return fmt.Errorf("Error sending the batch: %s", err.Error())
+	}
+	log.Info("New Empty batch proposal sent! ", tx.Hash())
+	return nil
 }

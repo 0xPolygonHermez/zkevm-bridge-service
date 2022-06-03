@@ -24,6 +24,7 @@ PrivateKeyPassword = "testonly"
 [Synchronizer]
 SyncInterval = "0s"
 SyncChunkSize = 100
+ForceBatch = false
 
 [BridgeController]
 Store = "postgres"
