@@ -26,13 +26,12 @@ CREATE TABLE sync.exit_root
 CREATE TABLE sync.batch
 (
     batch_num            BIGINT,
-    batch_hash           BYTEA,
+    tx_hash              BYTEA,
     block_id             BIGINT NOT NULL REFERENCES sync.block (id) ON DELETE CASCADE,
     block_num            BIGINT NOT NULL,
     sequencer            BYTEA,
     aggregator           BYTEA,
     consolidated_tx_hash BYTEA,
-    header               jsonb,
     uncles               jsonb,
     chain_id             BIGINT,
     global_exit_root     BYTEA,

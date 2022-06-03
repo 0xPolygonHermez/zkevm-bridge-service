@@ -41,8 +41,8 @@ const (
 	addTokenWrappedSQL     = "INSERT INTO sync.token_wrapped (orig_net, orig_token_addr, wrapped_token_addr, block_num, block_id, network_id) VALUES ($1, $2, $3, $4, $5, $6)"
 	getTokenWrappedSQL     = "SELECT orig_net, orig_token_addr, wrapped_token_addr, block_num, block_id, network_id FROM sync.token_wrapped WHERE orig_net = $1 AND orig_token_addr = $2" // nolint
 	consolidateBatchSQL    = "UPDATE sync.batch SET consolidated_tx_hash = $1, consolidated_at = $2, aggregator = $3 WHERE batch_num = $4 AND network_id = $5"
-	addBatchSQL            = "INSERT INTO sync.batch (batch_num, batch_hash, block_num, sequencer, aggregator, consolidated_tx_hash, header, uncles, received_at, chain_id, global_exit_root, block_id, network_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)"
-	getBatchByNumberSQL    = "SELECT block_num, sequencer, aggregator, consolidated_tx_hash, header, uncles, chain_id, global_exit_root, received_at, consolidated_at, block_id, network_id FROM sync.batch WHERE batch_num = $1 AND network_id = $2"
+	addBatchSQL            = "INSERT INTO sync.batch (batch_num, block_num, sequencer, aggregator, consolidated_tx_hash, tx_hash, uncles, received_at, chain_id, global_exit_root, block_id, network_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)"
+	getBatchByNumberSQL    = "SELECT batch_num, block_num, sequencer, aggregator, consolidated_tx_hash, tx_hash, uncles, chain_id, global_exit_root, received_at, consolidated_at, block_id, network_id FROM sync.batch WHERE batch_num = $1 AND network_id = $2"
 	getNumDepositsSQL      = "SELECT coalesce(MAX(deposit_cnt),-1) FROM sync.deposit WHERE network_id = $1 AND block_num <= $2"
 	getLastBatchNumberSQL  = "SELECT coalesce(max(batch_num),0) as batch FROM sync.batch"
 )
@@ -439,14 +439,14 @@ func (s *PostgresStorage) GetTokenWrapped(ctx context.Context, originalNetwork u
 
 // ConsolidateBatch changes the virtual status of a batch
 func (s *PostgresStorage) ConsolidateBatch(ctx context.Context, batch *etherman.Batch) error {
-	_, err := s.db.Exec(ctx, consolidateBatchSQL, batch.ConsolidatedTxHash, batch.ConsolidatedAt, batch.Aggregator, batch.Number().Uint64(), batch.NetworkID)
+	_, err := s.db.Exec(ctx, consolidateBatchSQL, batch.ConsolidatedTxHash, batch.ConsolidatedAt, batch.Aggregator, batch.BatchNumber, batch.NetworkID)
 	return err
 }
 
 // AddBatch adds a new batch to the db
 func (s *PostgresStorage) AddBatch(ctx context.Context, batch *etherman.Batch) error {
-	_, err := s.db.Exec(ctx, addBatchSQL, batch.Number().Uint64(), batch.Hash(), batch.BlockNumber, batch.Sequencer, batch.Aggregator,
-		batch.ConsolidatedTxHash, batch.Header, batch.Uncles, batch.ReceivedAt, batch.ChainID.String(), batch.GlobalExitRoot, batch.BlockID, batch.NetworkID)
+	_, err := s.db.Exec(ctx, addBatchSQL, batch.BatchNumber, batch.BlockNumber, batch.Sequencer, batch.Aggregator,
+		batch.ConsolidatedTxHash, batch.TxHash, batch.Uncles, batch.ReceivedAt, batch.ChainID.String(), batch.GlobalExitRoot, batch.BlockID, batch.NetworkID)
 	return err
 }
 
@@ -457,8 +457,8 @@ func (s *PostgresStorage) GetBatchByNumber(ctx context.Context, batchNumber uint
 		chain uint64
 	)
 	err := s.db.QueryRow(ctx, getBatchByNumberSQL, batchNumber, networkID).Scan(
-		&batch.BlockNumber, &batch.Sequencer, &batch.Aggregator, &batch.ConsolidatedTxHash,
-		&batch.Header, &batch.Uncles, &chain, &batch.GlobalExitRoot, &batch.ReceivedAt,
+		&batch.BatchNumber, &batch.BlockNumber, &batch.Sequencer, &batch.Aggregator, &batch.ConsolidatedTxHash,
+		&batch.TxHash, &batch.Uncles, &chain, &batch.GlobalExitRoot, &batch.ReceivedAt,
 		&batch.ConsolidatedAt, &batch.BlockID, &batch.NetworkID)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, gerror.ErrStorageNotFound

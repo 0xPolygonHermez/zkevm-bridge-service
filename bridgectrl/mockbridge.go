@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/hermeznetwork/hermez-bridge/db/pgstorage"
 	"github.com/hermeznetwork/hermez-bridge/etherman"
 	"github.com/hermeznetwork/hermez-bridge/test/vectors"
@@ -74,17 +73,13 @@ func MockBridgeCtrl(store *pgstorage.PostgresStorage) (*BridgeController, error)
 			return nil, err
 		}
 
-		head := types.Header{
-			TxHash:     common.Hash{},
-			Difficulty: big.NewInt(0),
-			Number:     new(big.Int).SetUint64(uint64(i + 1)),
-		}
 		batch := etherman.Batch{
 			BlockNumber:    1,
 			Sequencer:      common.HexToAddress("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9fe"),
 			ChainID:        big.NewInt(0),
 			GlobalExitRoot: common.HexToHash("0x30e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9fe"),
-			Header:         &head,
+			BatchNumber:    uint64(i + 1),
+			TxHash:         common.Hash{},
 			ReceivedAt:     time.Now(),
 			BlockID:        id,
 			NetworkID:      testDepositVectors[i].OriginalNetwork,

@@ -197,7 +197,7 @@ func (s *ClientSynchronizer) processBlockRange(blocks []etherman.Block, order ma
 						if rollbackErr != nil {
 							log.Fatalf("NetworkID: %d, error rolling back state to store block. BlockNumber: %d, rollbackErr: %v, err: %v", s.networkID, blocks[i].BlockNumber, rollbackErr, err)
 						}
-						log.Fatalf("NetworkID: %d, failed to consolidate batch locally, batch number: %d, err: %v", s.networkID, batch.Number().Uint64(), err)
+						log.Fatalf("NetworkID: %d, failed to consolidate batch locally, batch number: %d, err: %v", s.networkID, batch.BatchNumber, err)
 					}
 				} else {
 					err = s.storage.AddBatch(ctx, batch)
@@ -206,7 +206,7 @@ func (s *ClientSynchronizer) processBlockRange(blocks []etherman.Block, order ma
 						if rollbackErr != nil {
 							log.Fatalf("NetworkID: %d, error rolling back state to store block. BlockNumber: %d, rollbackErr: %v, err: %v", s.networkID, blocks[i].BlockNumber, rollbackErr, err)
 						}
-						log.Fatalf("NetworkID: %d, failed to add batch locally, batch number: %d, err: %v", s.networkID, batch.Number().Uint64(), err)
+						log.Fatalf("NetworkID: %d, failed to add batch locally, batch number: %d, err: %v", s.networkID, batch.BatchNumber, err)
 					}
 				}
 			} else if element.Name == etherman.DepositsOrder {
