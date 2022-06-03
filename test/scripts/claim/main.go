@@ -18,8 +18,6 @@ const (
 	l2AccHexPrivateKey = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
 	l2NetworkURL       = "http://localhost:8123"
 	bridgeURL          = "http://localhost:8080"
-
-	funds = 90000000000000000
 )
 
 func main() {
@@ -50,7 +48,9 @@ func main() {
 	}
 	bridgeData := deposits[0]
 	proof, err := client.GetMerkleProof(deposits[0].NetworkId, deposits[0].DepositCnt)
-
+	if err != nil {
+		log.Fatal("error: ", err)
+	}
 	log.Debug("bridge: ", bridgeData)
 	log.Debug("mainnetExitRoot: ", proof.MainExitRoot)
 	log.Debug("rollupExitRoot: ", proof.RollupExitRoot)
@@ -62,13 +62,13 @@ func main() {
 		log.Debug("smt: ", proof.MerkleProof[i])
 		smt = append(smt, common.HexToHash(proof.MerkleProof[i]))
 	}
-	globalExitRoot := *&etherman.GlobalExitRoot{
+	globalExitRoot := &etherman.GlobalExitRoot{
 		GlobalExitRootNum:   new(big.Int).SetUint64(proof.ExitRootNum),
 		GlobalExitRootL2Num: new(big.Int).SetUint64(proof.L2ExitRootNum),
-		ExitRoots: []common.Hash{common.HexToHash(proof.MainExitRoot), common.HexToHash(proof.RollupExitRoot)},
+		ExitRoots:           []common.Hash{common.HexToHash(proof.MainExitRoot), common.HexToHash(proof.RollupExitRoot)},
 	}
 	log.Info("Sending claim tx...")
-	err = c.SendClaim(ctx, bridgeData, smt, globalExitRoot.GlobalExitRootL2Num, &globalExitRoot, common.HexToAddress(l2BridgeAddr), auth)
+	err = c.SendClaim(ctx, bridgeData, smt, globalExitRoot.GlobalExitRootL2Num, globalExitRoot, common.HexToAddress(l2BridgeAddr), auth)
 	if err != nil {
 		log.Fatal("error: ", err)
 	}
