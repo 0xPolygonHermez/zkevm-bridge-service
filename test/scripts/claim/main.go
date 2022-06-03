@@ -2,21 +2,12 @@ package main
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
-	"io/ioutil"
 	"math/big"
-	"net/http"
-	"strings"
-	"time"
 
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/hermeznetwork/hermez-bridge/test/operations"
-	"github.com/hermeznetwork/hermez-core/encoding"
-	"github.com/hermeznetwork/hermez-core/etherman/smartcontracts/bridge"
+	clientUtils "github.com/hermeznetwork/hermez-bridge/client"
+	"github.com/hermeznetwork/hermez-bridge/etherman"
+	"github.com/hermeznetwork/hermez-bridge/utils"
 	"github.com/hermeznetwork/hermez-core/log"
 )
 
@@ -26,144 +17,65 @@ const (
 	l2AccHexAddress    = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
 	l2AccHexPrivateKey = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
 	l2NetworkURL       = "http://localhost:8123"
-	brdigeURL          = "http://localhost:8080"
+	bridgeURL          = "http://localhost:8080"
 
 	funds = 90000000000000000
 )
 
 func main() {
 	ctx := context.Background()
-	client, err := ethclient.Dial(l2NetworkURL)
+	c, err := utils.NewClient(ctx, l2NetworkURL)
 	if err != nil {
-		log.Error(err)
-		return
+		log.Fatal("Error: ", err)
 	}
-	br, err := bridge.NewBridge(common.HexToAddress(l2BridgeAddr), client)
+	auth, err := c.GetSigner(ctx, l2AccHexPrivateKey)
 	if err != nil {
-		log.Error(err)
-		return
-	}
-	privateKey, err := crypto.HexToECDSA(strings.TrimPrefix(l2AccHexPrivateKey, "0x"))
-	if err != nil {
-		log.Error(err)
-		return
-	}
-	chainID, err := client.NetworkID(ctx)
-	if err != nil {
-		log.Error(err)
-		return
-	}
-	auth, err := bind.NewKeyedTransactorWithChainID(privateKey, chainID)
-	if err != nil {
-		log.Error(err)
-		return
+		log.Fatal("Error: ", err)
 	}
 	auth.GasPrice = big.NewInt(0)
 
 	// Get Claim data
-	bridgeData, proofData, err := getClaimData()
-	if err != nil {
-		log.Fatal("error getting claimData: ", err)
-	} else if proofData == nil {
-		log.Fatal("error. Merkeltree proof not found. Please wait for a new batch to do the claim")
+	cfg := clientUtils.Config{
+		L1NodeURL: l2NetworkURL,
+		L2NodeURL: l2NetworkURL,
+		BridgeURL: bridgeURL,
 	}
-	log.Debug("bridge: ", bridgeData)
-	log.Debug("mainnetExitRoot: ", proofData.MainExitRoot)
-	log.Debug("rollupExitRoot: ", proofData.RollupExitRoot)
-	log.Debug("L2ExitRootNum: ", proofData.L2ExitRootNum)
-	log.Debug("ExitRootNum: ", proofData.ExitRootNum)
+	client, err := clientUtils.NewClient(ctx, cfg)
+	if err != nil {
+		log.Fatal("Error: ", err)
+	}
+	deposits, err := client.GetBridges(l2AccHexAddress, 0)
+	if err != nil {
+		log.Fatal("Error: ", err)
+	}
+	bridgeData := deposits[0]
+	proof, err := client.GetMerkleProof(deposits[0].NetworkId, deposits[0].DepositCnt)
 
-	amount := big.NewInt(funds)
-	var destNetwork uint32 = 1
-	var origNetwork uint32 = 0
-	destAddr := common.HexToAddress(l2AccHexAddress)
-	l2ExitRootNum, _ := new(big.Int).SetString(proofData.L2ExitRootNum, encoding.Base10)
-	depositCount, _ := new(big.Int).SetString(bridgeData.DepositCnt, encoding.Base10)
+	log.Debug("bridge: ", bridgeData)
+	log.Debug("mainnetExitRoot: ", proof.MainExitRoot)
+	log.Debug("rollupExitRoot: ", proof.RollupExitRoot)
+	log.Debug("L2ExitRootNum: ", proof.L2ExitRootNum)
+	log.Debug("ExitRootNum: ", proof.ExitRootNum)
+
 	var smt [][32]byte
-	for i := 0; i < len(proofData.MerkleProof); i++ {
-		log.Debug("smt: ", common.HexToHash(proofData.MerkleProof[i]).String())
-		smt = append(smt, common.HexToHash(proofData.MerkleProof[i]))
+	for i := 0; i < len(proof.MerkleProof); i++ {
+		log.Debug("smt: ", proof.MerkleProof[i])
+		smt = append(smt, common.HexToHash(proof.MerkleProof[i]))
+	}
+	globalExitRoot := *&etherman.GlobalExitRoot{
+		GlobalExitRootNum:   new(big.Int).SetUint64(proof.ExitRootNum),
+		GlobalExitRootL2Num: new(big.Int).SetUint64(proof.L2ExitRootNum),
+		ExitRoots: []common.Hash{common.HexToHash(proof.MainExitRoot), common.HexToHash(proof.RollupExitRoot)},
 	}
 	log.Info("Sending claim tx...")
-	tx, err := br.Claim(auth, common.HexToAddress(bridgeData.TokenAddr), amount, origNetwork, destNetwork, destAddr, smt,
-		uint32(depositCount.Uint64()), l2ExitRootNum, common.HexToHash(proofData.MainExitRoot),
-		common.HexToHash(proofData.RollupExitRoot))
+	err = c.SendClaim(ctx, bridgeData, smt, globalExitRoot.GlobalExitRootL2Num, &globalExitRoot, common.HexToAddress(l2BridgeAddr), auth)
 	if err != nil {
-		log.Error(err)
-		return
+		log.Fatal("error: ", err)
 	}
-	const txTimeout = 30 * time.Second
-	err = operations.WaitTxToBeMined(ctx, client, tx.Hash(), txTimeout)
+	log.Info("Success!")
+	balance, err := c.Client.BalanceAt(ctx, common.HexToAddress(l2AccHexAddress), nil)
 	if err != nil {
-		log.Error(err)
-		return
-	}
-	log.Info("Success! txHash: ", tx.Hash())
-	balance, err := client.BalanceAt(ctx, common.HexToAddress(l2AccHexAddress), nil)
-	if err != nil {
-		log.Error("error getting balance: ", err)
+		log.Fatal("error getting balance: ", err)
 	}
 	log.Info("L2 balance: ", balance)
-}
-
-func getClaimData() (*deposit, *proof, error) {
-	resp, err := http.Get(brdigeURL + "/bridges/" + l2AccHexAddress)
-	if err != nil {
-		return nil, nil, err
-	}
-	defer func() { _ = resp.Body.Close() }()
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	var bridges getBridgesResponse
-	err = json.Unmarshal([]byte(body), &bridges)
-	if err != nil {
-		log.Error("error unmarshaling bridges: ", err)
-	}
-
-	resp, err = http.Get(fmt.Sprintf("%s/merkle-proofs?net_id=%d&deposit_cnt=%s", brdigeURL, bridges.Deposits[0].NetworkID, bridges.Deposits[0].DepositCnt))
-	if err != nil {
-		return nil, nil, err
-	}
-	defer func() { _ = resp.Body.Close() }()
-	body, err = ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return nil, nil, err
-	}
-	var proof getProofResponse
-	err = json.Unmarshal([]byte(body), &proof)
-	if err != nil {
-		log.Error("error unmarshaling proof: ", err)
-	}
-	return bridges.Deposits[0], proof.Proof, nil
-}
-
-type getProofResponse struct {
-	Proof *proof `json:"proof,omitempty"`
-}
-
-type proof struct {
-	MerkleProof    []string `json:"merkle_proof,omitempty"`
-	ExitRootNum    string   `json:"exit_root_num,omitempty"`
-	L2ExitRootNum  string   `json:"l2_exit_root_num,omitempty"`
-	MainExitRoot   string   `json:"main_exit_root,omitempty"`
-	RollupExitRoot string   `json:"rollup_exit_root,omitempty"`
-}
-
-type getBridgesResponse struct {
-	Deposits []*deposit `json:"deposits,omitempty"`
-}
-
-type deposit struct {
-	OrigNet    uint32 `json:"orig_net,omitempty"`
-	TokenAddr  string `json:"token_addr,omitempty"`
-	Amount     string `json:"amount,omitempty"`
-	DestNet    uint32 `json:"dest_net,omitempty"`
-	DestAddr   string `json:"dest_addr,omitempty"`
-	BlockNum   string `json:"block_num,omitempty"`
-	DepositCnt string `json:"deposit_cnt,omitempty"`
-	NetworkID  uint32 `json:"network_id,omitempty"`
-	TxHash     string `json:"tx_hash,omitempty"`
 }
