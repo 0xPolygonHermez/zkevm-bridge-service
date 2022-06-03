@@ -110,14 +110,7 @@ func (c Client) SendBridge(ctx context.Context, tokenAddr common.Address, amount
 	log.Debug("Tx Hash: ", tx.Hash())
 	// wait transfer to be included in a batch
 	const txTimeout = 60 * time.Second
-	err = WaitTxToBeMined(ctx, c.Client, tx.Hash(), txTimeout)
-	if err != nil {
-		return err
-	}
-	// Wait until the batch that includes the tx is consolidated
-	const t time.Duration = 45
-	time.Sleep(t * time.Second)
-	return nil
+	return WaitTxToBeMined(ctx, c.Client, tx.Hash(), txTimeout)
 }
 
 // SendClaim send a claim transaction.
@@ -138,15 +131,7 @@ func (c Client) SendClaim(ctx context.Context, deposit *pb.Deposit, smtProof [][
 
 	// wait transfer to be mined
 	const txTimeout = 60 * time.Second
-	err = WaitTxToBeMined(ctx, c.Client, tx.Hash(), txTimeout)
-	if err != nil {
-		return err
-	}
-
-	// Wait for the consolidation
-	const t time.Duration = 30
-	time.Sleep(t * time.Second)
-	return nil
+	return WaitTxToBeMined(ctx, c.Client, tx.Hash(), txTimeout)
 }
 
 // WaitTxToBeMined waits until a tx is mined or forged.

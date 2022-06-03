@@ -13,8 +13,8 @@ import (
 )
 
 const (
-	defaultInterval = 2 * time.Second
-	defaultDeadline = 45 * time.Second
+	defaultInterval = 1 * time.Second
+	defaultDeadline = 60 * time.Second
 )
 
 func poll(interval, deadline time.Duration, condition ops.ConditionFunc) error {
@@ -78,7 +78,7 @@ func bridgeUpCondition() (done bool, err error) {
 	return done, nil
 }
 
-//WaitTxToBeMined waits until a tx is mined or forged
+// WaitTxToBeMined waits until a tx is mined or forged.
 func WaitTxToBeMined(ctx context.Context, client *ethclient.Client, hash common.Hash, timeout time.Duration) error {
 	w := ops.NewWait()
 	return w.TxToBeMined(client, hash, timeout)
