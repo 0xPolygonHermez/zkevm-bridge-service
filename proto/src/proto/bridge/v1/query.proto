@@ -73,6 +73,7 @@ message Deposit {
     uint64 deposit_cnt = 7;
     uint32 network_id = 8;
     string tx_hash = 9;
+    string claim_tx_hash = 10;
 }
 
 // Claim message
@@ -103,6 +104,7 @@ message CheckAPIRequest {}
 message GetBridgesRequest {
     string dest_addr = 1;
     uint64 offset = 2;
+    uint32 limit = 3;
 }
 
 message GetProofRequest {
@@ -123,6 +125,7 @@ message GetClaimStatusRequest {
 message GetClaimsRequest {
     string dest_addr = 1;
     uint64 offset = 2;
+    uint32 limit = 3;
 }
 
 // Get responses

@@ -27,5 +27,6 @@ type bridgeStorage interface {
 // BridgeServiceStorage interface for the Bridge Service.
 type BridgeServiceStorage interface {
 	GetClaims(ctx context.Context, destAddr string, limit uint, offset uint) ([]*etherman.Claim, error)
+	GetClaim(ctx context.Context, index uint, networkID uint) (*etherman.Claim, error)
 	GetDeposits(ctx context.Context, destAddr string, limit uint, offset uint) ([]*etherman.Deposit, error)
 }

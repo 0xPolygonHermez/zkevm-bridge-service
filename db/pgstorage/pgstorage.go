@@ -372,12 +372,12 @@ func (s *PostgresStorage) AddClaim(ctx context.Context, claim *etherman.Claim) e
 }
 
 // GetClaim gets a specific L1 claim
-func (s *PostgresStorage) GetClaim(ctx context.Context, depositCounterUser uint, networkID uint) (*etherman.Claim, error) {
+func (s *PostgresStorage) GetClaim(ctx context.Context, index uint, networkID uint) (*etherman.Claim, error) {
 	var (
 		claim  etherman.Claim
 		amount string
 	)
-	err := s.db.QueryRow(ctx, getClaimSQL, depositCounterUser, networkID).Scan(&claim.Index, &claim.OriginalNetwork, &claim.Token,
+	err := s.db.QueryRow(ctx, getClaimSQL, index, networkID).Scan(&claim.Index, &claim.OriginalNetwork, &claim.Token,
 		&amount, &claim.DestinationAddress, &claim.BlockNumber, &claim.BlockID, &claim.NetworkID, &claim.TxHash)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, gerror.ErrStorageNotFound
