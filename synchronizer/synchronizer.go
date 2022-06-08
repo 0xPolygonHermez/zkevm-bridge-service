@@ -71,7 +71,7 @@ func (s *ClientSynchronizer) Sync() error {
 				BlockNumber: s.genBlockNumber,
 				NetworkID:   s.networkID,
 			}
-			log.Warn("NetworkID: ", s.networkID, ", error getting the latest block. No data stored. Setting genesis block: ", lastBlockSynced, ". Error: ", err)
+			log.Warn("networkID: ", s.networkID, ", error getting the latest block. No data stored. Setting genesis block: ", lastBlockSynced, ". Error: ", err)
 		} else {
 			log.Fatal("networkID: ", s.networkID, ", unexpected error getting the latest block. Error: ", err)
 		}
@@ -83,7 +83,7 @@ func (s *ClientSynchronizer) Sync() error {
 			return nil
 		case <-time.After(waitDuration):
 			if lastBlockSynced, err = s.syncBlocks(lastBlockSynced); err != nil {
-				log.Warn("NetworkID: ", s.networkID, ", error syncing blocks: ", err)
+				log.Warn("networkID: ", s.networkID, ", error syncing blocks: ", err)
 				if s.ctx.Err() != nil {
 					log.Errorf("synchronizer ctx error: %s. NetworkID: %d", s.ctx.Err().Error(), s.networkID)
 					continue
@@ -93,7 +93,7 @@ func (s *ClientSynchronizer) Sync() error {
 				// Check latest Block
 				header, err := s.etherMan.HeaderByNumber(s.ctx, nil)
 				if err != nil {
-					log.Warn("NetworkID: ", s.networkID, ", error getting latest block from. Error: ", err)
+					log.Warn("networkID: ", s.networkID, ", error getting latest block from. Error: ", err)
 					continue
 				}
 				lastKnownBlock := header.Number
@@ -376,7 +376,7 @@ func (s *ClientSynchronizer) checkReorg(latestBlock *etherman.Block) (*etherman.
 			// Reorg detected. Getting previous block
 			latestBlock, err = s.storage.GetPreviousBlock(s.ctx, s.networkID, depth)
 			if errors.Is(err, gerror.ErrStorageNotFound) {
-				log.Warn("NetworkID: ", s.networkID, ", error checking reorg: previous block not found in db: ", err)
+				log.Warn("networkID: ", s.networkID, ", error checking reorg: previous block not found in db: ", err)
 				return &etherman.Block{}, nil
 			} else if err != nil {
 				return nil, err
