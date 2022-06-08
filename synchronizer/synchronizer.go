@@ -354,10 +354,6 @@ func (s *ClientSynchronizer) checkReorg(latestBlock *etherman.Block) (*etherman.
 	for {
 		block, err := s.etherMan.BlockByNumber(s.ctx, latestBlock.BlockNumber)
 		if err != nil {
-			if errors.Is(err, etherman.ErrNotFound) {
-				log.Warn("NetworkID: ", s.networkID, ", error getting latest block synced from network to check if there is a reorg. Block: ", latestBlock.BlockNumber)
-				return nil, fmt.Errorf("error getting latest block synced from network. Block: %d, error: %s", latestBlock.BlockNumber, err.Error())
-			}
 			log.Error("networkID: ", s.networkID, ", error getting blockByNumber from network: ", err)
 			return nil, err
 		}
