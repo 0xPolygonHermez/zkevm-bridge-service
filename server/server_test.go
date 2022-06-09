@@ -44,13 +44,14 @@ func TestBridgeMock(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "v1", version)
 
-	offset := 0
-	deposits, err := restClient.GetBridges("0xeB17ce701E9D92724AA2ABAdA7E4B28830597Dd9", offset)
+	offset := uint(0)
+	limit := uint(100)
+	deposits, err := restClient.GetBridges("0xeB17ce701E9D92724AA2ABAdA7E4B28830597Dd9", offset, limit)
 	require.NoError(t, err)
 	require.Equal(t, len(deposits), 1)
 	require.Equal(t, deposits[0].DepositCnt, uint64(4))
 
-	claims, err := restClient.GetClaims("0xabCcEd19d7f290B84608feC510bEe872CC8F5112", offset)
+	claims, err := restClient.GetClaims("0xabCcEd19d7f290B84608feC510bEe872CC8F5112", offset, limit)
 	require.NoError(t, err)
 	require.Equal(t, len(claims), 1)
 	require.Equal(t, claims[0].BlockNum, uint64(235))
