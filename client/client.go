@@ -88,9 +88,10 @@ func (c NodeClient) SendClaim(ctx context.Context, deposit *pb.Deposit, smtProof
 }
 
 // GetBridges returns bridge list for the specific destination address.
-func (c RestClient) GetBridges(destAddr string, offset int) ([]*pb.Deposit, error) {
-	fmt.Printf("%s%s/%s?offset=%d\n", c.bridgeURL, "/bridges", destAddr, offset)
-	resp, err := http.Get(fmt.Sprintf("%s%s/%s?offset=%d", c.bridgeURL, "/bridges", destAddr, offset))
+func (c RestClient) GetBridges(destAddr string, offset, limit uint) ([]*pb.Deposit, error) {
+  fmt.Printf("%s%s/%s?offset=%d&limit=%d", c.bridgeURL, "/bridges", destAddr, offset, limit)
+	resp, err := http.Get(fmt.Sprintf("%s%s/%s?offset=%d&limit=%d", c.bridgeURL, "/bridges", destAddr, offset, limit))
+
 	if err != nil {
 		return nil, err
 	}
@@ -107,8 +108,8 @@ func (c RestClient) GetBridges(destAddr string, offset int) ([]*pb.Deposit, erro
 }
 
 // GetClaims returns claim list for the specific destination address.
-func (c RestClient) GetClaims(destAddr string, offset int) ([]*pb.Claim, error) {
-	resp, err := http.Get(fmt.Sprintf("%s%s/%s?offset=%d", c.bridgeURL, "/claims", destAddr, offset))
+func (c RestClient) GetClaims(destAddr string, offset, limit uint) ([]*pb.Claim, error) {
+	resp, err := http.Get(fmt.Sprintf("%s%s/%s?offset=%d&limit=%d", c.bridgeURL, "/claims", destAddr, offset, limit))
 	if err != nil {
 		return nil, err
 	}

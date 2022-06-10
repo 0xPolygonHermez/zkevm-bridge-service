@@ -11,8 +11,8 @@ import (
 )
 
 const (
-	limit   = 25
-	version = "v1"
+	defaultPageLimit = 25
+	version          = "v1"
 )
 
 type bridgeService struct {
@@ -38,14 +38,19 @@ func (s *bridgeService) CheckAPI(ctx context.Context, req *pb.CheckAPIRequest) (
 
 // GetBridges returns bridges for the specific smart contract address both in L1 and L2.
 func (s *bridgeService) GetBridges(ctx context.Context, req *pb.GetBridgesRequest) (*pb.GetBridgesResponse, error) {
-	deposits, err := s.storage.GetDeposits(ctx, req.DestAddr, limit, uint(req.Offset))
+	limit := req.Limit
+	if limit == 0 {
+		limit = defaultPageLimit
+	}
+
+	deposits, err := s.storage.GetDeposits(ctx, req.DestAddr, uint(limit), uint(req.Offset))
 	if err != nil {
 		return nil, err
 	}
 
 	var pbDeposits []*pb.Deposit
 	for _, deposit := range deposits {
-		pbDeposits = append(pbDeposits, &pb.Deposit{
+		pbDeposit := pb.Deposit{
 			OrigNet:    uint32(deposit.OriginalNetwork),
 			TokenAddr:  deposit.TokenAddress.Hex(),
 			Amount:     deposit.Amount.String(),
@@ -55,7 +60,18 @@ func (s *bridgeService) GetBridges(ctx context.Context, req *pb.GetBridgesReques
 			DepositCnt: uint64(deposit.DepositCount),
 			NetworkId:  uint32(deposit.NetworkID),
 			TxHash:     deposit.TxHash.String(),
-		})
+		}
+
+		claim, err := s.storage.GetClaim(ctx, deposit.DepositCount, deposit.DestinationNetwork)
+		if err != nil {
+			if err != gerror.ErrStorageNotFound {
+				return nil, err
+			}
+		} else {
+			pbDeposit.ClaimTxHash = claim.TxHash.String()
+		}
+
+		pbDeposits = append(pbDeposits, &pbDeposit)
 	}
 
 	return &pb.GetBridgesResponse{
@@ -65,7 +81,12 @@ func (s *bridgeService) GetBridges(ctx context.Context, req *pb.GetBridgesReques
 
 // GetClaims returns claims for the specific smart contract address both in L1 and L2.
 func (s *bridgeService) GetClaims(ctx context.Context, req *pb.GetClaimsRequest) (*pb.GetClaimsResponse, error) {
-	claims, err := s.storage.GetClaims(ctx, req.DestAddr, limit, uint(req.Offset)) //nolint:gomnd
+	limit := req.Limit
+	if limit == 0 {
+		limit = defaultPageLimit
+	}
+
+	claims, err := s.storage.GetClaims(ctx, req.DestAddr, uint(limit), uint(req.Offset)) //nolint:gomnd
 	if err != nil {
 		return nil, err
 	}
