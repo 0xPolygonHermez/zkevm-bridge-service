@@ -14,6 +14,7 @@ import (
 	"github.com/hermeznetwork/hermez-bridge/etherman"
 	"github.com/hermeznetwork/hermez-core/encoding"
 	"github.com/hermeznetwork/hermez-core/etherman/smartcontracts/bridge"
+	"github.com/hermeznetwork/hermez-core/log"
 	"github.com/hermeznetwork/hermez-core/test/contracts/bin/ERC20"
 	ops "github.com/hermeznetwork/hermez-core/test/operations"
 )
@@ -68,7 +69,7 @@ func (c Client) ApproveERC20(ctx context.Context, erc20Addr, spender common.Addr
 	if err != nil {
 		return err
 	}
-	const txMinedTimeoutLimit = 20 * time.Second
+	const txMinedTimeoutLimit = 60 * time.Second
 	return WaitTxToBeMined(ctx, c.Client, tx.Hash(), txMinedTimeoutLimit)
 }
 
@@ -103,11 +104,12 @@ func (c Client) SendBridge(ctx context.Context, tokenAddr common.Address, amount
 	}
 	tx, err := br.Bridge(auth, tokenAddr, amount, destNetwork, *destAddr)
 	if err != nil {
+		log.Error("Error: ", err, ". Tx Hash: ", tx.Hash())
 		return err
 	}
-
+	log.Debug("Tx Hash: ", tx.Hash())
 	// wait transfer to be included in a batch
-	const txTimeout = 15 * time.Second
+	const txTimeout = 60 * time.Second
 	return WaitTxToBeMined(ctx, c.Client, tx.Hash(), txTimeout)
 }
 
@@ -122,11 +124,13 @@ func (c Client) SendClaim(ctx context.Context, deposit *pb.Deposit, smtProof [][
 		common.HexToAddress(deposit.DestAddr), smtProof, uint32(deposit.DepositCnt), globalExitRooNum,
 		globalExitRoot.ExitRoots[0], globalExitRoot.ExitRoots[1])
 	if err != nil {
+		log.Error("Error: ", err, ". Tx Hash: ", tx.Hash())
 		return err
 	}
+	log.Debug("Tx Hash: ", tx.Hash())
 
 	// wait transfer to be mined
-	const txTimeout = 15 * time.Second
+	const txTimeout = 60 * time.Second
 	return WaitTxToBeMined(ctx, c.Client, tx.Hash(), txTimeout)
 }
 
