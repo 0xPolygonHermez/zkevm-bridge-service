@@ -90,6 +90,7 @@ func (c NodeClient) SendClaim(ctx context.Context, deposit *pb.Deposit, smtProof
 // GetBridges returns bridge list for the specific destination address.
 func (c RestClient) GetBridges(destAddr string, offset, limit uint) ([]*pb.Deposit, uint64, error) {
 	resp, err := http.Get(fmt.Sprintf("%s%s/%s?offset=%d&limit=%d", c.bridgeURL, "/bridges", destAddr, offset, limit))
+
 	if err != nil {
 		return nil, 0, err
 	}
