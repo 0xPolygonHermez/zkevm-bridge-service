@@ -22,6 +22,7 @@ const (
 	addDepositSQL          = "INSERT INTO sync.deposit (orig_net, token_addr, amount, dest_net, dest_addr, block_num, deposit_cnt, block_id, network_id, tx_hash) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)"
 	getDepositSQL          = "SELECT orig_net, token_addr, amount, dest_net, dest_addr, block_num, deposit_cnt, block_id, network_id, tx_hash FROM sync.deposit WHERE network_id = $1 AND deposit_cnt = $2"
 	getDepositsSQL         = "SELECT orig_net, token_addr, amount, dest_net, dest_addr, block_num, deposit_cnt, block_id, network_id, tx_hash FROM sync.deposit WHERE dest_addr = $1 ORDER BY block_id DESC LIMIT $2 OFFSET $3"
+	getDepositCountSQL     = "SELECT COUNT(*) FROM sync.deposit WHERE dest_addr = $1"
 	getNodeByKeySQL        = "SELECT value, deposit_cnt FROM merkletree.rht WHERE key = $1 AND network = $2"
 	getRootByDepositCntSQL = "SELECT key FROM merkletree.rht WHERE deposit_cnt = $1 AND depth = $2 AND network = $3"
 	getLastDepositCntSQL   = "SELECT coalesce(MAX(deposit_cnt), 0) FROM merkletree.rht WHERE network = $1"
@@ -38,6 +39,7 @@ const (
 	addClaimSQL            = "INSERT INTO sync.claim (index, orig_net, token_addr, amount, dest_addr, block_num, block_id, network_id, tx_hash) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)"
 	getClaimSQL            = "SELECT index, orig_net, token_addr, amount, dest_addr, block_num, block_id, network_id, tx_hash FROM sync.claim WHERE index = $1 AND network_id = $2"
 	getClaimsSQL           = "SELECT index, orig_net, token_addr, amount, dest_addr, block_num, block_id, network_id, tx_hash FROM sync.claim WHERE dest_addr = $1 ORDER BY block_id DESC LIMIT $2 OFFSET $3"
+	getClaimCountSQL       = "SELECT COUNT(*) FROM sync.claim WHERE dest_addr = $1"
 	addTokenWrappedSQL     = "INSERT INTO sync.token_wrapped (orig_net, orig_token_addr, wrapped_token_addr, block_num, block_id, network_id) VALUES ($1, $2, $3, $4, $5, $6)"
 	getTokenWrappedSQL     = "SELECT orig_net, orig_token_addr, wrapped_token_addr, block_num, block_id, network_id FROM sync.token_wrapped WHERE orig_net = $1 AND orig_token_addr = $2" // nolint
 	consolidateBatchSQL    = "UPDATE sync.batch SET consolidated_tx_hash = $1, consolidated_at = $2, aggregator = $3 WHERE batch_num = $4 AND network_id = $5"
@@ -119,6 +121,17 @@ func (s *PostgresStorage) GetDeposit(ctx context.Context, depositCounterUser uin
 	}
 	deposit.Amount, _ = new(big.Int).SetString(amount, 10) // nolint
 	return &deposit, nil
+}
+
+// GetDepositCount gets the deposit count for the destination address
+func (s *PostgresStorage) GetDepositCount(ctx context.Context, destAddr string) (uint64, error) {
+	var depositCnt uint64
+	err := s.db.QueryRow(ctx, getDepositCountSQL, common.FromHex(destAddr)).Scan(&depositCnt)
+	if err != nil {
+		return 0, err
+	}
+
+	return depositCnt, nil
 }
 
 // GetDeposits gets the deposit list which be smaller than depositCount
@@ -386,6 +399,17 @@ func (s *PostgresStorage) GetClaim(ctx context.Context, index uint, networkID ui
 	}
 	claim.Amount, _ = new(big.Int).SetString(amount, 10) // nolint
 	return &claim, nil
+}
+
+// GetClaimCount gets the claim count for the destination address
+func (s *PostgresStorage) GetClaimCount(ctx context.Context, destAddr string) (uint64, error) {
+	var claimCnt uint64
+	err := s.db.QueryRow(ctx, getClaimCountSQL, common.FromHex(destAddr)).Scan(&claimCnt)
+	if err != nil {
+		return 0, err
+	}
+
+	return claimCnt, nil
 }
 
 // GetClaims gets the claim list which be smaller than index

@@ -32,10 +32,10 @@ service BridgeService {
         };
     }
 
-    /// Get the claim status whether it is able to send a claim transation or not
-    rpc GetClaimStatus(GetClaimStatusRequest) returns (GetClaimStatusResponse) {
+    /// Get the deposit status whether it is able to send a claim transation or not
+    rpc GetDepositStatus(GetDepositStatusRequest) returns (GetDepositStatusResponse) {
         option (google.api.http) = {
-            get: "/claim-status"
+            get: "/deposit-status"
         };
     }
 
@@ -117,7 +117,7 @@ message GetTokenWrappedRequest {
     uint32 orig_net = 2;
 }
 
-message GetClaimStatusRequest {
+message GetDepositStatusRequest {
     uint32 net_id = 1;
     uint64 deposit_cnt = 2;
 }
@@ -136,6 +136,7 @@ message CheckAPIResponse {
 
 message GetBridgesResponse {
     repeated Deposit deposits = 1;
+    uint64 total_cnt = 2;
 }
 
 message GetProofResponse {
@@ -146,10 +147,12 @@ message GetTokenWrappedResponse {
     TokenWrapped tokenwrapped = 1;
 }
 
-message GetClaimStatusResponse {
-    bool ready = 1;
+message GetDepositStatusResponse {
+    bool ready_for_claim = 1;
+    Deposit deposit = 2;
 }
 
 message GetClaimsResponse {
     repeated Claim claims = 1;
+    uint64 total_cnt = 2;
 }

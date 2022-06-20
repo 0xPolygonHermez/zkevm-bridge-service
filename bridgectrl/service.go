@@ -12,6 +12,7 @@ import (
 
 const (
 	defaultPageLimit = 25
+	maxPageLimit     = 100
 	version          = "v1"
 )
 
@@ -42,7 +43,13 @@ func (s *bridgeService) GetBridges(ctx context.Context, req *pb.GetBridgesReques
 	if limit == 0 {
 		limit = defaultPageLimit
 	}
-
+	if limit > maxPageLimit {
+		limit = maxPageLimit
+	}
+	totalCount, err := s.storage.GetDepositCount(ctx, req.DestAddr)
+	if err != nil {
+		return nil, err
+	}
 	deposits, err := s.storage.GetDeposits(ctx, req.DestAddr, uint(limit), uint(req.Offset))
 	if err != nil {
 		return nil, err
@@ -76,6 +83,7 @@ func (s *bridgeService) GetBridges(ctx context.Context, req *pb.GetBridgesReques
 
 	return &pb.GetBridgesResponse{
 		Deposits: pbDeposits,
+		TotalCnt: totalCount,
 	}, nil
 }
 
@@ -85,7 +93,13 @@ func (s *bridgeService) GetClaims(ctx context.Context, req *pb.GetClaimsRequest)
 	if limit == 0 {
 		limit = defaultPageLimit
 	}
-
+	if limit > maxPageLimit {
+		limit = maxPageLimit
+	}
+	totalCount, err := s.storage.GetClaimCount(ctx, req.DestAddr)
+	if err != nil {
+		return nil, err
+	}
 	claims, err := s.storage.GetClaims(ctx, req.DestAddr, uint(limit), uint(req.Offset)) //nolint:gomnd
 	if err != nil {
 		return nil, err
@@ -106,7 +120,8 @@ func (s *bridgeService) GetClaims(ctx context.Context, req *pb.GetClaimsRequest)
 	}
 
 	return &pb.GetClaimsResponse{
-		Claims: pbClaims,
+		Claims:   pbClaims,
+		TotalCnt: totalCount,
 	}, nil
 }
 
@@ -133,12 +148,31 @@ func (s *bridgeService) GetProof(ctx context.Context, req *pb.GetProofRequest) (
 	}, nil
 }
 
-// GetClaimStatus returns the claim status whether it is able to send a claim transaction or not.
-func (s *bridgeService) GetClaimStatus(ctx context.Context, req *pb.GetClaimStatusRequest) (*pb.GetClaimStatusResponse, error) {
+// GetDepositStatus returns the claim status whether it is able to send a claim transaction or not.
+func (s *bridgeService) GetDepositStatus(ctx context.Context, req *pb.GetDepositStatusRequest) (*pb.GetDepositStatusResponse, error) {
 	var (
-		exitRoot *etherman.GlobalExitRoot
-		err      error
+		exitRoot  *etherman.GlobalExitRoot
+		err       error
+		pbDeposit *pb.Deposit
 	)
+
+	deposit, err := s.storage.GetDeposit(ctx, uint(req.DepositCnt), uint(req.NetId))
+	if err != nil {
+		return nil, err
+	}
+
+	pbDeposit = &pb.Deposit{
+		OrigNet:    uint32(deposit.OriginalNetwork),
+		TokenAddr:  deposit.TokenAddress.Hex(),
+		Amount:     deposit.Amount.String(),
+		DestNet:    uint32(deposit.DestinationNetwork),
+		DestAddr:   deposit.DestinationAddress.Hex(),
+		BlockNum:   deposit.BlockNumber,
+		DepositCnt: uint64(deposit.DepositCount),
+		NetworkId:  uint32(deposit.NetworkID),
+		TxHash:     deposit.TxHash.String(),
+	}
+
 	if req.NetId == uint32(MainNetworkID) {
 		exitRoot, err = s.bridgeCtrl.storage.GetLatestL1SyncedExitRoot(ctx)
 	} else {
@@ -146,8 +180,9 @@ func (s *bridgeService) GetClaimStatus(ctx context.Context, req *pb.GetClaimStat
 	}
 
 	if err == gerror.ErrStorageNotFound {
-		return &pb.GetClaimStatusResponse{
-			Ready: false,
+		return &pb.GetDepositStatusResponse{
+			ReadyForClaim: false,
+			Deposit:       pbDeposit,
 		}, nil
 	} else if err != nil {
 		return nil, err
@@ -171,8 +206,9 @@ func (s *bridgeService) GetClaimStatus(ctx context.Context, req *pb.GetClaimStat
 		ready = false
 	}
 
-	return &pb.GetClaimStatusResponse{
-		Ready: ready,
+	return &pb.GetDepositStatusResponse{
+		ReadyForClaim: ready,
+		Deposit:       pbDeposit,
 	}, nil
 }
 

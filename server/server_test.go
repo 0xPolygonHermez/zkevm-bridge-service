@@ -46,23 +46,26 @@ func TestBridgeMock(t *testing.T) {
 
 	offset := uint(0)
 	limit := uint(100)
-	deposits, err := restClient.GetBridges("0xeB17ce701E9D92724AA2ABAdA7E4B28830597Dd9", offset, limit)
+	deposits, totalCount, err := restClient.GetBridges("0xeB17ce701E9D92724AA2ABAdA7E4B28830597Dd9", offset, limit)
 	require.NoError(t, err)
 	require.Equal(t, len(deposits), 1)
 	require.Equal(t, deposits[0].DepositCnt, uint64(4))
+	require.Equal(t, totalCount, uint64(1))
 
-	claims, err := restClient.GetClaims("0xabCcEd19d7f290B84608feC510bEe872CC8F5112", offset, limit)
+	claims, totalCount, err := restClient.GetClaims("0xabCcEd19d7f290B84608feC510bEe872CC8F5112", offset, limit)
 	require.NoError(t, err)
 	require.Equal(t, len(claims), 1)
 	require.Equal(t, claims[0].BlockNum, uint64(235))
+	require.Equal(t, totalCount, uint64(1))
 
 	proof, err := restClient.GetMerkleProof(0, 2)
 	require.NoError(t, err)
 	require.Equal(t, len(proof.MerkleProof), 32)
 
-	ready, err := restClient.GetClaimStatus(0, 2)
+	ready, deposit, err := restClient.GetDepositStatus(0, 2)
 	require.NoError(t, err)
 	require.Equal(t, ready, false)
+	require.Equal(t, deposit.DepositCnt, uint64(2))
 
 	wrappedToken, err := restClient.GetWrappedToken(1, "0x0EF3B0BC8D6313AB7DC03CF7225C872071BE1E6D")
 	require.NoError(t, err)
