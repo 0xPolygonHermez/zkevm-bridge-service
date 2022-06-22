@@ -141,22 +141,22 @@ func (c RestClient) GetMerkleProof(networkID uint32, depositCnt uint64) (*pb.Pro
 	return proofResp.Proof, nil
 }
 
-// GetDepositStatus returns the deposit status whether it is able to send a claim transaction or not.
-func (c RestClient) GetDepositStatus(networkID uint32, depositCnt uint64) (bool, *pb.Deposit, error) {
-	resp, err := http.Get(fmt.Sprintf("%s%s?net_id=%d&deposit_cnt=%d", c.bridgeURL, "/deposit-status", networkID, depositCnt))
+// GetBridge returns the specific bridge info.
+func (c RestClient) GetBridge(networkID uint32, depositCnt uint64) (*pb.Deposit, error) {
+	resp, err := http.Get(fmt.Sprintf("%s%s?net_id=%d&deposit_cnt=%d", c.bridgeURL, "/bridge", networkID, depositCnt))
 	if err != nil {
-		return false, nil, err
+		return nil, err
 	}
 	bodyBytes, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return false, nil, err
+		return nil, err
 	}
-	var depositStatusResp pb.GetDepositStatusResponse
-	err = protojson.Unmarshal(bodyBytes, &depositStatusResp)
+	var bridgeResp pb.GetBridgeResponse
+	err = protojson.Unmarshal(bodyBytes, &bridgeResp)
 	if err != nil {
-		return false, nil, err
+		return nil, err
 	}
-	return depositStatusResp.ReadyForClaim, depositStatusResp.Deposit, nil
+	return bridgeResp.Deposit, nil
 }
 
 // GetWrappedToken returns the wrapped token address.

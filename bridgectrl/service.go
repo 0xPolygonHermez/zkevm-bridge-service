@@ -37,7 +37,7 @@ func (s *bridgeService) CheckAPI(ctx context.Context, req *pb.CheckAPIRequest) (
 	}, nil
 }
 
-// GetBridges returns bridges for the specific smart contract address both in L1 and L2.
+// GetBridges returns bridges for the destination address both in L1 and L2.
 func (s *bridgeService) GetBridges(ctx context.Context, req *pb.GetBridgesRequest) (*pb.GetBridgesResponse, error) {
 	limit := req.Limit
 	if limit == 0 {
@@ -57,28 +57,25 @@ func (s *bridgeService) GetBridges(ctx context.Context, req *pb.GetBridgesReques
 
 	var pbDeposits []*pb.Deposit
 	for _, deposit := range deposits {
-		pbDeposit := pb.Deposit{
-			OrigNet:    uint32(deposit.OriginalNetwork),
-			TokenAddr:  deposit.TokenAddress.Hex(),
-			Amount:     deposit.Amount.String(),
-			DestNet:    uint32(deposit.DestinationNetwork),
-			DestAddr:   deposit.DestinationAddress.Hex(),
-			BlockNum:   deposit.BlockNumber,
-			DepositCnt: uint64(deposit.DepositCount),
-			NetworkId:  uint32(deposit.NetworkID),
-			TxHash:     deposit.TxHash.String(),
-		}
-
-		claim, err := s.storage.GetClaim(ctx, deposit.DepositCount, deposit.DestinationNetwork)
+		claimTxHash, readyForClaim, err := s.getDepositStatus(ctx, deposit.DepositCount, deposit.NetworkID)
 		if err != nil {
-			if err != gerror.ErrStorageNotFound {
-				return nil, err
-			}
-		} else {
-			pbDeposit.ClaimTxHash = claim.TxHash.String()
+			return nil, err
 		}
-
-		pbDeposits = append(pbDeposits, &pbDeposit)
+		pbDeposits = append(
+			pbDeposits, &pb.Deposit{
+				OrigNet:       uint32(deposit.OriginalNetwork),
+				TokenAddr:     deposit.TokenAddress.Hex(),
+				Amount:        deposit.Amount.String(),
+				DestNet:       uint32(deposit.DestinationNetwork),
+				DestAddr:      deposit.DestinationAddress.Hex(),
+				BlockNum:      deposit.BlockNumber,
+				DepositCnt:    uint64(deposit.DepositCount),
+				NetworkId:     uint32(deposit.NetworkID),
+				TxHash:        deposit.TxHash.String(),
+				ClaimTxHash:   claimTxHash,
+				ReadyForClaim: readyForClaim,
+			},
+		)
 	}
 
 	return &pb.GetBridgesResponse{
@@ -149,66 +146,31 @@ func (s *bridgeService) GetProof(ctx context.Context, req *pb.GetProofRequest) (
 }
 
 // GetDepositStatus returns the claim status whether it is able to send a claim transaction or not.
-func (s *bridgeService) GetDepositStatus(ctx context.Context, req *pb.GetDepositStatusRequest) (*pb.GetDepositStatusResponse, error) {
-	var (
-		exitRoot  *etherman.GlobalExitRoot
-		err       error
-		pbDeposit *pb.Deposit
-	)
-
+func (s *bridgeService) GetBridge(ctx context.Context, req *pb.GetBridgeRequest) (*pb.GetBridgeResponse, error) {
 	deposit, err := s.storage.GetDeposit(ctx, uint(req.DepositCnt), uint(req.NetId))
 	if err != nil {
 		return nil, err
 	}
 
-	pbDeposit = &pb.Deposit{
-		OrigNet:    uint32(deposit.OriginalNetwork),
-		TokenAddr:  deposit.TokenAddress.Hex(),
-		Amount:     deposit.Amount.String(),
-		DestNet:    uint32(deposit.DestinationNetwork),
-		DestAddr:   deposit.DestinationAddress.Hex(),
-		BlockNum:   deposit.BlockNumber,
-		DepositCnt: uint64(deposit.DepositCount),
-		NetworkId:  uint32(deposit.NetworkID),
-		TxHash:     deposit.TxHash.String(),
-	}
-
-	if req.NetId == uint32(MainNetworkID) {
-		exitRoot, err = s.bridgeCtrl.storage.GetLatestL1SyncedExitRoot(ctx)
-	} else {
-		exitRoot, err = s.bridgeCtrl.storage.GetLatestL2SyncedExitRoot(ctx)
-	}
-
-	if err == gerror.ErrStorageNotFound {
-		return &pb.GetDepositStatusResponse{
-			ReadyForClaim: false,
-			Deposit:       pbDeposit,
-		}, nil
-	} else if err != nil {
-		return nil, err
-	}
-
-	tID, found := s.bridgeCtrl.networkIDs[uint(req.NetId)]
-	if !found {
-		return nil, gerror.ErrNetworkNotRegister
-	}
-	ctx = context.WithValue(ctx, contextKeyNetwork, tID) //nolint
-	tID--
-	depositCnt, err := s.bridgeCtrl.exitTrees[tID].getDepositCntByRoot(ctx, exitRoot.ExitRoots[tID])
+	claimTxHash, readyForClaim, err := s.getDepositStatus(ctx, uint(req.DepositCnt), uint(req.NetId))
 	if err != nil {
 		return nil, err
 	}
 
-	var ready bool
-	if depositCnt >= uint(req.DepositCnt+1) {
-		ready = true
-	} else {
-		ready = false
-	}
-
-	return &pb.GetDepositStatusResponse{
-		ReadyForClaim: ready,
-		Deposit:       pbDeposit,
+	return &pb.GetBridgeResponse{
+		Deposit: &pb.Deposit{
+			OrigNet:       uint32(deposit.OriginalNetwork),
+			TokenAddr:     deposit.TokenAddress.Hex(),
+			Amount:        deposit.Amount.String(),
+			DestNet:       uint32(deposit.DestinationNetwork),
+			DestAddr:      deposit.DestinationAddress.Hex(),
+			BlockNum:      deposit.BlockNumber,
+			DepositCnt:    uint64(deposit.DepositCount),
+			NetworkId:     uint32(deposit.NetworkID),
+			TxHash:        deposit.TxHash.String(),
+			ClaimTxHash:   claimTxHash,
+			ReadyForClaim: readyForClaim,
+		},
 	}, nil
 }
 
@@ -226,4 +188,46 @@ func (s *bridgeService) GetTokenWrapped(ctx context.Context, req *pb.GetTokenWra
 			NetworkId:         uint32(tokenWrapped.NetworkID),
 		},
 	}, nil
+}
+
+func (s *bridgeService) getDepositStatus(ctx context.Context, depositCount uint, networkID uint) (string, bool, error) {
+	var (
+		claimTxHash string
+		exitRoot    *etherman.GlobalExitRoot
+	)
+	// Get the claim tx hash
+	claim, err := s.storage.GetClaim(ctx, depositCount, networkID)
+	if err != nil {
+		if err != gerror.ErrStorageNotFound {
+			return "", false, err
+		}
+	} else {
+		claimTxHash = claim.TxHash.String()
+	}
+	// Get the claim readiness
+	if networkID == MainNetworkID {
+		exitRoot, err = s.bridgeCtrl.storage.GetLatestL1SyncedExitRoot(ctx)
+	} else {
+		exitRoot, err = s.bridgeCtrl.storage.GetLatestL2SyncedExitRoot(ctx)
+	}
+
+	if err != nil {
+		if err != gerror.ErrStorageNotFound {
+			return "", false, err
+		}
+		return claimTxHash, false, nil
+	}
+
+	tID, found := s.bridgeCtrl.networkIDs[networkID]
+	if !found {
+		return "", false, gerror.ErrNetworkNotRegister
+	}
+	ctx = context.WithValue(ctx, contextKeyNetwork, tID) //nolint
+	tID--
+	depositCnt, err := s.bridgeCtrl.exitTrees[tID].getDepositCntByRoot(ctx, exitRoot.ExitRoots[tID])
+	if err != nil {
+		return "", false, err
+	}
+
+	return claimTxHash, depositCnt > depositCount, nil
 }

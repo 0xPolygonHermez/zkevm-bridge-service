@@ -21,12 +21,12 @@ type BridgeServiceClient interface {
 	// Getters
 	/// Get api version
 	CheckAPI(ctx context.Context, in *CheckAPIRequest, opts ...grpc.CallOption) (*CheckAPIResponse, error)
-	/// Get bridges for the specific smart contract address both in L1 and L2
+	/// Get bridges for the destination address both in L1 and L2
 	GetBridges(ctx context.Context, in *GetBridgesRequest, opts ...grpc.CallOption) (*GetBridgesResponse, error)
 	/// Get the merkle proof for the specific deposit
 	GetProof(ctx context.Context, in *GetProofRequest, opts ...grpc.CallOption) (*GetProofResponse, error)
-	/// Get the deposit status whether it is able to send a claim transation or not
-	GetDepositStatus(ctx context.Context, in *GetDepositStatusRequest, opts ...grpc.CallOption) (*GetDepositStatusResponse, error)
+	/// Get the specific deposit
+	GetBridge(ctx context.Context, in *GetBridgeRequest, opts ...grpc.CallOption) (*GetBridgeResponse, error)
 	/// Get claims for the specific smart contract address both in L1 and L2
 	GetClaims(ctx context.Context, in *GetClaimsRequest, opts ...grpc.CallOption) (*GetClaimsResponse, error)
 	/// Get token wrapped for the specific smart contract address both in L1 and L2
@@ -68,9 +68,9 @@ func (c *bridgeServiceClient) GetProof(ctx context.Context, in *GetProofRequest,
 	return out, nil
 }
 
-func (c *bridgeServiceClient) GetDepositStatus(ctx context.Context, in *GetDepositStatusRequest, opts ...grpc.CallOption) (*GetDepositStatusResponse, error) {
-	out := new(GetDepositStatusResponse)
-	err := c.cc.Invoke(ctx, "/bridge.v1.BridgeService/GetDepositStatus", in, out, opts...)
+func (c *bridgeServiceClient) GetBridge(ctx context.Context, in *GetBridgeRequest, opts ...grpc.CallOption) (*GetBridgeResponse, error) {
+	out := new(GetBridgeResponse)
+	err := c.cc.Invoke(ctx, "/bridge.v1.BridgeService/GetBridge", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -102,12 +102,12 @@ type BridgeServiceServer interface {
 	// Getters
 	/// Get api version
 	CheckAPI(context.Context, *CheckAPIRequest) (*CheckAPIResponse, error)
-	/// Get bridges for the specific smart contract address both in L1 and L2
+	/// Get bridges for the destination address both in L1 and L2
 	GetBridges(context.Context, *GetBridgesRequest) (*GetBridgesResponse, error)
 	/// Get the merkle proof for the specific deposit
 	GetProof(context.Context, *GetProofRequest) (*GetProofResponse, error)
-	/// Get the deposit status whether it is able to send a claim transation or not
-	GetDepositStatus(context.Context, *GetDepositStatusRequest) (*GetDepositStatusResponse, error)
+	/// Get the specific deposit
+	GetBridge(context.Context, *GetBridgeRequest) (*GetBridgeResponse, error)
 	/// Get claims for the specific smart contract address both in L1 and L2
 	GetClaims(context.Context, *GetClaimsRequest) (*GetClaimsResponse, error)
 	/// Get token wrapped for the specific smart contract address both in L1 and L2
@@ -128,8 +128,8 @@ func (UnimplementedBridgeServiceServer) GetBridges(context.Context, *GetBridgesR
 func (UnimplementedBridgeServiceServer) GetProof(context.Context, *GetProofRequest) (*GetProofResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetProof not implemented")
 }
-func (UnimplementedBridgeServiceServer) GetDepositStatus(context.Context, *GetDepositStatusRequest) (*GetDepositStatusResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetDepositStatus not implemented")
+func (UnimplementedBridgeServiceServer) GetBridge(context.Context, *GetBridgeRequest) (*GetBridgeResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetBridge not implemented")
 }
 func (UnimplementedBridgeServiceServer) GetClaims(context.Context, *GetClaimsRequest) (*GetClaimsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetClaims not implemented")
@@ -204,20 +204,20 @@ func _BridgeService_GetProof_Handler(srv interface{}, ctx context.Context, dec f
 	return interceptor(ctx, in, info, handler)
 }
 
-func _BridgeService_GetDepositStatus_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetDepositStatusRequest)
+func _BridgeService_GetBridge_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetBridgeRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(BridgeServiceServer).GetDepositStatus(ctx, in)
+		return srv.(BridgeServiceServer).GetBridge(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/bridge.v1.BridgeService/GetDepositStatus",
+		FullMethod: "/bridge.v1.BridgeService/GetBridge",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(BridgeServiceServer).GetDepositStatus(ctx, req.(*GetDepositStatusRequest))
+		return srv.(BridgeServiceServer).GetBridge(ctx, req.(*GetBridgeRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -278,8 +278,8 @@ var BridgeService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _BridgeService_GetProof_Handler,
 		},
 		{
-			MethodName: "GetDepositStatus",
-			Handler:    _BridgeService_GetDepositStatus_Handler,
+			MethodName: "GetBridge",
+			Handler:    _BridgeService_GetBridge_Handler,
 		},
 		{
 			MethodName: "GetClaims",

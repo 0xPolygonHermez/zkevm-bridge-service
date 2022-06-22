@@ -62,9 +62,9 @@ func TestBridgeMock(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, len(proof.MerkleProof), 32)
 
-	ready, deposit, err := restClient.GetDepositStatus(0, 2)
+	deposit, err := restClient.GetBridge(0, 2)
 	require.NoError(t, err)
-	require.Equal(t, ready, false)
+	require.Equal(t, deposit.ReadyForClaim, false)
 	require.Equal(t, deposit.DepositCnt, uint64(2))
 
 	wrappedToken, err := restClient.GetWrappedToken(1, "0x0EF3B0BC8D6313AB7DC03CF7225C872071BE1E6D")
