@@ -12,6 +12,7 @@ import (
 
 const (
 	defaultPageLimit = 25
+	maxPageLimit     = 100
 	version          = "v1"
 )
 
@@ -36,13 +37,19 @@ func (s *bridgeService) CheckAPI(ctx context.Context, req *pb.CheckAPIRequest) (
 	}, nil
 }
 
-// GetBridges returns bridges for the specific smart contract address both in L1 and L2.
+// GetBridges returns bridges for the destination address both in L1 and L2.
 func (s *bridgeService) GetBridges(ctx context.Context, req *pb.GetBridgesRequest) (*pb.GetBridgesResponse, error) {
 	limit := req.Limit
 	if limit == 0 {
 		limit = defaultPageLimit
 	}
-
+	if limit > maxPageLimit {
+		limit = maxPageLimit
+	}
+	totalCount, err := s.storage.GetDepositCount(ctx, req.DestAddr)
+	if err != nil {
+		return nil, err
+	}
 	deposits, err := s.storage.GetDeposits(ctx, req.DestAddr, uint(limit), uint(req.Offset))
 	if err != nil {
 		return nil, err
@@ -50,32 +57,30 @@ func (s *bridgeService) GetBridges(ctx context.Context, req *pb.GetBridgesReques
 
 	var pbDeposits []*pb.Deposit
 	for _, deposit := range deposits {
-		pbDeposit := pb.Deposit{
-			OrigNet:    uint32(deposit.OriginalNetwork),
-			TokenAddr:  deposit.TokenAddress.Hex(),
-			Amount:     deposit.Amount.String(),
-			DestNet:    uint32(deposit.DestinationNetwork),
-			DestAddr:   deposit.DestinationAddress.Hex(),
-			BlockNum:   deposit.BlockNumber,
-			DepositCnt: uint64(deposit.DepositCount),
-			NetworkId:  uint32(deposit.NetworkID),
-			TxHash:     deposit.TxHash.String(),
-		}
-
-		claim, err := s.storage.GetClaim(ctx, deposit.DepositCount, deposit.DestinationNetwork)
+		claimTxHash, readyForClaim, err := s.getDepositStatus(ctx, deposit.DepositCount, deposit.NetworkID)
 		if err != nil {
-			if err != gerror.ErrStorageNotFound {
-				return nil, err
-			}
-		} else {
-			pbDeposit.ClaimTxHash = claim.TxHash.String()
+			return nil, err
 		}
-
-		pbDeposits = append(pbDeposits, &pbDeposit)
+		pbDeposits = append(
+			pbDeposits, &pb.Deposit{
+				OrigNet:       uint32(deposit.OriginalNetwork),
+				TokenAddr:     deposit.TokenAddress.Hex(),
+				Amount:        deposit.Amount.String(),
+				DestNet:       uint32(deposit.DestinationNetwork),
+				DestAddr:      deposit.DestinationAddress.Hex(),
+				BlockNum:      deposit.BlockNumber,
+				DepositCnt:    uint64(deposit.DepositCount),
+				NetworkId:     uint32(deposit.NetworkID),
+				TxHash:        deposit.TxHash.String(),
+				ClaimTxHash:   claimTxHash,
+				ReadyForClaim: readyForClaim,
+			},
+		)
 	}
 
 	return &pb.GetBridgesResponse{
 		Deposits: pbDeposits,
+		TotalCnt: totalCount,
 	}, nil
 }
 
@@ -85,7 +90,13 @@ func (s *bridgeService) GetClaims(ctx context.Context, req *pb.GetClaimsRequest)
 	if limit == 0 {
 		limit = defaultPageLimit
 	}
-
+	if limit > maxPageLimit {
+		limit = maxPageLimit
+	}
+	totalCount, err := s.storage.GetClaimCount(ctx, req.DestAddr)
+	if err != nil {
+		return nil, err
+	}
 	claims, err := s.storage.GetClaims(ctx, req.DestAddr, uint(limit), uint(req.Offset)) //nolint:gomnd
 	if err != nil {
 		return nil, err
@@ -106,7 +117,8 @@ func (s *bridgeService) GetClaims(ctx context.Context, req *pb.GetClaimsRequest)
 	}
 
 	return &pb.GetClaimsResponse{
-		Claims: pbClaims,
+		Claims:   pbClaims,
+		TotalCnt: totalCount,
 	}, nil
 }
 
@@ -133,46 +145,32 @@ func (s *bridgeService) GetProof(ctx context.Context, req *pb.GetProofRequest) (
 	}, nil
 }
 
-// GetClaimStatus returns the claim status whether it is able to send a claim transaction or not.
-func (s *bridgeService) GetClaimStatus(ctx context.Context, req *pb.GetClaimStatusRequest) (*pb.GetClaimStatusResponse, error) {
-	var (
-		exitRoot *etherman.GlobalExitRoot
-		err      error
-	)
-	if req.NetId == uint32(MainNetworkID) {
-		exitRoot, err = s.bridgeCtrl.storage.GetLatestL1SyncedExitRoot(ctx)
-	} else {
-		exitRoot, err = s.bridgeCtrl.storage.GetLatestL2SyncedExitRoot(ctx)
-	}
-
-	if err == gerror.ErrStorageNotFound {
-		return &pb.GetClaimStatusResponse{
-			Ready: false,
-		}, nil
-	} else if err != nil {
-		return nil, err
-	}
-
-	tID, found := s.bridgeCtrl.networkIDs[uint(req.NetId)]
-	if !found {
-		return nil, gerror.ErrNetworkNotRegister
-	}
-	ctx = context.WithValue(ctx, contextKeyNetwork, tID) //nolint
-	tID--
-	depositCnt, err := s.bridgeCtrl.exitTrees[tID].getDepositCntByRoot(ctx, exitRoot.ExitRoots[tID])
+// GetDepositStatus returns the claim status whether it is able to send a claim transaction or not.
+func (s *bridgeService) GetBridge(ctx context.Context, req *pb.GetBridgeRequest) (*pb.GetBridgeResponse, error) {
+	deposit, err := s.storage.GetDeposit(ctx, uint(req.DepositCnt), uint(req.NetId))
 	if err != nil {
 		return nil, err
 	}
 
-	var ready bool
-	if depositCnt >= uint(req.DepositCnt+1) {
-		ready = true
-	} else {
-		ready = false
+	claimTxHash, readyForClaim, err := s.getDepositStatus(ctx, uint(req.DepositCnt), uint(req.NetId))
+	if err != nil {
+		return nil, err
 	}
 
-	return &pb.GetClaimStatusResponse{
-		Ready: ready,
+	return &pb.GetBridgeResponse{
+		Deposit: &pb.Deposit{
+			OrigNet:       uint32(deposit.OriginalNetwork),
+			TokenAddr:     deposit.TokenAddress.Hex(),
+			Amount:        deposit.Amount.String(),
+			DestNet:       uint32(deposit.DestinationNetwork),
+			DestAddr:      deposit.DestinationAddress.Hex(),
+			BlockNum:      deposit.BlockNumber,
+			DepositCnt:    uint64(deposit.DepositCount),
+			NetworkId:     uint32(deposit.NetworkID),
+			TxHash:        deposit.TxHash.String(),
+			ClaimTxHash:   claimTxHash,
+			ReadyForClaim: readyForClaim,
+		},
 	}, nil
 }
 
@@ -190,4 +188,46 @@ func (s *bridgeService) GetTokenWrapped(ctx context.Context, req *pb.GetTokenWra
 			NetworkId:         uint32(tokenWrapped.NetworkID),
 		},
 	}, nil
+}
+
+func (s *bridgeService) getDepositStatus(ctx context.Context, depositCount uint, networkID uint) (string, bool, error) {
+	var (
+		claimTxHash string
+		exitRoot    *etherman.GlobalExitRoot
+	)
+	// Get the claim tx hash
+	claim, err := s.storage.GetClaim(ctx, depositCount, networkID)
+	if err != nil {
+		if err != gerror.ErrStorageNotFound {
+			return "", false, err
+		}
+	} else {
+		claimTxHash = claim.TxHash.String()
+	}
+	// Get the claim readiness
+	if networkID == MainNetworkID {
+		exitRoot, err = s.bridgeCtrl.storage.GetLatestL1SyncedExitRoot(ctx)
+	} else {
+		exitRoot, err = s.bridgeCtrl.storage.GetLatestL2SyncedExitRoot(ctx)
+	}
+
+	if err != nil {
+		if err != gerror.ErrStorageNotFound {
+			return "", false, err
+		}
+		return claimTxHash, false, nil
+	}
+
+	tID, found := s.bridgeCtrl.networkIDs[networkID]
+	if !found {
+		return "", false, gerror.ErrNetworkNotRegister
+	}
+	ctx = context.WithValue(ctx, contextKeyNetwork, tID) //nolint
+	tID--
+	depositCnt, err := s.bridgeCtrl.exitTrees[tID].getDepositCntByRoot(ctx, exitRoot.ExitRoots[tID])
+	if err != nil {
+		return "", false, err
+	}
+
+	return claimTxHash, depositCnt > depositCount, nil
 }

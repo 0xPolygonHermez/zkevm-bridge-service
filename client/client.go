@@ -88,41 +88,39 @@ func (c NodeClient) SendClaim(ctx context.Context, deposit *pb.Deposit, smtProof
 }
 
 // GetBridges returns bridge list for the specific destination address.
-func (c RestClient) GetBridges(destAddr string, offset, limit uint) ([]*pb.Deposit, error) {
-	fmt.Printf("%s%s/%s?offset=%d&limit=%d", c.bridgeURL, "/bridges", destAddr, offset, limit)
+func (c RestClient) GetBridges(destAddr string, offset, limit uint) ([]*pb.Deposit, uint64, error) {
 	resp, err := http.Get(fmt.Sprintf("%s%s/%s?offset=%d&limit=%d", c.bridgeURL, "/bridges", destAddr, offset, limit))
-
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	bodyBytes, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	var bridgeResp pb.GetBridgesResponse
 	err = protojson.Unmarshal(bodyBytes, &bridgeResp)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
-	return bridgeResp.Deposits, nil
+	return bridgeResp.Deposits, bridgeResp.TotalCnt, nil
 }
 
 // GetClaims returns claim list for the specific destination address.
-func (c RestClient) GetClaims(destAddr string, offset, limit uint) ([]*pb.Claim, error) {
+func (c RestClient) GetClaims(destAddr string, offset, limit uint) ([]*pb.Claim, uint64, error) {
 	resp, err := http.Get(fmt.Sprintf("%s%s/%s?offset=%d&limit=%d", c.bridgeURL, "/claims", destAddr, offset, limit))
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	bodyBytes, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	var claimResp pb.GetClaimsResponse
 	err = protojson.Unmarshal(bodyBytes, &claimResp)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
-	return claimResp.Claims, nil
+	return claimResp.Claims, claimResp.TotalCnt, nil
 }
 
 // GetMerkleProof returns the merkle proof for the specific bridge transaction.
@@ -143,22 +141,22 @@ func (c RestClient) GetMerkleProof(networkID uint32, depositCnt uint64) (*pb.Pro
 	return proofResp.Proof, nil
 }
 
-// GetClaimStatus returns the claim status whether it is able to send a claim transaction or not.
-func (c RestClient) GetClaimStatus(networkID uint32, depositCnt uint64) (bool, error) {
-	resp, err := http.Get(fmt.Sprintf("%s%s?net_id=%d&deposit_cnt=%d", c.bridgeURL, "/claim-status", networkID, depositCnt))
+// GetBridge returns the specific bridge info.
+func (c RestClient) GetBridge(networkID uint32, depositCnt uint64) (*pb.Deposit, error) {
+	resp, err := http.Get(fmt.Sprintf("%s%s?net_id=%d&deposit_cnt=%d", c.bridgeURL, "/bridge", networkID, depositCnt))
 	if err != nil {
-		return false, err
+		return nil, err
 	}
 	bodyBytes, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return false, err
+		return nil, err
 	}
-	var claimStatusResp pb.GetClaimStatusResponse
-	err = protojson.Unmarshal(bodyBytes, &claimStatusResp)
+	var bridgeResp pb.GetBridgeResponse
+	err = protojson.Unmarshal(bodyBytes, &bridgeResp)
 	if err != nil {
-		return false, err
+		return nil, err
 	}
-	return claimStatusResp.Ready, nil
+	return bridgeResp.Deposit, nil
 }
 
 // GetWrappedToken returns the wrapped token address.

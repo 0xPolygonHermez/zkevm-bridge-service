@@ -18,7 +18,7 @@ service BridgeService {
         };
     }
 
-    /// Get bridges for the specific smart contract address both in L1 and L2
+    /// Get bridges for the destination address both in L1 and L2
     rpc GetBridges(GetBridgesRequest) returns (GetBridgesResponse) {
         option (google.api.http) = {
             get: "/bridges/{dest_addr}"
@@ -32,10 +32,10 @@ service BridgeService {
         };
     }
 
-    /// Get the claim status whether it is able to send a claim transation or not
-    rpc GetClaimStatus(GetClaimStatusRequest) returns (GetClaimStatusResponse) {
+    /// Get the specific deposit
+    rpc GetBridge(GetBridgeRequest) returns (GetBridgeResponse) {
         option (google.api.http) = {
-            get: "/claim-status"
+            get: "/bridge"
         };
     }
 
@@ -74,6 +74,7 @@ message Deposit {
     uint32 network_id = 8;
     string tx_hash = 9;
     string claim_tx_hash = 10;
+    bool ready_for_claim = 11;
 }
 
 // Claim message
@@ -117,7 +118,7 @@ message GetTokenWrappedRequest {
     uint32 orig_net = 2;
 }
 
-message GetClaimStatusRequest {
+message GetBridgeRequest {
     uint32 net_id = 1;
     uint64 deposit_cnt = 2;
 }
@@ -136,6 +137,7 @@ message CheckAPIResponse {
 
 message GetBridgesResponse {
     repeated Deposit deposits = 1;
+    uint64 total_cnt = 2;
 }
 
 message GetProofResponse {
@@ -146,10 +148,11 @@ message GetTokenWrappedResponse {
     TokenWrapped tokenwrapped = 1;
 }
 
-message GetClaimStatusResponse {
-    bool ready = 1;
+message GetBridgeResponse {
+    Deposit deposit = 1;
 }
 
 message GetClaimsResponse {
     repeated Claim claims = 1;
+    uint64 total_cnt = 2;
 }
