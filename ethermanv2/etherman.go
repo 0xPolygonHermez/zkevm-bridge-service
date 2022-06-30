@@ -102,6 +102,24 @@ func NewClient(cfg Config, auth *bind.TransactOpts, PoEAddr common.Address, brid
 	return &Client{EtherClient: ethClient, PoE: poe, Bridge: bridge, GlobalExitRootManager: globalExitRoot, SCAddresses: scAddresses, auth: auth}, nil
 }
 
+// NewL2Client creates a new etherman for L2.
+func NewL2Client(url string, bridgeAddr common.Address) (*Client, error) {
+	// Connect to ethereum node
+	ethClient, err := ethclient.Dial(url)
+	if err != nil {
+		log.Errorf("error connecting to %s: %+v", url, err)
+		return nil, err
+	}
+	// Create smc clients
+	bridge, err := bridge.NewBridge(bridgeAddr, ethClient)
+	if err != nil {
+		return nil, err
+	}
+	scAddresses := []common.Address{bridgeAddr}
+
+	return &Client{EtherClient: ethClient, Bridge: bridge, SCAddresses: scAddresses}, nil
+}
+
 // GetRollupInfoByBlockRange function retrieves the Rollup information that are included in all this ethereum blocks
 // from block x to block y.
 func (etherMan *Client) GetRollupInfoByBlockRange(ctx context.Context, fromBlock uint64, toBlock *uint64) ([]Block, map[common.Hash][]Order, error) {
