@@ -89,5 +89,5 @@ func NewSimulatedEtherman(cfg Config, auth *bind.TransactOpts) (etherman *Client
 	}
 
 	client.Commit()
-	return &Client{EtherClient: client, PoE: poe, Matic: maticContract, Bridge: br, GlobalExitRootManager: globalExitRoot, SCAddresses: []common.Address{poeAddr, exitManagerAddr, bridgeAddr}, auth: auth}, client, maticAddr, mockbr, nil
+	return &Client{EtherClient: client, PoE: poe, Bridge: br, GlobalExitRootManager: globalExitRoot, SCAddresses: []common.Address{poeAddr, exitManagerAddr, bridgeAddr}, auth: auth}, client, maticAddr, mockbr, nil
 }
