@@ -16,10 +16,10 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/hermeznetwork/hermez-core/ethermanv2/smartcontracts/bridge"
 	"github.com/hermeznetwork/hermez-core/ethermanv2/smartcontracts/globalexitrootmanager"
 	"github.com/hermeznetwork/hermez-core/ethermanv2/smartcontracts/matic"
 	"github.com/hermeznetwork/hermez-core/ethermanv2/smartcontracts/proofofefficiency"
-	"github.com/hermeznetwork/hermez-core/ethermanv2/smartcontracts/bridge"
 	"github.com/hermeznetwork/hermez-core/log"
 	"golang.org/x/crypto/sha3"
 )
@@ -31,10 +31,9 @@ var (
 	sequencedBatchesEventSignatureHash = crypto.Keccak256Hash([]byte("SequenceBatches(uint64)"))
 	forceSequencedBatchesSignatureHash = crypto.Keccak256Hash([]byte("SequenceForceBatches(uint64)"))
 	verifyBatchSignatureHash           = crypto.Keccak256Hash([]byte("VerifyBatch(uint64,address)"))
-
-	depositEventSignatureHash              = crypto.Keccak256Hash([]byte("BridgeEvent(address,uint256,uint32,uint32,address,uint32)"))
-	claimEventSignatureHash                = crypto.Keccak256Hash([]byte("ClaimEvent(uint32,uint32,address,uint256,address)"))
-	newWrappedTokenEventSignatureHash      = crypto.Keccak256Hash([]byte("NewWrappedToken(uint32,address,address)"))
+	depositEventSignatureHash          = crypto.Keccak256Hash([]byte("BridgeEvent(address,uint256,uint32,uint32,address,uint32)"))
+	claimEventSignatureHash            = crypto.Keccak256Hash([]byte("ClaimEvent(uint32,uint32,address,uint256,address)"))
+	newWrappedTokenEventSignatureHash  = crypto.Keccak256Hash([]byte("NewWrappedToken(uint32,address,address)"))
 
 	// ErrNotFound is used when the object is not found
 	ErrNotFound = errors.New("Not found")

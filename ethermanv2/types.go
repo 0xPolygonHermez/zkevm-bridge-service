@@ -33,7 +33,7 @@ type GlobalExitRoot struct {
 	GlobalExitRoot    common.Hash
 }
 
-// SequencedBatches represents virtual batches
+// SequencedBatch represents virtual batches
 type SequencedBatch struct {
 	BatchNumber uint64
 	Sequencer   common.Address
@@ -51,7 +51,7 @@ type ForcedBatch struct {
 	ForcedAt          time.Time
 }
 
-// VerifyBatch represents a VerifyBatch
+// VerifiedBatch represents a VerifiedBatch
 type VerifiedBatch struct {
 	BlockNumber uint64
 	BatchNumber uint64
