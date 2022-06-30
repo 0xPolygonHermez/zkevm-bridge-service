@@ -120,7 +120,7 @@ func main() {
 		for j := 0; j < requestCount; j++ {
 			go func(depositCount uint) {
 				defer wgRequest.Done()
-				res, err := http.Get(fmt.Sprintf("%s%s?orig_net=%d&deposit_cnt=%d", address, "/merkle-proofs", networkIds[depositCount%2], depositCount))
+				res, err := http.Get(fmt.Sprintf("%s%s?orig_net=%d&deposit_cnt=%d", address, "/merkle-proof", networkIds[depositCount%2], depositCount))
 				if err != nil {
 					panic(err)
 				}

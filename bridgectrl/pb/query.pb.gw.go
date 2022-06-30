@@ -358,7 +358,7 @@ func RegisterBridgeServiceHandlerServer(ctx context.Context, mux *runtime.ServeM
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
-		ctx, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/bridge.v1.BridgeService/GetProof", runtime.WithHTTPPathPattern("/merkle-proofs"))
+		ctx, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/bridge.v1.BridgeService/GetProof", runtime.WithHTTPPathPattern("/merkle-proof"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -535,7 +535,7 @@ func RegisterBridgeServiceHandlerClient(ctx context.Context, mux *runtime.ServeM
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
-		ctx, err = runtime.AnnotateContext(ctx, mux, req, "/bridge.v1.BridgeService/GetProof", runtime.WithHTTPPathPattern("/merkle-proofs"))
+		ctx, err = runtime.AnnotateContext(ctx, mux, req, "/bridge.v1.BridgeService/GetProof", runtime.WithHTTPPathPattern("/merkle-proof"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -622,7 +622,7 @@ var (
 
 	pattern_BridgeService_GetBridges_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 1, 0, 4, 1, 5, 1}, []string{"bridges", "dest_addr"}, ""))
 
-	pattern_BridgeService_GetProof_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0}, []string{"merkle-proofs"}, ""))
+	pattern_BridgeService_GetProof_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0}, []string{"merkle-proof"}, ""))
 
 	pattern_BridgeService_GetBridge_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0}, []string{"bridge"}, ""))
 

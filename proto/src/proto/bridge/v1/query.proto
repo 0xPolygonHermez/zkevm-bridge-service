@@ -28,7 +28,7 @@ service BridgeService {
     /// Get the merkle proof for the specific deposit
     rpc GetProof(GetProofRequest) returns (GetProofResponse) {
         option (google.api.http) = {
-            get: "/merkle-proofs"
+            get: "/merkle-proof"
         };
     }
 

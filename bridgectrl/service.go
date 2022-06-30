@@ -57,7 +57,7 @@ func (s *bridgeService) GetBridges(ctx context.Context, req *pb.GetBridgesReques
 
 	var pbDeposits []*pb.Deposit
 	for _, deposit := range deposits {
-		claimTxHash, readyForClaim, err := s.getDepositStatus(ctx, deposit.DepositCount, deposit.NetworkID)
+		claimTxHash, readyForClaim, err := s.getDepositStatus(ctx, deposit.DepositCount, deposit.NetworkID, deposit.DestinationNetwork)
 		if err != nil {
 			return nil, err
 		}
@@ -152,7 +152,7 @@ func (s *bridgeService) GetBridge(ctx context.Context, req *pb.GetBridgeRequest)
 		return nil, err
 	}
 
-	claimTxHash, readyForClaim, err := s.getDepositStatus(ctx, uint(req.DepositCnt), uint(req.NetId))
+	claimTxHash, readyForClaim, err := s.getDepositStatus(ctx, uint(req.DepositCnt), uint(req.NetId), deposit.DestinationNetwork)
 	if err != nil {
 		return nil, err
 	}
@@ -190,13 +190,13 @@ func (s *bridgeService) GetTokenWrapped(ctx context.Context, req *pb.GetTokenWra
 	}, nil
 }
 
-func (s *bridgeService) getDepositStatus(ctx context.Context, depositCount uint, networkID uint) (string, bool, error) {
+func (s *bridgeService) getDepositStatus(ctx context.Context, depositCount uint, networkID uint, destNetworkID uint) (string, bool, error) {
 	var (
 		claimTxHash string
 		exitRoot    *etherman.GlobalExitRoot
 	)
 	// Get the claim tx hash
-	claim, err := s.storage.GetClaim(ctx, depositCount, networkID)
+	claim, err := s.storage.GetClaim(ctx, depositCount, destNetworkID)
 	if err != nil {
 		if err != gerror.ErrStorageNotFound {
 			return "", false, err
