@@ -147,7 +147,7 @@ func TestE2E(t *testing.T) {
 			// Check L2 funds to see that the amount has been reduced
 			balance, err = opsman.CheckAccountBalance(ctx, operations.L2, &destAddr)
 			require.NoError(t, err)
-			assert.Equal(t, big.NewInt(8999979000000000000), balance)
+			assert.Equal(t, big.NewInt(8999913358000000000), balance)
 		})
 	}
 
