@@ -85,13 +85,13 @@ func TestBridgeTree(t *testing.T) {
 
 			// test reorg
 			ctx := context.WithValue(context.TODO(), contextKeyNetwork, uint8(1)) //nolint
-			orgRoot, err := bt.exitTrees[0].store.GetRoot(ctx, uint(i+1), cfg.Height-1)
+			orgRoot, err := bt.exitTrees[0].store.GetRoot(ctx, uint(i+1))
 			require.NoError(t, err)
 			err = bt.ReorgMT(uint(i), testVectors[i].OriginalNetwork)
 			require.NoError(t, err)
 			err = bt.AddDeposit(deposit)
 			require.NoError(t, err)
-			newRoot, err := bt.exitTrees[0].store.GetRoot(ctx, uint(i+1), cfg.Height-1)
+			newRoot, err := bt.exitTrees[0].store.GetRoot(ctx, uint(i+1))
 			require.NoError(t, err)
 			assert.Equal(t, orgRoot, newRoot)
 

@@ -9,15 +9,17 @@ import (
 
 // merkleTreeStore interface for the Merkle Tree
 type merkleTreeStore interface {
-	Get(ctx context.Context, key []byte) ([][]byte, uint, error)
-	Set(ctx context.Context, key []byte, value [][]byte, depositCount uint, depth uint8) error
+	Get(ctx context.Context, key []byte) ([][]byte, error)
+	Set(ctx context.Context, key []byte, value [][]byte) error
 	ResetMT(ctx context.Context, depositCount uint) error
-	GetRoot(ctx context.Context, depositCount uint, depth uint8) ([]byte, error)
+	GetRoot(ctx context.Context, depositCount uint) ([]byte, error)
+	SetRoot(ctx context.Context, root []byte, depositCount uint) error
 	GetLastDepositCount(ctx context.Context) (uint, error)
 }
 
 // bridgeStorage interface for the Bridge Tree
 type bridgeStorage interface {
+	GetDepositCountByRoot(ctx context.Context, root []byte, network uint8) (uint, error)
 	GetLatestL1SyncedExitRoot(ctx context.Context) (*etherman.GlobalExitRoot, error)
 	GetLatestL2SyncedExitRoot(ctx context.Context) (*etherman.GlobalExitRoot, error)
 	AddExitRoot(ctx context.Context, globalExitRoot *etherman.GlobalExitRoot) error

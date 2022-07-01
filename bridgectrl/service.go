@@ -222,9 +222,8 @@ func (s *bridgeService) getDepositStatus(ctx context.Context, depositCount uint,
 	if !found {
 		return "", false, gerror.ErrNetworkNotRegister
 	}
-	ctx = context.WithValue(ctx, contextKeyNetwork, tID) //nolint
 	tID--
-	depositCnt, err := s.bridgeCtrl.exitTrees[tID].getDepositCntByRoot(ctx, exitRoot.ExitRoots[tID])
+	depositCnt, err := s.bridgeCtrl.storage.GetDepositCountByRoot(ctx, exitRoot.ExitRoots[tID][:], uint8(tID+1))
 	if err != nil {
 		return "", false, err
 	}

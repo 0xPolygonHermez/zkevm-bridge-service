@@ -4,11 +4,13 @@ CREATE SCHEMA merkletree;
 
 CREATE TABLE merkletree.rht 
 (
-    key BYTEA,
-    value BYTEA[],
-    depth CHAR NOT NULL,
+    key BYTEA PRIMARY KEY,
+    value BYTEA[]
+);
+
+CREATE TABLE merkletree.root
+(
+    root BYTEA,
     network CHAR NOT NULL,
-    -- To parse uint8 to char in database, we are using one-index in the database
-    deposit_cnt BIGINT NOT NULL,
-    PRIMARY KEY(key, network)
+    deposit_cnt BIGINT NOT NULL
 );
