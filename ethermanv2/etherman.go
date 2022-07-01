@@ -18,6 +18,7 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/hermeznetwork/hermez-core/ethermanv2/smartcontracts/bridge"
 	"github.com/hermeznetwork/hermez-core/ethermanv2/smartcontracts/globalexitrootmanager"
+	"github.com/hermeznetwork/hermez-core/ethermanv2/smartcontracts/matic"
 	"github.com/hermeznetwork/hermez-core/ethermanv2/smartcontracts/proofofefficiency"
 	"github.com/hermeznetwork/hermez-core/log"
 	"golang.org/x/crypto/sha3"
@@ -50,6 +51,8 @@ const (
 	VerifyBatchOrder EventOrder = "VerifyBatch"
 	// SequenceForceBatchesOrder identifies a SequenceForceBatches event
 	SequenceForceBatchesOrder EventOrder = "SequenceForceBatches"
+	// ForcedBatchesOrder identifies a ForcedBatches event
+	ForcedBatchesOrder EventOrder = "ForcedBatches"
 	// DepositsOrder identifies a Deposits event
 	DepositsOrder EventOrder = "Deposit"
 	// ClaimsOrder identifies a Claims event
@@ -70,13 +73,14 @@ type Client struct {
 	PoE                   *proofofefficiency.Proofofefficiency
 	Bridge                *bridge.Bridge
 	GlobalExitRootManager *globalexitrootmanager.Globalexitrootmanager
+	Matic                 *matic.Matic
 	SCAddresses           []common.Address
 
 	auth *bind.TransactOpts
 }
 
 // NewClient creates a new etherman.
-func NewClient(cfg Config, auth *bind.TransactOpts, PoEAddr common.Address, bridgeAddr common.Address, globalExitRootManAddr common.Address) (*Client, error) {
+func NewClient(cfg Config, auth *bind.TransactOpts, PoEAddr common.Address, bridgeAddr common.Address, maticAddr common.Address, globalExitRootManAddr common.Address) (*Client, error) {
 	// Connect to ethereum node
 	ethClient, err := ethclient.Dial(cfg.URL)
 	if err != nil {
@@ -96,28 +100,14 @@ func NewClient(cfg Config, auth *bind.TransactOpts, PoEAddr common.Address, brid
 	if err != nil {
 		return nil, err
 	}
+	matic, err := matic.NewMatic(maticAddr, ethClient)
+	if err != nil {
+		return nil, err
+	}
 	var scAddresses []common.Address
 	scAddresses = append(scAddresses, PoEAddr, globalExitRootManAddr, bridgeAddr)
 
-	return &Client{EtherClient: ethClient, PoE: poe, Bridge: bridge, GlobalExitRootManager: globalExitRoot, SCAddresses: scAddresses, auth: auth}, nil
-}
-
-// NewL2Client creates a new etherman for L2.
-func NewL2Client(url string, bridgeAddr common.Address) (*Client, error) {
-	// Connect to ethereum node
-	ethClient, err := ethclient.Dial(url)
-	if err != nil {
-		log.Errorf("error connecting to %s: %+v", url, err)
-		return nil, err
-	}
-	// Create smc clients
-	bridge, err := bridge.NewBridge(bridgeAddr, ethClient)
-	if err != nil {
-		return nil, err
-	}
-	scAddresses := []common.Address{bridgeAddr}
-
-	return &Client{EtherClient: ethClient, Bridge: bridge, SCAddresses: scAddresses}, nil
+	return &Client{EtherClient: ethClient, PoE: poe, Bridge: bridge, Matic: matic, GlobalExitRootManager: globalExitRoot, SCAddresses: scAddresses, auth: auth}, nil
 }
 
 // GetRollupInfoByBlockRange function retrieves the Rollup information that are included in all this ethereum blocks
@@ -170,8 +160,7 @@ func (etherMan *Client) processEvent(ctx context.Context, vLog types.Log, blocks
 	case updateGlobalExitRootSignatureHash:
 		return etherMan.updateGlobalExitRootEvent(ctx, vLog, blocks, blocksOrder)
 	case forcedBatchSignatureHash:
-		log.Debug("ForcedBatch event detected")
-		return nil
+		return etherMan.forcedBatchEvent(ctx, vLog, blocks, blocksOrder)
 	case verifyBatchSignatureHash:
 		return etherMan.verifyBatchEvent(ctx, vLog, blocks, blocksOrder)
 	case forceSequencedBatchesSignatureHash:
@@ -211,7 +200,6 @@ func (etherMan *Client) updateGlobalExitRootEvent(ctx context.Context, vLog type
 	gExitRoot.MainnetExitRoot = common.BytesToHash(globalExitRoot.MainnetExitRoot[:])
 	gExitRoot.RollupExitRoot = common.BytesToHash(globalExitRoot.RollupExitRoot[:])
 	gExitRoot.GlobalExitRootNum = globalExitRoot.GlobalExitRootNum
-	gExitRoot.BlockNumber = vLog.BlockNumber
 	gExitRoot.GlobalExitRoot = hash(globalExitRoot.MainnetExitRoot, globalExitRoot.RollupExitRoot)
 
 	if len(*blocks) == 0 || ((*blocks)[len(*blocks)-1].BlockHash != vLog.BlockHash || (*blocks)[len(*blocks)-1].BlockNumber != vLog.BlockNumber) {
@@ -440,7 +428,6 @@ func (etherMan *Client) verifyBatchEvent(ctx context.Context, vLog types.Log, bl
 		return err
 	}
 	var verifyBatch VerifiedBatch
-	verifyBatch.BlockNumber = vLog.BlockNumber
 	verifyBatch.BatchNumber = vb.NumBatch
 	verifyBatch.TxHash = vLog.TxHash
 	verifyBatch.Aggregator = vb.Aggregator
@@ -519,6 +506,58 @@ func (etherMan *Client) forceSequencedBatchesEvent(ctx context.Context, vLog typ
 	}
 	(*blocksOrder)[(*blocks)[len(*blocks)-1].BlockHash] = append((*blocksOrder)[(*blocks)[len(*blocks)-1].BlockHash], or)
 
+	return nil
+}
+
+func (etherMan *Client) forcedBatchEvent(ctx context.Context, vLog types.Log, blocks *[]Block, blocksOrder *map[common.Hash][]Order) error {
+	log.Debug("ForceBatch event detected")
+	fb, err := etherMan.PoE.ParseForceBatch(vLog)
+	if err != nil {
+		return err
+	}
+	var forcedBatch ForcedBatch
+	forcedBatch.ForcedBatchNumber = fb.ForceBatchNum
+	forcedBatch.GlobalExitRoot = fb.LastGlobalExitRoot
+	// Read the tx for this batch.
+	tx, isPending, err := etherMan.EtherClient.TransactionByHash(ctx, vLog.TxHash)
+	if err != nil {
+		return err
+	} else if isPending {
+		return fmt.Errorf("error: tx is still pending. TxHash: %s", tx.Hash().String())
+	}
+	msg, err := tx.AsMessage(types.NewLondonSigner(tx.ChainId()), big.NewInt(0))
+	if err != nil {
+		log.Error(err)
+		return err
+	}
+	if fb.Sequencer == msg.From() {
+		forcedBatch.RawTxsData = tx.Data()
+	} else {
+		forcedBatch.RawTxsData = fb.Transactions
+	}
+	forcedBatch.Sequencer = fb.Sequencer
+	fullBlock, err := etherMan.EtherClient.BlockByHash(ctx, vLog.BlockHash)
+	if err != nil {
+		return fmt.Errorf("error getting hashParent. BlockNumber: %d. Error: %w", vLog.BlockNumber, err)
+	}
+	t := time.Unix(int64(fullBlock.Time()), 0)
+	forcedBatch.ForcedAt = t
+
+	if len(*blocks) == 0 || ((*blocks)[len(*blocks)-1].BlockHash != vLog.BlockHash || (*blocks)[len(*blocks)-1].BlockNumber != vLog.BlockNumber) {
+		block := prepareBlock(vLog, t, fullBlock)
+		block.ForcedBatches = append(block.ForcedBatches, forcedBatch)
+		*blocks = append(*blocks, block)
+	} else if (*blocks)[len(*blocks)-1].BlockHash == vLog.BlockHash && (*blocks)[len(*blocks)-1].BlockNumber == vLog.BlockNumber {
+		(*blocks)[len(*blocks)-1].ForcedBatches = append((*blocks)[len(*blocks)-1].ForcedBatches, forcedBatch)
+	} else {
+		log.Error("Error processing ForceBatch event. BlockHash:", vLog.BlockHash, ". BlockNumber: ", vLog.BlockNumber)
+		return fmt.Errorf("error processing ForceBatch event")
+	}
+	or := Order{
+		Name: ForcedBatchesOrder,
+		Pos:  len((*blocks)[len(*blocks)-1].ForcedBatches) - 1,
+	}
+	(*blocksOrder)[(*blocks)[len(*blocks)-1].BlockHash] = append((*blocksOrder)[(*blocks)[len(*blocks)-1].BlockHash], or)
 	return nil
 }
 

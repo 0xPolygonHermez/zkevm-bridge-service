@@ -67,7 +67,6 @@ func TestGEREvent(t *testing.T) {
 	blocks, _, err := etherman.GetRollupInfoByBlockRange(ctx, initBlock.NumberU64(), &finalBlockNumber)
 	require.NoError(t, err)
 
-	assert.Equal(t, uint64(2), blocks[0].GlobalExitRoots[0].BlockNumber)
 	assert.Equal(t, big.NewInt(1), blocks[0].GlobalExitRoots[0].GlobalExitRootNum)
 	assert.NotEqual(t, common.Hash{}, blocks[0].GlobalExitRoots[0].MainnetExitRoot)
 	assert.Equal(t, common.Hash{}, blocks[0].GlobalExitRoots[0].RollupExitRoot)
@@ -131,13 +130,13 @@ func TestSequencedBatchesEvent(t *testing.T) {
 	finalBlockNumber := finalBlock.NumberU64()
 	blocks, order, err := etherman.GetRollupInfoByBlockRange(ctx, initBlock.NumberU64(), &finalBlockNumber)
 	require.NoError(t, err)
-	assert.Equal(t, 2, len(blocks))
-	assert.Equal(t, 1, len(blocks[1].SequencedBatches))
-	assert.Equal(t, common.Hex2Bytes(rawTxs), blocks[1].SequencedBatches[0][1].Transactions)
-	assert.Equal(t, currentBlock.Time()-1, blocks[1].SequencedBatches[0][0].Timestamp)
-	assert.Equal(t, ger, blocks[1].SequencedBatches[0][0].GlobalExitRoot)
-	assert.Equal(t, []uint64{currentBlock.Time()}, blocks[1].SequencedBatches[0][0].ForceBatchesTimestamp)
-	assert.Equal(t, 0, order[blocks[1].BlockHash][0].Pos)
+	assert.Equal(t, 3, len(blocks))
+	assert.Equal(t, 1, len(blocks[2].SequencedBatches))
+	assert.Equal(t, common.Hex2Bytes(rawTxs), blocks[2].SequencedBatches[0][1].Transactions)
+	assert.Equal(t, currentBlock.Time()-1, blocks[2].SequencedBatches[0][0].Timestamp)
+	assert.Equal(t, ger, blocks[2].SequencedBatches[0][0].GlobalExitRoot)
+	assert.Equal(t, []uint64{currentBlock.Time()}, blocks[2].SequencedBatches[0][0].ForceBatchesTimestamp)
+	assert.Equal(t, 0, order[blocks[2].BlockHash][0].Pos)
 }
 
 func TestVerifyBatchEvent(t *testing.T) {
@@ -223,10 +222,10 @@ func TestSequenceForceBatchesEvent(t *testing.T) {
 	finalBlockNumber := finalBlock.NumberU64()
 	blocks, order, err := etherman.GetRollupInfoByBlockRange(ctx, initBlock.NumberU64(), &finalBlockNumber)
 	require.NoError(t, err)
-	assert.Equal(t, uint64(4), blocks[0].BlockNumber)
-	assert.Equal(t, uint64(1), blocks[0].SequencedForceBatches[0].LastBatchSequenced)
-	assert.Equal(t, uint64(1), blocks[0].SequencedForceBatches[0].ForceBatchNumber)
-	assert.Equal(t, 0, order[blocks[0].BlockHash][0].Pos)
+	assert.Equal(t, uint64(4), blocks[1].BlockNumber)
+	assert.Equal(t, uint64(1), blocks[1].SequencedForceBatches[0].LastBatchSequenced)
+	assert.Equal(t, uint64(1), blocks[1].SequencedForceBatches[0].ForceBatchNumber)
+	assert.Equal(t, 0, order[blocks[1].BlockHash][0].Pos)
 }
 
 func TestBridgeEvents(t *testing.T) {
