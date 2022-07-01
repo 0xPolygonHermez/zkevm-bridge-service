@@ -190,6 +190,7 @@ func (m *Manager) Setup() error {
 	// Run network container
 	err := m.startNetwork()
 	if err != nil {
+		log.Error("network start failed")
 		return err
 	}
 	const t time.Duration = 5
@@ -198,18 +199,21 @@ func (m *Manager) Setup() error {
 	// Start prover container
 	err = m.startProver()
 	if err != nil {
+		log.Error("prover start failed")
 		return err
 	}
 
 	//Send funds to hermezCore
 	err = m.AddFunds(m.ctx)
 	if err != nil {
+		log.Error("addfunds failed")
 		return err
 	}
 
 	// Run core container
 	err = m.startCore()
 	if err != nil {
+		log.Error("core start failed")
 		return err
 	}
 	//Wait for set the genesis and sync
@@ -218,6 +222,7 @@ func (m *Manager) Setup() error {
 	// Run bridge container
 	err = m.startBridge()
 	if err != nil {
+		log.Error("bridge start failed")
 		return err
 	}
 
