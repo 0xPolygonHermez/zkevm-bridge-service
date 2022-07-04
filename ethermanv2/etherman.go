@@ -18,7 +18,6 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/hermeznetwork/hermez-core/ethermanv2/smartcontracts/bridge"
 	"github.com/hermeznetwork/hermez-core/ethermanv2/smartcontracts/globalexitrootmanager"
-	"github.com/hermeznetwork/hermez-core/ethermanv2/smartcontracts/matic"
 	"github.com/hermeznetwork/hermez-core/ethermanv2/smartcontracts/proofofefficiency"
 	"github.com/hermeznetwork/hermez-core/log"
 	"golang.org/x/crypto/sha3"
@@ -73,14 +72,13 @@ type Client struct {
 	PoE                   *proofofefficiency.Proofofefficiency
 	Bridge                *bridge.Bridge
 	GlobalExitRootManager *globalexitrootmanager.Globalexitrootmanager
-	Matic                 *matic.Matic
 	SCAddresses           []common.Address
 
 	auth *bind.TransactOpts
 }
 
 // NewClient creates a new etherman.
-func NewClient(cfg Config, auth *bind.TransactOpts, PoEAddr common.Address, bridgeAddr common.Address, maticAddr common.Address, globalExitRootManAddr common.Address) (*Client, error) {
+func NewClient(cfg Config, auth *bind.TransactOpts, PoEAddr, bridgeAddr, globalExitRootManAddr common.Address) (*Client, error) {
 	// Connect to ethereum node
 	ethClient, err := ethclient.Dial(cfg.URL)
 	if err != nil {
@@ -100,14 +98,10 @@ func NewClient(cfg Config, auth *bind.TransactOpts, PoEAddr common.Address, brid
 	if err != nil {
 		return nil, err
 	}
-	matic, err := matic.NewMatic(maticAddr, ethClient)
-	if err != nil {
-		return nil, err
-	}
 	var scAddresses []common.Address
 	scAddresses = append(scAddresses, PoEAddr, globalExitRootManAddr, bridgeAddr)
 
-	return &Client{EtherClient: ethClient, PoE: poe, Bridge: bridge, Matic: matic, GlobalExitRootManager: globalExitRoot, SCAddresses: scAddresses, auth: auth}, nil
+	return &Client{EtherClient: ethClient, PoE: poe, Bridge: bridge, GlobalExitRootManager: globalExitRoot, SCAddresses: scAddresses, auth: auth}, nil
 }
 
 // GetRollupInfoByBlockRange function retrieves the Rollup information that are included in all this ethereum blocks
