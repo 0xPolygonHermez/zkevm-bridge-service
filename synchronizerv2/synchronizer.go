@@ -11,7 +11,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	etherman "github.com/hermeznetwork/hermez-bridge/ethermanv2"
 	"github.com/hermeznetwork/hermez-core/log"
-	"github.com/hermeznetwork/hermez-bridge/bridgectrl"
 	"github.com/hermeznetwork/hermez-bridge/utils/gerror"
 	"github.com/jackc/pgx/v4"
 )
@@ -25,7 +24,7 @@ type Synchronizer interface {
 // ClientSynchronizer connects L1 and L2
 type ClientSynchronizer struct {
 	etherMan       ethermanInterface
-	bridgeCtrl     *bridgectrl.BridgeController
+	bridgeCtrl     bridgectrlInterface
 	storage        storageInterface
 	ctx            context.Context
 	cancelCtx      context.CancelFunc
@@ -37,7 +36,7 @@ type ClientSynchronizer struct {
 // NewSynchronizer creates and initializes an instance of Synchronizer
 func NewSynchronizer(
 	storage storageInterface,
-	bridge *bridgectrl.BridgeController,
+	bridge bridgectrlInterface,
 	ethMan ethermanInterface,
 	genBlockNumber uint64,
 	cfg Config) (Synchronizer, error) {
@@ -229,7 +228,7 @@ func (s *ClientSynchronizer) processBlockRange(blocks []etherman.Block, order ma
 			} else if element.Name == etherman.VerifyBatchOrder {
 				s.processVerifiedBatch(blocks[i].VerifiedBatches[element.Pos], blockID, dbTx)
 			} else if element.Name == etherman.DepositsOrder {
-				// TODO
+				s.processDeposit(blocks[i].Deposits[element.Pos], blockID, dbTx)
 			} else if element.Name == etherman.ClaimsOrder {
 				// TODO
 			} else if element.Name == etherman.TokensOrder {
@@ -592,5 +591,23 @@ func (s *ClientSynchronizer) processVerifiedBatch(verifiedBatch etherman.Verifie
 			log.Fatalf("networkID: %d, error rolling back state. BlockID: %d, rollbackErr: %s, error : %s", s.networkID, verifiedBatch.BlockID, rollbackErr.Error(), err.Error())
 		}
 		log.Fatalf("networkID: %d, error storing the verifiedBatch in processVerifiedBatch. BlockID: %d, error: %s", s.networkID, verifiedBatch.BlockID, err.Error())
+	}
+}
+
+func (s *ClientSynchronizer) processDeposit(deposit etherman.Deposit, blockID uint64, dbTx pgx.Tx) {
+	deposit.BlockID = blockID
+	deposit.NetworkID = s.networkID
+	err := s.storage.AddDeposit(s.ctx, &deposit, dbTx)
+	if err != nil {
+		rollbackErr := s.storage.Rollback(s.ctx, dbTx)
+		if rollbackErr != nil {
+			log.Fatalf("networkID: %d, error rolling back state to store block. BlockID: %v, rollbackErr: %s, err: %s", s.networkID, deposit.BlockID, rollbackErr.Error(), err.Error())
+		}
+		log.Fatalf("networkID: %d, failed to store new deposit locally, block: %d, Deposit: %+v err: %s", s.networkID, deposit.BlockID, deposit, err.Error())
+	}
+
+	err = s.bridgeCtrl.AddDeposit(&deposit, dbTx)
+	if err != nil {
+		log.Fatalf("networkID: %d, failed to store new deposit in the bridge tree, block: %d, Deposit: %+v err: %s", s.networkID, &deposit.BlockID, deposit, err.Error())
 	}
 }

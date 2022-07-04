@@ -43,3 +43,8 @@ type storageInterface interface {
 	AddBatchNumberInForcedBatch(ctx context.Context, forceBatchNumber, batchNumber uint64, dbTx pgx.Tx) error
 	AddForcedBatch(ctx context.Context, forcedBatch *etherman.ForcedBatch, dbTx pgx.Tx) error
 }
+
+type bridgectrlInterface interface {
+	AddDeposit(deposit *etherman.Deposit, dbTx pgx.Tx) error
+	ReorgMT(depositCount, networkID uint) error
+}
