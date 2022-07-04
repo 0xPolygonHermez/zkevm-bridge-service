@@ -10,8 +10,8 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	etherman "github.com/hermeznetwork/hermez-bridge/ethermanv2"
-	"github.com/hermeznetwork/hermez-core/log"
 	"github.com/hermeznetwork/hermez-bridge/utils/gerror"
+	"github.com/hermeznetwork/hermez-core/log"
 	"github.com/jackc/pgx/v4"
 )
 
@@ -190,7 +190,7 @@ func (s *ClientSynchronizer) syncBlocks(lastBlockSynced *etherman.Block) (*ether
 				ReceivedAt:  time.Unix(int64(fb.Time()), 0),
 			}
 			s.processBlockRange([]etherman.Block{b}, order)
-			
+
 			lastBlockSynced = &b
 			log.Debugf("NetworkID: %d, Storing empty block. BlockNumber: %d. BlockHash: %s", s.networkID, b.BlockNumber, b.BlockHash.String())
 		}
@@ -429,7 +429,8 @@ func (s *ClientSynchronizer) processSequenceBatches(sequencedBatches []etherman.
 		}
 
 		// Now we need to check all the batches. ForcedBatches should be already stored in the batch table because this is done by the sequencer
-		for i, batch := range batches {
+		for i, b := range batches {
+			batch := b
 			// Call the check trusted state method to compare trusted and virtual state
 			status, err := s.checkTrustedState(batch, dbTx)
 			if err != nil {

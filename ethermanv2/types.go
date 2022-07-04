@@ -110,7 +110,7 @@ type Batch struct {
 	GlobalExitRoot common.Hash
 }
 
-// VerifyBatch represents a VerifyBatch
+// VerifiedBatch represents a VerifiedBatch
 type VerifiedBatch struct {
 	BatchNumber uint64
 	BlockID     uint64
