@@ -36,7 +36,10 @@ func NewMerkleTree(ctx context.Context, store merkleTreeStore, height uint8) (*M
 					return nil, err
 				}
 			}
-			store.SetRoot(ctx, zeroHashes[height][:], 0)
+			err1 := store.SetRoot(ctx, zeroHashes[height][:], 0)
+			if err1 != nil {
+				return nil, err
+			}
 		} else {
 			return nil, err
 		}
