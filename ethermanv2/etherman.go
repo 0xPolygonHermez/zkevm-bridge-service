@@ -201,6 +201,7 @@ func (etherMan *Client) updateGlobalExitRootEvent(ctx context.Context, vLog type
 	gExitRoot.RollupExitRoot = common.BytesToHash(globalExitRoot.RollupExitRoot[:])
 	gExitRoot.GlobalExitRootNum = globalExitRoot.GlobalExitRootNum
 	gExitRoot.GlobalExitRoot = hash(globalExitRoot.MainnetExitRoot, globalExitRoot.RollupExitRoot)
+	gExitRoot.BlockNumber = vLog.BlockNumber
 
 	if len(*blocks) == 0 || ((*blocks)[len(*blocks)-1].BlockHash != vLog.BlockHash || (*blocks)[len(*blocks)-1].BlockNumber != vLog.BlockNumber) {
 		fullBlock, err := etherMan.EtherClient.BlockByHash(ctx, vLog.BlockHash)
@@ -309,6 +310,7 @@ func (etherMan *Client) tokenWrappedEvent(ctx context.Context, vLog types.Log, b
 	tokenWrapped.OriginalNetwork = uint(tw.OriginalNetwork)
 	tokenWrapped.OriginalTokenAddress = tw.OriginalTokenAddress
 	tokenWrapped.WrappedTokenAddress = tw.WrappedTokenAddress
+	tokenWrapped.BlockNumber = vLog.BlockNumber
 
 	if len(*blocks) == 0 || ((*blocks)[len(*blocks)-1].BlockHash != vLog.BlockHash || (*blocks)[len(*blocks)-1].BlockNumber != vLog.BlockNumber) {
 		fullBlock, err := etherMan.EtherClient.BlockByHash(ctx, vLog.BlockHash)
@@ -431,6 +433,7 @@ func (etherMan *Client) verifyBatchEvent(ctx context.Context, vLog types.Log, bl
 	verifyBatch.BatchNumber = vb.NumBatch
 	verifyBatch.TxHash = vLog.TxHash
 	verifyBatch.Aggregator = vb.Aggregator
+	verifyBatch.BlockNumber = vLog.BlockNumber
 
 	if len(*blocks) == 0 || ((*blocks)[len(*blocks)-1].BlockHash != vLog.BlockHash || (*blocks)[len(*blocks)-1].BlockNumber != vLog.BlockNumber) {
 		fullBlock, err := etherMan.EtherClient.BlockByHash(ctx, vLog.BlockHash)
@@ -518,6 +521,7 @@ func (etherMan *Client) forcedBatchEvent(ctx context.Context, vLog types.Log, bl
 	var forcedBatch ForcedBatch
 	forcedBatch.ForcedBatchNumber = fb.ForceBatchNum
 	forcedBatch.GlobalExitRoot = fb.LastGlobalExitRoot
+	forcedBatch.BlockNumber = vLog.BlockNumber
 	// Read the tx for this batch.
 	tx, isPending, err := etherMan.EtherClient.TransactionByHash(ctx, vLog.TxHash)
 	if err != nil {

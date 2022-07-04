@@ -29,6 +29,7 @@ type Block struct {
 // GlobalExitRoot struct
 type GlobalExitRoot struct {
 	BlockID           uint64
+	BlockNumber       uint64
 	GlobalExitRootNum *big.Int
 	MainnetExitRoot   common.Hash
 	RollupExitRoot    common.Hash
@@ -46,6 +47,7 @@ type SequencedBatch struct {
 // ForcedBatch represents a ForcedBatch
 type ForcedBatch struct {
 	BlockID           uint64
+	BlockNumber       uint64
 	BatchNumber       *uint64
 	ForcedBatchNumber uint64
 	Sequencer         common.Address
@@ -112,6 +114,7 @@ type Batch struct {
 type VerifiedBatch struct {
 	BatchNumber uint64
 	BlockID     uint64
+	BlockNumber uint64
 	Aggregator  common.Address
 	TxHash      common.Hash
 }
@@ -120,6 +123,7 @@ type VerifiedBatch struct {
 type VirtualBatch struct {
 	BatchNumber uint64
 	BlockID     uint64
+	BlockNumber uint64
 	TxHash      common.Hash
 	Sequencer   common.Address
 }
