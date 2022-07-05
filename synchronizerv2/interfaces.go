@@ -20,8 +20,8 @@ type ethermanInterface interface {
 }
 
 type storageInterface interface {
-	GetLastBlock(ctx context.Context, networkID uint) (*etherman.Block, error)
-	GetLastBatchNumber(ctx context.Context) (uint64, error)
+	GetLastBlock(ctx context.Context, networkID uint, dbTx pgx.Tx) (*etherman.Block, error)
+	GetLastBatchNumber(ctx context.Context, dbTx pgx.Tx) (uint64, error)
 	GetBatchByNumber(ctx context.Context, batchNumber uint64, dbTx pgx.Tx) (*etherman.Batch, error)
 	Rollback(ctx context.Context, dbTx pgx.Tx) error
 	BeginDBTransaction(ctx context.Context) (pgx.Tx, error)
@@ -36,8 +36,8 @@ type storageInterface interface {
 	AddTokenWrapped(ctx context.Context, tokeWrapped *etherman.TokenWrapped, dbTx pgx.Tx) error
 	Reset(ctx context.Context, blockNumber uint64, dbTx pgx.Tx) error
 	ResetTrustedState(ctx context.Context, batchNumber uint64, dbTx pgx.Tx) error
-	GetPreviousBlock(ctx context.Context, networkID uint, offset uint64) (*etherman.Block, error)
-	GetNumberDeposits(ctx context.Context, origNetworkID uint, blockNumber uint64) (uint64, error)
+	GetPreviousBlock(ctx context.Context, networkID uint, offset uint64, dbTx pgx.Tx) (*etherman.Block, error)
+	GetNumberDeposits(ctx context.Context, origNetworkID uint, blockNumber uint64, dbTx pgx.Tx) (uint64, error)
 	// GetNextForcedBatches returns the next forcedBatches in FIFO order
 	GetNextForcedBatches(ctx context.Context, nextForcedBatches int, dbTx pgx.Tx) (*[]etherman.ForcedBatch, error)
 	AddBatchNumberInForcedBatch(ctx context.Context, forceBatchNumber, batchNumber uint64, dbTx pgx.Tx) error

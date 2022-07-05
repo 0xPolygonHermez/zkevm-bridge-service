@@ -65,7 +65,11 @@ func (s *ClientSynchronizer) Sync() error {
 	// If there is no lastEthereumBlock means that sync from the beginning is necessary. If not, it continues from the retrieved ethereum block
 	// Get the latest synced block. If there is no block on db, use genesis block
 	log.Infof("NetworkID: %d, Synchronization started", s.networkID)
-	lastBlockSynced, err := s.storage.GetLastBlock(s.ctx, s.networkID)
+	dbTx, err := s.storage.BeginDBTransaction(s.ctx)
+	if err != nil {
+		log.Fatalf("networkID: %d, error creating db transaction to get latest block", s.networkID)
+	}
+	lastBlockSynced, err := s.storage.GetLastBlock(s.ctx, s.networkID, dbTx)
 	if err != nil {
 		if err == gerror.ErrStorageNotFound {
 			log.Warn("error getting the latest ethereum block. No data stored. Setting genesis block. Error: ", err)
@@ -78,6 +82,16 @@ func (s *ClientSynchronizer) Sync() error {
 		} else {
 			log.Fatalf("networkID: %d, unexpected error getting the latest block. Error: %s", s.networkID, err.Error())
 		}
+	}
+	err = s.storage.Commit(s.ctx, dbTx)
+	if err != nil {
+		log.Errorf("networkID: %d, error committing dbTx, err: %s", s.networkID, err.Error())
+		rollbackErr := s.storage.Rollback(s.ctx, dbTx)
+		if rollbackErr != nil {
+			log.Fatalf("networkID: %d, error rolling back state. RollbackErr: %s, err: %s",
+				s.networkID, rollbackErr.Error(), err.Error())
+		}
+		log.Fatalf("networkID: %d, error committing dbTx, err: %s", s.networkID, err.Error())
 	}
 	for {
 		select {
@@ -99,7 +113,21 @@ func (s *ClientSynchronizer) Sync() error {
 					continue
 				}
 				// Check latest Synced Batch
-				latestSyncedBatch, err := s.storage.GetLastBatchNumber(s.ctx)
+				dbTx, err := s.storage.BeginDBTransaction(s.ctx)
+				if err != nil {
+					log.Fatalf("networkID: %d, error creating db transaction to get latest block", s.networkID)
+				}
+				latestSyncedBatch, err := s.storage.GetLastBatchNumber(s.ctx, dbTx)
+				errC := s.storage.Commit(s.ctx, dbTx)
+				if errC != nil {
+					log.Errorf("networkID: %d, error committing dbTx, err: %s", s.networkID, errC.Error())
+					rollbackErr := s.storage.Rollback(s.ctx, dbTx)
+					if rollbackErr != nil {
+						log.Fatalf("networkID: %d, error rolling back state. RollbackErr: %s, err: %s",
+							s.networkID, rollbackErr.Error(), errC.Error())
+					}
+					log.Fatalf("networkID: %d, error committing dbTx, err: %s", s.networkID, errC.Error())
+				}
 				if err != nil {
 					log.Warnf("networkID: %d, error getting latest batch synced. Error: %s", s.networkID, err.Error())
 					continue
@@ -275,7 +303,7 @@ func (s *ClientSynchronizer) resetState(blockNumber uint64) error {
 		log.Errorf("networkID: %d, error resetting the state. Error: %s", s.networkID, err.Error())
 		return err
 	}
-	depositCnt, err := s.storage.GetNumberDeposits(s.ctx, s.networkID, blockNumber)
+	depositCnt, err := s.storage.GetNumberDeposits(s.ctx, s.networkID, blockNumber, dbTx)
 	if err != nil {
 		rollbackErr := s.storage.Rollback(s.ctx, dbTx)
 		if rollbackErr != nil {
@@ -349,7 +377,21 @@ func (s *ClientSynchronizer) checkReorg(latestBlock *etherman.Block) (*etherman.
 			depth++
 			log.Debug("NetworkID: ", s.networkID, ", REORG: Looking for the latest correct block. Depth: ", depth)
 			// Reorg detected. Getting previous block
-			latestBlock, err = s.storage.GetPreviousBlock(s.ctx, s.networkID, depth)
+			dbTx, err := s.storage.BeginDBTransaction(s.ctx)
+			if err != nil {
+				log.Fatalf("networkID: %d, error creating db transaction to get latest block", s.networkID)
+			}
+			latestBlock, err = s.storage.GetPreviousBlock(s.ctx, s.networkID, depth, dbTx)
+			errC := s.storage.Commit(s.ctx, dbTx)
+			if errC != nil {
+				log.Errorf("networkID: %d, error committing dbTx, err: %s", s.networkID, errC.Error())
+				rollbackErr := s.storage.Rollback(s.ctx, dbTx)
+				if rollbackErr != nil {
+					log.Fatalf("networkID: %d, error rolling back state. RollbackErr: %s, err: %s",
+						s.networkID, rollbackErr.Error(), errC.Error())
+				}
+				log.Fatalf("networkID: %d, error committing dbTx, err: %s", s.networkID, errC.Error())
+			}
 			if errors.Is(err, gerror.ErrStorageNotFound) {
 				log.Warnf("networkID: %d, error checking reorg: previous block not found in db: %s", s.networkID, err.Error())
 				return &etherman.Block{}, nil
