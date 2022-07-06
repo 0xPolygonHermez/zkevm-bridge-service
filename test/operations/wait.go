@@ -18,8 +18,7 @@ const (
 )
 
 func poll(interval, deadline time.Duration, condition ops.ConditionFunc) error {
-	w := ops.NewWait()
-	return w.Poll(interval, deadline, condition)
+	return ops.Poll(interval, deadline, condition)
 }
 
 // WaitRestHealthy waits for a rest enpoint to be ready

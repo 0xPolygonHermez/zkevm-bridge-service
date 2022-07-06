@@ -171,7 +171,7 @@ func (etherMan *Client) processEvent(ctx context.Context, vLog types.Log, blocks
 }
 
 func (etherMan *Client) ownershipTransferredEvent(vLog types.Log) error {
-	ownership, err := etherMan.GlobalExitRootManager.ParseOwnershipTransferred(vLog)
+	ownership, err := etherMan.Bridge.ParseOwnershipTransferred(vLog)
 	if err != nil {
 		return err
 	}
@@ -231,9 +231,10 @@ func (etherMan *Client) depositEvent(ctx context.Context, vLog types.Log, blocks
 	deposit.OriginalNetwork = uint(d.OriginNetwork)
 	deposit.DestinationAddress = d.DestinationAddress
 	deposit.DestinationNetwork = uint(d.DestinationNetwork)
-	deposit.TokenAddress = d.TokenAddres
+	deposit.TokenAddress = d.OriginTokenAddress
 	deposit.DepositCount = uint(d.DepositCount)
 	deposit.TxHash = vLog.TxHash
+	deposit.Metadata = d.Metadata
 
 	if len(*blocks) == 0 || ((*blocks)[len(*blocks)-1].BlockHash != vLog.BlockHash || (*blocks)[len(*blocks)-1].BlockNumber != vLog.BlockNumber) {
 		fullBlock, err := etherMan.EtherClient.BlockByHash(ctx, vLog.BlockHash)
@@ -267,8 +268,8 @@ func (etherMan *Client) claimEvent(ctx context.Context, vLog types.Log, blocks *
 	claim.Amount = c.Amount
 	claim.DestinationAddress = c.DestinationAddress
 	claim.Index = uint(c.Index)
-	claim.OriginalNetwork = uint(c.OriginalNetwork)
-	claim.Token = c.Token
+	claim.OriginalNetwork = uint(c.OriginNetwork)
+	claim.Token = c.OriginTokenAddress
 	claim.BlockNumber = vLog.BlockNumber
 	claim.TxHash = vLog.TxHash
 
@@ -301,8 +302,8 @@ func (etherMan *Client) tokenWrappedEvent(ctx context.Context, vLog types.Log, b
 		return err
 	}
 	var tokenWrapped TokenWrapped
-	tokenWrapped.OriginalNetwork = uint(tw.OriginalNetwork)
-	tokenWrapped.OriginalTokenAddress = tw.OriginalTokenAddress
+	tokenWrapped.OriginalNetwork = uint(tw.OriginNetwork)
+	tokenWrapped.OriginalTokenAddress = tw.OriginTokenAddress
 	tokenWrapped.WrappedTokenAddress = tw.WrappedTokenAddress
 	tokenWrapped.BlockNumber = vLog.BlockNumber
 

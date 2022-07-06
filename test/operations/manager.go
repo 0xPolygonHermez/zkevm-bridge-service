@@ -641,13 +641,12 @@ func (m *Manager) ApproveERC20(ctx context.Context, erc20Addr, bridgeAddr common
 // GetTokenWrapped get token wrapped info
 func (m *Manager) GetTokenWrapped(ctx context.Context, originNetwork uint, originalTokenAddr common.Address, isCreated bool) (*etherman.TokenWrapped, error) {
 	if isCreated {
-		w := operations.NewWait()
 		blockID, err := m.getLastBlockID(ctx)
 		if err != nil {
 			return nil, err
 		}
 
-		err = w.Poll(defaultInterval, defaultDeadline, func() (bool, error) {
+		err = operations.Poll(defaultInterval, defaultDeadline, func() (bool, error) {
 			wrappedToken, err := m.storage.GetTokenWrapped(ctx, originNetwork, originalTokenAddr)
 			if err != nil {
 				return false, err
@@ -668,8 +667,7 @@ func (m *Manager) WaitBatchToBeConsolidated(ctx context.Context) error {
 		return err
 	}
 
-	w := operations.NewWait()
-	return w.Poll(defaultInterval, defaultDeadline, func() (bool, error) {
+	return operations.Poll(defaultInterval, defaultDeadline, func() (bool, error) {
 		batchNumber, _, verified, err := m.storage.GetLastBatchState(ctx)
 		if !verified {
 			return false, err
@@ -688,8 +686,7 @@ func (m *Manager) WaitExitRootToBeSynced(ctx context.Context, blockID uint64, is
 	if err != nil && err != gerror.ErrStorageNotFound {
 		return err
 	}
-	w := operations.NewWait()
-	return w.Poll(defaultInterval, defaultDeadline, func() (bool, error) {
+	return operations.Poll(defaultInterval, defaultDeadline, func() (bool, error) {
 		exitRoot, err := m.storage.GetLatestExitRoot(ctx)
 		if err != nil {
 			if err == gerror.ErrStorageNotFound {
