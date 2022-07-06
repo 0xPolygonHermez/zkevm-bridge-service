@@ -30,8 +30,8 @@ var (
 	sequencedBatchesEventSignatureHash = crypto.Keccak256Hash([]byte("SequenceBatches(uint64)"))
 	forceSequencedBatchesSignatureHash = crypto.Keccak256Hash([]byte("SequenceForceBatches(uint64)"))
 	verifyBatchSignatureHash           = crypto.Keccak256Hash([]byte("VerifyBatch(uint64,address)"))
-	depositEventSignatureHash          = crypto.Keccak256Hash([]byte("BridgeEvent(address,uint256,uint32,uint32,address,uint32)"))
-	claimEventSignatureHash            = crypto.Keccak256Hash([]byte("ClaimEvent(uint32,uint32,address,uint256,address)"))
+	depositEventSignatureHash          = crypto.Keccak256Hash([]byte("BridgeEvent(uint32,address,uint32,address,uint256,bytes,uint32)"))
+	claimEventSignatureHash            = crypto.Keccak256Hash([]byte("ClaimEvent(uint32,uint32,address,address,uint256)"))
 	newWrappedTokenEventSignatureHash  = crypto.Keccak256Hash([]byte("NewWrappedToken(uint32,address,address)"))
 
 	// ErrNotFound is used when the object is not found

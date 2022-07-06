@@ -241,7 +241,7 @@ func TestBridgeEvents(t *testing.T) {
 	amount := big.NewInt(9000000000000000000)
 	var destNetwork uint32 = 1 // 0 is reserved to mainnet. This variable is set in the smc
 	destinationAddr := common.HexToAddress("0x61A1d716a74fb45d29f148C6C20A2eccabaFD753")
-	_, err = bridge.Bridge(etherman.auth, maticAddr, amount, destNetwork, destinationAddr)
+	_, err = bridge.Bridge(etherman.auth, maticAddr, destNetwork, destinationAddr, amount)
 	require.NoError(t, err)
 
 	// Mine the tx in a block
@@ -268,8 +268,8 @@ func TestBridgeEvents(t *testing.T) {
 	// globalExitRootNum := block[0].GlobalExitRoots[0].GlobalExitRootNum
 
 	destNetwork = 1
-	_, err = bridge.Claim(etherman.auth, maticAddr, big.NewInt(1000000000000000000), destNetwork,
-		network, etherman.auth.From, smtProof, index, mainnetExitRoot, rollupExitRoot)
+	_, err = bridge.Claim(etherman.auth, smtProof, index, mainnetExitRoot, rollupExitRoot,
+		network, maticAddr, destNetwork, etherman.auth.From, big.NewInt(1000000000000000000), []byte{})
 	require.NoError(t, err)
 
 	// Mine the tx in a block
@@ -287,6 +287,6 @@ func TestBridgeEvents(t *testing.T) {
 	assert.NotEqual(t, common.Address{}, block[0].Claims[0].Token)
 	assert.Equal(t, etherman.auth.From, block[0].Claims[0].DestinationAddress)
 	assert.Equal(t, uint(0), block[0].Claims[0].Index)
-	assert.Equal(t, uint(1), block[0].Claims[0].OriginalNetwork)
+	assert.Equal(t, uint(0), block[0].Claims[0].OriginalNetwork)
 	assert.Equal(t, uint64(3), block[0].Claims[0].BlockNumber)
 }
