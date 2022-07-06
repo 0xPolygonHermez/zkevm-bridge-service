@@ -42,7 +42,7 @@ func main() {
 	if err != nil {
 		log.Fatal("Error: ", err)
 	}
-	deposits, _, err := client.GetBridges(l2AccHexAddress, 0, 10)
+	deposits, _, err := client.GetBridges(l2AccHexAddress, 0, 10) //nolint
 	if err != nil {
 		log.Fatal("Error: ", err)
 	}
