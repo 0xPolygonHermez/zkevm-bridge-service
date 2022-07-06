@@ -12,7 +12,10 @@ import (
 	etherman "github.com/hermeznetwork/hermez-bridge/ethermanv2"
 	"github.com/hermeznetwork/hermez-bridge/utils/gerror"
 	"github.com/hermeznetwork/hermez-core/log"
+	"github.com/hermeznetwork/hermez-core/sequencerv2/broadcast/pb"
 	"github.com/jackc/pgx/v4"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 // Synchronizer connects L1 and L2
@@ -31,6 +34,12 @@ type ClientSynchronizer struct {
 	genBlockNumber uint64
 	cfg            Config
 	networkID      uint
+	grpc struct {
+		client    pb.BroadcastServiceClient
+		ctx       context.Context
+		cancelCtx context.CancelFunc
+	}
+	synced bool
 }
 
 // NewSynchronizer creates and initializes an instance of Synchronizer
@@ -45,6 +54,12 @@ func NewSynchronizer(
 	if err != nil {
 		log.Fatal("error getting networkID. Error: ", err)
 	}
+	opts := []grpc.DialOption{
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	}
+	grpcCtx, grpcCancelCtx := context.WithTimeout(ctx, 1*time.Second)
+	conn, err := grpc.DialContext(ctx, cfg.GrpcUrl, opts...)
+	client := pb.NewBroadcastServiceClient(conn)
 	return &ClientSynchronizer{
 		bridgeCtrl:     bridge,
 		storage:        storage,
@@ -54,6 +69,15 @@ func NewSynchronizer(
 		genBlockNumber: genBlockNumber,
 		cfg:            cfg,
 		networkID:      networkID,
+		grpc: struct {
+			client    pb.BroadcastServiceClient
+			ctx       context.Context
+			cancelCtx context.CancelFunc
+		} {
+			client:    client,
+			ctx:       grpcCtx,
+			cancelCtx: grpcCancelCtx,
+		},
 	}, nil
 }
 
@@ -106,7 +130,7 @@ func (s *ClientSynchronizer) Sync() error {
 					continue
 				}
 			}
-			if waitDuration != s.cfg.SyncInterval.Duration {
+			if !s.synced {
 				latestsequencedBatchNumber, err := s.etherMan.GetLatestBatchNumber()
 				if err != nil {
 					log.Warnf("networkID: %d, error getting latest sequenced batch in the rollup. Error: %s", s.networkID, err.Error())
@@ -134,13 +158,17 @@ func (s *ClientSynchronizer) Sync() error {
 				}
 				if latestSyncedBatch == latestsequencedBatchNumber {
 					waitDuration = s.cfg.SyncInterval.Duration
+					s.synced = true
 				}
 				if latestSyncedBatch > latestsequencedBatchNumber {
 					log.Fatalf("networkID: %d, error: latest Synced BatchNumber is higher than the latest Proposed BatchNumber in the rollup", s.networkID)
 				}
+			} else { // Sync Trusted GlobalExitRoots if L1 is synced
+				err = s.syncTrustedState()
+				if err != nil {
+					log.Error("error getting current trusted state")
+				}
 			}
-			// Sync L2Blocks
-			// TODO
 		}
 	}
 }
@@ -148,6 +176,21 @@ func (s *ClientSynchronizer) Sync() error {
 // Stop function stops the synchronizer
 func (s *ClientSynchronizer) Stop() {
 	s.cancelCtx()
+}
+
+func (s *ClientSynchronizer) syncTrustedState() error {
+	lastBatch, err := s.grpc.client.GetLastBatch(s.ctx, &pb.Empty{})
+	if err != nil {
+		log.Error("error getting latest batch from grpc. Error: ", err)	
+		return err
+	}
+	trustedGlobalExitRoot := common.HexToAddress(lastBatch.GlobalExitRoot)
+	err = s.storage.NewTrustedGlobalExitRoot(s.ctx, trustedGlobalExitRoot)
+	if err != nil {
+		log.Error("error storing latest trusted globalExitRoot. Error: ", err)
+		return err
+	}
+	return nil
 }
 
 // This function syncs the node from a specific block to the latest
@@ -204,6 +247,7 @@ func (s *ClientSynchronizer) syncBlocks(lastBlockSynced *etherman.Block) (*ether
 
 		if lastKnownBlock.Cmp(new(big.Int).SetUint64(toBlock)) < 1 {
 			waitDuration = s.cfg.SyncInterval.Duration
+			s.synced = true
 			break
 		}
 		if len(blocks) == 0 { // If there is no events in the checked blocks range and lastKnownBlock > fromBlock.
