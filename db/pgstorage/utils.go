@@ -1,6 +1,7 @@
 package pgstorage
 
 import (
+	"context"
 	"os"
 	"strconv"
 
@@ -11,19 +12,9 @@ import (
 	migrate "github.com/rubenv/sql-migrate"
 )
 
-// RunMigrationsUp migrate up.
-func RunMigrationsUp(cfg Config) error {
-	return runMigrations(cfg, migrate.Up)
-}
-
-// RunMigrationsDown migrate down.
-func RunMigrationsDown(cfg Config) error {
-	return runMigrations(cfg, migrate.Down)
-}
-
-// runMigrations will execute pending migrations if needed to keep
-// the database updated with the latest changes in either direction of up or down.
-func runMigrations(cfg Config, direction migrate.MigrationDirection) error {
+// RunMigrations will execute pending migrations if needed to keep
+// the database updated with the latest changes
+func RunMigrations(cfg Config) error {
 	c, err := pgx.ParseConfig("postgres://" + cfg.User + ":" + cfg.Password + "@" + cfg.Host + ":" + cfg.Port + "/" + cfg.Name)
 	if err != nil {
 		return err
@@ -31,12 +22,12 @@ func runMigrations(cfg Config, direction migrate.MigrationDirection) error {
 	db := stdlib.OpenDB(*c)
 
 	var migrations = &migrate.PackrMigrationSource{Box: packr.New("hermez-db-migrations", "./migrations")}
-	nMigrations, err := migrate.Exec(db, "postgres", migrations, direction)
+	nMigrations, err := migrate.Exec(db, "postgres", migrations, migrate.Up)
 	if err != nil {
 		return err
 	}
 
-	log.Info("successfully ran ", nMigrations, " migrations")
+	log.Info("successfully ran ", nMigrations, " migrations Up")
 	return nil
 }
 
@@ -50,11 +41,22 @@ func InitOrReset(cfg Config) error {
 	}
 	defer pgStorage.db.Close()
 
-	// run migrations
-	if err := RunMigrationsDown(cfg); err != nil {
+	// reset db droping migrations table and schemas
+	if _, err := pgStorage.db.Exec(context.Background(), "DROP TABLE IF EXISTS gorp_migrations CASCADE;"); err != nil {
 		return err
 	}
-	return RunMigrationsUp(cfg)
+	if _, err := pgStorage.db.Exec(context.Background(), "DROP SCHEMA IF EXISTS sync CASCADE;"); err != nil {
+		return err
+	}
+	if _, err := pgStorage.db.Exec(context.Background(), "DROP SCHEMA IF EXISTS merkletree CASCADE;"); err != nil {
+		return err
+	}
+
+	// run migrations
+	if err := RunMigrations(cfg); err != nil {
+		return err
+	}
+	return nil
 }
 
 // NewConfigFromEnv creates config from standard postgres environment variables,
