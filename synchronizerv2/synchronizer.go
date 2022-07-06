@@ -34,7 +34,7 @@ type ClientSynchronizer struct {
 	genBlockNumber uint64
 	cfg            Config
 	networkID      uint
-	grpc struct {
+	grpc           struct {
 		client    pb.BroadcastServiceClient
 		ctx       context.Context
 		cancelCtx context.CancelFunc
@@ -58,7 +58,10 @@ func NewSynchronizer(
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	}
 	grpcCtx, grpcCancelCtx := context.WithTimeout(ctx, 1*time.Second)
-	conn, err := grpc.DialContext(ctx, cfg.GrpcUrl, opts...)
+	conn, err := grpc.DialContext(ctx, cfg.GrpcURL, opts...)
+	if err != nil {
+		log.Fatal("error creating grpc connection. Error: ", err)
+	}
 	client := pb.NewBroadcastServiceClient(conn)
 	return &ClientSynchronizer{
 		bridgeCtrl:     bridge,
@@ -73,7 +76,7 @@ func NewSynchronizer(
 			client    pb.BroadcastServiceClient
 			ctx       context.Context
 			cancelCtx context.CancelFunc
-		} {
+		}{
 			client:    client,
 			ctx:       grpcCtx,
 			cancelCtx: grpcCancelCtx,
@@ -181,7 +184,7 @@ func (s *ClientSynchronizer) Stop() {
 func (s *ClientSynchronizer) syncTrustedState() error {
 	lastBatch, err := s.grpc.client.GetLastBatch(s.ctx, &pb.Empty{})
 	if err != nil {
-		log.Error("error getting latest batch from grpc. Error: ", err)	
+		log.Error("error getting latest batch from grpc. Error: ", err)
 		return err
 	}
 	trustedGlobalExitRoot := common.HexToAddress(lastBatch.GlobalExitRoot)
