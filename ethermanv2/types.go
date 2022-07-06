@@ -10,9 +10,11 @@ import (
 
 // Block struct
 type Block struct {
+	ID                    uint64
 	BlockNumber           uint64
 	BlockHash             common.Hash
 	ParentHash            common.Hash
+	NetworkID             uint
 	GlobalExitRoots       []GlobalExitRoot
 	ForcedBatches         []ForcedBatch
 	SequencedBatches      [][]SequencedBatch
@@ -26,6 +28,7 @@ type Block struct {
 
 // GlobalExitRoot struct
 type GlobalExitRoot struct {
+	BlockID           uint64
 	BlockNumber       uint64
 	GlobalExitRootNum *big.Int
 	MainnetExitRoot   common.Hash
@@ -43,20 +46,14 @@ type SequencedBatch struct {
 
 // ForcedBatch represents a ForcedBatch
 type ForcedBatch struct {
+	BlockID           uint64
 	BlockNumber       uint64
+	BatchNumber       *uint64
 	ForcedBatchNumber uint64
 	Sequencer         common.Address
 	GlobalExitRoot    common.Hash
 	RawTxsData        []byte
 	ForcedAt          time.Time
-}
-
-// VerifiedBatch represents a VerifiedBatch
-type VerifiedBatch struct {
-	BlockNumber uint64
-	BatchNumber uint64
-	Aggregator  common.Address
-	TxHash      common.Hash
 }
 
 // SequencedForceBatch is a sturct to track the ForceSequencedBatches event.
@@ -102,4 +99,31 @@ type TokenWrapped struct {
 	BlockID              uint64
 	BlockNumber          uint64
 	NetworkID            uint
+}
+
+// Batch struct
+type Batch struct {
+	BatchNumber    uint64
+	Coinbase       common.Address
+	BatchL2Data    []byte
+	Timestamp      time.Time
+	GlobalExitRoot common.Hash
+}
+
+// VerifiedBatch represents a VerifiedBatch
+type VerifiedBatch struct {
+	BatchNumber uint64
+	BlockID     uint64
+	BlockNumber uint64
+	Aggregator  common.Address
+	TxHash      common.Hash
+}
+
+// VirtualBatch represents a VirtualBatch
+type VirtualBatch struct {
+	BatchNumber uint64
+	BlockID     uint64
+	BlockNumber uint64
+	TxHash      common.Hash
+	Sequencer   common.Address
 }
