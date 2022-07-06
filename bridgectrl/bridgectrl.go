@@ -89,7 +89,7 @@ func (bt *BridgeController) GetClaim(networkID uint, index uint) ([][KeyLen]byte
 	if err != nil {
 		return proof, nil, err
 	}
-	depositCnt, err := bt.exitTrees[tID].getDepositCntByRoot(ctx, globalExitRoot.ExitRoots[tID])
+	depositCnt, err := bt.storage.GetDepositCountByRoot(ctx, globalExitRoot.ExitRoots[tID][:], tID+1)
 	if err != nil {
 		return proof, nil, err
 	}
@@ -119,8 +119,7 @@ func (bt *BridgeController) ReorgMT(depositCount uint, networkID uint) error {
 // CheckExitRoot checks if each exitRoot is synchronized exactly
 func (bt *BridgeController) CheckExitRoot(globalExitRoot etherman.GlobalExitRoot) error {
 	for i, exitRoot := range globalExitRoot.ExitRoots {
-		ctx := context.WithValue(context.TODO(), contextKeyNetwork, uint8(i+1)) //nolint
-		_, err := bt.exitTrees[i].getDepositCntByRoot(ctx, exitRoot)
+		_, err := bt.storage.GetDepositCountByRoot(context.TODO(), exitRoot[:], uint8(i+1))
 		if err != nil {
 			return err
 		}

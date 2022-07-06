@@ -23,11 +23,13 @@ const (
 	getDepositSQL          = "SELECT orig_net, token_addr, amount, dest_net, dest_addr, block_num, deposit_cnt, block_id, network_id, tx_hash FROM sync.deposit WHERE network_id = $1 AND deposit_cnt = $2"
 	getDepositsSQL         = "SELECT orig_net, token_addr, amount, dest_net, dest_addr, block_num, deposit_cnt, block_id, network_id, tx_hash FROM sync.deposit WHERE dest_addr = $1 ORDER BY block_id DESC LIMIT $2 OFFSET $3"
 	getDepositCountSQL     = "SELECT COUNT(*) FROM sync.deposit WHERE dest_addr = $1"
-	getNodeByKeySQL        = "SELECT value, deposit_cnt FROM merkletree.rht WHERE key = $1 AND network = $2"
-	getRootByDepositCntSQL = "SELECT key FROM merkletree.rht WHERE deposit_cnt = $1 AND depth = $2 AND network = $3"
-	getLastDepositCntSQL   = "SELECT coalesce(MAX(deposit_cnt), 0) FROM merkletree.rht WHERE network = $1"
-	setNodeByKeySQL        = "INSERT INTO merkletree.rht (key, value, network, deposit_cnt, depth) VALUES ($1, $2, $3, $4, $5)"
-	resetNodeByKeySQL      = "DELETE FROM merkletree.rht WHERE deposit_cnt > $1 AND network = $2"
+	getNodeByKeySQL        = "SELECT value FROM merkletree.rht WHERE key = $1"
+	getDepositCntByRootSQL = "SELECT deposit_cnt FROM merkletree.root WHERE root = $1 AND network = $2"
+	getRootByDepositCntSQL = "SELECT root FROM merkletree.root WHERE deposit_cnt = $1 AND network = $2"
+	setRootSQL             = "INSERT INTO merkletree.root (root, deposit_cnt, network) VALUES ($1, $2, $3)"
+	getLastDepositCntSQL   = "SELECT coalesce(MAX(deposit_cnt), -1) FROM merkletree.root WHERE network = $1"
+	setNodeByKeySQL        = "INSERT INTO merkletree.rht (key, value) VALUES ($1, $2)"
+	resetRootSQL           = "DELETE FROM merkletree.root WHERE deposit_cnt > $1 AND network = $2"
 	getPreviousBlockSQL    = "SELECT id, block_num, block_hash, parent_hash, network_id, received_at FROM sync.block WHERE network_id = $1 ORDER BY block_num DESC LIMIT 1 OFFSET $2"
 	resetSQL               = "DELETE FROM sync.block WHERE block_num > $1 AND network_id = $2"
 	resetConsolidationSQL  = "UPDATE sync.batch SET aggregator = decode('0000000000000000000000000000000000000000', 'hex'), consolidated_tx_hash = decode('0000000000000000000000000000000000000000000000000000000000000000', 'hex'), consolidated_at = null WHERE consolidated_at > $1 AND network_id = $2"
@@ -165,26 +167,25 @@ func (s *PostgresStorage) GetDeposits(ctx context.Context, destAddr string, limi
 }
 
 // Get gets value of key from the merkle tree
-func (s *PostgresStorage) Get(ctx context.Context, key []byte) ([][]byte, uint, error) {
+func (s *PostgresStorage) Get(ctx context.Context, key []byte) ([][]byte, error) {
 	var (
-		data       [][]byte
-		depositCnt uint
+		data [][]byte
 	)
-	err := s.db.QueryRow(ctx, getNodeByKeySQL, key, string(ctx.Value(contextKeyNetwork).(uint8))).Scan(pq.Array(&data), &depositCnt)
+	err := s.db.QueryRow(ctx, getNodeByKeySQL, key).Scan(pq.Array(&data))
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, 0, gerror.ErrStorageNotFound
+			return nil, gerror.ErrStorageNotFound
 		}
-		return nil, 0, err
+		return nil, err
 	}
-	return data, depositCnt, nil
+	return data, nil
 }
 
 // GetRoot gets root by the deposit count from the merkle tree
-func (s *PostgresStorage) GetRoot(ctx context.Context, depositCnt uint, depth uint8) ([]byte, error) {
+func (s *PostgresStorage) GetRoot(ctx context.Context, depositCnt uint) ([]byte, error) {
 	var root []byte
 
-	err := s.db.QueryRow(ctx, getRootByDepositCntSQL, depositCnt, string(depth+1), string(ctx.Value(contextKeyNetwork).(uint8))).Scan(&root)
+	err := s.db.QueryRow(ctx, getRootByDepositCntSQL, depositCnt, string(ctx.Value(contextKeyNetwork).(uint8))).Scan(&root)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, gerror.ErrStorageNotFound
@@ -194,22 +195,44 @@ func (s *PostgresStorage) GetRoot(ctx context.Context, depositCnt uint, depth ui
 	return root, nil
 }
 
+// GetDepositCountByRoot gets the deposit count by the root.
+func (s *PostgresStorage) GetDepositCountByRoot(ctx context.Context, root []byte, network uint8) (uint, error) {
+	var depositCnt uint
+
+	err := s.db.QueryRow(ctx, getDepositCntByRootSQL, root, string(network)).Scan(&depositCnt)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return 0, gerror.ErrStorageNotFound
+		}
+		return 0, err
+	}
+	return depositCnt, nil
+}
+
+// SetRoot store the root with deposit count to the storage.
+func (s *PostgresStorage) SetRoot(ctx context.Context, root []byte, depositCnt uint) error {
+	_, err := s.db.Exec(ctx, setRootSQL, root, depositCnt, string(ctx.Value(contextKeyNetwork).(uint8)))
+	return err
+}
+
 // GetLastDepositCount gets the last deposit count from the merkle tree
 func (s *PostgresStorage) GetLastDepositCount(ctx context.Context) (uint, error) {
-	var depositCnt uint
+	var depositCnt int64
 	err := s.db.QueryRow(ctx, getLastDepositCntSQL, string(ctx.Value(contextKeyNetwork).(uint8))).Scan(&depositCnt)
 	if err != nil {
 		return 0, err
 	}
-
-	return depositCnt, nil
+	if depositCnt < 0 {
+		return 0, gerror.ErrStorageNotFound
+	}
+	return uint(depositCnt), nil
 }
 
 // Set inserts a key-value pair into the db.
 // If record with such a key already exists its assumed that the value is correct,
 // because it's a reverse hash table, and the key is a hash of the value
-func (s *PostgresStorage) Set(ctx context.Context, key []byte, value [][]byte, depositCnt uint, depth uint8) error {
-	_, err := s.db.Exec(ctx, setNodeByKeySQL, key, pq.Array(value), string(ctx.Value(contextKeyNetwork).(uint8)), depositCnt, string(depth+1))
+func (s *PostgresStorage) Set(ctx context.Context, key []byte, value [][]byte) error {
+	_, err := s.db.Exec(ctx, setNodeByKeySQL, key, pq.Array(value))
 	if err != nil {
 		if strings.Contains(err.Error(), "duplicate key value violates unique constraint") {
 			return nil
@@ -221,7 +244,7 @@ func (s *PostgresStorage) Set(ctx context.Context, key []byte, value [][]byte, d
 
 // ResetMT resets nodes of the Merkle Tree.
 func (s *PostgresStorage) ResetMT(ctx context.Context, depositCnt uint) error {
-	_, err := s.db.Exec(ctx, resetNodeByKeySQL, depositCnt, string(ctx.Value(contextKeyNetwork).(uint8)))
+	_, err := s.db.Exec(ctx, resetRootSQL, depositCnt, string(ctx.Value(contextKeyNetwork).(uint8)))
 	return err
 }
 
