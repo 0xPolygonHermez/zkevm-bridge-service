@@ -16,6 +16,7 @@ import (
 	"github.com/jackc/pgx/v4"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 // Synchronizer connects L1 and L2
@@ -182,7 +183,7 @@ func (s *ClientSynchronizer) Stop() {
 }
 
 func (s *ClientSynchronizer) syncTrustedState() error {
-	lastBatch, err := s.grpc.client.GetLastBatch(s.ctx, &pb.Empty{})
+	lastBatch, err := s.grpc.client.GetLastBatch(s.ctx, &emptypb.Empty{})
 	if err != nil {
 		log.Error("error getting latest batch from grpc. Error: ", err)
 		return err
