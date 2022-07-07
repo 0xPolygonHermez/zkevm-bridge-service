@@ -29,20 +29,30 @@ CREATE TABLE syncv2.exit_root
 
 CREATE TABLE syncv2.batch
 (
-    tx_hash              BYTEA,
     batch_num            BIGINT,
     block_id             BIGINT NOT NULL REFERENCES syncv2.block (id) ON DELETE CASCADE,
     block_num            BIGINT NOT NULL,
     sequencer            BYTEA,
     aggregator           BYTEA,
     consolidated_tx_hash BYTEA,
-    uncles               jsonb,
+    raw_tx_data          BYTEA, 
     global_exit_root     BYTEA,
     network_id           INTEGER,
 
-    received_at     TIMESTAMP WITH TIME ZONE NOT NULL,
+    timestamp       TIMESTAMP WITH TIME ZONE,
     consolidated_at TIMESTAMP WITH TIME ZONE,
     PRIMARY KEY(batch_num, network_id)
+);
+
+CREATE TABLE syncv2.forced_batch
+(
+    batch_num            BIGINT,
+    block_id             BIGINT NOT NULL REFERENCES syncv2.block (id) ON DELETE CASCADE,
+    block_num            BIGINT NOT NULL,
+    forced_batch_num     BIGINT,
+    sequencer            BYTEA,
+    global_exit_root     BYTEA,
+    raw_tx_data          BYTEA
 );
 
 CREATE TABLE syncv2.deposit
