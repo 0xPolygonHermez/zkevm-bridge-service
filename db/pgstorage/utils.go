@@ -1,7 +1,6 @@
 package pgstorage
 
 import (
-	"context"
 	"os"
 	"strconv"
 
@@ -12,9 +11,19 @@ import (
 	migrate "github.com/rubenv/sql-migrate"
 )
 
-// RunMigrations will execute pending migrations if needed to keep
-// the database updated with the latest changes
-func RunMigrations(cfg Config) error {
+// RunMigrationsUp migrate up.
+func RunMigrationsUp(cfg Config) error {
+	return runMigrations(cfg, migrate.Up)
+}
+
+// RunMigrationsDown migrate down.
+func RunMigrationsDown(cfg Config) error {
+	return runMigrations(cfg, migrate.Down)
+}
+
+// runMigrations will execute pending migrations if needed to keep
+// the database updated with the latest changes in either direction of up or down.
+func runMigrations(cfg Config, direction migrate.MigrationDirection) error {
 	c, err := pgx.ParseConfig("postgres://" + cfg.User + ":" + cfg.Password + "@" + cfg.Host + ":" + cfg.Port + "/" + cfg.Name)
 	if err != nil {
 		return err
@@ -22,12 +31,12 @@ func RunMigrations(cfg Config) error {
 	db := stdlib.OpenDB(*c)
 
 	var migrations = &migrate.PackrMigrationSource{Box: packr.New("hermez-db-migrations", "./migrations")}
-	nMigrations, err := migrate.Exec(db, "postgres", migrations, migrate.Up)
+	nMigrations, err := migrate.Exec(db, "postgres", migrations, direction)
 	if err != nil {
 		return err
 	}
 
-	log.Info("successfully ran ", nMigrations, " migrations Up")
+	log.Info("successfully ran ", nMigrations, " migrations")
 	return nil
 }
 
@@ -41,22 +50,11 @@ func InitOrReset(cfg Config) error {
 	}
 	defer pgStorage.db.Close()
 
-	// reset db droping migrations table and schemas
-	if _, err := pgStorage.db.Exec(context.Background(), "DROP TABLE IF EXISTS gorp_migrations CASCADE;"); err != nil {
-		return err
-	}
-	if _, err := pgStorage.db.Exec(context.Background(), "DROP SCHEMA IF EXISTS sync CASCADE;"); err != nil {
-		return err
-	}
-	if _, err := pgStorage.db.Exec(context.Background(), "DROP SCHEMA IF EXISTS merkletree CASCADE;"); err != nil {
-		return err
-	}
-
 	// run migrations
-	if err := RunMigrations(cfg); err != nil {
+	if err := RunMigrationsDown(cfg); err != nil {
 		return err
 	}
-	return nil
+	return RunMigrationsUp(cfg)
 }
 
 // NewConfigFromEnv creates config from standard postgres environment variables,

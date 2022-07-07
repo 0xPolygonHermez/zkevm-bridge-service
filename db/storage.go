@@ -60,5 +60,5 @@ func RunMigrations(cfg Config) error {
 		Host:     cfg.Host,
 		Port:     cfg.Port,
 	}
-	return pgstorage.RunMigrations(config)
+	return pgstorage.RunMigrationsUp(config)
 }
