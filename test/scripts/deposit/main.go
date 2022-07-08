@@ -4,9 +4,9 @@ import (
 	"context"
 	"math/big"
 
+	"github.com/0xPolygonHermez/zkevm-bridge-service/utils"
+	"github.com/0xPolygonHermez/zkevm-node/log"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/hermeznetwork/hermez-bridge/utils"
-	"github.com/hermeznetwork/hermez-core/log"
 )
 
 const (

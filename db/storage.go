@@ -3,10 +3,10 @@ package db
 import (
 	"context"
 
+	"github.com/0xPolygonHermez/zkevm-bridge-service/db/pgstorage"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/utils/gerror"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/hermeznetwork/hermez-bridge/db/pgstorage"
-	"github.com/hermeznetwork/hermez-bridge/etherman"
-	"github.com/hermeznetwork/hermez-bridge/utils/gerror"
 )
 
 // Storage interface

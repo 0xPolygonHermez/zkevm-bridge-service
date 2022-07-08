@@ -1,12 +1,12 @@
-module github.com/hermeznetwork/hermez-bridge
+module github.com/0xPolygonHermez/zkevm-bridge-service
 
 go 1.17
 
 require (
+	github.com/0xPolygonHermez/zkevm-node v0.0.0-20220708154340-8b51dc6c9742
 	github.com/ethereum/go-ethereum v1.10.20
 	github.com/gobuffalo/packr/v2 v2.8.3
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.10.0
-	github.com/hermeznetwork/hermez-core v0.0.0-20220706115223-050c500b2567
 	github.com/iden3/go-iden3-crypto v0.0.14-0.20220413123345-edc36bfa5247
 	github.com/jackc/pgx/v4 v4.16.1
 	github.com/lib/pq v1.10.2

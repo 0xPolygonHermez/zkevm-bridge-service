@@ -7,13 +7,13 @@ import (
 	"testing"
 	"time"
 
+	mockbridge "github.com/0xPolygonHermez/zkevm-bridge-service/test/mocksmartcontracts/bridge"
+	"github.com/0xPolygonHermez/zkevm-node/ethermanv2/smartcontracts/proofofefficiency"
+	"github.com/0xPolygonHermez/zkevm-node/log"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
-	mockbridge "github.com/hermeznetwork/hermez-bridge/test/mocksmartcontracts/bridge"
-	"github.com/hermeznetwork/hermez-core/ethermanv2/smartcontracts/proofofefficiency"
-	"github.com/hermeznetwork/hermez-core/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

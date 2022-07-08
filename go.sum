@@ -60,6 +60,8 @@ cloud.google.com/go/storage v1.10.0/go.mod h1:FLPqc6j+Ki4BU591ie1oL6qBQGu2Bl/tZ9
 cloud.google.com/go/storage v1.14.0/go.mod h1:GrKmX003DSIwi9o29oFT7YDnHYwZoctc3fOKtUw0Xmo=
 collectd.org v0.3.0/go.mod h1:A/8DzQBkF6abtvrT2j/AU/4tiBgJWYyh0y/oB/4MlWE=
 dmitri.shuralyov.com/gpu/mtl v0.0.0-20190408044501-666a987793e9/go.mod h1:H6x//7gZCb22OMCxBHrMx7a5I7Hp++hsVxbQ4BYO7hU=
+github.com/0xPolygonHermez/zkevm-node v0.0.0-20220708154340-8b51dc6c9742 h1:e/qvvapU/swyD68XryTG9rgai8rL9kSfRkRmHWsRBWI=
+github.com/0xPolygonHermez/zkevm-node v0.0.0-20220708154340-8b51dc6c9742/go.mod h1:gjG7zcZ9PgyGGoI8zvQ1PxA95vqBSnBhb4DRhttfymk=
 github.com/Azure/azure-sdk-for-go/sdk/azcore v0.21.1/go.mod h1:fBF9PQNqB8scdgpZ3ufzaLntG0AG7C1WjPMsiFOmfHM=
 github.com/Azure/azure-sdk-for-go/sdk/internal v0.8.3/go.mod h1:KLF4gFr6DcKFZwSuH8w8yEK6DpFl3LP5rhdvAb7Yz5I=
 github.com/Azure/azure-sdk-for-go/sdk/storage/azblob v0.3.0/go.mod h1:tPaiy8S5bQ+S5sOiDlINkp7+Ef339+Nz5L5XO+cnOHo=
@@ -538,10 +540,6 @@ github.com/hashicorp/memberlist v0.3.0/go.mod h1:MS2lj3INKhZjWNqd3N0m3J+Jxf3DAOn
 github.com/hashicorp/serf v0.8.2/go.mod h1:6hOLApaqBFA1NXqRQAsxw9QxuDEvNxSQRwA/JwenrHc=
 github.com/hashicorp/serf v0.9.6/go.mod h1:TXZNMjZQijwlDvp+r0b63xZ45H7JmCmgg4gpTwn9UV4=
 github.com/hashicorp/serf v0.9.7/go.mod h1:TXZNMjZQijwlDvp+r0b63xZ45H7JmCmgg4gpTwn9UV4=
-github.com/hermeznetwork/hermez-core v0.0.0-20220706102106-9781661f683e h1:adw2fr5NLptTb7O4TZGOmyz7AQhZbIl8UYjKJrcKsWM=
-github.com/hermeznetwork/hermez-core v0.0.0-20220706102106-9781661f683e/go.mod h1:3PYKo3wcW3ZvE980BVgShguW3TNJQLmIgljIZstCj/o=
-github.com/hermeznetwork/hermez-core v0.0.0-20220706115223-050c500b2567 h1:LlzRfq6QdT+q0QdLuRXeff1ny9fWOsEF5EaRJuyN9qE=
-github.com/hermeznetwork/hermez-core v0.0.0-20220706115223-050c500b2567/go.mod h1:3PYKo3wcW3ZvE980BVgShguW3TNJQLmIgljIZstCj/o=
 github.com/hermeznetwork/tracerr v0.3.2 h1:QB3TlQxO/4XHyixsg+nRZPuoel/FFQlQ7oAoHDD5l1c=
 github.com/hermeznetwork/tracerr v0.3.2/go.mod h1:nsWC1+tc4qUEbUGRv4DcPJJTjLsedlPajlFmpJoohK4=
 github.com/holiman/bloomfilter/v2 v2.0.3 h1:73e0e/V0tCydx14a0SCYS/EWCxgwLZ18CZcZKVu0fao=

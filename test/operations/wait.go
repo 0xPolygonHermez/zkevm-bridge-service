@@ -7,9 +7,9 @@ import (
 	"net/http"
 	"time"
 
+	ops "github.com/0xPolygonHermez/zkevm-node/test/operations"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
-	ops "github.com/hermeznetwork/hermez-core/test/operations"
 )
 
 const (

@@ -3,7 +3,7 @@ package bridgectrl
 import (
 	"context"
 
-	"github.com/hermeznetwork/hermez-bridge/utils/gerror"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/utils/gerror"
 )
 
 // zeroHashes is the pre-calculated zero hash array

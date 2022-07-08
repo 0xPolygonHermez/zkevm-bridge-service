@@ -7,7 +7,7 @@ package bridge.v1;
 
 import "google/api/annotations.proto";
 
-option go_package = "github.com/hermeznetwork/hermez-bridge/bridgetree/pb";
+option go_package = "github.com/0xPolygonHermez/zkevm-bridge-service/bridgetree/pb";
 
 service BridgeService {
     // Getters

@@ -4,11 +4,11 @@ import (
 	"context"
 	"math/big"
 
+	clientUtils "github.com/0xPolygonHermez/zkevm-bridge-service/client"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/utils"
+	"github.com/0xPolygonHermez/zkevm-node/log"
 	"github.com/ethereum/go-ethereum/common"
-	clientUtils "github.com/hermeznetwork/hermez-bridge/client"
-	"github.com/hermeznetwork/hermez-bridge/etherman"
-	"github.com/hermeznetwork/hermez-bridge/utils"
-	"github.com/hermeznetwork/hermez-core/log"
 )
 
 const (
