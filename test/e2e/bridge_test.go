@@ -7,11 +7,11 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/0xPolygonHermez/zkevm-bridge-service/bridgectrl"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/db"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/test/operations"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/test/vectors"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/hermeznetwork/hermez-bridge/bridgectrl"
-	"github.com/hermeznetwork/hermez-bridge/db"
-	"github.com/hermeznetwork/hermez-bridge/test/operations"
-	"github.com/hermeznetwork/hermez-bridge/test/vectors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

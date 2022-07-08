@@ -6,12 +6,12 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/hermeznetwork/hermez-bridge/bridgectrl"
-	"github.com/hermeznetwork/hermez-bridge/db"
-	"github.com/hermeznetwork/hermez-bridge/etherman"
-	"github.com/hermeznetwork/hermez-bridge/server"
-	"github.com/hermeznetwork/hermez-bridge/synchronizer"
-	"github.com/hermeznetwork/hermez-core/log"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/bridgectrl"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/db"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/server"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/synchronizer"
+	"github.com/0xPolygonHermez/zkevm-node/log"
 	"github.com/mitchellh/mapstructure"
 	"github.com/spf13/viper"
 )

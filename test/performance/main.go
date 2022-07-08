@@ -11,13 +11,13 @@ import (
 	"sync"
 	"time"
 
+	"github.com/0xPolygonHermez/zkevm-bridge-service/bridgectrl/pb"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/db/pgstorage"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/server"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/test/operations"
+	"github.com/0xPolygonHermez/zkevm-node/log"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/hermeznetwork/hermez-bridge/bridgectrl/pb"
-	"github.com/hermeznetwork/hermez-bridge/db/pgstorage"
-	"github.com/hermeznetwork/hermez-bridge/etherman"
-	"github.com/hermeznetwork/hermez-bridge/server"
-	"github.com/hermeznetwork/hermez-bridge/test/operations"
-	"github.com/hermeznetwork/hermez-core/log"
 	"google.golang.org/protobuf/encoding/protojson"
 )
 

@@ -4,7 +4,7 @@ import (
 	"os"
 	"os/signal"
 
-	"github.com/hermeznetwork/hermez-bridge/server"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/server"
 	"github.com/urfave/cli/v2"
 )
 
