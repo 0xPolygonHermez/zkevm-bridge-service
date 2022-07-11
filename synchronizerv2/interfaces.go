@@ -33,7 +33,7 @@ type storageInterface interface {
 	AddGlobalExitRoot(ctx context.Context, exitRoot *etherman.GlobalExitRoot, dbTx pgx.Tx) error
 	AddDeposit(ctx context.Context, deposit *etherman.Deposit, dbTx pgx.Tx) error
 	AddClaim(ctx context.Context, claim *etherman.Claim, dbTx pgx.Tx) error
-	AddTokenWrapped(ctx context.Context, tokeWrapped *etherman.TokenWrapped, dbTx pgx.Tx) error
+	AddTokenWrapped(ctx context.Context, tokenWrapped *etherman.TokenWrapped, dbTx pgx.Tx) error
 	Reset(ctx context.Context, blockNumber uint64, dbTx pgx.Tx) error
 	ResetTrustedState(ctx context.Context, batchNumber uint64, dbTx pgx.Tx) error
 	GetPreviousBlock(ctx context.Context, networkID uint, offset uint64, dbTx pgx.Tx) (*etherman.Block, error)
@@ -42,7 +42,7 @@ type storageInterface interface {
 	GetNextForcedBatches(ctx context.Context, nextForcedBatches int, dbTx pgx.Tx) (*[]etherman.ForcedBatch, error)
 	AddBatchNumberInForcedBatch(ctx context.Context, forceBatchNumber, batchNumber uint64, dbTx pgx.Tx) error
 	AddForcedBatch(ctx context.Context, forcedBatch *etherman.ForcedBatch, dbTx pgx.Tx) error
-	NewTrustedGlobalExitRoot(ctx context.Context, ger common.Address) error
+	AddTrustedGlobalExitRoot(ctx context.Context, ger common.Address) error
 }
 
 type bridgectrlInterface interface {

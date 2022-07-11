@@ -23,32 +23,31 @@ CREATE TABLE syncv2.exit_root
     block_id                BIGINT NOT NULL REFERENCES syncv2.block (id) ON DELETE CASCADE,
     global_exit_root_num    BIGINT,
     global_exit_root        BYTEA,
-    mainnet_root_id         BIGINT,
-    rollup_root_id          BIGINT
+    mainnet_deposit_cnt     BIGINT,
+    rollup_deposit_cnt      BIGINT
 );
 
 CREATE TABLE syncv2.batch
 (
-    batch_num            BIGINT,
-    block_id             BIGINT NOT NULL REFERENCES syncv2.block (id) ON DELETE CASCADE,
-    block_num            BIGINT NOT NULL,
+    batch_num            BIGINT PRIMARY KEY,
     sequencer            BYTEA,
-    aggregator           BYTEA,
-    consolidated_tx_hash BYTEA,
     raw_tx_data          BYTEA, 
     global_exit_root     BYTEA,
-    network_id           INTEGER,
+    timestamp            TIMESTAMP WITH TIME ZONE
+);
 
-    timestamp       TIMESTAMP WITH TIME ZONE,
-    consolidated_at TIMESTAMP WITH TIME ZONE,
-    PRIMARY KEY(batch_num, network_id)
+CREATE TABLE syncv2.verified_batch
+(
+    batch_num   BIGINT PRIMARY KEY REFERENCES syncv2.batch (batch_num),
+    aggregator  BYTEA,
+    tx_hash     BYTEA,
+    block_id    BIGINT NOT NULL REFERENCES syncv2.block (id) ON DELETE CASCADE
 );
 
 CREATE TABLE syncv2.forced_batch
 (
     batch_num            BIGINT,
     block_id             BIGINT NOT NULL REFERENCES syncv2.block (id) ON DELETE CASCADE,
-    block_num            BIGINT NOT NULL,
     forced_batch_num     BIGINT,
     sequencer            BYTEA,
     global_exit_root     BYTEA,
@@ -57,7 +56,6 @@ CREATE TABLE syncv2.forced_batch
 
 CREATE TABLE syncv2.deposit
 (
-    id          SERIAL PRIMARY KEY,   
     network_id  INTEGER,
     orig_net    INTEGER,
     token_addr  BYTEA NOT NULL,
@@ -65,10 +63,10 @@ CREATE TABLE syncv2.deposit
     dest_net    INTEGER NOT NULL,
     dest_addr   BYTEA NOT NULL,
     block_id    BIGINT NOT NULL REFERENCES syncv2.block (id) ON DELETE CASCADE,
-    block_num   BIGINT NOT NULL,
     deposit_cnt BIGINT,
     tx_hash     BYTEA NOT NULL,
-    metadata    BYTEA NOT NULL
+    metadata    BYTEA NOT NULL,
+    PRIMARY KEY (network_id, deposit_cnt)
 );
 
 CREATE TABLE syncv2.claim
@@ -80,7 +78,6 @@ CREATE TABLE syncv2.claim
     amount      VARCHAR,
     dest_addr   BYTEA NOT NULL,
     block_id    BIGINT NOT NULL REFERENCES syncv2.block (id) ON DELETE CASCADE,
-    block_num   BIGINT NOT NULL,
     tx_hash     BYTEA NOT NULL,
     PRIMARY KEY (network_id, index)
 );
@@ -92,7 +89,9 @@ CREATE TABLE syncv2.token_wrapped
     orig_token_addr    BYTEA NOT NULL,
     wrapped_token_addr BYTEA NOT NULL,
     block_id           BIGINT NOT NULL REFERENCES syncv2.block (id) ON DELETE CASCADE,
-    block_num          BIGINT NOT NULL
+    name               VARCHAR,
+    symbol             VARCHAR,
+    decimals           INTEGER
 );
 
 CREATE TABLE mtv2.rht 
@@ -103,6 +102,7 @@ CREATE TABLE mtv2.rht
 
 CREATE TABLE mtv2.root
 (
-    root       BYTEA,
-    deposit_id BIGINT PRIMARY KEY REFERENCES syncv2.deposit (id) ON DELETE CASCADE
+    root        BYTEA,
+    deposit_cnt BIGINT,
+    network     INTEGER
 );

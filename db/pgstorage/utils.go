@@ -4,6 +4,7 @@ import (
 	"os"
 	"strconv"
 
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/gobuffalo/packr/v2"
 	"github.com/hermeznetwork/hermez-core/log"
 	"github.com/jackc/pgx/v4"
@@ -76,4 +77,37 @@ func getEnv(key string, defaultValue string) string {
 		return value
 	}
 	return defaultValue
+}
+
+//nolint
+var (
+	String, _ = abi.NewType("string", "", nil)
+	Uint8, _  = abi.NewType("uint8", "", nil)
+)
+
+// TokenMetadata is a metadata of ERC20 token.
+type TokenMetadata struct {
+	name     string
+	symbol   string
+	decimals uint8
+}
+
+func getDecodedToken(metadata []byte) (*TokenMetadata, error) {
+	//nolint
+	args := abi.Arguments{
+		{"name", String, false},
+		{"symbol", String, false},
+		{"decimals", Uint8, false},
+	}
+	var token map[string]interface{}
+	err := args.UnpackIntoMap(token, metadata)
+	if err != nil {
+		return nil, err
+	}
+
+	return &TokenMetadata{
+		name:     token["name"].(string),
+		symbol:   token["symbol"].(string),
+		decimals: token["decimals"].(uint8),
+	}, nil
 }

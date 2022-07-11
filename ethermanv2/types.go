@@ -76,6 +76,7 @@ type Deposit struct {
 	BlockNumber        uint64
 	NetworkID          uint
 	TxHash             common.Hash
+	Metadata           common.Hash
 }
 
 // Claim struct
