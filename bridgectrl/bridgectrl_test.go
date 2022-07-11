@@ -10,11 +10,11 @@ import (
 	"runtime"
 	"testing"
 
+	"github.com/0xPolygonHermez/zkevm-bridge-service/db/pgstorage"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/test/vectors"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/utils/gerror"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/hermeznetwork/hermez-bridge/db/pgstorage"
-	"github.com/hermeznetwork/hermez-bridge/etherman"
-	"github.com/hermeznetwork/hermez-bridge/test/vectors"
-	"github.com/hermeznetwork/hermez-bridge/utils/gerror"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

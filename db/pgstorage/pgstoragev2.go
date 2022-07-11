@@ -5,10 +5,10 @@ import (
 	"errors"
 	"fmt"
 
+	etherman "github.com/0xPolygonHermez/zkevm-bridge-service/ethermanv2"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/utils/gerror"
+	"github.com/0xPolygonHermez/zkevm-node/log"
 	"github.com/ethereum/go-ethereum/common"
-	etherman "github.com/hermeznetwork/hermez-bridge/ethermanv2"
-	"github.com/hermeznetwork/hermez-bridge/utils/gerror"
-	"github.com/hermeznetwork/hermez-core/log"
 	"github.com/jackc/pgx/v4"
 	"github.com/jackc/pgx/v4/pgxpool"
 )

@@ -4,8 +4,8 @@ import (
 	"math/big"
 	"time"
 
+	"github.com/0xPolygonHermez/zkevm-node/ethermanv2/smartcontracts/proofofefficiency"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/hermeznetwork/hermez-core/ethermanv2/smartcontracts/proofofefficiency"
 )
 
 // Block struct
@@ -76,7 +76,7 @@ type Deposit struct {
 	BlockNumber        uint64
 	NetworkID          uint
 	TxHash             common.Hash
-	Metadata           common.Hash
+	Metadata           []byte
 }
 
 // Claim struct

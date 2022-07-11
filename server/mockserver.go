@@ -1,8 +1,8 @@
 package server
 
 import (
-	"github.com/hermeznetwork/hermez-bridge/bridgectrl"
-	"github.com/hermeznetwork/hermez-bridge/db/pgstorage"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/bridgectrl"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/db/pgstorage"
 )
 
 // RunMockServer runs mock server

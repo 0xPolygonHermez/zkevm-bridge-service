@@ -7,9 +7,9 @@ import (
 	"net/http"
 	"time"
 
+	ops "github.com/0xPolygonHermez/zkevm-node/test/operations"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
-	ops "github.com/hermeznetwork/hermez-core/test/operations"
 )
 
 const (
@@ -18,8 +18,7 @@ const (
 )
 
 func poll(interval, deadline time.Duration, condition ops.ConditionFunc) error {
-	w := ops.NewWait()
-	return w.Poll(interval, deadline, condition)
+	return ops.Poll(interval, deadline, condition)
 }
 
 // WaitRestHealthy waits for a rest enpoint to be ready

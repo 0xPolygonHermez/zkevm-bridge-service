@@ -4,9 +4,9 @@ import (
 	"context"
 	"math/big"
 
+	etherman "github.com/0xPolygonHermez/zkevm-bridge-service/ethermanv2"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	etherman "github.com/hermeznetwork/hermez-bridge/ethermanv2"
 	"github.com/jackc/pgx/v4"
 )
 

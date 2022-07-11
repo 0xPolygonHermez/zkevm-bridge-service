@@ -6,8 +6,8 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/hermeznetwork/hermez-bridge/client"
-	"github.com/hermeznetwork/hermez-bridge/test/operations"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/client"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/test/operations"
 	"github.com/stretchr/testify/require"
 )
 

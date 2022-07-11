@@ -5,17 +5,17 @@ import (
 	"fmt"
 	"math/big"
 
+	mockbridge "github.com/0xPolygonHermez/zkevm-bridge-service/test/mocksmartcontracts/bridge"
+	"github.com/0xPolygonHermez/zkevm-node/ethermanv2/smartcontracts/bridge"
+	"github.com/0xPolygonHermez/zkevm-node/ethermanv2/smartcontracts/globalexitrootmanager"
+	"github.com/0xPolygonHermez/zkevm-node/ethermanv2/smartcontracts/matic"
+	"github.com/0xPolygonHermez/zkevm-node/ethermanv2/smartcontracts/mockverifier"
+	"github.com/0xPolygonHermez/zkevm-node/ethermanv2/smartcontracts/proofofefficiency"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/crypto"
-	mockbridge "github.com/hermeznetwork/hermez-bridge/test/mocksmartcontracts/bridge"
-	"github.com/hermeznetwork/hermez-core/ethermanv2/smartcontracts/bridge"
-	"github.com/hermeznetwork/hermez-core/ethermanv2/smartcontracts/globalexitrootmanager"
-	"github.com/hermeznetwork/hermez-core/ethermanv2/smartcontracts/matic"
-	"github.com/hermeznetwork/hermez-core/ethermanv2/smartcontracts/mockverifier"
-	"github.com/hermeznetwork/hermez-core/ethermanv2/smartcontracts/proofofefficiency"
 )
 
 // NewSimulatedEtherman creates an etherman that uses a simulated blockchain. It's important to notice that the ChainID of the auth
@@ -63,7 +63,7 @@ func NewSimulatedEtherman(cfg Config, auth *bind.TransactOpts) (etherman *Client
 	if err != nil {
 		return nil, nil, common.Address{}, nil, err
 	}
-	poeAddr, _, poe, err := proofofefficiency.DeployProofofefficiency(auth, client, exitManagerAddr, maticAddr, rollupVerifierAddr, genesis, auth.From, true)
+	poeAddr, _, poe, err := proofofefficiency.DeployProofofefficiency(auth, client, exitManagerAddr, maticAddr, rollupVerifierAddr, genesis, auth.From, true, "http://localhost")
 	if err != nil {
 		return nil, nil, common.Address{}, nil, err
 	}

@@ -7,24 +7,24 @@ import (
 	"os/exec"
 	"time"
 
+	"github.com/0xPolygonHermez/zkevm-bridge-service/bridgectrl"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/bridgectrl/pb"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/db"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/db/pgstorage"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/utils"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/utils/gerror"
+	"github.com/0xPolygonHermez/zkevm-node/encoding"
+	"github.com/0xPolygonHermez/zkevm-node/etherman/smartcontracts/bridge"
+	"github.com/0xPolygonHermez/zkevm-node/etherman/smartcontracts/globalexitrootmanager"
+	erc20 "github.com/0xPolygonHermez/zkevm-node/etherman/smartcontracts/matic"
+	"github.com/0xPolygonHermez/zkevm-node/etherman/smartcontracts/proofofefficiency"
+	"github.com/0xPolygonHermez/zkevm-node/log"
+	"github.com/0xPolygonHermez/zkevm-node/test/contracts/bin/ERC20"
+	"github.com/0xPolygonHermez/zkevm-node/test/operations"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/hermeznetwork/hermez-bridge/bridgectrl"
-	"github.com/hermeznetwork/hermez-bridge/bridgectrl/pb"
-	"github.com/hermeznetwork/hermez-bridge/db"
-	"github.com/hermeznetwork/hermez-bridge/db/pgstorage"
-	"github.com/hermeznetwork/hermez-bridge/etherman"
-	"github.com/hermeznetwork/hermez-bridge/utils"
-	"github.com/hermeznetwork/hermez-bridge/utils/gerror"
-	"github.com/hermeznetwork/hermez-core/encoding"
-	"github.com/hermeznetwork/hermez-core/etherman/smartcontracts/bridge"
-	"github.com/hermeznetwork/hermez-core/etherman/smartcontracts/globalexitrootmanager"
-	erc20 "github.com/hermeznetwork/hermez-core/etherman/smartcontracts/matic"
-	"github.com/hermeznetwork/hermez-core/etherman/smartcontracts/proofofefficiency"
-	"github.com/hermeznetwork/hermez-core/log"
-	"github.com/hermeznetwork/hermez-core/test/contracts/bin/ERC20"
-	"github.com/hermeznetwork/hermez-core/test/operations"
 )
 
 // NetworkSID is used to identify the network.
@@ -641,13 +641,12 @@ func (m *Manager) ApproveERC20(ctx context.Context, erc20Addr, bridgeAddr common
 // GetTokenWrapped get token wrapped info
 func (m *Manager) GetTokenWrapped(ctx context.Context, originNetwork uint, originalTokenAddr common.Address, isCreated bool) (*etherman.TokenWrapped, error) {
 	if isCreated {
-		w := operations.NewWait()
 		blockID, err := m.getLastBlockID(ctx)
 		if err != nil {
 			return nil, err
 		}
 
-		err = w.Poll(defaultInterval, defaultDeadline, func() (bool, error) {
+		err = operations.Poll(defaultInterval, defaultDeadline, func() (bool, error) {
 			wrappedToken, err := m.storage.GetTokenWrapped(ctx, originNetwork, originalTokenAddr)
 			if err != nil {
 				return false, err
@@ -668,8 +667,7 @@ func (m *Manager) WaitBatchToBeConsolidated(ctx context.Context) error {
 		return err
 	}
 
-	w := operations.NewWait()
-	return w.Poll(defaultInterval, defaultDeadline, func() (bool, error) {
+	return operations.Poll(defaultInterval, defaultDeadline, func() (bool, error) {
 		batchNumber, _, verified, err := m.storage.GetLastBatchState(ctx)
 		if !verified {
 			return false, err
@@ -688,8 +686,7 @@ func (m *Manager) WaitExitRootToBeSynced(ctx context.Context, blockID uint64, is
 	if err != nil && err != gerror.ErrStorageNotFound {
 		return err
 	}
-	w := operations.NewWait()
-	return w.Poll(defaultInterval, defaultDeadline, func() (bool, error) {
+	return operations.Poll(defaultInterval, defaultDeadline, func() (bool, error) {
 		exitRoot, err := m.storage.GetLatestExitRoot(ctx)
 		if err != nil {
 			if err == gerror.ErrStorageNotFound {
