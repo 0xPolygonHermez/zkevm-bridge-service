@@ -67,7 +67,7 @@ func (p *PostgresStorageV2) BeginDBTransaction(ctx context.Context) (pgx.Tx, err
 // GetLastBlock gets the last block.
 func (p *PostgresStorageV2) GetLastBlock(ctx context.Context, networkID int, dbTx pgx.Tx) (*etherman.Block, error) {
 	var block etherman.Block
-	const getLastBlockSQL = "SELECT * FROM syncv2.block where network_id = $1 ORDER BY block_num DESC LIMIT 1"
+	const getLastBlockSQL = "SELECT id, block_num, block_hash, parent_hash, network_id, received_at FROM syncv2.block where network_id = $1 ORDER BY block_num DESC LIMIT 1"
 
 	e := p.getExecQuerier(dbTx)
 	err := e.QueryRow(ctx, getLastBlockSQL, networkID).Scan(&block.ID, &block.BlockNumber, &block.BlockHash, &block.ParentHash, &block.NetworkID, &block.ReceivedAt)
