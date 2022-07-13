@@ -8,6 +8,7 @@ require (
 	github.com/gobuffalo/packr/v2 v2.8.3
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.10.0
 	github.com/iden3/go-iden3-crypto v0.0.14-0.20220413123345-edc36bfa5247
+	github.com/jackc/pgconn v1.12.1
 	github.com/jackc/pgx/v4 v4.16.1
 	github.com/lib/pq v1.10.2
 	github.com/mitchellh/mapstructure v1.5.0
@@ -70,7 +71,6 @@ require (
 	github.com/holiman/uint256 v1.2.0 // indirect
 	github.com/imdario/mergo v0.3.13 // indirect
 	github.com/jackc/chunkreader/v2 v2.0.1 // indirect
-	github.com/jackc/pgconn v1.12.1 // indirect
 	github.com/jackc/pgio v1.0.0 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgproto3/v2 v2.3.0 // indirect

@@ -1,7 +1,28 @@
+-- +migrate Down
+DROP SCHEMA IF EXISTS sync CASCADE;
+DROP SCHEMA IF EXISTS merkletree CASCADE;
+
 -- +migrate Up
 CREATE SCHEMA sync;
+CREATE SCHEMA merkletree;
 
 -- History
+
+CREATE TABLE merkletree.rht 
+(
+    key BYTEA PRIMARY KEY,
+    value BYTEA[]
+);
+
+CREATE TABLE merkletree.root
+(
+    root BYTEA,
+    network CHAR NOT NULL,
+    deposit_cnt BIGINT NOT NULL,
+    PRIMARY KEY(root, network)
+);
+
+
 CREATE TABLE sync.block
 (
     id          SERIAL PRIMARY KEY,   

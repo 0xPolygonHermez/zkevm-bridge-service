@@ -189,7 +189,7 @@ func (s *ClientSynchronizer) syncTrustedState() error {
 		return err
 	}
 	trustedGlobalExitRoot := common.HexToAddress(lastBatch.GlobalExitRoot)
-	err = s.storage.NewTrustedGlobalExitRoot(s.ctx, trustedGlobalExitRoot)
+	err = s.storage.AddTrustedGlobalExitRoot(s.ctx, trustedGlobalExitRoot)
 	if err != nil {
 		log.Error("error storing latest trusted globalExitRoot. Error: ", err)
 		return err
