@@ -68,8 +68,8 @@ func TestGEREvent(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t, big.NewInt(1), blocks[0].GlobalExitRoots[0].GlobalExitRootNum)
-	assert.NotEqual(t, common.Hash{}, blocks[0].GlobalExitRoots[0].MainnetExitRoot)
-	assert.Equal(t, common.Hash{}, blocks[0].GlobalExitRoots[0].RollupExitRoot)
+	assert.NotEqual(t, common.Hash{}, blocks[0].GlobalExitRoots[0].ExitRoots[0])
+	assert.Equal(t, common.Hash{}, blocks[0].GlobalExitRoots[0].ExitRoots[1])
 }
 
 func TestSequencedBatchesEvent(t *testing.T) {
@@ -263,8 +263,8 @@ func TestBridgeEvents(t *testing.T) {
 		smtProof [][32]byte
 		index    uint32
 	)
-	mainnetExitRoot := block[0].GlobalExitRoots[0].MainnetExitRoot
-	rollupExitRoot := block[0].GlobalExitRoots[0].RollupExitRoot
+	mainnetExitRoot := block[0].GlobalExitRoots[0].ExitRoots[0]
+	rollupExitRoot := block[0].GlobalExitRoots[0].ExitRoots[1]
 	// globalExitRootNum := block[0].GlobalExitRoots[0].GlobalExitRootNum
 
 	destNetwork = 1

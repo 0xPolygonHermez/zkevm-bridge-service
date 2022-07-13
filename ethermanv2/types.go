@@ -31,8 +31,7 @@ type GlobalExitRoot struct {
 	BlockID           uint64
 	BlockNumber       uint64
 	GlobalExitRootNum *big.Int
-	MainnetExitRoot   common.Hash
-	RollupExitRoot    common.Hash
+	ExitRoots         []common.Hash
 	GlobalExitRoot    common.Hash
 }
 

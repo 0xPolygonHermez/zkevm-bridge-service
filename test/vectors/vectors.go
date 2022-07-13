@@ -88,6 +88,7 @@ type DepositVectorRaw struct {
 	DestinationAddress string `json:"destinationAddress"`
 	ExpectedHash       string `json:"leafValue"`
 	CurrentHash        string `json:"currentLeafValue"`
+	Metadata           string `json:"metadata"`
 }
 
 // MTRootVectorRaw represents the root of Merkle Tree

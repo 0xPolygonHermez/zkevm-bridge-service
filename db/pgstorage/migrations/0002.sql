@@ -104,5 +104,6 @@ CREATE TABLE mtv2.root
 (
     root        BYTEA,
     deposit_cnt BIGINT,
-    network     INTEGER
+    network     INTEGER,
+    PRIMARY KEY(deposit_cnt, network)
 );

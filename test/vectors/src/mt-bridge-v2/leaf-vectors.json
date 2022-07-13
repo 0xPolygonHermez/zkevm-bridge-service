@@ -1,0 +1,38 @@
+[
+  {
+    "originNetwork": 0,
+    "tokenAddress": "0x6B175474E89094C44Da98b954EedeAC495271d0F",
+    "amount": "0x8ac7230489e80000",
+    "destinationNetwork": 1,
+    "destinationAddress": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+    "metadata": "0x",
+    "leafValue": "0x8d84b047a969e9a2ea149d1755e8185b79f2007239bb1e7a151778b60b2cc580"
+  },
+  {
+    "originNetwork": 1,
+    "tokenAddress": "0x6B175474E89094C44Da98b954EedeAC495271d0F",
+    "amount": "0x8ac7230489e80000",
+    "destinationNetwork": 0,
+    "destinationAddress": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+    "metadata": "0x12345670",
+    "leafValue": "0xd22867d19bc4b5254f8f0dcffe4dc5020e5f25cbb06c64faa058a84f7fcbd5d4"
+  },
+  {
+    "originNetwork": 0,
+    "tokenAddress": "0x0000000000000000000000000000000000000000",
+    "amount": "0x8ac7230489e80000",
+    "destinationNetwork": 1,
+    "destinationAddress": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+    "metadata": "0x12345678",
+    "leafValue": "0xed65b9b82c1015b7374ec1097e56971d6887db5a97eb81e7ecb1c710d725f761"
+  },
+  {
+    "originNetwork": 10,
+    "tokenAddress": "0x0000000000000000000000000000000000000000",
+    "amount": "0x01",
+    "destinationNetwork": 4,
+    "destinationAddress": "0x0000000000000000000000000000000000000000",
+    "metadata": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb922661234e51aad88F6F4ce6aB8827279cffFb92266",
+    "leafValue": "0xb92d6d1debb1c2c2bb9c523ba3df72d6d759357a82220ea48f7b4189bdacb879"
+  }
+]
