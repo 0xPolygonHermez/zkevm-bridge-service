@@ -63,12 +63,11 @@ func main() {
 		smt = append(smt, common.HexToHash(proof.MerkleProof[i]))
 	}
 	globalExitRoot := &etherman.GlobalExitRoot{
-		GlobalExitRootNum:   new(big.Int).SetUint64(proof.ExitRootNum),
-		GlobalExitRootL2Num: new(big.Int).SetUint64(proof.L2ExitRootNum),
-		ExitRoots:           []common.Hash{common.HexToHash(proof.MainExitRoot), common.HexToHash(proof.RollupExitRoot)},
+		GlobalExitRootNum: new(big.Int).SetUint64(proof.ExitRootNum),
+		ExitRoots:         []common.Hash{common.HexToHash(proof.MainExitRoot), common.HexToHash(proof.RollupExitRoot)},
 	}
 	log.Info("Sending claim tx...")
-	err = c.SendClaim(ctx, bridgeData, smt, globalExitRoot.GlobalExitRootL2Num, globalExitRoot, common.HexToAddress(l2BridgeAddr), auth)
+	err = c.SendClaim(ctx, bridgeData, smt, &big.Int{}, globalExitRoot, common.HexToAddress(l2BridgeAddr), auth)
 	if err != nil {
 		log.Fatal("error: ", err)
 	}

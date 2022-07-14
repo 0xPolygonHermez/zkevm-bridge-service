@@ -54,12 +54,11 @@ func TestBridgeTree(t *testing.T) {
 		BlockNumber:     0,
 		BlockHash:       common.HexToHash("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9fc"),
 		ParentHash:      common.Hash{},
-		Batches:         []etherman.Batch{},
 		Deposits:        []etherman.Deposit{},
 		GlobalExitRoots: []etherman.GlobalExitRoot{},
 		Claims:          []etherman.Claim{},
 		Tokens:          []etherman.TokenWrapped{},
-	})
+	}, nil)
 	require.NoError(t, err)
 
 	bt, err := NewBridgeController(cfg, []uint{0, 1000}, store, store)
@@ -85,22 +84,22 @@ func TestBridgeTree(t *testing.T) {
 
 			// test reorg
 			ctx := context.WithValue(context.TODO(), contextKeyNetwork, uint8(1)) //nolint
-			orgRoot, err := bt.exitTrees[0].store.GetRoot(ctx, uint(i+1))
+			orgRoot, err := bt.exitTrees[0].store.GetRoot(ctx, uint(i+1), nil)
 			require.NoError(t, err)
 			err = bt.ReorgMT(uint(i), testVectors[i].OriginalNetwork)
 			require.NoError(t, err)
 			err = bt.AddDeposit(deposit)
 			require.NoError(t, err)
-			newRoot, err := bt.exitTrees[0].store.GetRoot(ctx, uint(i+1))
+			newRoot, err := bt.exitTrees[0].store.GetRoot(ctx, uint(i+1), nil)
 			require.NoError(t, err)
 			assert.Equal(t, orgRoot, newRoot)
 
-			err = store.AddExitRoot(context.TODO(), &etherman.GlobalExitRoot{
+			err = store.AddGlobalExitRoot(context.TODO(), &etherman.GlobalExitRoot{
 				BlockNumber:       0,
 				GlobalExitRootNum: big.NewInt(int64(i)),
 				ExitRoots:         []common.Hash{common.BytesToHash(bt.exitTrees[0].root[:]), common.BytesToHash(bt.exitTrees[1].root[:])},
 				BlockID:           id,
-			})
+			}, nil)
 
 			require.NoError(t, err)
 		}

@@ -250,7 +250,7 @@ func TestE2E(t *testing.T) {
 		require.NoError(t, err)
 		t.Log("smt2: ", smtProof)
 		t.Log("deposits[0]: ", deposits[0])
-		t.Log("globaExitRoot: ", globaExitRoot, globaExitRoot.GlobalExitRootL2Num)
+		t.Log("globaExitRoot: ", globaExitRoot, globaExitRoot.GlobalExitRootNum)
 		// Claim funds in L2
 		err = opsman.SendL2Claim(ctx, deposits[0], smtProof, globaExitRoot)
 		require.NoError(t, err)

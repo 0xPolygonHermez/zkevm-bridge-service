@@ -5,33 +5,34 @@ import (
 
 	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/jackc/pgx/v4"
 )
 
 // merkleTreeStore interface for the Merkle Tree
 type merkleTreeStore interface {
-	Get(ctx context.Context, key []byte) ([][]byte, error)
-	Set(ctx context.Context, key []byte, value [][]byte) error
-	ResetMT(ctx context.Context, depositCount uint) error
-	GetRoot(ctx context.Context, depositCount uint) ([]byte, error)
-	SetRoot(ctx context.Context, root []byte, depositCount uint) error
-	GetLastDepositCount(ctx context.Context) (uint, error)
+	Get(ctx context.Context, key []byte, dbTx pgx.Tx) ([][]byte, error)
+	Set(ctx context.Context, key []byte, value [][]byte, dbTx pgx.Tx) error
+	ResetMT(ctx context.Context, depositCount uint, dbTx pgx.Tx) error
+	GetRoot(ctx context.Context, depositCount uint, dbTx pgx.Tx) ([]byte, error)
+	SetRoot(ctx context.Context, root []byte, depositCount uint, dbTx pgx.Tx) error
+	GetLastDepositCount(ctx context.Context, dbTx pgx.Tx) (uint, error)
 }
 
 // bridgeStorage interface for the Bridge Tree
 type bridgeStorage interface {
-	GetDepositCountByRoot(ctx context.Context, root []byte, network uint8) (uint, error)
-	GetLatestL1SyncedExitRoot(ctx context.Context) (*etherman.GlobalExitRoot, error)
-	GetLatestL2SyncedExitRoot(ctx context.Context) (*etherman.GlobalExitRoot, error)
-	AddExitRoot(ctx context.Context, globalExitRoot *etherman.GlobalExitRoot) error
-	GetTokenWrapped(ctx context.Context, originalNetwork uint, originalTokenAddress common.Address) (*etherman.TokenWrapped, error)
+	GetDepositCountByRoot(ctx context.Context, root []byte, network uint8, dbTx pgx.Tx) (uint, error)
+	GetLatestL1SyncedExitRoot(ctx context.Context, dbTx pgx.Tx) (*etherman.GlobalExitRoot, error)
+	GetLatestL2SyncedExitRoot(ctx context.Context, dbTx pgx.Tx) (*etherman.GlobalExitRoot, error)
+	AddGlobalExitRoot(ctx context.Context, globalExitRoot *etherman.GlobalExitRoot, dbTx pgx.Tx) error
+	GetTokenWrapped(ctx context.Context, originalNetwork uint, originalTokenAddress common.Address, dbTx pgx.Tx) (*etherman.TokenWrapped, error)
 }
 
 // BridgeServiceStorage interface for the Bridge Service.
 type BridgeServiceStorage interface {
-	GetClaims(ctx context.Context, destAddr string, limit uint, offset uint) ([]*etherman.Claim, error)
-	GetClaim(ctx context.Context, index uint, networkID uint) (*etherman.Claim, error)
-	GetClaimCount(ctx context.Context, destAddr string) (uint64, error)
-	GetDeposit(ctx context.Context, depositCnt uint, networkID uint) (*etherman.Deposit, error)
-	GetDeposits(ctx context.Context, destAddr string, limit uint, offset uint) ([]*etherman.Deposit, error)
-	GetDepositCount(ctx context.Context, destAddr string) (uint64, error)
+	GetClaims(ctx context.Context, destAddr string, limit uint, offset uint, dbTx pgx.Tx) ([]*etherman.Claim, error)
+	GetClaim(ctx context.Context, index uint, networkID uint, dbTx pgx.Tx) (*etherman.Claim, error)
+	GetClaimCount(ctx context.Context, destAddr string, dbTx pgx.Tx) (uint64, error)
+	GetDeposit(ctx context.Context, depositCnt uint, networkID uint, dbTx pgx.Tx) (*etherman.Deposit, error)
+	GetDeposits(ctx context.Context, destAddr string, limit uint, offset uint, dbTx pgx.Tx) ([]*etherman.Deposit, error)
+	GetDepositCount(ctx context.Context, destAddr string, dbTx pgx.Tx) (uint64, error)
 }

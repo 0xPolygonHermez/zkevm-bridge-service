@@ -81,15 +81,15 @@ func (bt *BridgeController) GetClaim(networkID uint, index uint) ([][KeyLen]byte
 	ctx = context.WithValue(context.TODO(), contextKeyNetwork, tID) //nolint
 	tID--
 	if networkID == MainNetworkID {
-		globalExitRoot, err = bt.storage.GetLatestL1SyncedExitRoot(context.TODO())
+		globalExitRoot, err = bt.storage.GetLatestL1SyncedExitRoot(context.TODO(), nil)
 	} else {
-		globalExitRoot, err = bt.storage.GetLatestL2SyncedExitRoot(context.TODO())
+		globalExitRoot, err = bt.storage.GetLatestL2SyncedExitRoot(context.TODO(), nil)
 	}
 
 	if err != nil {
 		return proof, nil, err
 	}
-	depositCnt, err := bt.storage.GetDepositCountByRoot(ctx, globalExitRoot.ExitRoots[tID][:], tID+1)
+	depositCnt, err := bt.storage.GetDepositCountByRoot(ctx, globalExitRoot.ExitRoots[tID][:], tID+1, nil)
 	if err != nil {
 		return proof, nil, err
 	}
@@ -119,7 +119,7 @@ func (bt *BridgeController) ReorgMT(depositCount uint, networkID uint) error {
 // CheckExitRoot checks if each exitRoot is synchronized exactly
 func (bt *BridgeController) CheckExitRoot(globalExitRoot etherman.GlobalExitRoot) error {
 	for i, exitRoot := range globalExitRoot.ExitRoots {
-		_, err := bt.storage.GetDepositCountByRoot(context.TODO(), exitRoot[:], uint8(i+1))
+		_, err := bt.storage.GetDepositCountByRoot(context.TODO(), exitRoot[:], uint8(i+1), nil)
 		if err != nil {
 			return err
 		}
@@ -134,17 +134,17 @@ func (bt *BridgeController) MockAddDeposit(deposit *etherman.Deposit) error {
 	if err != nil {
 		return err
 	}
-	return bt.storage.AddExitRoot(context.TODO(), &etherman.GlobalExitRoot{
+	return bt.storage.AddGlobalExitRoot(context.TODO(), &etherman.GlobalExitRoot{
 		BlockNumber:       0,
 		GlobalExitRootNum: big.NewInt(int64(deposit.DepositCount)),
 		ExitRoots:         []common.Hash{common.BytesToHash(bt.exitTrees[0].root[:]), common.BytesToHash(bt.exitTrees[1].root[:])},
 		BlockID:           deposit.BlockID,
-	})
+	}, nil)
 }
 
 // GetTokenWrapped returns tokenWrapped information.
 func (bt *BridgeController) GetTokenWrapped(origNetwork uint, origTokenAddr common.Address) (*etherman.TokenWrapped, error) {
-	tokenWrapped, err := bt.storage.GetTokenWrapped(context.Background(), origNetwork, origTokenAddr)
+	tokenWrapped, err := bt.storage.GetTokenWrapped(context.Background(), origNetwork, origTokenAddr, nil)
 	if err != nil {
 		return nil, err
 	}

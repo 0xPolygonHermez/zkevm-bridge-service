@@ -46,11 +46,11 @@ func (s *bridgeService) GetBridges(ctx context.Context, req *pb.GetBridgesReques
 	if limit > maxPageLimit {
 		limit = maxPageLimit
 	}
-	totalCount, err := s.storage.GetDepositCount(ctx, req.DestAddr)
+	totalCount, err := s.storage.GetDepositCount(ctx, req.DestAddr, nil)
 	if err != nil {
 		return nil, err
 	}
-	deposits, err := s.storage.GetDeposits(ctx, req.DestAddr, uint(limit), uint(req.Offset))
+	deposits, err := s.storage.GetDeposits(ctx, req.DestAddr, uint(limit), uint(req.Offset), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -93,11 +93,11 @@ func (s *bridgeService) GetClaims(ctx context.Context, req *pb.GetClaimsRequest)
 	if limit > maxPageLimit {
 		limit = maxPageLimit
 	}
-	totalCount, err := s.storage.GetClaimCount(ctx, req.DestAddr)
+	totalCount, err := s.storage.GetClaimCount(ctx, req.DestAddr, nil)
 	if err != nil {
 		return nil, err
 	}
-	claims, err := s.storage.GetClaims(ctx, req.DestAddr, uint(limit), uint(req.Offset)) //nolint:gomnd
+	claims, err := s.storage.GetClaims(ctx, req.DestAddr, uint(limit), uint(req.Offset), nil) //nolint:gomnd
 	if err != nil {
 		return nil, err
 	}
@@ -138,7 +138,6 @@ func (s *bridgeService) GetProof(ctx context.Context, req *pb.GetProofRequest) (
 		Proof: &pb.Proof{
 			MerkleProof:    proof,
 			ExitRootNum:    exitRoot.GlobalExitRootNum.Uint64(),
-			L2ExitRootNum:  exitRoot.GlobalExitRootL2Num.Uint64(),
 			MainExitRoot:   exitRoot.ExitRoots[0].Hex(),
 			RollupExitRoot: exitRoot.ExitRoots[1].Hex(),
 		},
@@ -147,7 +146,7 @@ func (s *bridgeService) GetProof(ctx context.Context, req *pb.GetProofRequest) (
 
 // GetDepositStatus returns the claim status whether it is able to send a claim transaction or not.
 func (s *bridgeService) GetBridge(ctx context.Context, req *pb.GetBridgeRequest) (*pb.GetBridgeResponse, error) {
-	deposit, err := s.storage.GetDeposit(ctx, uint(req.DepositCnt), uint(req.NetId))
+	deposit, err := s.storage.GetDeposit(ctx, uint(req.DepositCnt), uint(req.NetId), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -196,7 +195,7 @@ func (s *bridgeService) getDepositStatus(ctx context.Context, depositCount uint,
 		exitRoot    *etherman.GlobalExitRoot
 	)
 	// Get the claim tx hash
-	claim, err := s.storage.GetClaim(ctx, depositCount, destNetworkID)
+	claim, err := s.storage.GetClaim(ctx, depositCount, destNetworkID, nil)
 	if err != nil {
 		if err != gerror.ErrStorageNotFound {
 			return "", false, err
@@ -206,9 +205,9 @@ func (s *bridgeService) getDepositStatus(ctx context.Context, depositCount uint,
 	}
 	// Get the claim readiness
 	if networkID == MainNetworkID {
-		exitRoot, err = s.bridgeCtrl.storage.GetLatestL1SyncedExitRoot(ctx)
+		exitRoot, err = s.bridgeCtrl.storage.GetLatestL1SyncedExitRoot(ctx, nil)
 	} else {
-		exitRoot, err = s.bridgeCtrl.storage.GetLatestL2SyncedExitRoot(ctx)
+		exitRoot, err = s.bridgeCtrl.storage.GetLatestL2SyncedExitRoot(ctx, nil)
 	}
 
 	if err != nil {
@@ -223,7 +222,7 @@ func (s *bridgeService) getDepositStatus(ctx context.Context, depositCount uint,
 		return "", false, gerror.ErrNetworkNotRegister
 	}
 	tID--
-	depositCnt, err := s.bridgeCtrl.storage.GetDepositCountByRoot(ctx, exitRoot.ExitRoots[tID][:], uint8(tID+1))
+	depositCnt, err := s.bridgeCtrl.storage.GetDepositCountByRoot(ctx, exitRoot.ExitRoots[tID][:], uint8(tID+1), nil)
 	if err != nil {
 		return "", false, err
 	}

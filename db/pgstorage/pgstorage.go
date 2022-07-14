@@ -4,8 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"math/big"
-	"strings"
 
 	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/utils/gerror"
@@ -13,53 +11,19 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/jackc/pgx/v4"
 	"github.com/jackc/pgx/v4/pgxpool"
-	"github.com/lib/pq"
 )
 
-const (
-	getLastBlockSQL        = "SELECT * FROM sync.block where network_id = $1 ORDER BY block_num DESC LIMIT 1"
-	addBlockSQL            = "INSERT INTO sync.block (block_num, block_hash, parent_hash, received_at, network_id) VALUES ($1, $2, $3, $4, $5) RETURNING id;"
-	addDepositSQL          = "INSERT INTO sync.deposit (orig_net, token_addr, amount, dest_net, dest_addr, block_num, deposit_cnt, block_id, network_id, tx_hash) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)"
-	getDepositSQL          = "SELECT orig_net, token_addr, amount, dest_net, dest_addr, block_num, deposit_cnt, block_id, network_id, tx_hash FROM sync.deposit WHERE network_id = $1 AND deposit_cnt = $2"
-	getDepositsSQL         = "SELECT orig_net, token_addr, amount, dest_net, dest_addr, block_num, deposit_cnt, block_id, network_id, tx_hash FROM sync.deposit WHERE dest_addr = $1 ORDER BY block_id DESC LIMIT $2 OFFSET $3"
-	getDepositCountSQL     = "SELECT COUNT(*) FROM sync.deposit WHERE dest_addr = $1"
-	getNodeByKeySQL        = "SELECT value FROM merkletree.rht WHERE key = $1"
-	getDepositCntByRootSQL = "SELECT deposit_cnt FROM merkletree.root WHERE root = $1 AND network = $2"
-	getRootByDepositCntSQL = "SELECT root FROM merkletree.root WHERE deposit_cnt = $1 AND network = $2"
-	setRootSQL             = "INSERT INTO merkletree.root (root, deposit_cnt, network) VALUES ($1, $2, $3)"
-	getLastDepositCntSQL   = "SELECT coalesce(MAX(deposit_cnt), -1) FROM merkletree.root WHERE network = $1"
-	setNodeByKeySQL        = "INSERT INTO merkletree.rht (key, value) VALUES ($1, $2)"
-	resetRootSQL           = "DELETE FROM merkletree.root WHERE deposit_cnt > $1 AND network = $2"
-	getPreviousBlockSQL    = "SELECT id, block_num, block_hash, parent_hash, network_id, received_at FROM sync.block WHERE network_id = $1 ORDER BY block_num DESC LIMIT 1 OFFSET $2"
-	resetSQL               = "DELETE FROM sync.block WHERE block_num > $1 AND network_id = $2"
-	resetConsolidationSQL  = "UPDATE sync.batch SET aggregator = decode('0000000000000000000000000000000000000000', 'hex'), consolidated_tx_hash = decode('0000000000000000000000000000000000000000000000000000000000000000', 'hex'), consolidated_at = null WHERE consolidated_at > $1 AND network_id = $2"
-	addGlobalExitRootSQL   = "INSERT INTO sync.exit_root (block_num, global_exit_root_num, mainnet_exit_root, rollup_exit_root, block_id, global_exit_root_l2_num) VALUES ($1, $2, $3, $4, $5, $6)"
-	getLatestExitRootSQL   = "SELECT block_id, block_num, global_exit_root_num, mainnet_exit_root, rollup_exit_root FROM sync.exit_root ORDER BY global_exit_root_num DESC LIMIT 1"
-	getLatestL1ExitRootSQL = "SELECT block_id, block_num, global_exit_root_num, mainnet_exit_root, rollup_exit_root FROM sync.exit_root WHERE global_exit_root_num = (SELECT MAX(global_exit_root_num)-1 FROM sync.exit_root WHERE global_exit_root_l2_num IS NOT NULL)"
-	getLatestL2ExitRootSQL = "SELECT block_id, block_num, global_exit_root_num, mainnet_exit_root, rollup_exit_root, global_exit_root_l2_num FROM sync.exit_root WHERE global_exit_root_l2_num IS NOT NULL ORDER BY global_exit_root_num DESC LIMIT 1"
-	getLatestMainnetRSQL   = "SELECT mainnet_exit_root FROM sync.exit_root ORDER BY global_exit_root_num DESC LIMIT 1"
-	addClaimSQL            = "INSERT INTO sync.claim (index, orig_net, token_addr, amount, dest_addr, block_num, block_id, network_id, tx_hash) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)"
-	getClaimSQL            = "SELECT index, orig_net, token_addr, amount, dest_addr, block_num, block_id, network_id, tx_hash FROM sync.claim WHERE index = $1 AND network_id = $2"
-	getClaimsSQL           = "SELECT index, orig_net, token_addr, amount, dest_addr, block_num, block_id, network_id, tx_hash FROM sync.claim WHERE dest_addr = $1 ORDER BY block_id DESC LIMIT $2 OFFSET $3"
-	getClaimCountSQL       = "SELECT COUNT(*) FROM sync.claim WHERE dest_addr = $1"
-	addTokenWrappedSQL     = "INSERT INTO sync.token_wrapped (orig_net, orig_token_addr, wrapped_token_addr, block_num, block_id, network_id) VALUES ($1, $2, $3, $4, $5, $6)"
-	getTokenWrappedSQL     = "SELECT orig_net, orig_token_addr, wrapped_token_addr, block_num, block_id, network_id FROM sync.token_wrapped WHERE orig_net = $1 AND orig_token_addr = $2" // nolint
-	consolidateBatchSQL    = "UPDATE sync.batch SET consolidated_tx_hash = $1, consolidated_at = $2, aggregator = $3 WHERE batch_num = $4 AND network_id = $5"
-	addBatchSQL            = "INSERT INTO sync.batch (batch_num, block_num, sequencer, aggregator, consolidated_tx_hash, tx_hash, uncles, received_at, chain_id, global_exit_root, block_id, network_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)"
-	getBatchByNumberSQL    = "SELECT batch_num, block_num, sequencer, aggregator, consolidated_tx_hash, tx_hash, uncles, chain_id, global_exit_root, received_at, consolidated_at, block_id, network_id FROM sync.batch WHERE batch_num = $1 AND network_id = $2"
-	getNumDepositsSQL      = "SELECT coalesce(MAX(deposit_cnt),-1) FROM sync.deposit WHERE network_id = $1 AND block_num <= $2"
-	getLastBatchNumberSQL  = "SELECT coalesce(max(batch_num),0) as batch FROM sync.batch"
-	getLastBatchStateSQL   = "SELECT batch_num, block_id, CASE WHEN consolidated_at IS NULL THEN false ELSE true END AS verified FROM sync.batch ORDER BY batch_num DESC LIMIT 1;"
-)
-
-var (
-	contextKeyNetwork = "merkle-tree-network"
-)
-
-// PostgresStorage implements the Storage interface
+// PostgresStorage implements the Storage interface.
 type PostgresStorage struct {
-	db   *pgxpool.Pool
-	dbTx []pgx.Tx
+	*pgxpool.Pool
+}
+
+// getExecQuerier determines which execQuerier to use, dbTx or the main pgxpool
+func (p *PostgresStorage) getExecQuerier(dbTx pgx.Tx) execQuerier {
+	if dbTx != nil {
+		return dbTx
+	}
+	return p
 }
 
 // NewPostgresStorage creates a new Storage DB
@@ -75,14 +39,38 @@ func NewPostgresStorage(cfg Config, dbTxSize uint) (*PostgresStorage, error) {
 		log.Errorf("Unable to connect to database: %v\n", err)
 		return nil, err
 	}
-	dbTx := make([]pgx.Tx, dbTxSize)
-	return &PostgresStorage{db: db, dbTx: dbTx}, nil
+	return &PostgresStorage{db}, nil
 }
 
-// GetLastBlock gets the latest block
-func (s *PostgresStorage) GetLastBlock(ctx context.Context, networkID uint) (*etherman.Block, error) {
+// Rollback rollbacks a db transaction.
+func (p *PostgresStorage) Rollback(ctx context.Context, dbTx pgx.Tx) error {
+	if dbTx != nil {
+		return dbTx.Rollback(ctx)
+	}
+
+	return gerror.ErrNilDBTransaction
+}
+
+// Commit commits a db transaction.
+func (p *PostgresStorage) Commit(ctx context.Context, dbTx pgx.Tx) error {
+	if dbTx != nil {
+		return dbTx.Commit(ctx)
+	}
+	return gerror.ErrNilDBTransaction
+}
+
+// BeginDBTransaction starts a transaction block.
+func (p *PostgresStorage) BeginDBTransaction(ctx context.Context) (pgx.Tx, error) {
+	return p.Begin(ctx)
+}
+
+// GetLastBlock gets the last block.
+func (p *PostgresStorage) GetLastBlock(ctx context.Context, networkID uint, dbTx pgx.Tx) (*etherman.Block, error) {
 	var block etherman.Block
-	err := s.db.QueryRow(ctx, getLastBlockSQL, networkID).Scan(&block.ID, &block.BlockNumber, &block.BlockHash, &block.ParentHash, &block.NetworkID, &block.ReceivedAt)
+	const getLastBlockSQL = "SELECT id, block_num, block_hash, parent_hash, network_id, received_at FROM syncv2.block where network_id = $1 ORDER BY block_num DESC LIMIT 1"
+
+	e := p.getExecQuerier(dbTx)
+	err := e.QueryRow(ctx, getLastBlockSQL, networkID).Scan(&block.ID, &block.BlockNumber, &block.BlockHash, &block.ParentHash, &block.NetworkID, &block.ReceivedAt)
 
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, gerror.ErrStorageNotFound
@@ -93,456 +81,299 @@ func (s *PostgresStorage) GetLastBlock(ctx context.Context, networkID uint) (*et
 	return &block, nil
 }
 
-// AddBlock adds a new block to the db
-func (s *PostgresStorage) AddBlock(ctx context.Context, block *etherman.Block) (uint64, error) {
-	var id uint64
-	err := s.db.QueryRow(ctx, addBlockSQL, block.BlockNumber, block.BlockHash.Bytes(), block.ParentHash.Bytes(), block.ReceivedAt, block.NetworkID).Scan(&id)
-	return id, err
+// GetLastBatchNumber gets the last batch number.
+func (p *PostgresStorage) GetLastBatchNumber(ctx context.Context, dbTx pgx.Tx) (uint64, error) {
+	var batchNumber uint64
+	const getLastBatchNumberSQL = "SELECT coalesce(max(batch_num),0) as batch FROM syncv2.batch"
+
+	e := p.getExecQuerier(dbTx)
+	err := e.QueryRow(ctx, getLastBatchNumberSQL).Scan(&batchNumber)
+
+	return batchNumber, err
 }
 
-// AddDeposit adds a new block to the db
-func (s *PostgresStorage) AddDeposit(ctx context.Context, deposit *etherman.Deposit) error {
-	_, err := s.db.Exec(ctx, addDepositSQL, deposit.OriginalNetwork, deposit.TokenAddress, deposit.Amount.String(), deposit.DestinationNetwork,
-		deposit.DestinationAddress, deposit.BlockNumber, deposit.DepositCount, deposit.BlockID, deposit.NetworkID, deposit.TxHash)
+// GetBatchByNumber gets the specific batch by the batch number.
+func (p *PostgresStorage) GetBatchByNumber(ctx context.Context, batchNumber uint64, dbTx pgx.Tx) (*etherman.Batch, error) {
+	var batch etherman.Batch
+	const getBatchByNumberSQL = "SELECT batch_num, sequencer, raw_tx_data, timestamp, global_exit_root FROM syncv2.batch WHERE batch_num = $1"
+
+	e := p.getExecQuerier(dbTx)
+	err := e.QueryRow(ctx, getBatchByNumberSQL, batchNumber).Scan(
+		&batch.BatchNumber, &batch.Coinbase, &batch.BatchL2Data, &batch.Timestamp, &batch.GlobalExitRoot)
+
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, gerror.ErrStorageNotFound
+	}
+
+	return &batch, err
+}
+
+// AddBlock adds a new block to the storage.
+func (p *PostgresStorage) AddBlock(ctx context.Context, block *etherman.Block, dbTx pgx.Tx) (uint64, error) {
+	var blockID uint64
+	const addBlockSQL = "INSERT INTO sync.block (block_num, block_hash, parent_hash, network_id, received_at) VALUES ($1, $2, $3, $4, $5) RETURNING id;"
+	e := p.getExecQuerier(dbTx)
+	err := e.QueryRow(ctx, addBlockSQL, block.BlockNumber, block.BlockHash, block.ParentHash, block.NetworkID, block.ReceivedAt).Scan(&blockID)
+
+	return blockID, err
+}
+
+// AddBatch adds a new batch to the storage.
+func (p *PostgresStorage) AddBatch(ctx context.Context, batch *etherman.Batch, dbTx pgx.Tx) error {
+	const addBatchSQL = "INSERT INTO syncv2.batch (batch_num, sequencer, raw_tx_data, timestamp, global_exit_root) VALUES ($1, $2, $3, $4, $5)"
+	e := p.getExecQuerier(dbTx)
+	_, err := e.Exec(ctx, addBatchSQL, batch.BatchNumber, batch.Coinbase, batch.BatchL2Data, batch.Timestamp, batch.GlobalExitRoot)
+
 	return err
 }
 
-// GetDeposit gets a specific deposit
-func (s *PostgresStorage) GetDeposit(ctx context.Context, depositCounterUser uint, networkID uint) (*etherman.Deposit, error) {
-	var (
-		deposit etherman.Deposit
-		amount  string
-	)
-	err := s.db.QueryRow(ctx, getDepositSQL, networkID, depositCounterUser).Scan(&deposit.OriginalNetwork, &deposit.TokenAddress,
-		&amount, &deposit.DestinationNetwork, &deposit.DestinationAddress, &deposit.BlockNumber, &deposit.DepositCount, &deposit.BlockID,
-		&deposit.NetworkID, &deposit.TxHash)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return nil, gerror.ErrStorageNotFound
-	} else if err != nil {
-		return nil, err
-	}
-	deposit.Amount, _ = new(big.Int).SetString(amount, 10) // nolint
-	return &deposit, nil
+// AddVerifiedBatch adds a new verified batch.
+func (p *PostgresStorage) AddVerifiedBatch(ctx context.Context, verifiedBatch *etherman.VerifiedBatch, dbTx pgx.Tx) error {
+	const addVerifiedBatchSQL = "INSERT INTO syncv2.verified_batch (batch_num, aggregator, tx_hash, block_id) VALUES ($1, $2, $3, $4)"
+	e := p.getExecQuerier(dbTx)
+	_, err := e.Exec(ctx, addVerifiedBatchSQL, verifiedBatch.BatchNumber, verifiedBatch.Aggregator, verifiedBatch.TxHash, verifiedBatch.BlockID)
+
+	return err
 }
 
-// GetDepositCount gets the deposit count for the destination address
-func (s *PostgresStorage) GetDepositCount(ctx context.Context, destAddr string) (uint64, error) {
-	var depositCnt uint64
-	err := s.db.QueryRow(ctx, getDepositCountSQL, common.FromHex(destAddr)).Scan(&depositCnt)
+// AddGlobalExitRoot adds a new ExitRoot to the db.
+func (p *PostgresStorage) AddGlobalExitRoot(ctx context.Context, exitRoot *etherman.GlobalExitRoot, dbTx pgx.Tx) error {
+	const addExitRootSQL = "INSERT INTO syncv2.exit_root (block_id, global_exit_root_num, global_exit_root, mainnet_deposit_cnt, rollup_deposit_cnt) VALUES ($1, $2, $3, $4, $5)"
+	mainnetDepositCount, err := p.GetDepositCountByExitRoot(ctx, exitRoot.ExitRoots[0][:], 0, dbTx)
 	if err != nil {
-		return 0, err
+		return err
+	}
+	rollupDepositCount, err := p.GetDepositCountByExitRoot(ctx, exitRoot.ExitRoots[1][:], 1, dbTx)
+	if err != nil {
+		return err
 	}
 
-	return depositCnt, nil
+	e := p.getExecQuerier(dbTx)
+	_, err = e.Exec(ctx, addExitRootSQL, exitRoot.BlockID, exitRoot.GlobalExitRootNum.String(), exitRoot.GlobalExitRoot, mainnetDepositCount, rollupDepositCount)
+	return err
 }
 
-// GetDeposits gets the deposit list which be smaller than depositCount
-func (s *PostgresStorage) GetDeposits(ctx context.Context, destAddr string, limit uint, offset uint) ([]*etherman.Deposit, error) {
-	rows, err := s.db.Query(ctx, getDepositsSQL, common.FromHex(destAddr), limit, offset)
+// GetDepositCountByExitRoot gets the related deposit id by the exit root.
+func (p *PostgresStorage) GetDepositCountByExitRoot(ctx context.Context, exitRoot []byte, networkID uint, dbTx pgx.Tx) (uint64, error) {
+	var depositID uint64
+	const getDepositCountSQL = "SELECT deposit_cnt FROM mtv2.root WHERE root = $1 AND network = $2 ORDER BY deposit_cnt DESC LIMIT 1"
+	e := p.getExecQuerier(dbTx)
+	err := e.QueryRow(ctx, getDepositCountSQL, exitRoot, networkID).Scan(&depositID)
+	return depositID, err
+}
+
+// AddDeposit adds new deposit to the storage.
+func (p *PostgresStorage) AddDeposit(ctx context.Context, deposit *etherman.Deposit, dbTx pgx.Tx) error {
+	const addDepositSQL = "INSERT INTO syncv2.deposit (network_id, orig_net, token_addr, amount, dest_net, dest_addr, block_id, deposit_cnt, tx_hash, metadata) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)"
+	e := p.getExecQuerier(dbTx)
+	_, err := e.Exec(ctx, addDepositSQL, deposit.NetworkID, deposit.OriginalNetwork, deposit.TokenAddress, deposit.Amount.String(), deposit.DestinationNetwork, deposit.DestinationAddress, deposit.BlockID, deposit.DepositCount, deposit.TxHash, deposit.Metadata)
+	return err
+}
+
+// AddClaim adds new claim to the storage.
+func (p *PostgresStorage) AddClaim(ctx context.Context, claim *etherman.Claim, dbTx pgx.Tx) error {
+	const addClaimSQL = "INSERT INTO syncv2.claim (network_id, index, orig_net, token_addr, amount, dest_addr, block_id, tx_hash) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"
+	e := p.getExecQuerier(dbTx)
+	_, err := e.Exec(ctx, addClaimSQL, claim.NetworkID, claim.OriginalNetwork, claim.Token, claim.Amount.String(), claim.DestinationAddress, claim.BlockID, claim.TxHash)
+	return err
+}
+
+// GetTokenMetadata gets the metadata of the dedicated token.
+func (p *PostgresStorage) GetTokenMetadata(ctx context.Context, tokenWrapped *etherman.TokenWrapped, dbTx pgx.Tx) ([]byte, error) {
+	var metadata []byte
+	const getMetadataSQL = "SELECT metadata from syncv2.deposit WHERE network_id = $1 AND token_addr = $2 AND dest_net = $3 AND metadata IS NOT NULL LIMIT 1"
+	e := p.getExecQuerier(dbTx)
+	err := e.QueryRow(ctx, getMetadataSQL, tokenWrapped.OriginalNetwork, tokenWrapped.OriginalTokenAddress, tokenWrapped.NetworkID).Scan(&metadata)
+
+	return metadata, err
+}
+
+// AddTokenWrapped adds new wrapped token to the storage.
+func (p *PostgresStorage) AddTokenWrapped(ctx context.Context, tokenWrapped *etherman.TokenWrapped, dbTx pgx.Tx) error {
+	metadata, err := p.GetTokenMetadata(ctx, tokenWrapped, dbTx)
+	if err != nil {
+		return err
+	}
+	tokenMetadata, err := getDecodedToken(metadata)
+	if err != nil {
+		return err
+	}
+	const addTokenWrappedSQL = "INSERT INTO syncv2.token_wrapped (network_id, orig_net, orig_token_addr, wrapped_token_addr, block_id, name, symbol, decimals) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"
+	e := p.getExecQuerier(dbTx)
+	_, err = e.Exec(ctx, addTokenWrappedSQL, tokenWrapped.NetworkID, tokenWrapped.OriginalNetwork, tokenWrapped.OriginalTokenAddress, tokenWrapped.WrappedTokenAddress, tokenWrapped.BlockID, tokenMetadata.name, tokenMetadata.symbol, tokenMetadata.decimals)
+	return err
+}
+
+// Reset resets the state to a block for the given DB tx.
+func (p *PostgresStorage) Reset(ctx context.Context, blockNumber uint64, dbTx pgx.Tx) error {
+	const resetSQL = "DELETE FROM syncv2.block WHERE block_num > $1"
+	e := p.getExecQuerier(dbTx)
+	_, err := e.Exec(ctx, resetSQL, blockNumber)
+	return err
+}
+
+// GetPreviousBlock gets the offset previous L1 block respect to latest.
+func (p *PostgresStorage) GetPreviousBlock(ctx context.Context, networkID uint, offset uint64, dbTx pgx.Tx) (*etherman.Block, error) {
+	var block etherman.Block
+	const getPreviousBlockSQL = "SELECT block_num, block_hash, parent_hash, network_id, received_at FROM syncv2.block WHERE network_id = $1 ORDER BY block_num DESC LIMIT 1 OFFSET $2"
+	e := p.getExecQuerier(dbTx)
+	err := e.QueryRow(ctx, getPreviousBlockSQL, networkID, offset).Scan(&block.BlockNumber, &block.BlockHash, &block.ParentHash, &block.NetworkID, &block.ReceivedAt)
+	return &block, err
+}
+
+// GetNumberDeposits gets the number of  deposits.
+func (p *PostgresStorage) GetNumberDeposits(ctx context.Context, networkID uint, blockNumber uint64, dbTx pgx.Tx) (uint64, error) {
+	var nDeposits int64
+	const getNumDepositsSQL = "SELECT coalesce(MAX(deposit_cnt), -1) FROM syncv2.deposit WHERE network_id = $1 AND block_num <= $2"
+	err := p.getExecQuerier(dbTx).QueryRow(ctx, getNumDepositsSQL, networkID, blockNumber).Scan(&nDeposits)
+	return uint64(nDeposits + 1), err
+}
+
+// GetNextForcedBatches gets the next forced batches from the queue.
+func (p *PostgresStorage) GetNextForcedBatches(ctx context.Context, nextForcedBatches int, dbTx pgx.Tx) ([]etherman.ForcedBatch, error) {
+	const getNextForcedBatchesSQL = "SELECT forced_batch_num, global_exit_root, timestamp, raw_txs_data, coinbase, batch_num, block_num FROM syncv2.forced_batch WHERE batch_num IS NULL LIMIT $1"
+	e := p.getExecQuerier(dbTx)
+	// Get the next forced batches
+	rows, err := e.Query(ctx, getNextForcedBatchesSQL, nextForcedBatches)
+
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, gerror.ErrStorageNotFound
 	} else if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
 
-	deposits := make([]*etherman.Deposit, 0, len(rows.RawValues()))
-
+	batches := make([]etherman.ForcedBatch, 0, len(rows.RawValues()))
+	var forcedBatch etherman.ForcedBatch
 	for rows.Next() {
-		var (
-			deposit etherman.Deposit
-			amount  string
-		)
-		err := rows.Scan(&deposit.OriginalNetwork, &deposit.TokenAddress, &amount, &deposit.DestinationNetwork, &deposit.DestinationAddress,
-			&deposit.BlockNumber, &deposit.DepositCount, &deposit.BlockID, &deposit.NetworkID, &deposit.TxHash)
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, gerror.ErrStorageNotFound
-		} else if err != nil {
+		err := rows.Scan(&forcedBatch.ForcedBatchNumber, &forcedBatch.GlobalExitRoot, &forcedBatch.ForcedAt, &forcedBatch.RawTxsData, &forcedBatch.Sequencer, &forcedBatch.BatchNumber, &forcedBatch.BlockNumber)
+		if err != nil {
 			return nil, err
 		}
-		deposit.Amount, _ = new(big.Int).SetString(amount, 10) // nolint
-		deposits = append(deposits, &deposit)
+		batches = append(batches, forcedBatch)
 	}
 
-	return deposits, nil
+	return batches, nil
 }
 
-// Get gets value of key from the merkle tree
-func (s *PostgresStorage) Get(ctx context.Context, key []byte) ([][]byte, error) {
-	var (
-		data [][]byte
-	)
-	err := s.db.QueryRow(ctx, getNodeByKeySQL, key).Scan(pq.Array(&data))
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, gerror.ErrStorageNotFound
-		}
-		return nil, err
-	}
-	return data, nil
+// AddBatchNumberInForcedBatch updates the forced_batch table with the batchNumber.
+func (p *PostgresStorage) AddBatchNumberInForcedBatch(ctx context.Context, forceBatchNumber, batchNumber uint64, dbTx pgx.Tx) error {
+	const addBatchNumberInForcedBatchSQL = "UPDATE syncv2.forced_batch SET batch_num = $2 WHERE forced_batch_num = $1"
+	e := p.getExecQuerier(dbTx)
+	_, err := e.Exec(ctx, addBatchNumberInForcedBatchSQL, forceBatchNumber, batchNumber)
+	return err
 }
 
-// GetRoot gets root by the deposit count from the merkle tree
-func (s *PostgresStorage) GetRoot(ctx context.Context, depositCnt uint) ([]byte, error) {
-	var root []byte
+// AddForcedBatch adds a new ForcedBatch to the db.
+func (p *PostgresStorage) AddForcedBatch(ctx context.Context, forcedBatch *etherman.ForcedBatch, dbTx pgx.Tx) error {
+	const addForcedBatchSQL = "INSERT INTO syncv2.forced_batch (forced_batch_num, global_exit_root, timestamp, raw_txs_data, coinbase, batch_num, block_num) VALUES ($1, $2, $3, $4, $5, $6, $7)"
+	_, err := p.getExecQuerier(dbTx).Exec(ctx, addForcedBatchSQL, forcedBatch.ForcedBatchNumber, forcedBatch.GlobalExitRoot.String(), forcedBatch.ForcedAt, forcedBatch.RawTxsData, forcedBatch.Sequencer.String(), forcedBatch.BatchNumber, forcedBatch.BlockNumber)
+	return err
+}
 
-	err := s.db.QueryRow(ctx, getRootByDepositCntSQL, depositCnt, string(ctx.Value(contextKeyNetwork).(uint8))).Scan(&root)
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, gerror.ErrStorageNotFound
-		}
-		return nil, err
-	}
-	return root, nil
+// AddTrustedGlobalExitRoot adds new global exit root which comes from the trusted sequencer.
+func (p *PostgresStorage) AddTrustedGlobalExitRoot(ctx context.Context, ger common.Hash) error {
+	return nil
+}
+
+// ConsolidateBatch make a batch verified.
+func (p *PostgresStorage) ConsolidateBatch(ctx context.Context, batch *etherman.Batch, dbTx pgx.Tx) error {
+	return nil
+}
+
+// GetClaim gets a specific claim from the storage.
+func (p *PostgresStorage) GetClaim(ctx context.Context, depositCounterUser uint, networkID uint, dbTx pgx.Tx) (*etherman.Claim, error) {
+	return nil, nil
+}
+
+// GetDeposit gets a specific deposit from the storage.
+func (p *PostgresStorage) GetDeposit(ctx context.Context, depositCounterUser uint, networkID uint, dbTx pgx.Tx) (*etherman.Deposit, error) {
+	return nil, nil
+}
+
+// GetLatestExitRoot gets the latest global exit root.
+func (p *PostgresStorage) GetLatestExitRoot(ctx context.Context, dbTx pgx.Tx) (*etherman.GlobalExitRoot, error) {
+	return nil, nil
+}
+
+// GetLatestL1SyncedExitRoot gets the latest L1 synced global exit root.
+func (p *PostgresStorage) GetLatestL1SyncedExitRoot(ctx context.Context, dbTx pgx.Tx) (*etherman.GlobalExitRoot, error) {
+	return nil, nil
+}
+
+// GetLatestL2SyncedExitRoot gets the latest L2 synced global exit root.
+func (p *PostgresStorage) GetLatestL2SyncedExitRoot(ctx context.Context, dbTx pgx.Tx) (*etherman.GlobalExitRoot, error) {
+	return nil, nil
+}
+
+// GetTokenWrapped gets a specific wrapped token.
+func (p *PostgresStorage) GetTokenWrapped(ctx context.Context, originalNetwork uint, originalTokenAddress common.Address, dbTx pgx.Tx) (*etherman.TokenWrapped, error) {
+	return nil, nil
 }
 
 // GetDepositCountByRoot gets the deposit count by the root.
-func (s *PostgresStorage) GetDepositCountByRoot(ctx context.Context, root []byte, network uint8) (uint, error) {
-	var depositCnt uint
+func (p *PostgresStorage) GetDepositCountByRoot(ctx context.Context, root []byte, network uint8, dbTx pgx.Tx) (uint, error) {
+	return 0, nil
+}
 
-	err := s.db.QueryRow(ctx, getDepositCntByRootSQL, root, string(network)).Scan(&depositCnt)
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return 0, gerror.ErrStorageNotFound
-		}
-		return 0, err
-	}
-	return depositCnt, nil
+// GetRoot gets root by the deposit count from the merkle tree.
+func (p *PostgresStorage) GetRoot(ctx context.Context, depositCnt uint, dbTx pgx.Tx) ([]byte, error) {
+	return nil, nil
 }
 
 // SetRoot store the root with deposit count to the storage.
-func (s *PostgresStorage) SetRoot(ctx context.Context, root []byte, depositCnt uint) error {
-	_, err := s.db.Exec(ctx, setRootSQL, root, depositCnt, string(ctx.Value(contextKeyNetwork).(uint8)))
-	return err
+func (p *PostgresStorage) SetRoot(ctx context.Context, root []byte, depositCnt uint, dbTx pgx.Tx) error {
+	return nil
 }
 
-// GetLastDepositCount gets the last deposit count from the merkle tree
-func (s *PostgresStorage) GetLastDepositCount(ctx context.Context) (uint, error) {
-	var depositCnt int64
-	err := s.db.QueryRow(ctx, getLastDepositCntSQL, string(ctx.Value(contextKeyNetwork).(uint8))).Scan(&depositCnt)
-	if err != nil {
-		return 0, err
-	}
-	if depositCnt < 0 {
-		return 0, gerror.ErrStorageNotFound
-	}
-	return uint(depositCnt), nil
+// Get gets value of key from the merkle tree.
+func (p *PostgresStorage) Get(ctx context.Context, key []byte, dbTx pgx.Tx) ([][]byte, error) {
+	return nil, nil
 }
 
 // Set inserts a key-value pair into the db.
 // If record with such a key already exists its assumed that the value is correct,
 // because it's a reverse hash table, and the key is a hash of the value
-func (s *PostgresStorage) Set(ctx context.Context, key []byte, value [][]byte) error {
-	_, err := s.db.Exec(ctx, setNodeByKeySQL, key, pq.Array(value))
-	if err != nil {
-		if strings.Contains(err.Error(), "duplicate key value violates unique constraint") {
-			return nil
-		}
-		return err
-	}
+func (p *PostgresStorage) Set(ctx context.Context, key []byte, value [][]byte, dbTx pgx.Tx) error {
 	return nil
+}
+
+// GetLastDepositCount gets the last deposit count from the merkle tree.
+func (p *PostgresStorage) GetLastDepositCount(ctx context.Context, dbTx pgx.Tx) (uint, error) {
+	return 0, nil
 }
 
 // ResetMT resets nodes of the Merkle Tree.
-func (s *PostgresStorage) ResetMT(ctx context.Context, depositCnt uint) error {
-	_, err := s.db.Exec(ctx, resetRootSQL, depositCnt, string(ctx.Value(contextKeyNetwork).(uint8)))
-	return err
-}
-
-// GetPreviousBlock gets the offset previous block respect to latest
-func (s *PostgresStorage) GetPreviousBlock(ctx context.Context, networkID uint, offset uint64) (*etherman.Block, error) {
-	var block etherman.Block
-	err := s.db.QueryRow(ctx, getPreviousBlockSQL, networkID, offset).Scan(&block.ID, &block.BlockNumber, &block.BlockHash, &block.ParentHash, &block.NetworkID, &block.ReceivedAt)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return nil, gerror.ErrStorageNotFound
-	} else if err != nil {
-		return nil, err
-	}
-
-	return &block, nil
-}
-
-// Reset resets the state to a specific block
-func (s *PostgresStorage) Reset(ctx context.Context, block *etherman.Block, networkID uint) error {
-	if _, err := s.db.Exec(ctx, resetSQL, block.BlockNumber, networkID); err != nil {
-		return err
-	}
-
-	if block.BlockNumber != 0 { // if its zero, everything is removed so there is no consolidations
-		//Remove consolidations
-		_, err := s.db.Exec(ctx, resetConsolidationSQL, block.ReceivedAt, networkID)
-		return err
-	}
+func (p *PostgresStorage) ResetMT(ctx context.Context, depositCnt uint, dbTx pgx.Tx) error {
 	return nil
 }
 
-// Rollback rollbacks a db transaction
-func (s *PostgresStorage) Rollback(ctx context.Context, index uint) error {
-	if s.dbTx[index] != nil {
-		err := s.dbTx[index].Rollback(ctx)
-		s.dbTx[index] = nil
-		return err
-	}
-
-	return gerror.ErrNilDBTransaction
+// GetClaimCount gets the claim count for the destination address.
+func (p *PostgresStorage) GetClaimCount(ctx context.Context, destAddr string, dbTx pgx.Tx) (uint64, error) {
+	return 0, nil
 }
 
-// Commit commits a db transaction
-func (s *PostgresStorage) Commit(ctx context.Context, index uint) error {
-	if s.dbTx[index] != nil {
-		err := s.dbTx[index].Commit(ctx)
-		s.dbTx[index] = nil
-		return err
-	}
-	return gerror.ErrNilDBTransaction
+// GetClaims gets the claim list which be smaller than index.
+func (p *PostgresStorage) GetClaims(ctx context.Context, destAddr string, limit uint, offset uint, dbTx pgx.Tx) ([]*etherman.Claim, error) {
+	return nil, nil
 }
 
-// BeginDBTransaction starts a transaction block
-func (s *PostgresStorage) BeginDBTransaction(ctx context.Context, index uint) error {
-	if s.dbTx[index] != nil {
-		return fmt.Errorf("db tx already ongoing!. networkID: %d", index)
-	}
-	dbTx, err := s.db.Begin(ctx)
-	if err != nil {
-		return err
-	}
-	s.dbTx[index] = dbTx
-	return nil
+// GetDeposits gets the deposit list which be smaller than depositCount.
+func (p *PostgresStorage) GetDeposits(ctx context.Context, destAddr string, limit uint, offset uint, dbTx pgx.Tx) ([]*etherman.Deposit, error) {
+	return nil, nil
 }
 
-// AddExitRoot adds a new ExitRoot to the db
-func (s *PostgresStorage) AddExitRoot(ctx context.Context, exitRoot *etherman.GlobalExitRoot) error {
-	var batch uint64
-	err := s.db.QueryRow(ctx, getLastBatchNumberSQL).Scan(&batch)
-	if !errors.Is(err, pgx.ErrNoRows) && err != nil {
-		return err
-	}
-	var mainnetExitRoot common.Hash
-	err = s.db.QueryRow(ctx, getLatestMainnetRSQL).Scan(&mainnetExitRoot)
-	if !errors.Is(err, pgx.ErrNoRows) && err != nil {
-		return err
-	}
-	var storeBatch *uint64
-	if mainnetExitRoot != exitRoot.ExitRoots[0] {
-		storeBatch = nil
-	} else {
-		storeBatch = &batch
-	}
-	_, err = s.db.Exec(ctx, addGlobalExitRootSQL, exitRoot.BlockNumber, exitRoot.GlobalExitRootNum.String(), exitRoot.ExitRoots[0], exitRoot.ExitRoots[1], exitRoot.BlockID, storeBatch)
-	return err
-}
-
-// GetLatestL1SyncedExitRoot get the latest ExitRoot stored that fully synced the rollup exit root in L1.
-func (s *PostgresStorage) GetLatestL1SyncedExitRoot(ctx context.Context) (*etherman.GlobalExitRoot, error) {
-	var (
-		batch           uint64
-		exitRoot        etherman.GlobalExitRoot
-		globalNum       uint64
-		mainnetExitRoot common.Hash
-		rollupExitRoot  common.Hash
-	)
-	err := s.db.QueryRow(ctx, getLastBatchNumberSQL).Scan(&batch)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return nil, gerror.ErrStorageNotFound
-	} else if err != nil {
-		return nil, err
-	} else if batch == uint64(0) {
-		return nil, gerror.ErrStorageNotFound
-	}
-	err = s.db.QueryRow(ctx, getLatestL1ExitRootSQL).Scan(&exitRoot.BlockID, &exitRoot.BlockNumber, &globalNum, &mainnetExitRoot, &rollupExitRoot)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return nil, gerror.ErrStorageNotFound
-	} else if err != nil {
-		return nil, err
-	}
-	exitRoot.GlobalExitRootNum = new(big.Int).SetUint64(globalNum)
-	exitRoot.GlobalExitRootL2Num = new(big.Int).SetUint64(batch)
-	exitRoot.ExitRoots = []common.Hash{mainnetExitRoot, rollupExitRoot}
-	return &exitRoot, nil
-}
-
-// GetLatestL2SyncedExitRoot get the latest ExitRoot stored in L2.
-func (s *PostgresStorage) GetLatestL2SyncedExitRoot(ctx context.Context) (*etherman.GlobalExitRoot, error) {
-	var (
-		exitRoot        etherman.GlobalExitRoot
-		globalNum       uint64
-		globalL2Num     uint64
-		mainnetExitRoot common.Hash
-		rollupExitRoot  common.Hash
-	)
-	err := s.db.QueryRow(ctx, getLatestL2ExitRootSQL).Scan(&exitRoot.BlockID, &exitRoot.BlockNumber, &globalNum, &mainnetExitRoot, &rollupExitRoot, &globalL2Num)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return nil, gerror.ErrStorageNotFound
-	} else if err != nil {
-		return nil, err
-	}
-	exitRoot.GlobalExitRootNum = new(big.Int).SetUint64(globalNum)
-	exitRoot.GlobalExitRootL2Num = new(big.Int).SetUint64(globalL2Num)
-	exitRoot.ExitRoots = []common.Hash{mainnetExitRoot, rollupExitRoot}
-	return &exitRoot, nil
-}
-
-// GetLatestExitRoot get the latest ExitRoot from L1.
-func (s *PostgresStorage) GetLatestExitRoot(ctx context.Context) (*etherman.GlobalExitRoot, error) {
-	var (
-		exitRoot        etherman.GlobalExitRoot
-		globalNum       uint64
-		mainnetExitRoot common.Hash
-		rollupExitRoot  common.Hash
-	)
-	err := s.db.QueryRow(ctx, getLatestExitRootSQL).Scan(&exitRoot.BlockID, &exitRoot.BlockNumber, &globalNum, &mainnetExitRoot, &rollupExitRoot)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return nil, gerror.ErrStorageNotFound
-	} else if err != nil {
-		return nil, err
-	}
-	exitRoot.GlobalExitRootNum = new(big.Int).SetUint64(globalNum)
-	exitRoot.ExitRoots = []common.Hash{mainnetExitRoot, rollupExitRoot}
-	return &exitRoot, nil
-}
-
-// AddClaim adds a new claim to the db
-func (s *PostgresStorage) AddClaim(ctx context.Context, claim *etherman.Claim) error {
-	_, err := s.db.Exec(ctx, addClaimSQL, claim.Index, claim.OriginalNetwork, claim.Token, claim.Amount.String(),
-		claim.DestinationAddress, claim.BlockNumber, claim.BlockID, claim.NetworkID, claim.TxHash)
-	return err
-}
-
-// GetClaim gets a specific L1 claim
-func (s *PostgresStorage) GetClaim(ctx context.Context, index uint, networkID uint) (*etherman.Claim, error) {
-	var (
-		claim  etherman.Claim
-		amount string
-	)
-	err := s.db.QueryRow(ctx, getClaimSQL, index, networkID).Scan(&claim.Index, &claim.OriginalNetwork, &claim.Token,
-		&amount, &claim.DestinationAddress, &claim.BlockNumber, &claim.BlockID, &claim.NetworkID, &claim.TxHash)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return nil, gerror.ErrStorageNotFound
-	} else if err != nil {
-		return nil, err
-	}
-	claim.Amount, _ = new(big.Int).SetString(amount, 10) // nolint
-	return &claim, nil
-}
-
-// GetClaimCount gets the claim count for the destination address
-func (s *PostgresStorage) GetClaimCount(ctx context.Context, destAddr string) (uint64, error) {
-	var claimCnt uint64
-	err := s.db.QueryRow(ctx, getClaimCountSQL, common.FromHex(destAddr)).Scan(&claimCnt)
-	if err != nil {
-		return 0, err
-	}
-
-	return claimCnt, nil
-}
-
-// GetClaims gets the claim list which be smaller than index
-func (s *PostgresStorage) GetClaims(ctx context.Context, destAddr string, limit uint, offset uint) ([]*etherman.Claim, error) {
-	rows, err := s.db.Query(ctx, getClaimsSQL, common.FromHex(destAddr), limit, offset)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return nil, gerror.ErrStorageNotFound
-	} else if err != nil {
-		return nil, err
-	}
-
-	claims := make([]*etherman.Claim, 0, len(rows.RawValues()))
-
-	for rows.Next() {
-		var (
-			claim  etherman.Claim
-			amount string
-		)
-		err := rows.Scan(&claim.Index, &claim.OriginalNetwork, &claim.Token, &amount, &claim.DestinationAddress, &claim.BlockNumber,
-			&claim.BlockID, &claim.NetworkID, &claim.TxHash)
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, gerror.ErrStorageNotFound
-		} else if err != nil {
-			return nil, err
-		}
-		claim.Amount, _ = new(big.Int).SetString(amount, 10) // nolint
-		claims = append(claims, &claim)
-	}
-
-	return claims, nil
-}
-
-// AddTokenWrapped adds a new claim to the db
-func (s *PostgresStorage) AddTokenWrapped(ctx context.Context, tokeWrapped *etherman.TokenWrapped) error {
-	_, err := s.db.Exec(ctx, addTokenWrappedSQL, tokeWrapped.OriginalNetwork, tokeWrapped.OriginalTokenAddress,
-		tokeWrapped.WrappedTokenAddress, tokeWrapped.BlockNumber, tokeWrapped.BlockID, tokeWrapped.NetworkID)
-	return err
-}
-
-// GetTokenWrapped gets a specific tokenWrapped
-func (s *PostgresStorage) GetTokenWrapped(ctx context.Context, originalNetwork uint, originalTokenAddress common.Address) (*etherman.TokenWrapped, error) {
-	var token etherman.TokenWrapped
-	err := s.db.QueryRow(ctx, getTokenWrappedSQL, originalNetwork, originalTokenAddress).Scan(&token.OriginalNetwork, &token.OriginalTokenAddress,
-		&token.WrappedTokenAddress, &token.BlockNumber, &token.BlockID, &token.NetworkID)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return nil, gerror.ErrStorageNotFound
-	} else if err != nil {
-		return nil, err
-	}
-	return &token, nil
-}
-
-// ConsolidateBatch changes the virtual status of a batch
-func (s *PostgresStorage) ConsolidateBatch(ctx context.Context, batch *etherman.Batch) error {
-	_, err := s.db.Exec(ctx, consolidateBatchSQL, batch.ConsolidatedTxHash, batch.ConsolidatedAt, batch.Aggregator, batch.BatchNumber, batch.NetworkID)
-	return err
-}
-
-// AddBatch adds a new batch to the db
-func (s *PostgresStorage) AddBatch(ctx context.Context, batch *etherman.Batch) error {
-	_, err := s.db.Exec(ctx, addBatchSQL, batch.BatchNumber, batch.BlockNumber, batch.Sequencer, batch.Aggregator,
-		batch.ConsolidatedTxHash, batch.TxHash, batch.Uncles, batch.ReceivedAt, batch.ChainID.String(), batch.GlobalExitRoot, batch.BlockID, batch.NetworkID)
-	return err
-}
-
-// GetBatchByNumber gets the batch with the required number
-func (s *PostgresStorage) GetBatchByNumber(ctx context.Context, batchNumber uint64, networkID uint) (*etherman.Batch, error) {
-	var (
-		batch etherman.Batch
-		chain uint64
-	)
-	err := s.db.QueryRow(ctx, getBatchByNumberSQL, batchNumber, networkID).Scan(
-		&batch.BatchNumber, &batch.BlockNumber, &batch.Sequencer, &batch.Aggregator, &batch.ConsolidatedTxHash,
-		&batch.TxHash, &batch.Uncles, &chain, &batch.GlobalExitRoot, &batch.ReceivedAt,
-		&batch.ConsolidatedAt, &batch.BlockID, &batch.NetworkID)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return nil, gerror.ErrStorageNotFound
-	} else if err != nil {
-		return nil, err
-	}
-	batch.ChainID = new(big.Int).SetUint64(chain)
-
-	return &batch, nil
-}
-
-// GetNumberDeposits gets the number of  deposits
-func (s *PostgresStorage) GetNumberDeposits(ctx context.Context, networkID uint, blockNumber uint64) (uint64, error) {
-	var nDeposits int64
-	err := s.db.QueryRow(ctx, getNumDepositsSQL, networkID, blockNumber).Scan(&nDeposits)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return 0, nil
-	} else if err != nil {
-		return 0, err
-	}
-	// 0-index in deposit table, 1-index in MT table
-	return uint64(nDeposits + 1), nil
+// GetDepositCount gets the deposit count for the destination address.
+func (p *PostgresStorage) GetDepositCount(ctx context.Context, destAddr string, dbTx pgx.Tx) (uint64, error) {
+	return 0, nil
 }
 
 // GetLastBatchState returns the lates verified batch number.
-func (s *PostgresStorage) GetLastBatchState(ctx context.Context) (uint64, uint64, bool, error) {
-	var (
-		batchNumber   uint64
-		blockID       uint64
-		batchVerified bool
-	)
-	err := s.db.QueryRow(ctx, getLastBatchStateSQL).Scan(&batchNumber, &blockID, &batchVerified)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return 0, 0, false, nil
-	} else if err != nil {
-		return 0, 0, false, err
-	}
-	return batchNumber, blockID, batchVerified, err
+func (p *PostgresStorage) GetLastBatchState(ctx context.Context, dbTx pgx.Tx) (uint64, uint64, bool, error) {
+	return 0, 0, false, nil
+}
+
+// ResetTrustedState resets trusted batches from the storage.
+func (p *PostgresStorage) ResetTrustedState(ctx context.Context, batchNumber uint64, dbTx pgx.Tx) error {
+	return nil
 }

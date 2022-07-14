@@ -38,6 +38,7 @@ func hashDeposit(deposit *etherman.Deposit) [KeyLen]byte {
 	destNet := make([]byte, 4) //nolint:gomnd
 	binary.BigEndian.PutUint32(destNet, uint32(deposit.DestinationNetwork))
 	var buf [KeyLen]byte
-	copy(res[:], keccak256.Hash(origNet, deposit.TokenAddress[:], deposit.Amount.FillBytes(buf[:]), destNet, deposit.DestinationAddress[:]))
+	metaHash := keccak256.Hash(deposit.Metadata)
+	copy(res[:], keccak256.Hash(origNet, deposit.TokenAddress[:], destNet, deposit.DestinationAddress[:], deposit.Amount.FillBytes(buf[:]), metaHash))
 	return res
 }

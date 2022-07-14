@@ -1,30 +1,16 @@
 package synchronizer
 
-import "time"
-
-// Duration is a wrapper type that parses time duration from text.
-type Duration struct {
-	time.Duration `validate:"required"`
-}
-
-// UnmarshalText unmarshalls time duration from text.
-func (d *Duration) UnmarshalText(data []byte) error {
-	duration, err := time.ParseDuration(string(data))
-	if err != nil {
-		return err
-	}
-	d.Duration = duration
-	return nil
-}
+import (
+	"github.com/0xPolygonHermez/zkevm-node/config/types"
+)
 
 // Config represents the configuration of the synchronizer
 type Config struct {
 	// SyncInterval is the delay interval between reading new rollup information
-	SyncInterval Duration `mapstructure:"SyncInterval"`
+	SyncInterval types.Duration `mapstructure:"SyncInterval"`
 
 	// SyncChunkSize is the number of blocks to sync on each chunk
 	SyncChunkSize uint64 `mapstructure:"SyncChunkSize"`
 
-	//ForceBatch allows the bridge service to force a batch everytime it detects an L1 deposit
-	ForceBatch bool `mapstructure:"ForceBatch"`
+	GrpcURL string `mapstructure:"GrpcURL"`
 }

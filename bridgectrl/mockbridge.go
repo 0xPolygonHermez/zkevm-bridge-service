@@ -63,28 +63,23 @@ func MockBridgeCtrl(store *pgstorage.PostgresStorage) (*BridgeController, error)
 			BlockNumber:     testBlockVector.BlockNumber,
 			BlockHash:       common.HexToHash(testBlockVector.BlockHash),
 			ParentHash:      common.HexToHash(testBlockVector.ParentHash),
-			Batches:         []etherman.Batch{},
 			Deposits:        []etherman.Deposit{},
 			GlobalExitRoots: []etherman.GlobalExitRoot{},
 			Claims:          []etherman.Claim{},
 			Tokens:          []etherman.TokenWrapped{},
-		})
+		}, nil)
 		if err != nil {
 			return nil, err
 		}
 
 		batch := etherman.Batch{
-			BlockNumber:    1,
-			Sequencer:      common.HexToAddress("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9fe"),
-			ChainID:        big.NewInt(0),
+			Coinbase:       common.HexToAddress("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9fe"),
 			GlobalExitRoot: common.HexToHash("0x30e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9fe"),
 			BatchNumber:    uint64(i + 1),
-			TxHash:         common.Hash{},
-			ReceivedAt:     time.Now(),
-			BlockID:        id,
-			NetworkID:      testDepositVectors[i].OriginalNetwork,
+			BatchL2Data:    []byte{},
+			Timestamp:      time.Time{},
 		}
-		err = store.AddBatch(context.TODO(), &batch)
+		err = store.AddBatch(context.TODO(), &batch, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -101,7 +96,7 @@ func MockBridgeCtrl(store *pgstorage.PostgresStorage) (*BridgeController, error)
 			NetworkID:          testDepositVectors[i].OriginalNetwork,
 			BlockNumber:        0,
 		}
-		err = store.AddDeposit(context.TODO(), deposit)
+		err = store.AddDeposit(context.TODO(), deposit, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -116,7 +111,7 @@ func MockBridgeCtrl(store *pgstorage.PostgresStorage) (*BridgeController, error)
 			DestinationAddress: common.HexToAddress(testClaimVectors[i].DestinationAddress),
 			BlockID:            id,
 			BlockNumber:        testClaimVectors[i].BlockNumber,
-		})
+		}, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -125,13 +120,12 @@ func MockBridgeCtrl(store *pgstorage.PostgresStorage) (*BridgeController, error)
 		if err != nil {
 			return nil, err
 		}
-		err = store.AddExitRoot(context.TODO(), &etherman.GlobalExitRoot{
-			BlockNumber:         0,
-			GlobalExitRootNum:   big.NewInt(int64(i)),
-			GlobalExitRootL2Num: big.NewInt(int64(i)),
-			ExitRoots:           []common.Hash{common.BytesToHash(bt.exitTrees[0].root[:]), common.BytesToHash(bt.exitTrees[1].root[:])},
-			BlockID:             id,
-		})
+		err = store.AddGlobalExitRoot(context.TODO(), &etherman.GlobalExitRoot{
+			BlockNumber:       0,
+			GlobalExitRootNum: big.NewInt(int64(i)),
+			ExitRoots:         []common.Hash{common.BytesToHash(bt.exitTrees[0].root[:]), common.BytesToHash(bt.exitTrees[1].root[:])},
+			BlockID:           id,
+		}, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -143,7 +137,7 @@ func MockBridgeCtrl(store *pgstorage.PostgresStorage) (*BridgeController, error)
 		BlockID:              1,
 		BlockNumber:          1,
 		NetworkID:            0,
-	})
+	}, nil)
 	if err != nil {
 		return nil, err
 	}
