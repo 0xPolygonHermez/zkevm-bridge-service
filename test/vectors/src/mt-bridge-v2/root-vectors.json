@@ -14,7 +14,9 @@
     "newRoot": "0x7782d756ce2109dfb4385dd1ab6ce2f8bd87cce4ba1a298dfe64ab6b0b0356f8"
   },
   {
-    "previousLeafsValues": [],
+    "previousLeafsValues": [
+      "0x8d84b047a969e9a2ea149d1755e8185b79f2007239bb1e7a151778b60b2cc580"
+    ],
     "currentRoot": "0x7782d756ce2109dfb4385dd1ab6ce2f8bd87cce4ba1a298dfe64ab6b0b0356f8",
     "newLeaf": {
       "originNetwork": 1,
@@ -28,7 +30,10 @@
     "newRoot": "0xd1a5006b2018b8d3eed2461d04857f93312501a7f08ec7f3d3469bd0c80b3f90"
   },
   {
-    "previousLeafsValues": [],
+    "previousLeafsValues": [
+      "0x8d84b047a969e9a2ea149d1755e8185b79f2007239bb1e7a151778b60b2cc580",
+      "0xd22867d19bc4b5254f8f0dcffe4dc5020e5f25cbb06c64faa058a84f7fcbd5d4"
+    ],
     "currentRoot": "0xd1a5006b2018b8d3eed2461d04857f93312501a7f08ec7f3d3469bd0c80b3f90",
     "newLeaf": {
       "originNetwork": 0,
@@ -42,7 +47,11 @@
     "newRoot": "0xad5ffc65ca4a2235ac389fcc2f6464f639e61bdfc733dd01e2cf104fd71a454e"
   },
   {
-    "previousLeafsValues": [],
+    "previousLeafsValues": [
+      "0x8d84b047a969e9a2ea149d1755e8185b79f2007239bb1e7a151778b60b2cc580",
+      "0xd22867d19bc4b5254f8f0dcffe4dc5020e5f25cbb06c64faa058a84f7fcbd5d4",
+      "0xed65b9b82c1015b7374ec1097e56971d6887db5a97eb81e7ecb1c710d725f761"
+    ],
     "currentRoot": "0xad5ffc65ca4a2235ac389fcc2f6464f639e61bdfc733dd01e2cf104fd71a454e",
     "newLeaf": {
       "originNetwork": 10,

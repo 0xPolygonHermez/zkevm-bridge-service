@@ -74,7 +74,7 @@ func TestLeafHash(t *testing.T) {
 }
 
 func TestMTAddLeaf(t *testing.T) {
-	data, err := os.ReadFile("test/vectors/src/mt-bridge/root-vectors.json")
+	data, err := os.ReadFile("test/vectors/src/mt-bridge-v2/root-vectors.json")
 	require.NoError(t, err)
 
 	var mtTestVectors []vectors.MTRootVectorRaw
@@ -117,6 +117,7 @@ func TestMTAddLeaf(t *testing.T) {
 				DestinationAddress: common.HexToAddress(testVector.NewLeaf.DestinationAddress),
 				BlockNumber:        0,
 				DepositCount:       uint(ti + 1),
+				Metadata:           common.FromHex(testVector.NewLeaf.Metadata),
 			}
 			leafHash := hashDeposit(deposit)
 			err = mt.addLeaf(ctx, leafHash)
@@ -128,7 +129,7 @@ func TestMTAddLeaf(t *testing.T) {
 }
 
 func TestMTGetProof(t *testing.T) {
-	data, err := os.ReadFile("test/vectors/src/mt-bridge/claim-vectors.json")
+	data, err := os.ReadFile("test/vectors/src/mt-bridge-v2/claim-vectors.json")
 	require.NoError(t, err)
 
 	var mtTestVectors []vectors.MTClaimVectorRaw
@@ -162,6 +163,7 @@ func TestMTGetProof(t *testing.T) {
 					DestinationAddress: common.HexToAddress(leaf.DestinationAddress),
 					BlockNumber:        0,
 					DepositCount:       uint(li + 1),
+					Metadata:           common.FromHex(leaf.Metadata),
 				}
 
 				leafHash := hashDeposit(deposit)
