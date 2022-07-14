@@ -191,8 +191,9 @@ func (etherMan *Client) updateGlobalExitRootEvent(ctx context.Context, vLog type
 		return err
 	}
 	var gExitRoot GlobalExitRoot
-	gExitRoot.MainnetExitRoot = common.BytesToHash(globalExitRoot.MainnetExitRoot[:])
-	gExitRoot.RollupExitRoot = common.BytesToHash(globalExitRoot.RollupExitRoot[:])
+	gExitRoot.ExitRoots = make([]common.Hash, 0)
+	gExitRoot.ExitRoots = append(gExitRoot.ExitRoots, common.BytesToHash(globalExitRoot.MainnetExitRoot[:]))
+	gExitRoot.ExitRoots = append(gExitRoot.ExitRoots, common.BytesToHash(globalExitRoot.RollupExitRoot[:]))
 	gExitRoot.GlobalExitRootNum = globalExitRoot.GlobalExitRootNum
 	gExitRoot.GlobalExitRoot = hash(globalExitRoot.MainnetExitRoot, globalExitRoot.RollupExitRoot)
 	gExitRoot.BlockNumber = vLog.BlockNumber

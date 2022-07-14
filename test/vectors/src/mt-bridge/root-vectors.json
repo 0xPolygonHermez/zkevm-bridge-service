@@ -3,7 +3,7 @@
     "previousLeafsValues": [],
     "currentRoot": "0x27ae5ba08d7291c96c8cbddcc148bf48a6d68c7974b94356f53754ef6171d757",
     "newLeaf": {
-      "originalNetwork": 0,
+      "originNetwork": 0,
       "tokenAddress": "0x6B175474E89094C44Da98b954EedeAC495271d0F",
       "amount": "0x8ac7230489e80000",
       "destinationNetwork": 1,
@@ -18,7 +18,7 @@
     ],
     "currentRoot": "0x47d6c069bf9ae1d490124b9c5c061a34d8761a0d2c9124d8b2adee6363e9522a",
     "newLeaf": {
-      "originalNetwork": 1,
+      "originNetwork": 1,
       "tokenAddress": "0x6B175474E89094C44Da98b954EedeAC495271d0F",
       "amount": "0x8ac7230489e80000",
       "destinationNetwork": 0,
@@ -34,7 +34,7 @@
     ],
     "currentRoot": "0xaec4f0656a52ae10f19e6f3dd80f40b336394028209c749fa22c72acc4832629",
     "newLeaf": {
-      "originalNetwork": 0,
+      "originNetwork": 0,
       "tokenAddress": "0x0000000000000000000000000000000000000000",
       "amount": "0x8ac7230489e80000",
       "destinationNetwork": 1,
@@ -51,7 +51,7 @@
     ],
     "currentRoot": "0x4acc844cf9ab741d69f9f7506ffbd2983501da0710d16090e06f17e6f8ffda00",
     "newLeaf": {
-      "originalNetwork": 10,
+      "originNetwork": 10,
       "tokenAddress": "0x0000000000000000000000000000000000000000",
       "amount": "0x01",
       "destinationNetwork": 4,

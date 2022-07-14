@@ -1,6 +1,6 @@
 [
     {
-        "originalNetwork": 0,
+        "originNetwork": 0,
         "tokenAddress": "0x617b3a3528F9cDd6630fd3301B9c8911F7Bf063D",
         "amount": "1000000000000000001",
         "destinationNetwork": 1000,
@@ -8,7 +8,7 @@
         "leafValue": "3f54d8d7ce5988cc6367f629f49be150561f7f07f0961dc09be7ed8b52b6729d"
     },
     {
-        "originalNetwork": 0,
+        "originNetwork": 0,
         "tokenAddress": "0xeB17ce701E9D92724AA2ABAdA7E4B28830597Dd9",
         "amount": "100000000000000000",
         "destinationNetwork": 1001,
@@ -16,7 +16,7 @@
         "leafValue": "2161d290fbf5627b28f8f5fbf77db1435fea7c8e51a29cc20686f08020dff077"
     },
     {
-        "originalNetwork": 0,
+        "originNetwork": 0,
         "tokenAddress": "0x187Bd40226A7073b49163b1f6c2b73d8F2aa8478",
         "amount": "1000000000000000002",
         "destinationNetwork": 1000,
@@ -24,7 +24,7 @@
         "leafValue": "5408098bf8f450739b5917dd700af9ce37823d5d989f8827049b95d1bee1de47"
     },
     {
-        "originalNetwork": 0,
+        "originNetwork": 0,
         "tokenAddress": "0x617b3a3528F9cDd6630fd3301B9c8911F7Bf063D",
         "amount": "1000000000000000000",
         "destinationNetwork": 1000,

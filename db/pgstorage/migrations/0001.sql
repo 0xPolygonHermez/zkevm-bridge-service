@@ -19,7 +19,7 @@ CREATE TABLE merkletree.root
     root BYTEA,
     network CHAR NOT NULL,
     deposit_cnt BIGINT NOT NULL,
-    PRIMARY KEY(root, network)
+    PRIMARY KEY(deposit_cnt, network)
 );
 
 

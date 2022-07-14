@@ -81,13 +81,14 @@ func LoadE2ETestVectors(path string) ([]E2ETestVectors, error) {
 
 // DepositVectorRaw represents the deposit vector
 type DepositVectorRaw struct {
-	OriginalNetwork    uint   `json:"originalNetwork"`
+	OriginalNetwork    uint   `json:"originNetwork"`
 	TokenAddress       string `json:"tokenAddress"`
 	Amount             string `json:"amount"`
 	DestinationNetwork uint   `json:"destinationNetwork"`
 	DestinationAddress string `json:"destinationAddress"`
 	ExpectedHash       string `json:"leafValue"`
 	CurrentHash        string `json:"currentLeafValue"`
+	Metadata           string `json:"metadata"`
 }
 
 // MTRootVectorRaw represents the root of Merkle Tree
@@ -109,7 +110,7 @@ type MTClaimVectorRaw struct {
 // ClaimVectorRaw represents the claim vector
 type ClaimVectorRaw struct {
 	Index              uint   `json:"index"`
-	OriginalNetwork    uint   `json:"origNetwork"`
+	OriginalNetwork    uint   `json:"originNetwork"`
 	Token              string `json:"token"`
 	Amount             string `json:"amount"`
 	DestinationNetwork uint   `json:"destNetwork"`

@@ -139,11 +139,11 @@ func (p *PostgresStorageV2) AddVerifiedBatch(ctx context.Context, verifiedBatch 
 // AddExitRoot adds a new ExitRoot to the db.
 func (p *PostgresStorageV2) AddExitRoot(ctx context.Context, exitRoot *etherman.GlobalExitRoot, dbTx pgx.Tx) error {
 	const addExitRootSQL = "INSERT INTO syncv2.exit_root (block_id, global_exit_root_num, global_exit_root, mainnet_deposit_cnt, rollup_deposit_cnt) VALUES ($1, $2, $3, $4, $5)"
-	mainnetDepositCount, err := p.GetDepositCountByExitRoot(ctx, exitRoot.MainnetExitRoot[:], 0, dbTx)
+	mainnetDepositCount, err := p.GetDepositCountByExitRoot(ctx, exitRoot.ExitRoots[0][:], 0, dbTx)
 	if err != nil {
 		return err
 	}
-	rollupDepositCount, err := p.GetDepositCountByExitRoot(ctx, exitRoot.RollupExitRoot[:], 1, dbTx)
+	rollupDepositCount, err := p.GetDepositCountByExitRoot(ctx, exitRoot.ExitRoots[1][:], 1, dbTx)
 	if err != nil {
 		return err
 	}
