@@ -115,30 +115,30 @@ func setupLog(c log.Config) {
 	log.Init(c)
 }
 
-func newEthermans(c config.Config) (*etherman.ClientEtherMan, []*etherman.ClientEtherMan, error) {
+func newEthermans(c config.Config) (*etherman.Client, []*etherman.Client, error) {
 	auth, err := newAuthFromKeystore(c.Etherman.PrivateKeyPath, c.Etherman.PrivateKeyPassword, c.NetworkConfig.L1ChainID)
 	if err != nil {
 		return nil, nil, err
 	}
-	l1Etherman, err := etherman.NewEtherman(c.Etherman, c.NetworkConfig.PoEAddr, c.NetworkConfig.BridgeAddr, c.NetworkConfig.GlobalExitRootManAddr, auth, c.NetworkConfig.MaticAddr)
+	l1Etherman, err := etherman.NewClient(c.Etherman, auth, c.NetworkConfig.PoEAddr, c.NetworkConfig.BridgeAddr, c.NetworkConfig.GlobalExitRootManAddr)
 	if err != nil {
 		return nil, nil, err
 	}
 	if len(c.L2BridgeAddrs) != len(c.Etherman.L2URLs) {
 		log.Fatal("Environment configuration error. L2 bridge addresses and l2 hermezCore urls mismatch")
 	}
-	var l2Ethermans []*etherman.ClientEtherMan
-	for i, addr := range c.L2BridgeAddrs {
-		l2Etherman, err := etherman.NewL2Etherman(c.Etherman.L2URLs[i], addr)
-		if err != nil {
-			return l1Etherman, nil, err
-		}
-		l2Ethermans = append(l2Ethermans, l2Etherman)
-	}
+	var l2Ethermans []*etherman.Client
+	// for i, addr := range c.L2BridgeAddrs {
+	// 	l2Etherman, err := etherman.NewClient(c.Etherman.L2URLs[i], addr)
+	// 	if err != nil {
+	// 		return l1Etherman, nil, err
+	// 	}
+	// 	l2Ethermans = append(l2Ethermans, l2Etherman)
+	// }
 	return l1Etherman, l2Ethermans, nil
 }
 
-func runSynchronizer(genBlockNumber uint64, brdigeCtrl *bridgectrl.BridgeController, etherman *etherman.ClientEtherMan, cfg synchronizer.Config, storage db.Storage) {
+func runSynchronizer(genBlockNumber uint64, brdigeCtrl *bridgectrl.BridgeController, etherman *etherman.Client, cfg synchronizer.Config, storage db.Storage) {
 	sy, err := synchronizer.NewSynchronizer(storage, brdigeCtrl, etherman, genBlockNumber, cfg)
 	if err != nil {
 		log.Fatal(err)

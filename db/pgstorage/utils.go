@@ -45,11 +45,10 @@ func runMigrations(cfg Config, direction migrate.MigrationDirection) error {
 // will reset all the known data and rerun the migrations
 func InitOrReset(cfg Config) error {
 	// connect to database
-	pgStorage, err := NewPostgresStorage(cfg, 0)
+	_, err := NewPostgresStorage(cfg, 0)
 	if err != nil {
 		return err
 	}
-	defer pgStorage.db.Close()
 
 	// run migrations
 	if err := RunMigrationsDown(cfg); err != nil {

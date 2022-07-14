@@ -69,7 +69,7 @@ func main() {
 			BlockNumber:        0,
 			DepositCount:       uint(i + 6), //nolint:gomnd
 		}
-		err := store.AddDeposit(ctx, deposit)
+		err := store.AddDeposit(ctx, deposit, nil)
 		if err != nil {
 			panic(err)
 		}
@@ -95,7 +95,7 @@ func main() {
 				BlockNumber:        0,
 				DepositCount:       uint(i + preDepositCount + 6), //nolint:gomnd
 			}
-			err := store.AddDeposit(ctx, deposit)
+			err := store.AddDeposit(ctx, deposit, nil)
 			if err != nil {
 				panic(err)
 			}

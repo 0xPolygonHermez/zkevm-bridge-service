@@ -4,46 +4,63 @@ import (
 	"math/big"
 	"time"
 
+	"github.com/0xPolygonHermez/zkevm-node/ethermanv2/smartcontracts/proofofefficiency"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
 )
-
-const (
-	// BatchesOrder identifies a batch event
-	BatchesOrder EventOrder = "Batches"
-	//DepositsOrder identifies a deposit event
-	DepositsOrder EventOrder = "Deposits"
-	//GlobalExitRootsOrder identifies a gloalExitRoot event
-	GlobalExitRootsOrder EventOrder = "GlobalExitRoots"
-	//ClaimsOrder identifies a claim event
-	ClaimsOrder EventOrder = "Claims"
-	//TokensOrder identifies a TokenWrapped event
-	TokensOrder EventOrder = "Tokens"
-)
-
-// EventOrder is the the type used to identify the events order
-type EventOrder string
-
-// Order contains the event order to let the synchronizer store the information following this order
-type Order struct {
-	Name EventOrder
-	Pos  int
-}
 
 // Block struct
 type Block struct {
-	ID              uint64
-	BlockNumber     uint64
-	BlockHash       common.Hash
-	ParentHash      common.Hash
-	NetworkID       uint
-	Batches         []Batch
-	Deposits        []Deposit
-	GlobalExitRoots []GlobalExitRoot
-	Claims          []Claim
-	Tokens          []TokenWrapped
+	ID                    uint64
+	BlockNumber           uint64
+	BlockHash             common.Hash
+	ParentHash            common.Hash
+	NetworkID             uint
+	GlobalExitRoots       []GlobalExitRoot
+	ForcedBatches         []ForcedBatch
+	SequencedBatches      [][]SequencedBatch
+	VerifiedBatches       []VerifiedBatch
+	SequencedForceBatches []SequencedForceBatch
+	Deposits              []Deposit
+	Claims                []Claim
+	Tokens                []TokenWrapped
+	ReceivedAt            time.Time
+}
 
-	ReceivedAt time.Time
+// GlobalExitRoot struct
+type GlobalExitRoot struct {
+	BlockID           uint64
+	BlockNumber       uint64
+	GlobalExitRootNum *big.Int
+	ExitRoots         []common.Hash
+	GlobalExitRoot    common.Hash
+}
+
+// SequencedBatch represents virtual batches
+type SequencedBatch struct {
+	BatchNumber uint64
+	Sequencer   common.Address
+	TxHash      common.Hash
+	proofofefficiency.ProofOfEfficiencyBatchData
+}
+
+// ForcedBatch represents a ForcedBatch
+type ForcedBatch struct {
+	BlockID           uint64
+	BlockNumber       uint64
+	BatchNumber       *uint64
+	ForcedBatchNumber uint64
+	Sequencer         common.Address
+	GlobalExitRoot    common.Hash
+	RawTxsData        []byte
+	ForcedAt          time.Time
+}
+
+// SequencedForceBatch is a sturct to track the ForceSequencedBatches event.
+type SequencedForceBatch struct {
+	LastBatchSequenced uint64
+	ForceBatchNumber   uint64
+	Sequencer          common.Address
+	TxHash             common.Hash
 }
 
 // Deposit struct
@@ -58,15 +75,7 @@ type Deposit struct {
 	BlockNumber        uint64
 	NetworkID          uint
 	TxHash             common.Hash
-}
-
-// GlobalExitRoot struct
-type GlobalExitRoot struct {
-	BlockID             uint64
-	BlockNumber         uint64
-	GlobalExitRootNum   *big.Int
-	GlobalExitRootL2Num *big.Int
-	ExitRoots           []common.Hash
+	Metadata           []byte
 }
 
 // Claim struct
@@ -92,19 +101,29 @@ type TokenWrapped struct {
 	NetworkID            uint
 }
 
-// Batch represents a batch
+// Batch struct
 type Batch struct {
-	BlockID            uint64
-	BlockNumber        uint64
-	BatchNumber        uint64
-	NetworkID          uint
-	Sequencer          common.Address
-	Aggregator         common.Address
-	ConsolidatedTxHash common.Hash
-	ChainID            *big.Int
-	GlobalExitRoot     common.Hash
-	Uncles             []*types.Header
-	TxHash             common.Hash
-	ReceivedAt         time.Time
-	ConsolidatedAt     *time.Time
+	BatchNumber    uint64
+	Coinbase       common.Address
+	BatchL2Data    []byte
+	Timestamp      time.Time
+	GlobalExitRoot common.Hash
+}
+
+// VerifiedBatch represents a VerifiedBatch
+type VerifiedBatch struct {
+	BatchNumber uint64
+	BlockID     uint64
+	BlockNumber uint64
+	Aggregator  common.Address
+	TxHash      common.Hash
+}
+
+// VirtualBatch represents a VirtualBatch
+type VirtualBatch struct {
+	BatchNumber uint64
+	BlockID     uint64
+	BlockNumber uint64
+	TxHash      common.Hash
+	Sequencer   common.Address
 }
