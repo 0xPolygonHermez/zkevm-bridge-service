@@ -12,7 +12,8 @@ var zeroHashes [][KeyLen]byte
 // MerkleTree struct
 type MerkleTree struct {
 	// store is the database storage to store all node data
-	store merkleTreeStore
+	store   merkleTreeStore
+	network uint8
 	// height is the depth of the merkle tree
 	height uint8
 	// count is the number of deposit
@@ -26,8 +27,8 @@ func init() {
 }
 
 // NewMerkleTree creates new MerkleTree.
-func NewMerkleTree(ctx context.Context, store merkleTreeStore, height uint8) (*MerkleTree, error) {
-	depositCnt, err := store.GetLastDepositCount(ctx, nil)
+func NewMerkleTree(ctx context.Context, store merkleTreeStore, height, network uint8) (*MerkleTree, error) {
+	depositCnt, err := store.GetLastDepositCount(ctx, network, nil)
 	if err != nil {
 		if err == gerror.ErrStorageNotFound {
 			for h := uint8(0); h < height; h++ {
@@ -36,7 +37,7 @@ func NewMerkleTree(ctx context.Context, store merkleTreeStore, height uint8) (*M
 					return nil, err
 				}
 			}
-			err1 := store.SetRoot(ctx, zeroHashes[height][:], 0, nil)
+			err1 := store.SetRoot(ctx, zeroHashes[height][:], 0, network, nil)
 			if err1 != nil {
 				return nil, err
 			}
@@ -46,17 +47,18 @@ func NewMerkleTree(ctx context.Context, store merkleTreeStore, height uint8) (*M
 	}
 
 	var mtRoot [KeyLen]byte
-	root, err := store.GetRoot(ctx, depositCnt, nil)
+	root, err := store.GetRoot(ctx, depositCnt, network, nil)
 	if err != nil {
 		return nil, err
 	}
 	copy(mtRoot[:], root)
 
 	return &MerkleTree{
-		store:  store,
-		height: height,
-		count:  depositCnt,
-		root:   mtRoot,
+		store:   store,
+		network: network,
+		height:  height,
+		count:   depositCnt,
+		root:    mtRoot,
 	}, nil
 }
 
@@ -127,18 +129,18 @@ func (mt *MerkleTree) addLeaf(ctx context.Context, leaf [KeyLen]byte) error {
 	// Set the root value
 	mt.root = cur
 	mt.count++
-	err = mt.store.SetRoot(ctx, cur[:], mt.count, nil)
+	err = mt.store.SetRoot(ctx, cur[:], mt.count, mt.network, nil)
 	return err
 }
 
 func (mt *MerkleTree) resetLeaf(ctx context.Context, depositCount uint) error {
-	err := mt.store.ResetMT(ctx, depositCount, nil)
+	err := mt.store.ResetMT(ctx, depositCount, mt.network, nil)
 	if err != nil {
 		return err
 	}
 
 	mt.count = depositCount
-	root, err := mt.store.GetRoot(ctx, depositCount, nil)
+	root, err := mt.store.GetRoot(ctx, depositCount, mt.network, nil)
 	if err != nil {
 		return err
 	}

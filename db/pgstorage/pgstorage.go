@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/utils/gerror"
@@ -11,6 +12,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/jackc/pgx/v4"
 	"github.com/jackc/pgx/v4/pgxpool"
+	"github.com/lib/pq"
 )
 
 // PostgresStorage implements the Storage interface.
@@ -111,7 +113,7 @@ func (p *PostgresStorage) GetBatchByNumber(ctx context.Context, batchNumber uint
 // AddBlock adds a new block to the storage.
 func (p *PostgresStorage) AddBlock(ctx context.Context, block *etherman.Block, dbTx pgx.Tx) (uint64, error) {
 	var blockID uint64
-	const addBlockSQL = "INSERT INTO sync.block (block_num, block_hash, parent_hash, network_id, received_at) VALUES ($1, $2, $3, $4, $5) RETURNING id;"
+	const addBlockSQL = "INSERT INTO syncv2.block (block_num, block_hash, parent_hash, network_id, received_at) VALUES ($1, $2, $3, $4, $5) RETURNING id;"
 	e := p.getExecQuerier(dbTx)
 	err := e.QueryRow(ctx, addBlockSQL, block.BlockNumber, block.BlockHash, block.ParentHash, block.NetworkID, block.ReceivedAt).Scan(&blockID)
 
@@ -138,28 +140,10 @@ func (p *PostgresStorage) AddVerifiedBatch(ctx context.Context, verifiedBatch *e
 
 // AddGlobalExitRoot adds a new ExitRoot to the db.
 func (p *PostgresStorage) AddGlobalExitRoot(ctx context.Context, exitRoot *etherman.GlobalExitRoot, dbTx pgx.Tx) error {
-	const addExitRootSQL = "INSERT INTO syncv2.exit_root (block_id, global_exit_root_num, global_exit_root, mainnet_deposit_cnt, rollup_deposit_cnt) VALUES ($1, $2, $3, $4, $5)"
-	mainnetDepositCount, err := p.GetDepositCountByExitRoot(ctx, exitRoot.ExitRoots[0][:], 0, dbTx)
-	if err != nil {
-		return err
-	}
-	rollupDepositCount, err := p.GetDepositCountByExitRoot(ctx, exitRoot.ExitRoots[1][:], 1, dbTx)
-	if err != nil {
-		return err
-	}
-
+	const addExitRootSQL = "INSERT INTO syncv2.exit_root (block_id, global_exit_root_num, global_exit_root, exit_roots) VALUES ($1, $2, $3, $4)"
 	e := p.getExecQuerier(dbTx)
-	_, err = e.Exec(ctx, addExitRootSQL, exitRoot.BlockID, exitRoot.GlobalExitRootNum.String(), exitRoot.GlobalExitRoot, mainnetDepositCount, rollupDepositCount)
+	_, err := e.Exec(ctx, addExitRootSQL, exitRoot.BlockID, exitRoot.GlobalExitRootNum.String(), exitRoot.GlobalExitRoot, pq.Array(exitRoot.ExitRoots))
 	return err
-}
-
-// GetDepositCountByExitRoot gets the related deposit id by the exit root.
-func (p *PostgresStorage) GetDepositCountByExitRoot(ctx context.Context, exitRoot []byte, networkID uint, dbTx pgx.Tx) (uint64, error) {
-	var depositID uint64
-	const getDepositCountSQL = "SELECT deposit_cnt FROM mtv2.root WHERE root = $1 AND network = $2 ORDER BY deposit_cnt DESC LIMIT 1"
-	e := p.getExecQuerier(dbTx)
-	err := e.QueryRow(ctx, getDepositCountSQL, exitRoot, networkID).Scan(&depositID)
-	return depositID, err
 }
 
 // AddDeposit adds new deposit to the storage.
@@ -313,39 +297,75 @@ func (p *PostgresStorage) GetTokenWrapped(ctx context.Context, originalNetwork u
 
 // GetDepositCountByRoot gets the deposit count by the root.
 func (p *PostgresStorage) GetDepositCountByRoot(ctx context.Context, root []byte, network uint8, dbTx pgx.Tx) (uint, error) {
-	return 0, nil
+	var depositCount uint
+	const getDepositCountByRootSQL = "SELECT deposit_cnt FROM mtv2.root WHERE root = $1 AND network = $2"
+	err := p.getExecQuerier(dbTx).QueryRow(ctx, getDepositCountByRootSQL, root, network).Scan(&depositCount)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return 0, gerror.ErrStorageNotFound
+	}
+	return depositCount, nil
 }
 
 // GetRoot gets root by the deposit count from the merkle tree.
-func (p *PostgresStorage) GetRoot(ctx context.Context, depositCnt uint, dbTx pgx.Tx) ([]byte, error) {
-	return nil, nil
+func (p *PostgresStorage) GetRoot(ctx context.Context, depositCnt uint, network uint8, dbTx pgx.Tx) ([]byte, error) {
+	var root []byte
+	const getRootByDepositCntSQL = "SELECT root FROM mtv2.root WHERE deposit_cnt = $1 AND network = $2"
+	err := p.getExecQuerier(dbTx).QueryRow(ctx, getRootByDepositCntSQL, depositCnt, network).Scan(&root)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, gerror.ErrStorageNotFound
+	}
+	return root, err
 }
 
 // SetRoot store the root with deposit count to the storage.
-func (p *PostgresStorage) SetRoot(ctx context.Context, root []byte, depositCnt uint, dbTx pgx.Tx) error {
-	return nil
+func (p *PostgresStorage) SetRoot(ctx context.Context, root []byte, depositCnt uint, network uint8, dbTx pgx.Tx) error {
+	const setRootSQL = "INSERT INTO mtv2.root (root, deposit_cnt, network) VALUES ($1, $2, $3)"
+	_, err := p.getExecQuerier(dbTx).Exec(ctx, setRootSQL, root, depositCnt, network)
+	return err
 }
 
 // Get gets value of key from the merkle tree.
 func (p *PostgresStorage) Get(ctx context.Context, key []byte, dbTx pgx.Tx) ([][]byte, error) {
-	return nil, nil
+	const getValueByKeySQL = "SELECT value FROM mtv2.rht WHERE key = $1"
+	var data [][]byte
+	err := p.getExecQuerier(dbTx).QueryRow(ctx, getValueByKeySQL, key).Scan(pq.Array(&data))
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, gerror.ErrStorageNotFound
+	}
+	return data, err
 }
 
 // Set inserts a key-value pair into the db.
 // If record with such a key already exists its assumed that the value is correct,
 // because it's a reverse hash table, and the key is a hash of the value
 func (p *PostgresStorage) Set(ctx context.Context, key []byte, value [][]byte, dbTx pgx.Tx) error {
-	return nil
+	const setNodeSQL = "INSERT INTO mtv2.rht (key, value) VALUES ($1, $2)"
+	_, err := p.getExecQuerier(dbTx).Exec(ctx, setNodeSQL, key, pq.Array(value))
+	if err != nil && strings.Contains(err.Error(), "duplicate key value violates unique constraint") {
+		return nil
+	}
+	return err
 }
 
 // GetLastDepositCount gets the last deposit count from the merkle tree.
-func (p *PostgresStorage) GetLastDepositCount(ctx context.Context, dbTx pgx.Tx) (uint, error) {
-	return 0, nil
+func (p *PostgresStorage) GetLastDepositCount(ctx context.Context, network uint8, dbTx pgx.Tx) (uint, error) {
+	var depositCnt int64
+	const getLastDepositCountSQL = "SELECT coalesce(MAX(deposit_cnt), -1) FROM mtv2.root WHERE network = $1"
+	err := p.getExecQuerier(dbTx).QueryRow(ctx, getLastDepositCountSQL, network).Scan(&depositCnt)
+	if err != nil {
+		return 0, nil
+	}
+	if depositCnt < 0 {
+		return 0, gerror.ErrStorageNotFound
+	}
+	return uint(depositCnt), nil
 }
 
 // ResetMT resets nodes of the Merkle Tree.
-func (p *PostgresStorage) ResetMT(ctx context.Context, depositCnt uint, dbTx pgx.Tx) error {
-	return nil
+func (p *PostgresStorage) ResetMT(ctx context.Context, depositCnt uint, network uint8, dbTx pgx.Tx) error {
+	const resetRootSQL = "DELETE FROM mtv2.root WHERE network = $1 AND deposit_cnt > $2"
+	_, err := p.getExecQuerier(dbTx).Exec(ctx, resetRootSQL, network, depositCnt)
+	return err
 }
 
 // GetClaimCount gets the claim count for the destination address.

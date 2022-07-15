@@ -35,9 +35,8 @@ func NewBridgeController(cfg Config, networks []uint, storage bridgeStorage, sto
 	)
 
 	for i, network := range networks {
-		networkIDs[network] = uint8(i + 1)
-		ctx := context.WithValue(context.TODO(), contextKeyNetwork, uint8(i+1)) //nolint
-		mt, err := NewMerkleTree(ctx, store, cfg.Height)
+		networkIDs[network] = uint8(i)
+		mt, err := NewMerkleTree(context.TODO(), store, cfg.Height, uint8(i))
 		if err != nil {
 			return nil, err
 		}
@@ -53,22 +52,18 @@ func NewBridgeController(cfg Config, networks []uint, storage bridgeStorage, sto
 
 // AddDeposit adds deposit information to the bridge tree.
 func (bt *BridgeController) AddDeposit(deposit *etherman.Deposit) error {
-	var ctx context.Context
-
 	leaf := hashDeposit(deposit)
 
 	tID, found := bt.networkIDs[deposit.NetworkID]
 	if !found {
 		return gerror.ErrNetworkNotRegister
 	}
-	ctx = context.WithValue(context.TODO(), contextKeyNetwork, tID) //nolint
-	return bt.exitTrees[tID-1].addLeaf(ctx, leaf)
+	return bt.exitTrees[tID].addLeaf(context.TODO(), leaf)
 }
 
 // GetClaim returns claim information to the user.
 func (bt *BridgeController) GetClaim(networkID uint, index uint) ([][KeyLen]byte, *etherman.GlobalExitRoot, error) {
 	var (
-		ctx            context.Context
 		proof          [][KeyLen]byte
 		globalExitRoot *etherman.GlobalExitRoot
 		err            error
@@ -78,18 +73,17 @@ func (bt *BridgeController) GetClaim(networkID uint, index uint) ([][KeyLen]byte
 	if !found {
 		return proof, nil, gerror.ErrNetworkNotRegister
 	}
-	ctx = context.WithValue(context.TODO(), contextKeyNetwork, tID) //nolint
-	tID--
+	ctx := context.TODO()
 	if networkID == MainNetworkID {
-		globalExitRoot, err = bt.storage.GetLatestL1SyncedExitRoot(context.TODO(), nil)
+		globalExitRoot, err = bt.storage.GetLatestL1SyncedExitRoot(ctx, nil)
 	} else {
-		globalExitRoot, err = bt.storage.GetLatestL2SyncedExitRoot(context.TODO(), nil)
+		globalExitRoot, err = bt.storage.GetLatestL2SyncedExitRoot(ctx, nil)
 	}
 
 	if err != nil {
 		return proof, nil, err
 	}
-	depositCnt, err := bt.storage.GetDepositCountByRoot(ctx, globalExitRoot.ExitRoots[tID][:], tID+1, nil)
+	depositCnt, err := bt.storage.GetDepositCountByRoot(ctx, globalExitRoot.ExitRoots[tID][:], tID, nil)
 	if err != nil {
 		return proof, nil, err
 	}
@@ -107,19 +101,17 @@ func (bt *BridgeController) GetClaim(networkID uint, index uint) ([][KeyLen]byte
 
 // ReorgMT reorg the specific merkle tree.
 func (bt *BridgeController) ReorgMT(depositCount uint, networkID uint) error {
-	var ctx context.Context
 	tID, found := bt.networkIDs[networkID]
 	if !found {
 		return gerror.ErrNetworkNotRegister
 	}
-	ctx = context.WithValue(context.TODO(), contextKeyNetwork, tID) //nolint
-	return bt.exitTrees[tID-1].resetLeaf(ctx, depositCount)
+	return bt.exitTrees[tID].resetLeaf(context.TODO(), depositCount)
 }
 
 // CheckExitRoot checks if each exitRoot is synchronized exactly
 func (bt *BridgeController) CheckExitRoot(globalExitRoot etherman.GlobalExitRoot) error {
 	for i, exitRoot := range globalExitRoot.ExitRoots {
-		_, err := bt.storage.GetDepositCountByRoot(context.TODO(), exitRoot[:], uint8(i+1), nil)
+		_, err := bt.storage.GetDepositCountByRoot(context.TODO(), exitRoot[:], uint8(i), nil)
 		if err != nil {
 			return err
 		}
