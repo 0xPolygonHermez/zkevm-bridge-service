@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math/big"
 	"strings"
 
 	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman"
@@ -142,7 +143,7 @@ func (p *PostgresStorage) AddVerifiedBatch(ctx context.Context, verifiedBatch *e
 func (p *PostgresStorage) AddGlobalExitRoot(ctx context.Context, exitRoot *etherman.GlobalExitRoot, dbTx pgx.Tx) error {
 	const addExitRootSQL = "INSERT INTO syncv2.exit_root (block_id, global_exit_root_num, global_exit_root, exit_roots) VALUES ($1, $2, $3, $4)"
 	e := p.getExecQuerier(dbTx)
-	_, err := e.Exec(ctx, addExitRootSQL, exitRoot.BlockID, exitRoot.GlobalExitRootNum.String(), exitRoot.GlobalExitRoot, pq.Array(exitRoot.ExitRoots))
+	_, err := e.Exec(ctx, addExitRootSQL, exitRoot.BlockID, exitRoot.GlobalExitRootNum.String(), exitRoot.GlobalExitRoot, pq.Array([][]byte{exitRoot.ExitRoots[0][:], exitRoot.ExitRoots[1][:]}))
 	return err
 }
 
@@ -282,12 +283,34 @@ func (p *PostgresStorage) GetLatestExitRoot(ctx context.Context, dbTx pgx.Tx) (*
 
 // GetLatestL1SyncedExitRoot gets the latest L1 synced global exit root.
 func (p *PostgresStorage) GetLatestL1SyncedExitRoot(ctx context.Context, dbTx pgx.Tx) (*etherman.GlobalExitRoot, error) {
-	return nil, nil
+	var (
+		ger         etherman.GlobalExitRoot
+		exitRootNum int64
+		exitRoots   [][]byte
+	)
+	const getLatestL1SyncedExitRootSQL = "SELECT block_id, global_exit_root_num, global_exit_root, exit_roots FROM syncv2.exit_root ORDER BY global_exit_root_num DESC LIMIT 1"
+	err := p.getExecQuerier(dbTx).QueryRow(ctx, getLatestL1SyncedExitRootSQL).Scan(&ger.BlockID, &exitRootNum, &ger.GlobalExitRoot, pq.Array(&exitRoots))
+	if err != nil {
+		return nil, err
+	}
+	ger.GlobalExitRootNum = big.NewInt(exitRootNum)
+	ger.ExitRoots = []common.Hash{common.BytesToHash(exitRoots[0]), common.BytesToHash(exitRoots[1])}
+	return &ger, nil
 }
 
 // GetLatestL2SyncedExitRoot gets the latest L2 synced global exit root.
 func (p *PostgresStorage) GetLatestL2SyncedExitRoot(ctx context.Context, dbTx pgx.Tx) (*etherman.GlobalExitRoot, error) {
-	return nil, nil
+	var (
+		ger       etherman.GlobalExitRoot
+		exitRoots [][]byte
+	)
+	const getLatestL2SyncedExitRootSQL = "SELECT block_id, global_exit_root, exit_roots FROM syncv2.exit_root WHERE global_exit_root_num IS NULL ORDER BY block_id DESC LIMIT 1"
+	err := p.getExecQuerier(dbTx).QueryRow(ctx, getLatestL2SyncedExitRootSQL).Scan(&ger.BlockID, &ger.GlobalExitRoot, pq.Array(&exitRoots))
+	if err != nil {
+		return nil, err
+	}
+	ger.ExitRoots = []common.Hash{common.BytesToHash(exitRoots[0]), common.BytesToHash(exitRoots[1])}
+	return &ger, nil
 }
 
 // GetTokenWrapped gets a specific wrapped token.

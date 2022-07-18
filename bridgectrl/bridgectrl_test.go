@@ -13,7 +13,6 @@ import (
 	"github.com/0xPolygonHermez/zkevm-bridge-service/db/pgstorage"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/test/vectors"
-	"github.com/0xPolygonHermez/zkevm-bridge-service/utils/gerror"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -103,8 +102,9 @@ func TestBridgeTree(t *testing.T) {
 		}
 
 		for i, testVector := range testVectors {
-			_, _, err := bt.GetClaim(testVector.OriginalNetwork, uint(i+1))
-			require.EqualError(t, err, gerror.ErrStorageNotFound.Error())
+			proof, _, err := bt.GetClaim(testVector.OriginalNetwork, uint(i+1))
+			require.NoError(t, err)
+			require.Equal(t, len(proof), 32)
 		}
 	})
 }
