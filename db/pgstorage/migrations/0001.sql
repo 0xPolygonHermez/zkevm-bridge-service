@@ -23,8 +23,7 @@ CREATE TABLE syncv2.exit_root
     block_id                BIGINT NOT NULL REFERENCES syncv2.block (id) ON DELETE CASCADE,
     global_exit_root_num    BIGINT,
     global_exit_root        BYTEA,
-    mainnet_deposit_cnt     BIGINT,
-    rollup_deposit_cnt      BIGINT
+    exit_roots              BYTEA[]
 );
 
 CREATE TABLE syncv2.batch

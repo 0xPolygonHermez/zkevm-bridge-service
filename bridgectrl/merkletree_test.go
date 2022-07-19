@@ -45,7 +45,7 @@ func formatBytes32String(text string) ([KeyLen]byte, error) {
 }
 
 func TestLeafHash(t *testing.T) {
-	data, err := os.ReadFile("test/vectors/src/mt-bridge-v2/leaf-vectors.json")
+	data, err := os.ReadFile("test/vectors/src/mt-bridge/leaf-vectors.json")
 	require.NoError(t, err)
 
 	var leafVectors []vectors.DepositVectorRaw
@@ -74,7 +74,7 @@ func TestLeafHash(t *testing.T) {
 }
 
 func TestMTAddLeaf(t *testing.T) {
-	data, err := os.ReadFile("test/vectors/src/mt-bridge-v2/root-vectors.json")
+	data, err := os.ReadFile("test/vectors/src/mt-bridge/root-vectors.json")
 	require.NoError(t, err)
 
 	var mtTestVectors []vectors.MTRootVectorRaw
@@ -93,7 +93,7 @@ func TestMTAddLeaf(t *testing.T) {
 			store, err := pgstorage.NewPostgresStorage(dbCfg, 0)
 			require.NoError(t, err)
 
-			mt, err := NewMerkleTree(ctx, store, uint8(32))
+			mt, err := NewMerkleTree(ctx, store, uint8(32), uint8(0))
 			require.NoError(t, err)
 
 			for _, leaf := range testVector.ExistingLeaves {
@@ -129,7 +129,7 @@ func TestMTAddLeaf(t *testing.T) {
 }
 
 func TestMTGetProof(t *testing.T) {
-	data, err := os.ReadFile("test/vectors/src/mt-bridge-v2/claim-vectors.json")
+	data, err := os.ReadFile("test/vectors/src/mt-bridge/claim-vectors.json")
 	require.NoError(t, err)
 
 	var mtTestVectors []vectors.MTClaimVectorRaw
@@ -148,7 +148,7 @@ func TestMTGetProof(t *testing.T) {
 			store, err := pgstorage.NewPostgresStorage(dbCfg, 0)
 			require.NoError(t, err)
 
-			mt, err := NewMerkleTree(ctx, store, uint8(32))
+			mt, err := NewMerkleTree(ctx, store, uint8(32), uint8(0))
 			require.NoError(t, err)
 
 			for li, leaf := range testVector.Deposits {

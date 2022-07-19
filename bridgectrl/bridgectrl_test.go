@@ -13,7 +13,6 @@ import (
 	"github.com/0xPolygonHermez/zkevm-bridge-service/db/pgstorage"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/test/vectors"
-	"github.com/0xPolygonHermez/zkevm-bridge-service/utils/gerror"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -51,22 +50,19 @@ func TestBridgeTree(t *testing.T) {
 	require.NoError(t, err)
 
 	id, err := store.AddBlock(context.TODO(), &etherman.Block{
-		BlockNumber:     0,
-		BlockHash:       common.HexToHash("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9fc"),
-		ParentHash:      common.Hash{},
-		Deposits:        []etherman.Deposit{},
-		GlobalExitRoots: []etherman.GlobalExitRoot{},
-		Claims:          []etherman.Claim{},
-		Tokens:          []etherman.TokenWrapped{},
+		BlockNumber: 0,
+		BlockHash:   common.HexToHash("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9fc"),
+		ParentHash:  common.Hash{},
 	}, nil)
 	require.NoError(t, err)
 
 	bt, err := NewBridgeController(cfg, []uint{0, 1000}, store, store)
 	require.NoError(t, err)
 
+	ctx := context.TODO()
 	t.Run("Test adding deposit for the bridge tree", func(t *testing.T) {
 		for i, testVector := range testVectors {
-			amount, _ := new(big.Int).SetString(testVector.Amount, 10)
+			amount, _ := new(big.Int).SetString(testVector.Amount, 0)
 			deposit := &etherman.Deposit{
 				OriginalNetwork:    testVector.OriginalNetwork,
 				TokenAddress:       common.HexToAddress(testVector.TokenAddress),
@@ -75,6 +71,7 @@ func TestBridgeTree(t *testing.T) {
 				DestinationAddress: common.HexToAddress(testVector.DestinationAddress),
 				BlockNumber:        0,
 				DepositCount:       uint(i + 1),
+				Metadata:           common.FromHex(testVector.Metadata),
 			}
 			leafHash := hashDeposit(deposit)
 			assert.Equal(t, testVector.ExpectedHash, hex.EncodeToString(leafHash[:]))
@@ -83,14 +80,14 @@ func TestBridgeTree(t *testing.T) {
 			require.NoError(t, err)
 
 			// test reorg
-			ctx := context.WithValue(context.TODO(), contextKeyNetwork, uint8(1)) //nolint
-			orgRoot, err := bt.exitTrees[0].store.GetRoot(ctx, uint(i+1), nil)
+
+			orgRoot, err := bt.exitTrees[0].store.GetRoot(ctx, uint(i+1), 0, nil)
 			require.NoError(t, err)
 			err = bt.ReorgMT(uint(i), testVectors[i].OriginalNetwork)
 			require.NoError(t, err)
 			err = bt.AddDeposit(deposit)
 			require.NoError(t, err)
-			newRoot, err := bt.exitTrees[0].store.GetRoot(ctx, uint(i+1), nil)
+			newRoot, err := bt.exitTrees[0].store.GetRoot(ctx, uint(i+1), 0, nil)
 			require.NoError(t, err)
 			assert.Equal(t, orgRoot, newRoot)
 
@@ -105,8 +102,9 @@ func TestBridgeTree(t *testing.T) {
 		}
 
 		for i, testVector := range testVectors {
-			_, _, err := bt.GetClaim(testVector.OriginalNetwork, uint(i+1))
-			require.EqualError(t, err, gerror.ErrStorageNotFound.Error())
+			proof, _, err := bt.GetClaim(testVector.OriginalNetwork, uint(i+1))
+			require.NoError(t, err)
+			require.Equal(t, len(proof), 32)
 		}
 	})
 }
