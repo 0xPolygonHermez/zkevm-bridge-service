@@ -274,7 +274,7 @@ func (p *PostgresStorage) GetClaim(ctx context.Context, depositCounterUser uint,
 	)
 	const getClaimSQL = "SELECT index, orig_net, token_addr, amount, dest_addr, block_id, network_id, tx_hash FROM syncv2.claim WHERE index = $1 AND network_id = $2"
 	err := p.getExecQuerier(dbTx).QueryRow(ctx, getClaimSQL, depositCounterUser, networkID).Scan(&claim.Index, &claim.OriginalNetwork, &claim.Token, &amount, &claim.DestinationAddress, &claim.BlockID, &claim.NetworkID, &claim.TxHash)
-	claim.Amount, _ = new(big.Int).SetString(amount, 10)
+	claim.Amount, _ = new(big.Int).SetString(amount, 10) //nolint:gomnd
 	return &claim, err
 }
 
@@ -286,7 +286,7 @@ func (p *PostgresStorage) GetDeposit(ctx context.Context, depositCounterUser uin
 	)
 	const getDepositSQL = "SELECT orig_net, token_addr, amount, dest_net, dest_addr, deposit_cnt, block_id, network_id, tx_hash, metadata FROM syncv2.deposit WHERE network_id = $1 AND deposit_cnt = $2"
 	err := p.getExecQuerier(dbTx).QueryRow(ctx, getDepositSQL, networkID, depositCounterUser).Scan(&deposit.OriginalNetwork, &deposit.TokenAddress, &amount, &deposit.DestinationNetwork, &deposit.DestinationAddress, &deposit.DepositCount, &deposit.BlockID, &deposit.NetworkID, &deposit.TxHash, &deposit.Metadata)
-	deposit.Amount, _ = new(big.Int).SetString(amount, 10)
+	deposit.Amount, _ = new(big.Int).SetString(amount, 10) //nolint:gomnd
 	return &deposit, err
 }
 
@@ -435,7 +435,7 @@ func (p *PostgresStorage) GetClaims(ctx context.Context, destAddr string, limit 
 		if err != nil {
 			return nil, err
 		}
-		claim.Amount, _ = new(big.Int).SetString(amount, 10)
+		claim.Amount, _ = new(big.Int).SetString(amount, 10) //nolint:gomnd
 		claims = append(claims, &claim)
 	}
 	return claims, nil
@@ -460,7 +460,7 @@ func (p *PostgresStorage) GetDeposits(ctx context.Context, destAddr string, limi
 		if err != nil {
 			return nil, err
 		}
-		deposit.Amount, _ = new(big.Int).SetString(amount, 10)
+		deposit.Amount, _ = new(big.Int).SetString(amount, 10) //nolint:gomnd
 		deposits = append(deposits, &deposit)
 	}
 

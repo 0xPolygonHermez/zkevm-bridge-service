@@ -133,7 +133,7 @@ func MockBridgeCtrl(store *pgstorage.PostgresStorage) (*BridgeController, error)
 		WrappedTokenAddress:  common.HexToAddress("0xC2716D3537ECA4B318E60F3D7D6A48714F1F3335"),
 		BlockID:              1,
 		BlockNumber:          1,
-		NetworkID:            1000,
+		NetworkID:            1000, //nolint:gomnd
 	}, nil)
 	if err != nil {
 		return nil, err
