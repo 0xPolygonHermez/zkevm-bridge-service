@@ -38,4 +38,4 @@ jobs:
     - name: Test
       env:
         GITHUB_TOKEN: ${{ secrets.GIT_TOKEN }}
-      run: make test-full
+      run: make test
