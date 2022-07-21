@@ -159,7 +159,7 @@ func (p *PostgresStorage) AddDeposit(ctx context.Context, deposit *etherman.Depo
 func (p *PostgresStorage) AddClaim(ctx context.Context, claim *etherman.Claim, dbTx pgx.Tx) error {
 	const addClaimSQL = "INSERT INTO syncv2.claim (network_id, index, orig_net, token_addr, amount, dest_addr, block_id, tx_hash) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"
 	e := p.getExecQuerier(dbTx)
-	_, err := e.Exec(ctx, addClaimSQL, claim.NetworkID, claim.OriginalNetwork, claim.Token, claim.Amount.String(), claim.DestinationAddress, claim.BlockID, claim.TxHash)
+	_, err := e.Exec(ctx, addClaimSQL, claim.NetworkID, claim.Index, claim.OriginalNetwork, claim.Token, claim.Amount.String(), claim.DestinationAddress, claim.BlockID, claim.TxHash)
 	return err
 }
 
@@ -185,7 +185,7 @@ func (p *PostgresStorage) AddTokenWrapped(ctx context.Context, tokenWrapped *eth
 	}
 	const addTokenWrappedSQL = "INSERT INTO syncv2.token_wrapped (network_id, orig_net, orig_token_addr, wrapped_token_addr, block_id, name, symbol, decimals) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"
 	e := p.getExecQuerier(dbTx)
-	_, err = e.Exec(ctx, addTokenWrappedSQL, tokenWrapped.NetworkID, tokenWrapped.OriginalNetwork, tokenWrapped.OriginalTokenAddress, tokenWrapped.WrappedTokenAddress, tokenWrapped.BlockID, tokenMetadata.name, tokenMetadata.symbol, tokenMetadata.decimals)
+	_, err = e.Exec(ctx, addTokenWrappedSQL, tokenWrapped.NetworkID, tokenWrapped.OriginalNetwork, tokenWrapped.OriginalTokenAddress, tokenWrapped.WrappedTokenAddress, tokenWrapped.BlockID, tokenMetadata.Name, tokenMetadata.Symbol, tokenMetadata.Decimals)
 	return err
 }
 
@@ -268,17 +268,31 @@ func (p *PostgresStorage) ConsolidateBatch(ctx context.Context, batch *etherman.
 
 // GetClaim gets a specific claim from the storage.
 func (p *PostgresStorage) GetClaim(ctx context.Context, depositCounterUser uint, networkID uint, dbTx pgx.Tx) (*etherman.Claim, error) {
-	return nil, nil
+	var (
+		claim  etherman.Claim
+		amount string
+	)
+	const getClaimSQL = "SELECT index, orig_net, token_addr, amount, dest_addr, block_id, network_id, tx_hash FROM syncv2.claim WHERE index = $1 AND network_id = $2"
+	err := p.getExecQuerier(dbTx).QueryRow(ctx, getClaimSQL, depositCounterUser, networkID).Scan(&claim.Index, &claim.OriginalNetwork, &claim.Token, &amount, &claim.DestinationAddress, &claim.BlockID, &claim.NetworkID, &claim.TxHash)
+	claim.Amount, _ = new(big.Int).SetString(amount, 10) //nolint:gomnd
+	return &claim, err
 }
 
 // GetDeposit gets a specific deposit from the storage.
 func (p *PostgresStorage) GetDeposit(ctx context.Context, depositCounterUser uint, networkID uint, dbTx pgx.Tx) (*etherman.Deposit, error) {
-	return nil, nil
+	var (
+		deposit etherman.Deposit
+		amount  string
+	)
+	const getDepositSQL = "SELECT orig_net, token_addr, amount, dest_net, dest_addr, deposit_cnt, block_id, network_id, tx_hash, metadata FROM syncv2.deposit WHERE network_id = $1 AND deposit_cnt = $2"
+	err := p.getExecQuerier(dbTx).QueryRow(ctx, getDepositSQL, networkID, depositCounterUser).Scan(&deposit.OriginalNetwork, &deposit.TokenAddress, &amount, &deposit.DestinationNetwork, &deposit.DestinationAddress, &deposit.DepositCount, &deposit.BlockID, &deposit.NetworkID, &deposit.TxHash, &deposit.Metadata)
+	deposit.Amount, _ = new(big.Int).SetString(amount, 10) //nolint:gomnd
+	return &deposit, err
 }
 
 // GetLatestExitRoot gets the latest global exit root.
 func (p *PostgresStorage) GetLatestExitRoot(ctx context.Context, dbTx pgx.Tx) (*etherman.GlobalExitRoot, error) {
-	return nil, nil
+	return p.GetLatestL1SyncedExitRoot(ctx, dbTx)
 }
 
 // GetLatestL1SyncedExitRoot gets the latest L1 synced global exit root.
@@ -315,7 +329,11 @@ func (p *PostgresStorage) GetLatestL2SyncedExitRoot(ctx context.Context, dbTx pg
 
 // GetTokenWrapped gets a specific wrapped token.
 func (p *PostgresStorage) GetTokenWrapped(ctx context.Context, originalNetwork uint, originalTokenAddress common.Address, dbTx pgx.Tx) (*etherman.TokenWrapped, error) {
-	return nil, nil
+	const getWrappedTokenSQL = "SELECT network_id, orig_net, orig_token_addr, wrapped_token_addr, block_id, name, symbol, decimals FROM syncv2.token_wrapped WHERE orig_net = $1 AND orig_token_addr = $2"
+	var token etherman.TokenWrapped
+	err := p.getExecQuerier(dbTx).QueryRow(ctx, getWrappedTokenSQL, originalNetwork, originalTokenAddress).Scan(&token.NetworkID, &token.OriginalNetwork, &token.OriginalTokenAddress, &token.WrappedTokenAddress, &token.BlockID, &token.Name, &token.Symbol, &token.Decimals)
+
+	return &token, err
 }
 
 // GetDepositCountByRoot gets the deposit count by the root.
@@ -393,22 +411,68 @@ func (p *PostgresStorage) ResetMT(ctx context.Context, depositCnt uint, network 
 
 // GetClaimCount gets the claim count for the destination address.
 func (p *PostgresStorage) GetClaimCount(ctx context.Context, destAddr string, dbTx pgx.Tx) (uint64, error) {
-	return 0, nil
+	const getClaimCountSQL = "SELECT COUNT(*) FROM syncv2.claim WHERE dest_addr = $1"
+	var claimCount uint64
+	err := p.getExecQuerier(dbTx).QueryRow(ctx, getClaimCountSQL, common.FromHex(destAddr)).Scan(&claimCount)
+	return claimCount, err
 }
 
 // GetClaims gets the claim list which be smaller than index.
 func (p *PostgresStorage) GetClaims(ctx context.Context, destAddr string, limit uint, offset uint, dbTx pgx.Tx) ([]*etherman.Claim, error) {
-	return nil, nil
+	const getClaimsSQL = "SELECT index, orig_net, token_addr, amount, dest_addr, block_id, network_id, tx_hash FROM syncv2.claim WHERE dest_addr = $1 ORDER BY block_id DESC LIMIT $2 OFFSET $3"
+	rows, err := p.getExecQuerier(dbTx).Query(ctx, getClaimsSQL, common.FromHex(destAddr), limit, offset)
+	if err != nil {
+		return nil, err
+	}
+	claims := make([]*etherman.Claim, 0, len(rows.RawValues()))
+
+	for rows.Next() {
+		var (
+			claim  etherman.Claim
+			amount string
+		)
+		err = rows.Scan(&claim.Index, &claim.OriginalNetwork, &claim.Token, &amount, &claim.DestinationAddress, &claim.BlockID, &claim.NetworkID, &claim.TxHash)
+		if err != nil {
+			return nil, err
+		}
+		claim.Amount, _ = new(big.Int).SetString(amount, 10) //nolint:gomnd
+		claims = append(claims, &claim)
+	}
+	return claims, nil
 }
 
 // GetDeposits gets the deposit list which be smaller than depositCount.
 func (p *PostgresStorage) GetDeposits(ctx context.Context, destAddr string, limit uint, offset uint, dbTx pgx.Tx) ([]*etherman.Deposit, error) {
-	return nil, nil
+	const getDepositsSQL = "SELECT orig_net, token_addr, amount, dest_net, dest_addr, deposit_cnt, block_id, network_id, tx_hash, metadata FROM syncv2.deposit WHERE dest_addr = $1 ORDER BY block_id DESC LIMIT $2 OFFSET $3"
+	rows, err := p.getExecQuerier(dbTx).Query(ctx, getDepositsSQL, common.FromHex(destAddr), limit, offset)
+	if err != nil {
+		return nil, err
+	}
+
+	deposits := make([]*etherman.Deposit, 0, len(rows.RawValues()))
+
+	for rows.Next() {
+		var (
+			deposit etherman.Deposit
+			amount  string
+		)
+		err = rows.Scan(&deposit.OriginalNetwork, &deposit.TokenAddress, &amount, &deposit.DestinationNetwork, &deposit.DestinationAddress, &deposit.DepositCount, &deposit.BlockID, &deposit.NetworkID, &deposit.TxHash, &deposit.Metadata)
+		if err != nil {
+			return nil, err
+		}
+		deposit.Amount, _ = new(big.Int).SetString(amount, 10) //nolint:gomnd
+		deposits = append(deposits, &deposit)
+	}
+
+	return deposits, nil
 }
 
 // GetDepositCount gets the deposit count for the destination address.
 func (p *PostgresStorage) GetDepositCount(ctx context.Context, destAddr string, dbTx pgx.Tx) (uint64, error) {
-	return 0, nil
+	const getDepositCountSQL = "SELECT COUNT(*) FROM syncv2.deposit WHERE dest_addr = $1"
+	var depositCount uint64
+	err := p.getExecQuerier(dbTx).QueryRow(ctx, getDepositCountSQL, common.FromHex(destAddr)).Scan(&depositCount)
+	return depositCount, err
 }
 
 // GetLastBatchState returns the lates verified batch number.

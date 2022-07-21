@@ -60,13 +60,9 @@ func MockBridgeCtrl(store *pgstorage.PostgresStorage) (*BridgeController, error)
 
 	for i, testBlockVector := range testBlockVectors {
 		id, err := store.AddBlock(context.TODO(), &etherman.Block{
-			BlockNumber:     testBlockVector.BlockNumber,
-			BlockHash:       common.HexToHash(testBlockVector.BlockHash),
-			ParentHash:      common.HexToHash(testBlockVector.ParentHash),
-			Deposits:        []etherman.Deposit{},
-			GlobalExitRoots: []etherman.GlobalExitRoot{},
-			Claims:          []etherman.Claim{},
-			Tokens:          []etherman.TokenWrapped{},
+			BlockNumber: testBlockVector.BlockNumber,
+			BlockHash:   common.HexToHash(testBlockVector.BlockHash),
+			ParentHash:  common.HexToHash(testBlockVector.ParentHash),
 		}, nil)
 		if err != nil {
 			return nil, err
@@ -95,6 +91,7 @@ func MockBridgeCtrl(store *pgstorage.PostgresStorage) (*BridgeController, error)
 			BlockID:            id,
 			NetworkID:          testDepositVectors[i].OriginalNetwork,
 			BlockNumber:        0,
+			Metadata:           common.FromHex(testDepositVectors[i].Metadata),
 		}
 		err = store.AddDeposit(context.TODO(), deposit, nil)
 		if err != nil {
@@ -131,12 +128,12 @@ func MockBridgeCtrl(store *pgstorage.PostgresStorage) (*BridgeController, error)
 		}
 	}
 	err = store.AddTokenWrapped(context.TODO(), &etherman.TokenWrapped{
-		OriginalNetwork:      1,
-		OriginalTokenAddress: common.HexToAddress("0x0EF3B0BC8D6313AB7DC03CF7225C872071BE1E6D"),
+		OriginalNetwork:      0,
+		OriginalTokenAddress: common.HexToAddress("0x617b3a3528F9cDd6630fd3301B9c8911F7Bf063D"),
 		WrappedTokenAddress:  common.HexToAddress("0xC2716D3537ECA4B318E60F3D7D6A48714F1F3335"),
 		BlockID:              1,
 		BlockNumber:          1,
-		NetworkID:            0,
+		NetworkID:            1000, //nolint:gomnd
 	}, nil)
 	if err != nil {
 		return nil, err
