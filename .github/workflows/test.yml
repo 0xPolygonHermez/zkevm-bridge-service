@@ -26,11 +26,6 @@ jobs:
         go-version: ${{ matrix.go-version }}
       env:
         GOARCH: ${{ matrix.goarch }}
-    - name: Inject github insteadOf configuration
-      env:
-        GITHUB_TOKEN: ${{ secrets.GIT_TOKEN }}
-      run: |
-        git config --global url."https://${GITHUB_TOKEN}:x-oauth-basic@github.com/".insteadOf "https://github.com/"
     - name: download dependencies
       run: go mod vendor
     - name: Login to DockerHub
@@ -39,8 +34,6 @@ jobs:
         username: ${{ secrets.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_TOKEN }}
     - name: Test
-      env:
-        GITHUB_TOKEN: ${{ secrets.GIT_TOKEN }}
       run: make test
   from-fork-test:
     if:
@@ -63,11 +56,6 @@ jobs:
         go-version: ${{ matrix.go-version }}
       env:
         GOARCH: ${{ matrix.goarch }}
-    - name: Inject github insteadOf configuration
-      env:
-        GITHUB_TOKEN: ${{ secrets.GIT_TOKEN }}
-      run: |
-        git config --global url."https://${GITHUB_TOKEN}:x-oauth-basic@github.com/".insteadOf "https://github.com/"
     - name: download dependencies
       run: go mod vendor
     - name: Login to DockerHub
@@ -76,8 +64,6 @@ jobs:
         username: ${{ secrets.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_TOKEN }}
     - name: Test
-      env:
-        GITHUB_TOKEN: ${{ secrets.GIT_TOKEN }}
       run: make test
 
     # Update check run

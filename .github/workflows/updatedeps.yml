@@ -18,11 +18,6 @@ jobs:
         go-version: "1.17.x"
       env:
         GOARCH: "amd64"
-    - name: Inject github insteadOf configuration
-      env:
-        PRIVATE_GITHUB_TOKEN: ${{ secrets.GIT_TOKEN }}
-      run: |
-        git config --global url."https://${PRIVATE_GITHUB_TOKEN}:x-oauth-basic@github.com/".insteadOf "https://github.com/"
     - name: Install Protoc
       uses: arduino/setup-protoc@v1
     - name: Install protoc-gen-go
