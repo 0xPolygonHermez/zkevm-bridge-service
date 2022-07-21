@@ -93,6 +93,7 @@ type Claim struct {
 
 // TokenWrapped struct
 type TokenWrapped struct {
+	TokenMetadata
 	OriginalNetwork      uint
 	OriginalTokenAddress common.Address
 	WrappedTokenAddress  common.Address
@@ -126,4 +127,11 @@ type VirtualBatch struct {
 	BlockNumber uint64
 	TxHash      common.Hash
 	Sequencer   common.Address
+}
+
+// TokenMetadata is a metadata of ERC20 token.
+type TokenMetadata struct {
+	Name     string
+	Symbol   string
+	Decimals uint8
 }
