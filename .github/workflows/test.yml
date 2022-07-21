@@ -41,8 +41,7 @@ jobs:
     - name: Test
       env:
         GITHUB_TOKEN: ${{ secrets.GIT_TOKEN }}
-      run: make test-full
-
+      run: make test
   from-fork-test:
     if:
       github.event_name == 'repository_dispatch' &&
@@ -79,7 +78,7 @@ jobs:
     - name: Test
       env:
         GITHUB_TOKEN: ${{ secrets.GIT_TOKEN }}
-      run: make test-full
+      run: make test
 
     # Update check run
     - uses: actions/github-script@v5

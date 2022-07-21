@@ -4,6 +4,7 @@ import (
 	"os"
 	"strconv"
 
+	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman"
 	"github.com/0xPolygonHermez/zkevm-node/log"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/gobuffalo/packr/v2"
@@ -84,29 +85,22 @@ var (
 	Uint8, _  = abi.NewType("uint8", "", nil)
 )
 
-// TokenMetadata is a metadata of ERC20 token.
-type TokenMetadata struct {
-	name     string
-	symbol   string
-	decimals uint8
-}
-
-func getDecodedToken(metadata []byte) (*TokenMetadata, error) {
+func getDecodedToken(metadata []byte) (*etherman.TokenMetadata, error) {
 	//nolint
 	args := abi.Arguments{
 		{"name", String, false},
 		{"symbol", String, false},
 		{"decimals", Uint8, false},
 	}
-	var token map[string]interface{}
+	token := make(map[string]interface{})
 	err := args.UnpackIntoMap(token, metadata)
 	if err != nil {
 		return nil, err
 	}
 
-	return &TokenMetadata{
-		name:     token["name"].(string),
-		symbol:   token["symbol"].(string),
-		decimals: token["decimals"].(uint8),
+	return &etherman.TokenMetadata{
+		Name:     token["name"].(string),
+		Symbol:   token["symbol"].(string),
+		Decimals: token["decimals"].(uint8),
 	}, nil
 }
