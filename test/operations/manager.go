@@ -25,6 +25,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/jackc/pgx/v4"
 )
 
 // NetworkSID is used to identify the network.
@@ -66,6 +67,15 @@ var (
 	}
 )
 
+type storageInterface interface {
+	GetLastBlock(ctx context.Context, networkID uint, dbTx pgx.Tx) (*etherman.Block, error)
+	GetLatestExitRoot(ctx context.Context, dbTx pgx.Tx) (*etherman.GlobalExitRoot, error)
+	GetLatestL1SyncedExitRoot(ctx context.Context, dbTx pgx.Tx) (*etherman.GlobalExitRoot, error)
+	GetLatestL2SyncedExitRoot(ctx context.Context, dbTx pgx.Tx) (*etherman.GlobalExitRoot, error)
+	GetLastBatchState(ctx context.Context, dbTx pgx.Tx) (uint64, uint64, bool, error)
+	GetTokenWrapped(ctx context.Context, originalNetwork uint, originalTokenAddress common.Address, dbTx pgx.Tx) (*etherman.TokenWrapped, error)
+}
+
 // Config is the main Manager configuration.
 type Config struct {
 	// Arity   uint8
@@ -79,7 +89,7 @@ type Manager struct {
 	cfg *Config
 	ctx context.Context
 
-	storage       db.Storage
+	storage       storageInterface
 	bridgetree    *bridgectrl.BridgeController
 	bridgeService pb.BridgeServiceServer
 
@@ -121,7 +131,7 @@ func NewManager(ctx context.Context, cfg *Config) (*Manager, error) {
 		return nil, err
 	}
 	bService := bridgectrl.NewBridgeService(pgst, bt)
-	opsman.storage = st
+	opsman.storage = st.(storageInterface)
 	opsman.bridgetree = bt
 	opsman.bridgeService = bService
 	opsman.clients = make(map[NetworkSID]*utils.Client)
