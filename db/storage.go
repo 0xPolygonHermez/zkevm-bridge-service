@@ -5,6 +5,7 @@ import (
 	"github.com/0xPolygonHermez/zkevm-bridge-service/utils/gerror"
 )
 
+// Storage interface
 type Storage interface{}
 
 // NewStorage creates a new Storage
