@@ -5,8 +5,10 @@ import (
 	"github.com/0xPolygonHermez/zkevm-bridge-service/utils/gerror"
 )
 
+type Storage interface{}
+
 // NewStorage creates a new Storage
-func NewStorage(cfg Config, networksNumber uint) (interface{}, error) {
+func NewStorage(cfg Config, networksNumber uint) (Storage, error) {
 	if cfg.Database == "postgres" {
 		return pgstorage.NewPostgresStorage(pgstorage.Config{
 			Name:     cfg.Name,
