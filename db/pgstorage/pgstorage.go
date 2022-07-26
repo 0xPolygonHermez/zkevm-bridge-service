@@ -257,13 +257,10 @@ func (p *PostgresStorage) AddForcedBatch(ctx context.Context, forcedBatch *ether
 }
 
 // AddTrustedGlobalExitRoot adds new global exit root which comes from the trusted sequencer.
-func (p *PostgresStorage) AddTrustedGlobalExitRoot(ctx context.Context, ger common.Hash) error {
-	return nil
-}
-
-// ConsolidateBatch make a batch verified.
-func (p *PostgresStorage) ConsolidateBatch(ctx context.Context, batch *etherman.Batch, dbTx pgx.Tx) error {
-	return nil
+func (p *PostgresStorage) AddTrustedGlobalExitRoot(ctx context.Context, trustedExitRoot *etherman.GlobalExitRoot, dbTx pgx.Tx) error {
+	const addTrustedGerSQL = "INSERT INTO syncv2.exit_root (global_exit_root_num, global_exit_root, exit_roots) VALUES ($1, $2, $3)"
+	_, err := p.getExecQuerier(dbTx).Exec(ctx, addTrustedGerSQL, trustedExitRoot.GlobalExitRootNum.String(), trustedExitRoot.GlobalExitRoot, pq.Array([][]byte{trustedExitRoot.ExitRoots[0][:], trustedExitRoot.ExitRoots[1][:]}))
+	return err
 }
 
 // GetClaim gets a specific claim from the storage.
@@ -315,14 +312,16 @@ func (p *PostgresStorage) GetLatestL1SyncedExitRoot(ctx context.Context, dbTx pg
 // GetLatestL2SyncedExitRoot gets the latest L2 synced global exit root.
 func (p *PostgresStorage) GetLatestL2SyncedExitRoot(ctx context.Context, dbTx pgx.Tx) (*etherman.GlobalExitRoot, error) {
 	var (
-		ger       etherman.GlobalExitRoot
-		exitRoots [][]byte
+		ger         etherman.GlobalExitRoot
+		exitRootNum int64
+		exitRoots   [][]byte
 	)
-	const getLatestL2SyncedExitRootSQL = "SELECT block_id, global_exit_root, exit_roots FROM syncv2.exit_root WHERE global_exit_root_num IS NULL ORDER BY block_id DESC LIMIT 1"
-	err := p.getExecQuerier(dbTx).QueryRow(ctx, getLatestL2SyncedExitRootSQL).Scan(&ger.BlockID, &ger.GlobalExitRoot, pq.Array(&exitRoots))
+	const getLatestL2SyncedExitRootSQL = "SELECT block_id, global_exit_root, exit_roots FROM syncv2.exit_root WHERE block_id IS NULL ORDER BY global_exit_root_num DESC LIMIT 1"
+	err := p.getExecQuerier(dbTx).QueryRow(ctx, getLatestL2SyncedExitRootSQL).Scan(&exitRootNum, &ger.GlobalExitRoot, pq.Array(&exitRoots))
 	if err != nil {
 		return nil, err
 	}
+	ger.GlobalExitRootNum = big.NewInt(exitRootNum)
 	ger.ExitRoots = []common.Hash{common.BytesToHash(exitRoots[0]), common.BytesToHash(exitRoots[1])}
 	return &ger, nil
 }
@@ -477,10 +476,12 @@ func (p *PostgresStorage) GetDepositCount(ctx context.Context, destAddr string, 
 
 // GetLastBatchState returns the lates verified batch number.
 func (p *PostgresStorage) GetLastBatchState(ctx context.Context, dbTx pgx.Tx) (uint64, uint64, bool, error) {
+	//TODO
 	return 0, 0, false, nil
 }
 
 // ResetTrustedState resets trusted batches from the storage.
 func (p *PostgresStorage) ResetTrustedState(ctx context.Context, batchNumber uint64, dbTx pgx.Tx) error {
+	//TODO
 	return nil
 }

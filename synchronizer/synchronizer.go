@@ -11,7 +11,7 @@ import (
 	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/utils/gerror"
 	"github.com/0xPolygonHermez/zkevm-node/log"
-	"github.com/0xPolygonHermez/zkevm-node/sequencerv2/broadcast/pb"
+	"github.com/0xPolygonHermez/zkevm-node/sequencer/broadcast/pb"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/jackc/pgx/v4"
 	"google.golang.org/grpc"
@@ -188,8 +188,16 @@ func (s *ClientSynchronizer) syncTrustedState() error {
 		log.Error("error getting latest batch from grpc. Error: ", err)
 		return err
 	}
-	trustedGlobalExitRoot := common.HexToHash(lastBatch.GlobalExitRoot)
-	err = s.storage.AddTrustedGlobalExitRoot(s.ctx, trustedGlobalExitRoot)
+	ger := &etherman.GlobalExitRoot{
+		GlobalExitRoot: common.HexToHash(lastBatch.GlobalExitRoot),
+		ExitRoots: []common.Hash{
+			common.HexToHash(lastBatch.MainnetExitRoot),
+			common.HexToHash(lastBatch.RollupExitRoot),
+		},
+		GlobalExitRootNum: new(big.Int).SetUint64(lastBatch.BatchNumber),
+	}
+
+	err = s.storage.AddTrustedGlobalExitRoot(s.ctx, ger, nil)
 	if err != nil {
 		log.Error("error storing latest trusted globalExitRoot. Error: ", err)
 		return err

@@ -36,7 +36,7 @@ func main() {
 	if err != nil {
 		log.Fatal("Error: ", err)
 	}
-	maticAmount, err := poe.CalculateSequencerCollateral(&bind.CallOpts{Pending: false})
+	maticAmount, err := poe.CalculateForceProverFee(&bind.CallOpts{Pending: false})
 	if err != nil {
 		log.Fatal("Error getting collateral amount from smc: ", err)
 	}
@@ -44,7 +44,7 @@ func main() {
 	if err != nil {
 		log.Fatal("Error approving matics: ", err)
 	}
-	tx, err := poe.SendBatch(auth, []byte{}, maticAmount)
+	tx, err := poe.SequenceBatches(auth, nil)
 	if err != nil {
 		log.Fatal("Error sending the batch: ", err)
 	}
