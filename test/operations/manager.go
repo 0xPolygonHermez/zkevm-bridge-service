@@ -479,24 +479,24 @@ func (m *Manager) GetBridgeInfoByDestAddr(ctx context.Context, addr *common.Addr
 }
 
 // SendL1Claim send an L1 claim
-func (m *Manager) SendL1Claim(ctx context.Context, deposit *pb.Deposit, smtProof [][32]byte, globalExitRoot *etherman.GlobalExitRoot) error {
+func (m *Manager) SendL1Claim(ctx context.Context, deposit *pb.Deposit, smtProof [][32]byte, globalExitRoot *etherman.GlobalExitRoot, metadata []byte) error {
 	client := m.clients[L1]
 	auth, err := client.GetSigner(ctx, accHexPrivateKeys[L1])
 	if err != nil {
 		return err
 	}
-	return client.SendClaim(ctx, deposit, smtProof, globalExitRoot.GlobalExitRootNum, globalExitRoot, common.HexToAddress(l1BridgeAddr), auth)
+	return client.SendClaim(ctx, deposit, smtProof, globalExitRoot.GlobalExitRootNum, globalExitRoot, common.HexToAddress(l1BridgeAddr), auth, metadata)
 }
 
 // SendL2Claim send an L2 claim
-func (m *Manager) SendL2Claim(ctx context.Context, deposit *pb.Deposit, smtProof [][32]byte, globalExitRoot *etherman.GlobalExitRoot) error {
+func (m *Manager) SendL2Claim(ctx context.Context, deposit *pb.Deposit, smtProof [][32]byte, globalExitRoot *etherman.GlobalExitRoot, metadata []byte) error {
 	client := m.clients[L2]
 	auth, err := client.GetSigner(ctx, accHexPrivateKeys[L2])
 	if err != nil {
 		return err
 	}
 	auth.GasPrice = big.NewInt(0)
-	err = client.SendClaim(ctx, deposit, smtProof, globalExitRoot.GlobalExitRootNum, globalExitRoot, common.HexToAddress(l2BridgeAddr), auth)
+	err = client.SendClaim(ctx, deposit, smtProof, globalExitRoot.GlobalExitRootNum, globalExitRoot, common.HexToAddress(l2BridgeAddr), auth, metadata)
 	if err != nil {
 		return err
 	}
@@ -560,7 +560,7 @@ func (m *Manager) ForceBatchProposal(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	maticAmount, err := poe.CalculateSequencerCollateral(&bind.CallOpts{Pending: false})
+	maticAmount, err := poe.CalculateForceProverFee(&bind.CallOpts{Pending: false})
 	if err != nil {
 		return err
 	}
@@ -578,7 +578,7 @@ func (m *Manager) ForceBatchProposal(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	tx, err := poe.SendBatch(auth, []byte{}, maticAmount)
+	tx, err := poe.SequenceBatches(auth, []proofofefficiency.ProofOfEfficiencyBatchData{})
 	if err != nil {
 		return err
 	}

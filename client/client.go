@@ -82,9 +82,9 @@ func (c NodeClient) SendBridge(ctx context.Context, tokenAddr common.Address, am
 // SendClaim send a claim transaction.
 func (c NodeClient) SendClaim(ctx context.Context, deposit *pb.Deposit, smtProof [][32]byte,
 	globalExitRooNum *big.Int, globalExitRoot *etherman.GlobalExitRoot, bridgeSCAddr common.Address,
-	auth *bind.TransactOpts, network NetworkSID,
+	auth *bind.TransactOpts, network NetworkSID, metadata []byte,
 ) error {
-	return c.clients[network].SendClaim(ctx, deposit, smtProof, globalExitRooNum, globalExitRoot, bridgeSCAddr, auth)
+	return c.clients[network].SendClaim(ctx, deposit, smtProof, globalExitRooNum, globalExitRoot, bridgeSCAddr, auth, metadata)
 }
 
 // GetBridges returns bridge list for the specific destination address.

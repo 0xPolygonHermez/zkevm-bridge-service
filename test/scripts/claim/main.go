@@ -66,8 +66,9 @@ func main() {
 		GlobalExitRootNum: new(big.Int).SetUint64(proof.ExitRootNum),
 		ExitRoots:         []common.Hash{common.HexToHash(proof.MainExitRoot), common.HexToHash(proof.RollupExitRoot)},
 	}
+	metadata := []byte{}
 	log.Info("Sending claim tx...")
-	err = c.SendClaim(ctx, bridgeData, smt, &big.Int{}, globalExitRoot, common.HexToAddress(l2BridgeAddr), auth)
+	err = c.SendClaim(ctx, bridgeData, smt, &big.Int{}, globalExitRoot, common.HexToAddress(l2BridgeAddr), auth, metadata)
 	if err != nil {
 		log.Fatal("error: ", err)
 	}

@@ -8,7 +8,7 @@ import (
 	"time"
 
 	mockbridge "github.com/0xPolygonHermez/zkevm-bridge-service/test/mocksmartcontracts/bridge"
-	"github.com/0xPolygonHermez/zkevm-node/ethermanv2/smartcontracts/proofofefficiency"
+	"github.com/0xPolygonHermez/zkevm-node/etherman/smartcontracts/proofofefficiency"
 	"github.com/0xPolygonHermez/zkevm-node/log"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
