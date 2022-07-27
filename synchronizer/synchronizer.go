@@ -168,6 +168,7 @@ func (s *ClientSynchronizer) Sync() error {
 					log.Fatalf("networkID: %d, error: latest Synced BatchNumber is higher than the latest Proposed BatchNumber in the rollup", s.networkID)
 				}
 			} else { // Sync Trusted GlobalExitRoots if L1 is synced
+				log.Info("Virtual state is synced, getting trusted state")
 				err = s.syncTrustedState()
 				if err != nil {
 					log.Error("error getting current trusted state")
