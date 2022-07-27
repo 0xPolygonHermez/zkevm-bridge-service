@@ -102,7 +102,7 @@ func (c Client) SendBridge(ctx context.Context, tokenAddr common.Address, amount
 	if err != nil {
 		return nil
 	}
-	tx, err := br.Bridge(auth, tokenAddr, amount, destNetwork, *destAddr)
+	tx, err := br.Bridge(auth, tokenAddr, destNetwork, *destAddr, amount)
 	if err != nil {
 		log.Error("Error: ", err, ". Tx Hash: ", tx.Hash())
 		return err
@@ -120,9 +120,7 @@ func (c Client) SendClaim(ctx context.Context, deposit *pb.Deposit, smtProof [][
 		return err
 	}
 	amount, _ := new(big.Int).SetString(deposit.Amount, encoding.Base10)
-	tx, err := br.Claim(auth, common.HexToAddress(deposit.TokenAddr), amount, deposit.OrigNet, deposit.DestNet,
-		common.HexToAddress(deposit.DestAddr), smtProof, uint32(deposit.DepositCnt), globalExitRooNum,
-		globalExitRoot.ExitRoots[0], globalExitRoot.ExitRoots[1])
+	tx, err := br.Claim(auth, smtProof, uint32(deposit.DepositCnt), globalExitRoot.ExitRoots[0], globalExitRoot.ExitRoots[1], deposit.OrigNet, common.HexToAddress(deposit.TokenAddr), deposit.DestNet, common.HexToAddress(deposit.DestAddr), amount, []byte{})
 	if err != nil {
 		log.Error("Error: ", err, ". Tx Hash: ", tx.Hash())
 		return err

@@ -560,7 +560,7 @@ func (m *Manager) ForceBatchProposal(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	maticAmount, err := poe.CalculateSequencerCollateral(&bind.CallOpts{Pending: false})
+	maticAmount, err := poe.CalculateForceProverFee(&bind.CallOpts{Pending: false})
 	if err != nil {
 		return err
 	}
@@ -578,7 +578,7 @@ func (m *Manager) ForceBatchProposal(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	tx, err := poe.SendBatch(auth, []byte{}, maticAmount)
+	tx, err := poe.SequenceBatches(auth, nil)
 	if err != nil {
 		return err
 	}
