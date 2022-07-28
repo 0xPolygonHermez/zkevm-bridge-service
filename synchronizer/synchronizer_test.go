@@ -5,7 +5,6 @@ import (
 	"math/big"
 	"testing"
 	"time"
-	"fmt"
 
 	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman"
 	cfgTypes "github.com/0xPolygonHermez/zkevm-node/config/types"
@@ -14,6 +13,8 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/protobuf/types/known/emptypb"
+	"github.com/0xPolygonHermez/zkevm-node/sequencer/broadcast/pb"
 )
 
 type mocks struct {
@@ -21,6 +22,7 @@ type mocks struct {
 	BridgeCtrl *bridgectrlMock
 	Storage    *storageMock
 	DbTx       *dbTxMock
+	Grpc       *grpcMock
 }
 
 func TestTrustedStateReorg(t *testing.T) {
@@ -38,8 +40,7 @@ func TestTrustedStateReorg(t *testing.T) {
 		}
 		ctxMatchBy := mock.MatchedBy(func(ctx context.Context) bool { return ctx != nil })
 		m.Etherman.On("GetNetworkID", ctxMatchBy).Return(uint(0), nil)
-		sync, err := NewSynchronizer(m.Storage, m.BridgeCtrl, m.Etherman, genBlockNumber, cfg)
-		//storage interface{}, bridge bridgectrlInterface, ethMan ethermanInterface, genBlockNumber uint64, cfg Config
+		sync, err := NewSynchronizer(m.Storage, m.BridgeCtrl, m.Etherman, m.Grpc, genBlockNumber, cfg)
 		require.NoError(t, err)
 		// state preparation
 		m.Storage.
@@ -122,7 +123,6 @@ func TestTrustedStateReorg(t *testing.T) {
 					ReceivedAt:  ethermanBlock.ReceivedAt,
 					SequencedBatches: ethermanBlock.SequencedBatches,
 				}
-				fmt.Println("block: ", block)
 
 				m.Storage.
 					On("AddBlock", ctx, block, m.DbTx).
@@ -161,6 +161,29 @@ func TestTrustedStateReorg(t *testing.T) {
 				m.Storage.
 					On("Commit", ctx, m.DbTx).
 					Run(func(args mock.Arguments) { sync.Stop() }).
+					Return(nil).
+					Once()
+
+				grpc := &pb.GetBatchResponse{
+					GlobalExitRoot: "0xb14c74e4dddf25627a745f46cae6ac98782e2783c3ccc28107c8210e60d58861",
+					MainnetExitRoot: "0xc14c74e4dddf25627a745f46cae6ac98782e2783c3ccc28107c8210e60d58862",
+					RollupExitRoot: "0xd14c74e4dddf25627a745f46cae6ac98782e2783c3ccc28107c8210e60d58863",
+				}
+				m.Grpc.
+					On("GetLastBatch", ctx, &emptypb.Empty{}).
+					Return(grpc, nil).
+					Once()
+				
+				ger := &etherman.GlobalExitRoot{
+					GlobalExitRoot: common.HexToHash(grpc.GlobalExitRoot),
+					ExitRoots: []common.Hash{
+						common.HexToHash(grpc.MainnetExitRoot),
+						common.HexToHash(grpc.RollupExitRoot),
+					},
+					GlobalExitRootNum: big.NewInt(0),
+				}
+				m.Storage.
+					On("AddTrustedGlobalExitRoot", ctx, ger, nil).
 					Return(nil).
 					Once()
 			}).
@@ -222,6 +245,7 @@ func TestTrustedStateReorg(t *testing.T) {
 		BridgeCtrl: newBridgectrlMock(t),
 		Storage:    newStorageMock(t),
 		DbTx:       newDbTxMock(t),
+		Grpc:       newGrpcMock(t),
 	}
 
 	// start synchronizing
@@ -235,5 +259,3 @@ func TestTrustedStateReorg(t *testing.T) {
 	}
 
 }
-
-// 2- Deposit inside two blocks with different hash
