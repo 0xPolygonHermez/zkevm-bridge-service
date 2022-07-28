@@ -20,6 +20,9 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/urfave/cli/v2"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
+	"github.com/0xPolygonHermez/zkevm-node/sequencer/broadcast/pb"
 )
 
 func start(ctx *cli.Context) error {
@@ -128,6 +131,7 @@ func newEthermans(c config.Config) (*etherman.Client, []*etherman.Client, error)
 		log.Fatal("Environment configuration error. L2 bridge addresses and l2 hermezCore urls mismatch")
 	}
 	var l2Ethermans []*etherman.Client
+	// TODO
 	// for i, addr := range c.L2BridgeAddrs {
 	// 	l2Etherman, err := etherman.NewClient(c.Etherman.L2URLs[i], addr)
 	// 	if err != nil {
@@ -139,7 +143,16 @@ func newEthermans(c config.Config) (*etherman.Client, []*etherman.Client, error)
 }
 
 func runSynchronizer(genBlockNumber uint64, brdigeCtrl *bridgectrl.BridgeController, etherman *etherman.Client, cfg synchronizer.Config, storage *db.Storage) {
-	sy, err := synchronizer.NewSynchronizer(storage, brdigeCtrl, etherman, genBlockNumber, cfg)
+	ctx := context.Background()
+	opts := []grpc.DialOption{
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	}
+	conn, err := grpc.DialContext(ctx, cfg.GrpcURL, opts...)
+	if err != nil {
+		log.Fatal("error creating grpc connection. Error: ", err)
+	}
+	client := pb.NewBroadcastServiceClient(conn)
+	sy, err := synchronizer.NewSynchronizer(storage, brdigeCtrl, etherman, client, genBlockNumber, cfg)
 	if err != nil {
 		log.Fatal(err)
 	}

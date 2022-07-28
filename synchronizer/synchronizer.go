@@ -14,8 +14,6 @@ import (
 	"github.com/0xPolygonHermez/zkevm-node/sequencer/broadcast/pb"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/jackc/pgx/v4"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
@@ -35,11 +33,7 @@ type ClientSynchronizer struct {
 	genBlockNumber uint64
 	cfg            Config
 	networkID      uint
-	grpc           struct {
-		client    pb.BroadcastServiceClient
-		ctx       context.Context
-		cancelCtx context.CancelFunc
-	}
+	grpc           pb.BroadcastServiceClient
 	synced bool
 }
 
@@ -48,6 +42,7 @@ func NewSynchronizer(
 	storage storageInterface,
 	bridge bridgectrlInterface,
 	ethMan ethermanInterface,
+	sGrpc pb.BroadcastServiceClient,
 	genBlockNumber uint64,
 	cfg Config) (Synchronizer, error) {
 	ctx, cancel := context.WithCancel(context.Background())
@@ -55,15 +50,7 @@ func NewSynchronizer(
 	if err != nil {
 		log.Fatal("error getting networkID. Error: ", err)
 	}
-	opts := []grpc.DialOption{
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	}
-	grpcCtx, grpcCancelCtx := context.WithTimeout(ctx, 1*time.Second)
-	conn, err := grpc.DialContext(ctx, cfg.GrpcURL, opts...)
-	if err != nil {
-		log.Fatal("error creating grpc connection. Error: ", err)
-	}
-	client := pb.NewBroadcastServiceClient(conn)
+
 	return &ClientSynchronizer{
 		bridgeCtrl:     bridge,
 		storage:        storage,
@@ -73,15 +60,7 @@ func NewSynchronizer(
 		genBlockNumber: genBlockNumber,
 		cfg:            cfg,
 		networkID:      networkID,
-		grpc: struct {
-			client    pb.BroadcastServiceClient
-			ctx       context.Context
-			cancelCtx context.CancelFunc
-		}{
-			client:    client,
-			ctx:       grpcCtx,
-			cancelCtx: grpcCancelCtx,
-		},
+		grpc: sGrpc,
 	}, nil
 }
 
@@ -184,7 +163,7 @@ func (s *ClientSynchronizer) Stop() {
 }
 
 func (s *ClientSynchronizer) syncTrustedState() error {
-	lastBatch, err := s.grpc.client.GetLastBatch(s.ctx, &emptypb.Empty{})
+	lastBatch, err := s.grpc.GetLastBatch(s.ctx, &emptypb.Empty{})
 	if err != nil {
 		log.Error("error getting latest batch from grpc. Error: ", err)
 		return err
@@ -197,7 +176,7 @@ func (s *ClientSynchronizer) syncTrustedState() error {
 		},
 		GlobalExitRootNum: new(big.Int).SetUint64(lastBatch.BatchNumber),
 	}
-
+	// TODO improve. If lastest ger it is already stored, skip
 	err = s.storage.AddTrustedGlobalExitRoot(s.ctx, ger, nil)
 	if err != nil {
 		log.Error("error storing latest trusted globalExitRoot. Error: ", err)
