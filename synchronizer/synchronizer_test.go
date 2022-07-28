@@ -9,12 +9,12 @@ import (
 	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman"
 	cfgTypes "github.com/0xPolygonHermez/zkevm-node/config/types"
 	"github.com/0xPolygonHermez/zkevm-node/etherman/smartcontracts/proofofefficiency"
+	"github.com/0xPolygonHermez/zkevm-node/sequencer/broadcast/pb"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/types/known/emptypb"
-	"github.com/0xPolygonHermez/zkevm-node/sequencer/broadcast/pb"
 )
 
 type mocks struct {
@@ -36,7 +36,7 @@ func TestTrustedStateReorg(t *testing.T) {
 		cfg := Config{
 			SyncInterval:  cfgTypes.Duration{Duration: 1 * time.Second},
 			SyncChunkSize: 10,
-			GrpcURL: "localhost:61090",
+			GrpcURL:       "localhost:61090",
 		}
 		ctxMatchBy := mock.MatchedBy(func(ctx context.Context) bool { return ctx != nil })
 		m.Etherman.On("GetNetworkID", ctxMatchBy).Return(uint(0), nil)
@@ -76,7 +76,7 @@ func TestTrustedStateReorg(t *testing.T) {
 
 				sequencedBatch := etherman.SequencedBatch{
 					BatchNumber: uint64(1),
-					Sequencer:    common.HexToAddress("0x222"),
+					Sequencer:   common.HexToAddress("0x222"),
 					TxHash:      common.HexToHash("0x333"),
 					ProofOfEfficiencyBatchData: proofofefficiency.ProofOfEfficiencyBatchData{
 						Transactions:          []byte{},
@@ -89,7 +89,7 @@ func TestTrustedStateReorg(t *testing.T) {
 				ethermanBlock := etherman.Block{
 					BlockHash:        ethBlock.Hash(),
 					SequencedBatches: [][]etherman.SequencedBatch{{sequencedBatch}},
-					NetworkID: 0,
+					NetworkID:        0,
 				}
 				blocks := []etherman.Block{ethermanBlock}
 				order := map[common.Hash][]etherman.Order{
@@ -115,12 +115,12 @@ func TestTrustedStateReorg(t *testing.T) {
 					Once()
 
 				block := &etherman.Block{
-					ID:          0,
-					BlockNumber: ethermanBlock.BlockNumber,
-					BlockHash:   ethermanBlock.BlockHash,
-					ParentHash:  ethermanBlock.ParentHash,
-					NetworkID:   0,
-					ReceivedAt:  ethermanBlock.ReceivedAt,
+					ID:               0,
+					BlockNumber:      ethermanBlock.BlockNumber,
+					BlockHash:        ethermanBlock.BlockHash,
+					ParentHash:       ethermanBlock.ParentHash,
+					NetworkID:        0,
+					ReceivedAt:       ethermanBlock.ReceivedAt,
 					SequencedBatches: ethermanBlock.SequencedBatches,
 				}
 
@@ -140,12 +140,12 @@ func TestTrustedStateReorg(t *testing.T) {
 					On("ResetTrustedState", ctx, sequencedBatch.BatchNumber, m.DbTx).
 					Return(nil).
 					Once()
-				
-				b := &etherman.Batch {
-					BatchNumber: sequencedBatch.BatchNumber,
-					Coinbase: sequencedBatch.Sequencer,
-					BatchL2Data: sequencedBatch.Transactions,
-					Timestamp: time.Unix(int64(sequencedBatch.Timestamp), 0),
+
+				b := &etherman.Batch{
+					BatchNumber:    sequencedBatch.BatchNumber,
+					Coinbase:       sequencedBatch.Sequencer,
+					BatchL2Data:    sequencedBatch.Transactions,
+					Timestamp:      time.Unix(int64(sequencedBatch.Timestamp), 0),
 					GlobalExitRoot: sequencedBatch.GlobalExitRoot,
 				}
 
@@ -165,15 +165,15 @@ func TestTrustedStateReorg(t *testing.T) {
 					Once()
 
 				grpc := &pb.GetBatchResponse{
-					GlobalExitRoot: "0xb14c74e4dddf25627a745f46cae6ac98782e2783c3ccc28107c8210e60d58861",
+					GlobalExitRoot:  "0xb14c74e4dddf25627a745f46cae6ac98782e2783c3ccc28107c8210e60d58861",
 					MainnetExitRoot: "0xc14c74e4dddf25627a745f46cae6ac98782e2783c3ccc28107c8210e60d58862",
-					RollupExitRoot: "0xd14c74e4dddf25627a745f46cae6ac98782e2783c3ccc28107c8210e60d58863",
+					RollupExitRoot:  "0xd14c74e4dddf25627a745f46cae6ac98782e2783c3ccc28107c8210e60d58863",
 				}
 				m.Grpc.
 					On("GetLastBatch", ctx, &emptypb.Empty{}).
 					Return(grpc, nil).
 					Once()
-				
+
 				ger := &etherman.GlobalExitRoot{
 					GlobalExitRoot: common.HexToHash(grpc.GlobalExitRoot),
 					ExitRoots: []common.Hash{
@@ -257,5 +257,4 @@ func TestTrustedStateReorg(t *testing.T) {
 			require.NoError(t, err)
 		})
 	}
-
 }

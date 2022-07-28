@@ -6,8 +6,9 @@ import (
 )
 
 // Storage interface
-type Storage struct{
-	*pgstorage.PostgresStorage}
+type Storage struct {
+	*pgstorage.PostgresStorage
+}
 
 // NewStorage creates a new Storage
 func NewStorage(cfg Config, networksNumber uint) (*Storage, error) {

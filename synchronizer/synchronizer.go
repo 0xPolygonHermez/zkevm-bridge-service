@@ -34,7 +34,7 @@ type ClientSynchronizer struct {
 	cfg            Config
 	networkID      uint
 	grpc           pb.BroadcastServiceClient
-	synced bool
+	synced         bool
 }
 
 // NewSynchronizer creates and initializes an instance of Synchronizer
@@ -60,7 +60,7 @@ func NewSynchronizer(
 		genBlockNumber: genBlockNumber,
 		cfg:            cfg,
 		networkID:      networkID,
-		grpc: sGrpc,
+		grpc:           sGrpc,
 	}, nil
 }
 
