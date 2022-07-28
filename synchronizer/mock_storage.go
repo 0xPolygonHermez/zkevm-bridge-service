@@ -5,10 +5,7 @@ package synchronizer
 import (
 	context "context"
 
-	common "github.com/ethereum/go-ethereum/common"
-
 	etherman "github.com/0xPolygonHermez/zkevm-bridge-service/etherman"
-
 	mock "github.com/stretchr/testify/mock"
 
 	pgx "github.com/jackc/pgx/v4"
@@ -138,13 +135,13 @@ func (_m *storageMock) AddTokenWrapped(ctx context.Context, tokenWrapped *etherm
 	return r0
 }
 
-// AddTrustedGlobalExitRoot provides a mock function with given fields: ctx, ger
-func (_m *storageMock) AddTrustedGlobalExitRoot(ctx context.Context, ger common.Hash) error {
-	ret := _m.Called(ctx, ger)
+// AddTrustedGlobalExitRoot provides a mock function with given fields: ctx, trustedExitRoot, dbTx
+func (_m *storageMock) AddTrustedGlobalExitRoot(ctx context.Context, trustedExitRoot *etherman.GlobalExitRoot, dbTx pgx.Tx) error {
+	ret := _m.Called(ctx, trustedExitRoot, dbTx)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, common.Hash) error); ok {
-		r0 = rf(ctx, ger)
+	if rf, ok := ret.Get(0).(func(context.Context, *etherman.GlobalExitRoot, pgx.Tx) error); ok {
+		r0 = rf(ctx, trustedExitRoot, dbTx)
 	} else {
 		r0 = ret.Error(0)
 	}

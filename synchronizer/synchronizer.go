@@ -45,7 +45,7 @@ type ClientSynchronizer struct {
 
 // NewSynchronizer creates and initializes an instance of Synchronizer
 func NewSynchronizer(
-	storage interface{},
+	storage storageInterface,
 	bridge bridgectrlInterface,
 	ethMan ethermanInterface,
 	genBlockNumber uint64,
@@ -66,7 +66,7 @@ func NewSynchronizer(
 	client := pb.NewBroadcastServiceClient(conn)
 	return &ClientSynchronizer{
 		bridgeCtrl:     bridge,
-		storage:        storage.(storageInterface),
+		storage:        storage,
 		etherMan:       ethMan,
 		ctx:            ctx,
 		cancelCtx:      cancel,
