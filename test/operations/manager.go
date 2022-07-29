@@ -131,7 +131,7 @@ func NewManager(ctx context.Context, cfg *Config) (*Manager, error) {
 		return nil, err
 	}
 	bService := bridgectrl.NewBridgeService(pgst, bt)
-	opsman.storage = st
+	opsman.storage = st.(storageInterface)
 	opsman.bridgetree = bt
 	opsman.bridgeService = bService
 	opsman.clients = make(map[NetworkSID]*utils.Client)

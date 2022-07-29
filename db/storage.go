@@ -6,12 +6,10 @@ import (
 )
 
 // Storage interface
-type Storage struct {
-	*pgstorage.PostgresStorage
-}
+type Storage interface{}
 
 // NewStorage creates a new Storage
-func NewStorage(cfg Config, networksNumber uint) (*Storage, error) {
+func NewStorage(cfg Config, networksNumber uint) (Storage, error) {
 	if cfg.Database == "postgres" {
 		pg, err := pgstorage.NewPostgresStorage(pgstorage.Config{
 			Name:     cfg.Name,
@@ -21,7 +19,7 @@ func NewStorage(cfg Config, networksNumber uint) (*Storage, error) {
 			Port:     cfg.Port,
 			MaxConns: cfg.MaxConns,
 		}, networksNumber)
-		return &Storage{pg}, err
+		return pg, err
 	}
 	return nil, gerror.ErrStorageNotRegister
 }
