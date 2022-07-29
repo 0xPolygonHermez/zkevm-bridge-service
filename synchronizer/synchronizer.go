@@ -25,16 +25,16 @@ type Synchronizer interface {
 
 // ClientSynchronizer connects L1 and L2
 type ClientSynchronizer struct {
-	etherMan       ethermanInterface
-	bridgeCtrl     bridgectrlInterface
-	storage        storageInterface
-	ctx            context.Context
-	cancelCtx      context.CancelFunc
-	genBlockNumber uint64
-	cfg            Config
-	networkID      uint
-	grpc           pb.BroadcastServiceClient
-	synced         bool
+	etherMan        ethermanInterface
+	bridgeCtrl      bridgectrlInterface
+	storage         storageInterface
+	ctx             context.Context
+	cancelCtx       context.CancelFunc
+	genBlockNumber  uint64
+	cfg             Config
+	networkID       uint
+	broadcastClient pb.BroadcastServiceClient
+	synced          bool
 }
 
 // NewSynchronizer creates and initializes an instance of Synchronizer
@@ -42,7 +42,7 @@ func NewSynchronizer(
 	storage interface{},
 	bridge bridgectrlInterface,
 	ethMan ethermanInterface,
-	sGrpc pb.BroadcastServiceClient,
+	broadcastClient pb.BroadcastServiceClient,
 	genBlockNumber uint64,
 	cfg Config) (Synchronizer, error) {
 	ctx, cancel := context.WithCancel(context.Background())
@@ -52,15 +52,15 @@ func NewSynchronizer(
 	}
 
 	return &ClientSynchronizer{
-		bridgeCtrl:     bridge,
-		storage:        storage.(storageInterface),
-		etherMan:       ethMan,
-		ctx:            ctx,
-		cancelCtx:      cancel,
-		genBlockNumber: genBlockNumber,
-		cfg:            cfg,
-		networkID:      networkID,
-		grpc:           sGrpc,
+		bridgeCtrl:      bridge,
+		storage:         storage.(storageInterface),
+		etherMan:        ethMan,
+		ctx:             ctx,
+		cancelCtx:       cancel,
+		genBlockNumber:  genBlockNumber,
+		cfg:             cfg,
+		networkID:       networkID,
+		broadcastClient: broadcastClient,
 	}, nil
 }
 
@@ -163,7 +163,7 @@ func (s *ClientSynchronizer) Stop() {
 }
 
 func (s *ClientSynchronizer) syncTrustedState() error {
-	lastBatch, err := s.grpc.GetLastBatch(s.ctx, &emptypb.Empty{})
+	lastBatch, err := s.broadcastClient.GetLastBatch(s.ctx, &emptypb.Empty{})
 	if err != nil {
 		log.Error("error getting latest batch from grpc. Error: ", err)
 		return err

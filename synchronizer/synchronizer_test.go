@@ -18,11 +18,11 @@ import (
 )
 
 type mocks struct {
-	Etherman   *ethermanMock
-	BridgeCtrl *bridgectrlMock
-	Storage    *storageMock
-	DbTx       *dbTxMock
-	Grpc       *grpcMock
+	Etherman        *ethermanMock
+	BridgeCtrl      *bridgectrlMock
+	Storage         *storageMock
+	DbTx            *dbTxMock
+	BroadcastClient *broadcastMock
 }
 
 func TestTrustedStateReorg(t *testing.T) {
@@ -40,7 +40,7 @@ func TestTrustedStateReorg(t *testing.T) {
 		}
 		ctxMatchBy := mock.MatchedBy(func(ctx context.Context) bool { return ctx != nil })
 		m.Etherman.On("GetNetworkID", ctxMatchBy).Return(uint(0), nil)
-		sync, err := NewSynchronizer(m.Storage, m.BridgeCtrl, m.Etherman, m.Grpc, genBlockNumber, cfg)
+		sync, err := NewSynchronizer(m.Storage, m.BridgeCtrl, m.Etherman, m.BroadcastClient, genBlockNumber, cfg)
 		require.NoError(t, err)
 		// state preparation
 		m.Storage.
@@ -164,21 +164,21 @@ func TestTrustedStateReorg(t *testing.T) {
 					Return(nil).
 					Once()
 
-				grpc := &pb.GetBatchResponse{
+				broadcast := &pb.GetBatchResponse{
 					GlobalExitRoot:  "0xb14c74e4dddf25627a745f46cae6ac98782e2783c3ccc28107c8210e60d58861",
 					MainnetExitRoot: "0xc14c74e4dddf25627a745f46cae6ac98782e2783c3ccc28107c8210e60d58862",
 					RollupExitRoot:  "0xd14c74e4dddf25627a745f46cae6ac98782e2783c3ccc28107c8210e60d58863",
 				}
-				m.Grpc.
+				m.BroadcastClient.
 					On("GetLastBatch", ctx, &emptypb.Empty{}).
-					Return(grpc, nil).
+					Return(broadcast, nil).
 					Once()
 
 				ger := &etherman.GlobalExitRoot{
-					GlobalExitRoot: common.HexToHash(grpc.GlobalExitRoot),
+					GlobalExitRoot: common.HexToHash(broadcast.GlobalExitRoot),
 					ExitRoots: []common.Hash{
-						common.HexToHash(grpc.MainnetExitRoot),
-						common.HexToHash(grpc.RollupExitRoot),
+						common.HexToHash(broadcast.MainnetExitRoot),
+						common.HexToHash(broadcast.RollupExitRoot),
 					},
 					GlobalExitRootNum: big.NewInt(0),
 				}
@@ -242,11 +242,11 @@ func TestTrustedStateReorg(t *testing.T) {
 	}
 
 	m := mocks{
-		Etherman:   newEthermanMock(t),
-		BridgeCtrl: newBridgectrlMock(t),
-		Storage:    newStorageMock(t),
-		DbTx:       newDbTxMock(t),
-		Grpc:       newGrpcMock(t),
+		Etherman:        newEthermanMock(t),
+		BridgeCtrl:      newBridgectrlMock(t),
+		Storage:         newStorageMock(t),
+		DbTx:            newDbTxMock(t),
+		BroadcastClient: newBroadcastMock(t),
 	}
 
 	// start synchronizing

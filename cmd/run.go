@@ -151,8 +151,8 @@ func runSynchronizer(genBlockNumber uint64, brdigeCtrl *bridgectrl.BridgeControl
 	if err != nil {
 		log.Fatal("error creating grpc connection. Error: ", err)
 	}
-	client := pb.NewBroadcastServiceClient(conn)
-	sy, err := synchronizer.NewSynchronizer(storage, brdigeCtrl, etherman, client, genBlockNumber, cfg)
+	broadcastClient := pb.NewBroadcastServiceClient(conn)
+	sy, err := synchronizer.NewSynchronizer(storage, brdigeCtrl, etherman, broadcastClient, genBlockNumber, cfg)
 	if err != nil {
 		log.Fatal(err)
 	}
