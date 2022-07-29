@@ -60,6 +60,9 @@ message TokenWrapped {
     string original_token_addr = 2;
     string wrapped_token_addr = 3;
     uint32 network_id = 4;
+    string name = 5;
+    string symbol = 6;
+    uint32 decimals = 7;
 }
 
 // Deposit message
@@ -74,7 +77,8 @@ message Deposit {
     uint32 network_id = 8;
     string tx_hash = 9;
     string claim_tx_hash = 10;
-    bool ready_for_claim = 11;
+    string metadata = 11;
+    bool ready_for_claim = 12;
 }
 
 // Claim message

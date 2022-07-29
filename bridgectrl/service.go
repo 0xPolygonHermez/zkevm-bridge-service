@@ -73,6 +73,7 @@ func (s *bridgeService) GetBridges(ctx context.Context, req *pb.GetBridgesReques
 				NetworkId:     uint32(deposit.NetworkID),
 				TxHash:        deposit.TxHash.String(),
 				ClaimTxHash:   claimTxHash,
+				Metadata:      "0x" + hex.EncodeToString(deposit.Metadata),
 				ReadyForClaim: readyForClaim,
 			},
 		)
@@ -168,6 +169,7 @@ func (s *bridgeService) GetBridge(ctx context.Context, req *pb.GetBridgeRequest)
 			NetworkId:     uint32(deposit.NetworkID),
 			TxHash:        deposit.TxHash.String(),
 			ClaimTxHash:   claimTxHash,
+			Metadata:      "0x" + hex.EncodeToString(deposit.Metadata),
 			ReadyForClaim: readyForClaim,
 		},
 	}, nil
@@ -185,6 +187,9 @@ func (s *bridgeService) GetTokenWrapped(ctx context.Context, req *pb.GetTokenWra
 			OriginalTokenAddr: tokenWrapped.OriginalTokenAddress.Hex(),
 			WrappedTokenAddr:  tokenWrapped.WrappedTokenAddress.Hex(),
 			NetworkId:         uint32(tokenWrapped.NetworkID),
+			Name:              tokenWrapped.Name,
+			Symbol:            tokenWrapped.Symbol,
+			Decimals:          uint32(tokenWrapped.Decimals),
 		},
 	}, nil
 }
