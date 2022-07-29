@@ -186,27 +186,6 @@ func (_m *storageMock) BeginDBTransaction(ctx context.Context) (pgx.Tx, error) {
 	return r0, r1
 }
 
-// CheckTrustedExitRootExists provides a mock function with given fields: ctx, globalExitRoot, dbTx
-func (_m *storageMock) CheckTrustedExitRootExists(ctx context.Context, globalExitRoot *etherman.GlobalExitRoot, dbTx pgx.Tx) (bool, error) {
-	ret := _m.Called(ctx, globalExitRoot, dbTx)
-
-	var r0 bool
-	if rf, ok := ret.Get(0).(func(context.Context, *etherman.GlobalExitRoot, pgx.Tx) bool); ok {
-		r0 = rf(ctx, globalExitRoot, dbTx)
-	} else {
-		r0 = ret.Get(0).(bool)
-	}
-
-	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *etherman.GlobalExitRoot, pgx.Tx) error); ok {
-		r1 = rf(ctx, globalExitRoot, dbTx)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
 // Commit provides a mock function with given fields: ctx, dbTx
 func (_m *storageMock) Commit(ctx context.Context, dbTx pgx.Tx) error {
 	ret := _m.Called(ctx, dbTx)

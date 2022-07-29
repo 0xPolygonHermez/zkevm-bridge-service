@@ -43,7 +43,6 @@ type storageInterface interface {
 	AddBatchNumberInForcedBatch(ctx context.Context, forceBatchNumber, batchNumber uint64, dbTx pgx.Tx) error
 	AddForcedBatch(ctx context.Context, forcedBatch *etherman.ForcedBatch, dbTx pgx.Tx) error
 	AddTrustedGlobalExitRoot(ctx context.Context, trustedExitRoot *etherman.GlobalExitRoot, dbTx pgx.Tx) error
-	CheckTrustedExitRootExists(ctx context.Context, globalExitRoot *etherman.GlobalExitRoot, dbTx pgx.Tx) (bool, error)
 }
 
 type bridgectrlInterface interface {

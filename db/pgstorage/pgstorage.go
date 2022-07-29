@@ -260,6 +260,9 @@ func (p *PostgresStorage) AddForcedBatch(ctx context.Context, forcedBatch *ether
 func (p *PostgresStorage) AddTrustedGlobalExitRoot(ctx context.Context, trustedExitRoot *etherman.GlobalExitRoot, dbTx pgx.Tx) error {
 	const addTrustedGerSQL = "INSERT INTO syncv2.exit_root (global_exit_root_num, global_exit_root, exit_roots) VALUES ($1, $2, $3)"
 	_, err := p.getExecQuerier(dbTx).Exec(ctx, addTrustedGerSQL, trustedExitRoot.GlobalExitRootNum.String(), trustedExitRoot.GlobalExitRoot, pq.Array([][]byte{trustedExitRoot.ExitRoots[0][:], trustedExitRoot.ExitRoots[1][:]}))
+	if err != nil && strings.Contains(err.Error(), "duplicate key value violates unique constraint") {
+		return gerror.ErrDuplicatedRegister
+	}
 	return err
 }
 
@@ -484,18 +487,4 @@ func (p *PostgresStorage) GetLastBatchState(ctx context.Context, dbTx pgx.Tx) (u
 func (p *PostgresStorage) ResetTrustedState(ctx context.Context, batchNumber uint64, dbTx pgx.Tx) error {
 	//TODO
 	return nil
-}
-
-// CheckTrustedExitRootExists checks if the trusted global exit root is already stored.
-func (p *PostgresStorage) CheckTrustedExitRootExists(ctx context.Context, globalExitRoot *etherman.GlobalExitRoot, dbTx pgx.Tx) (bool, error) {
-	var count int
-	const checkTrustedExitRootSQL = "SELECT count(*) FROM syncv2.exit_root WHERE global_exit_root_num = $1 AND global_exit_root = $2"
-	err := p.getExecQuerier(dbTx).QueryRow(ctx, checkTrustedExitRootSQL, globalExitRoot.GlobalExitRootNum.String(), globalExitRoot.GlobalExitRoot).Scan(&count)
-	if err != nil {
-		return false, err
-	}
-	if count == 0 {
-		return false, nil
-	}
-	return true, nil
 }
