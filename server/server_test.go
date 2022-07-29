@@ -63,10 +63,14 @@ func TestBridgeMock(t *testing.T) {
 
 	deposit, err := restClient.GetBridge(0, 2)
 	require.NoError(t, err)
+	require.NotEmpty(t, deposit.Metadata)
 	require.Equal(t, deposit.ReadyForClaim, true)
 	require.Equal(t, deposit.DepositCnt, uint64(2))
 
 	wrappedToken, err := restClient.GetWrappedToken(0, "0x617b3a3528F9cDd6630fd3301B9c8911F7Bf063D")
 	require.NoError(t, err)
 	require.Equal(t, wrappedToken.WrappedTokenAddr, "0xc2716D3537EcA4B318e60f3d7d6a48714f1F3335")
+	require.Equal(t, wrappedToken.Name, "CoinA")
+	require.Equal(t, wrappedToken.Symbol, "COA")
+	require.Equal(t, wrappedToken.Decimals, uint32(12))
 }
