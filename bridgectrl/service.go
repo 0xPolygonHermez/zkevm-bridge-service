@@ -207,7 +207,7 @@ func (s *bridgeService) getDepositStatus(ctx context.Context, depositCount uint,
 	if networkID == MainNetworkID {
 		exitRoot, err = s.bridgeCtrl.storage.GetLatestL1SyncedExitRoot(ctx, nil)
 	} else {
-		exitRoot, err = s.bridgeCtrl.storage.GetLatestL2SyncedExitRoot(ctx, nil)
+		exitRoot, err = s.bridgeCtrl.storage.GetLatestTrustedExitRoot(ctx, nil)
 	}
 
 	if err != nil {

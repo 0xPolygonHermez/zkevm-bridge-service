@@ -183,6 +183,11 @@ func TestTrustedStateReorg(t *testing.T) {
 					GlobalExitRootNum: big.NewInt(0),
 				}
 				m.Storage.
+					On("CheckTrustedExitRootExists", ctx, ger, nil).
+					Return(false, nil).
+					Once()
+
+				m.Storage.
 					On("AddTrustedGlobalExitRoot", ctx, ger, nil).
 					Return(nil).
 					Once()

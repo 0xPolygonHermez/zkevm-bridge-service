@@ -176,11 +176,18 @@ func (s *ClientSynchronizer) syncTrustedState() error {
 		},
 		GlobalExitRootNum: new(big.Int).SetUint64(lastBatch.BatchNumber),
 	}
-	// TODO improve. If lastest ger it is already stored, skip
-	err = s.storage.AddTrustedGlobalExitRoot(s.ctx, ger, nil)
+	// If lastest ger it is already stored, skip
+	isAlreadyStored, err := s.storage.CheckTrustedExitRootExists(s.ctx, ger, nil)
 	if err != nil {
-		log.Error("error storing latest trusted globalExitRoot. Error: ", err)
+		log.Error("error checking stored trusted globalExitRoot. Error: ", err)
 		return err
+	}
+	if !isAlreadyStored {
+		err = s.storage.AddTrustedGlobalExitRoot(s.ctx, ger, nil)
+		if err != nil {
+			log.Error("error storing latest trusted globalExitRoot. Error: ", err)
+			return err
+		}
 	}
 	return nil
 }

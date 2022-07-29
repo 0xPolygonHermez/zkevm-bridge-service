@@ -309,15 +309,15 @@ func (p *PostgresStorage) GetLatestL1SyncedExitRoot(ctx context.Context, dbTx pg
 	return &ger, nil
 }
 
-// GetLatestL2SyncedExitRoot gets the latest L2 synced global exit root.
-func (p *PostgresStorage) GetLatestL2SyncedExitRoot(ctx context.Context, dbTx pgx.Tx) (*etherman.GlobalExitRoot, error) {
+// GetLatestTrustedExitRoot gets the latest trusted global exit root.
+func (p *PostgresStorage) GetLatestTrustedExitRoot(ctx context.Context, dbTx pgx.Tx) (*etherman.GlobalExitRoot, error) {
 	var (
 		ger         etherman.GlobalExitRoot
 		exitRootNum int64
 		exitRoots   [][]byte
 	)
-	const getLatestL2SyncedExitRootSQL = "SELECT block_id, global_exit_root, exit_roots FROM syncv2.exit_root WHERE block_id IS NULL ORDER BY global_exit_root_num DESC LIMIT 1"
-	err := p.getExecQuerier(dbTx).QueryRow(ctx, getLatestL2SyncedExitRootSQL).Scan(&exitRootNum, &ger.GlobalExitRoot, pq.Array(&exitRoots))
+	const getLatestTrustedExitRootSQL = "SELECT block_id, global_exit_root, exit_roots FROM syncv2.exit_root WHERE block_id IS NULL ORDER BY global_exit_root_num DESC LIMIT 1"
+	err := p.getExecQuerier(dbTx).QueryRow(ctx, getLatestTrustedExitRootSQL).Scan(&exitRootNum, &ger.GlobalExitRoot, pq.Array(&exitRoots))
 	if err != nil {
 		return nil, err
 	}
@@ -484,4 +484,18 @@ func (p *PostgresStorage) GetLastBatchState(ctx context.Context, dbTx pgx.Tx) (u
 func (p *PostgresStorage) ResetTrustedState(ctx context.Context, batchNumber uint64, dbTx pgx.Tx) error {
 	//TODO
 	return nil
+}
+
+// CheckTrustedExitRootExists checks if the trusted global exit root is already stored.
+func (p *PostgresStorage) CheckTrustedExitRootExists(ctx context.Context, globalExitRoot *etherman.GlobalExitRoot, dbTx pgx.Tx) (bool, error) {
+	var count int
+	const checkTrustedExitRootSQL = "SELECT count(*) FROM syncv2.exit_root WHERE global_exit_root_num = $1 AND global_exit_root = $2"
+	err := p.getExecQuerier(dbTx).QueryRow(ctx, checkTrustedExitRootSQL, globalExitRoot.GlobalExitRootNum.String(), globalExitRoot.GlobalExitRoot).Scan(&count)
+	if err != nil {
+		return false, err
+	}
+	if count == 0 {
+		return false, nil
+	}
+	return true, nil
 }
