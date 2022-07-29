@@ -29,7 +29,7 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: true
           tags: |
-            hermeznetwork/zkevm-bridge
-            hermeznetwork/zkevm-bridge:2.0
+            hermeznetwork/zkevm-bridge-service
+            hermeznetwork/zkevm-bridge-service:2.0
           build-args: |
             PRIVATE_TOKEN=${{secrets.GIT_TOKEN}}
