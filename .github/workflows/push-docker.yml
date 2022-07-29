@@ -29,8 +29,7 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: true
           tags: |
-            hermeznetwork/hermez-bridge
-            hermeznetwork/hermez-bridge:1.5-integration
-            hermeznetwork/hermez-bridge:1.5-itestnet
+            hermeznetwork/zkevm-bridge
+            hermeznetwork/zkevm-bridge:2.0
           build-args: |
             PRIVATE_TOKEN=${{secrets.GIT_TOKEN}}

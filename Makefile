@@ -1,26 +1,25 @@
 DOCKERCOMPOSE := docker-compose -f docker-compose.yml
-DOCKERCOMPOSEDBCORE := hez-postgres-core
-DOCKERCOMPOSEDBBRIDGE := hez-postgres-bridge
-DOCKERCOMPOSEHERMEZCORE := hez-core
-DOCKERCOMPOSENETWORK := hez-network
-DOCKERCOMPOSEPROVER := hez-prover
-DOCKERCOMPOSEBRIDGE := hez-bridge
-DOCKERCOMPOSEMOCKSERVER := hez-bridge-mock
+DOCKERCOMPOSEDBCORE := zkevm-postgres-core
+DOCKERCOMPOSEDBBRIDGE := zkevm-postgres-bridge
+DOCKERCOMPOSEZKEVMCORE := zkevm-core
+DOCKERCOMPOSENETWORK := zkevm-network
+DOCKERCOMPOSEPROVER := zkevm-prover
+DOCKERCOMPOSEBRIDGE := zkevm-bridge
+DOCKERCOMPOSEMOCKSERVER := zkevm-bridge-mock
 
 RUNDBCORE := $(DOCKERCOMPOSE) up -d $(DOCKERCOMPOSEDBCORE)
 RUNDBBRIDGE := $(DOCKERCOMPOSE) up -d $(DOCKERCOMPOSEDBBRIDGE)
 RUNDBS := ${RUNDBCORE} && ${RUNDBBRIDGE}
-RUNCORE := $(DOCKERCOMPOSE) up -d $(DOCKERCOMPOSEHERMEZCORE)
+RUNCORE := $(DOCKERCOMPOSE) up -d $(DOCKERCOMPOSEZKEVMCORE)
 RUNNETWORK := $(DOCKERCOMPOSE) up -d $(DOCKERCOMPOSENETWORK)
 RUNPROVER := $(DOCKERCOMPOSE) up -d $(DOCKERCOMPOSEPROVER)
 RUNBRIDGE := $(DOCKERCOMPOSE) up -d $(DOCKERCOMPOSEBRIDGE)
 RUNMOCKBRIDGE := $(DOCKERCOMPOSE) up -d $(DOCKERCOMPOSEMOCKSERVER)
-RUN := $(DOCKERCOMPOSE) up -d
 
 STOPDBCORE := $(DOCKERCOMPOSE) stop $(DOCKERCOMPOSEDBCORE) && $(DOCKERCOMPOSE) rm -f $(DOCKERCOMPOSEDBCORE)
 STOPDBBRIDGE := $(DOCKERCOMPOSE) stop $(DOCKERCOMPOSEDBBRIDGE) && $(DOCKERCOMPOSE) rm -f $(DOCKERCOMPOSEDBBRIDGE)
 STOPDBS := ${STOPDBCORE} && ${STOPDBBRIDGE}
-STOPCORE := $(DOCKERCOMPOSE) stop $(DOCKERCOMPOSEHERMEZCORE) && $(DOCKERCOMPOSE) rm -f $(DOCKERCOMPOSEHERMEZCORE)
+STOPCORE := $(DOCKERCOMPOSE) stop $(DOCKERCOMPOSEZKEVMCORE) && $(DOCKERCOMPOSE) rm -f $(DOCKERCOMPOSEZKEVMCORE)
 STOPNETWORK := $(DOCKERCOMPOSE) stop $(DOCKERCOMPOSENETWORK) && $(DOCKERCOMPOSE) rm -f $(DOCKERCOMPOSENETWORK)
 STOPPROVER := $(DOCKERCOMPOSE) stop $(DOCKERCOMPOSEPROVER) && $(DOCKERCOMPOSE) rm -f $(DOCKERCOMPOSEPROVER)
 STOPBRIDGE := $(DOCKERCOMPOSE) stop $(DOCKERCOMPOSEBRIDGE) && $(DOCKERCOMPOSE) rm -f $(DOCKERCOMPOSEBRIDGE)
@@ -35,7 +34,7 @@ LDFLAGS := -ldflags "-X main.version=$(VERSION) -X main.commit=$(COMMIT) -X main
 GOBASE := $(shell pwd)
 GOBIN := $(GOBASE)/dist
 GOENVVARS := GOBIN=$(GOBIN)
-GOBINARY := hezbridge
+GOBINARY := zkevm-bridge
 GOCMD := $(GOBASE)/cmd
 
 LINT := $$(go env GOPATH)/bin/golangci-lint run --timeout=5m -E whitespace -E gosec -E gci -E misspell -E gomnd -E gofmt -E goimports -E golint --exclude-use-default=false --max-same-issues 0
@@ -56,7 +55,7 @@ install-git-hooks: ## Moves hook files to the .git/hooks directory
 .PHONY: test
 test: ## Runs only short tests without checking race conditions
 	$(STOPDBBRIDGE) || true
-	$(RUNDBBRIDGE); sleep 5
+	$(RUNDBBRIDGE); sleep 3
 	trap '$(STOPDBBRIDGE)' EXIT; go test --cover -short -p 1 ./...
 
 .PHONY: install-linter
@@ -65,7 +64,7 @@ install-linter: ## Installs the linter
 
 .PHONY: build-docker
 build-docker: ## Builds a docker image with the core binary
-	docker build -t hermeznetwork/hermez-bridge -f ./Dockerfile .
+	docker build -t hermeznetwork/zkevm-bridge -f ./Dockerfile .
 
 .PHONY: run-db-core
 run-db-core: ## Runs the node database
@@ -132,7 +131,15 @@ restart: stop run ## Executes `make stop` and `make run` commands
 
 .PHONY: run
 run: ## runs all services
-	$(RUN)
+	$(RUNDBBRIDGE)
+	sleep 3
+	$(RUNNETWORK)
+	sleep 5
+	$(RUNPROVER)
+	sleep 2
+	$(RUNCORE)
+	sleep 5
+	$(RUNBRIDGE)
 
 .PHONY: run-mockserver
 run-mockserver: ## runs the mocked restful server
