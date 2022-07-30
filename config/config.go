@@ -52,7 +52,7 @@ func Load(configFilePath string, network string) (*Config, error) {
 	viper.AutomaticEnv()
 	replacer := strings.NewReplacer(".", "_")
 	viper.SetEnvKeyReplacer(replacer)
-	viper.SetEnvPrefix("HERMEZBRIDGE")
+	viper.SetEnvPrefix("ZKEVM_BRIDGE")
 	err = viper.ReadInConfig()
 	if err != nil {
 		_, ok := err.(viper.ConfigFileNotFoundError)

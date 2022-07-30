@@ -48,7 +48,7 @@ func proverUpCondition() (bool, error) {
 	return ops.ProverUpCondition()
 }
 
-func coreUpCondition() (done bool, err error) {
+func zkevmNodeUpCondition() (done bool, err error) {
 	return ops.NodeUpCondition(l2NetworkURL)
 }
 

@@ -1,97 +1,107 @@
-version: '3'
+version: '3.5'
 services:
-  zkevm-postgres-core:
-    container_name: zkevm-postgres-core
+  zkevm-node-db:
+    container_name: zkevm-node-db
     image: postgres
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+        reservations:
+          memory: 1G
     ports:
       - 5432:5432
+    volumes:
+      - ./config/initproverdb.sql:/docker-entrypoint-initdb.d/init.sql
     environment:
-      # In order to update this values, you may need to run: docker rm -f -v postgres
       - POSTGRES_USER=test_user
       - POSTGRES_PASSWORD=test_password
       - POSTGRES_DB=test_db
+    command: ["postgres", "-N", "500"]
 
-  zkevm-postgres-bridge:
-    container_name: zkevm-postgres-bridge
+  zkevm-bridge-db:
+    container_name: zkevm-bridge-db
     image: postgres
     expose:
       - 5433
     ports:
       - 5433:5433
     environment:
-      # In order to update this values, you may need to run: docker rm -f -v postgres
       - POSTGRES_USER=test_user
       - POSTGRES_PASSWORD=test_password
       - POSTGRES_DB=test_db
     command: -p 5433 -N 500
 
-  zkevm-core:
-    container_name: zkevm-core
-    image: hermeznetwork/hermez-node-zkevm:develop@sha256:3a64d49203f07a00678b7c26a7ebc28b4b00e24dd9e27a9c1cde26aac0c43c68
+  zkevm-node:
+    container_name: zkevm-node
+    image: hermeznetwork/zkevm-node:develop
     ports:
       - 8123:8123
+      - 61090:61090
     environment:
-      - HERMEZCORE_DATABASE_USER=test_user
-      - HERMEZCORE_DATABASE_PASSWORD=test_password
-      - HERMEZCORE_DATABASE_NAME=test_db
-      - HERMEZCORE_DATABASE_HOST=zkevm-postgres-core
-      - HERMEZCORE_DATABASE_PORT=5432
-      - HERMEZCORE_ETHERMAN_PRIVATEKEYPATH=/pk/keystore
+      - ZKEVM_NODE_DATABASE_USER=test_user
+      - ZKEVM_NODE_DATABASE_PASSWORD=test_password
+      - ZKEVM_NODE_DATABASE_NAME=test_db
+      - ZKEVM_NODE_DATABASE_HOST=zkevm-node-db
+      - ZKEVM_NODE_DATABASE_PORT=5432
+      - ZKEVM_NODE_ETHERMAN_PRIVATEKEYPATH=/pk/keystore
+      - ZKEVM_NODE_RPC_BROADCASTURI=zkevm-node:61090
     volumes:
       - ./test/test.keystore:/pk/keystore
-    #command: ["./hezcore", "run", "--network", "local", "--cfg", "/app/config.local.toml"]
-    command: >
-      sh -c "/app/hezcore register --cfg /app/config.local.toml --network local -y http://zkevm-core:8123 &&
-             /app/hezcore approve --cfg /app/config.local.toml --network local --amount 10000 -y &&
-             /app/hezcore run --network local --cfg /app/config.local.toml"
+      - ./config/config.zkevm.node.toml:/app/config.toml
+    command: 
+      - "/bin/sh"
+      - "-c"
+      - "/app/zkevm-node approve --am 10000000000000000 -y --network local --cfg /app/config.toml &&
+         /app/zkevm-node run --network local --cfg /app/config.toml --components \"synchronizer,rpc,sequencer,aggregator,broadcast-trusted-state\""
 
-  zkevm-network:
-    container_name: zkevm-network
-    image: hermeznetwork/geth-zkevm-contracts@sha256:545ffeaabd3d05d2a3c9a190a34ec4bb9da076bae58b8ada579045353cf2e8ff
+  zkevm-mock-l1-network:
+    container_name: zkevm-local-l1-network
+    image: hermeznetwork/geth-zkevm-contracts@sha256:7ac654f8b06baaca030f0022398dca1ffaa872be07dcf03c6bbc3ff6011adb88
     ports:
       - 8545:8545
 
   zkevm-prover:
     container_name: zkevm-prover
-    image: hermeznetwork/zkevm-mock-prover@sha256:3a86d0c65f0428decb7f1f3843b753bf6846bf43f6c628ab0b4d298fe7f918f2
+    image: hermeznetwork/zkprover-local@sha256:9adf1bb1e11e4063da4cfc9059f770506ccfd56b184c3f5e918a6f9d1571fd8e
     ports:
-      - 50051:50051
-    environment:
-      - POSTGRES_USER=test_user
-      - POSTGRES_PASSWORD=test_password
-      - POSTGRES_DB=test_db
-      - POSTGRES_HOST=zkevm-postgres-core
-      - POSTGRES_PORT=5432
-      - PROOF_TIME=1000
+      # - 50051:50051 # Prover
+      - 50052:50052 # Mock prover
+      - 50061:50061 # MT
+      - 50071:50071 # Executor
+    volumes:
+      - ./config/config.zkevm.prover.json:/usr/src/app/config.json
+    command: >
+      zkprover input_executor.json
 
-  zkevm-bridge:
-    container_name: zkevm-bridge
-    image: hermeznetwork/hermez-bridge
+  zkevm-bridge-service:
+    container_name: zkevm-bridge-service
+    image: zkevm-bridge-service
     ports:
       - 8080:8080
       - 9090:9090
     environment:
-      - HERMEZBRIDGE_DATABASE_USER=test_user
-      - HERMEZBRIDGE_DATABASE_PASSWORD=test_password
-      - HERMEZBRIDGE_DATABASE_NAME=test_db
-      - HERMEZBRIDGE_DATABASE_HOST=zkevm-postgres-bridge
-      - HERMEZBRIDGE_DATABASE_PORT=5433
-      - HERMEZBRIDGE_ETHERMAN_PRIVATEKEYPATH=/pk/keystore
+      - ZKEVM_BRIDGE_DATABASE_USER=test_user
+      - ZKEVM_BRIDGE_DATABASE_PASSWORD=test_password
+      - ZKEVM_BRIDGE_DATABASE_NAME=test_db
+      - ZKEVM_BRIDGE_DATABASE_HOST=zkevm-bridge-db
+      - ZKEVM_BRIDGE_DATABASE_PORT=5433
+      - ZKEVM_BRIDGE_ETHERMAN_PRIVATEKEYPATH=/pk/keystore
     volumes:
       - ./test/test.keystore:/pk/keystore
-      - ./config/config.local.toml:/app/config.toml
-    command: ["./hezbridge", "run", "--network", "local", "--cfg", "/app/config.toml"]
+      - ./config/config.zkevm.bridge.toml:/app/config.toml
+    command: ["./zkevm-bridge", "run", "--network", "local", "--cfg", "/app/config.toml"]
 
-  zkevm-bridge-mock:
-    container_name: zkevm-bridge-mock
-    image: hermeznetwork/hermez-bridge
+  zkevm-bridge-service-mock:
+    container_name: zkevm-bridge-service-mock
+    image: zkevm-bridge-service
     ports:
       - 8080:8080
       - 9090:9090
     environment:
-      - HERMEZBRIDGE_DATABASE_USER=test_user
-      - HERMEZBRIDGE_DATABASE_PASSWORD=test_password
-      - HERMEZBRIDGE_DATABASE_NAME=test_db
-      - HERMEZBRIDGE_DATABASE_HOST=zkevm-postgres-bridge
-      - HERMEZBRIDGE_DATABASE_PORT=5433
-    command: ["./hezbridge", "mockserver"]
+      - ZKEVM_BRIDGE_DATABASE_USER=test_user
+      - ZKEVM_BRIDGE_DATABASE_PASSWORD=test_password
+      - ZKEVM_BRIDGE_DATABASE_NAME=test_db
+      - ZKEVM_BRIDGE_DATABASE_HOST=zkevm-bridge-db
+      - ZKEVM_BRIDGE_DATABASE_PORT=5433
+    command: ["./zkevm-bridge", "mockserver"]

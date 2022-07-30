@@ -125,7 +125,7 @@ func newEthermans(c config.Config) (*etherman.Client, []*etherman.Client, error)
 		return nil, nil, err
 	}
 	if len(c.L2BridgeAddrs) != len(c.Etherman.L2URLs) {
-		log.Fatal("Environment configuration error. L2 bridge addresses and l2 hermezCore urls mismatch")
+		log.Fatal("environment configuration error. zkevm bridge addresses and zkevm node urls mismatch")
 	}
 	var l2Ethermans []*etherman.Client
 	// for i, addr := range c.L2BridgeAddrs {

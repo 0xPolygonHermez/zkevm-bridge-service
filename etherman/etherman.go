@@ -80,9 +80,9 @@ type Client struct {
 // NewClient creates a new etherman.
 func NewClient(cfg Config, auth *bind.TransactOpts, PoEAddr, bridgeAddr, globalExitRootManAddr common.Address) (*Client, error) {
 	// Connect to ethereum node
-	ethClient, err := ethclient.Dial(cfg.URL)
+	ethClient, err := ethclient.Dial(cfg.L1URL)
 	if err != nil {
-		log.Errorf("error connecting to %s: %+v", cfg.URL, err)
+		log.Errorf("error connecting to %s: %+v", cfg.L1URL, err)
 		return nil, err
 	}
 	// Create smc clients
