@@ -14,8 +14,6 @@ import (
 	"github.com/0xPolygonHermez/zkevm-node/sequencer/broadcast/pb"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/jackc/pgx/v4"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
@@ -27,20 +25,16 @@ type Synchronizer interface {
 
 // ClientSynchronizer connects L1 and L2
 type ClientSynchronizer struct {
-	etherMan       ethermanInterface
-	bridgeCtrl     bridgectrlInterface
-	storage        storageInterface
-	ctx            context.Context
-	cancelCtx      context.CancelFunc
-	genBlockNumber uint64
-	cfg            Config
-	networkID      uint
-	grpc           struct {
-		client    pb.BroadcastServiceClient
-		ctx       context.Context
-		cancelCtx context.CancelFunc
-	}
-	synced bool
+	etherMan        ethermanInterface
+	bridgeCtrl      bridgectrlInterface
+	storage         storageInterface
+	ctx             context.Context
+	cancelCtx       context.CancelFunc
+	genBlockNumber  uint64
+	cfg             Config
+	networkID       uint
+	broadcastClient pb.BroadcastServiceClient
+	synced          bool
 }
 
 // NewSynchronizer creates and initializes an instance of Synchronizer
@@ -48,6 +42,7 @@ func NewSynchronizer(
 	storage interface{},
 	bridge bridgectrlInterface,
 	ethMan ethermanInterface,
+	broadcastClient pb.BroadcastServiceClient,
 	genBlockNumber uint64,
 	cfg Config) (Synchronizer, error) {
 	ctx, cancel := context.WithCancel(context.Background())
@@ -55,33 +50,17 @@ func NewSynchronizer(
 	if err != nil {
 		log.Fatal("error getting networkID. Error: ", err)
 	}
-	opts := []grpc.DialOption{
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	}
-	grpcCtx, grpcCancelCtx := context.WithTimeout(ctx, 1*time.Second)
-	conn, err := grpc.DialContext(ctx, cfg.GrpcURL, opts...)
-	if err != nil {
-		log.Fatal("error creating grpc connection. Error: ", err)
-	}
-	client := pb.NewBroadcastServiceClient(conn)
+
 	return &ClientSynchronizer{
-		bridgeCtrl:     bridge,
-		storage:        storage.(storageInterface),
-		etherMan:       ethMan,
-		ctx:            ctx,
-		cancelCtx:      cancel,
-		genBlockNumber: genBlockNumber,
-		cfg:            cfg,
-		networkID:      networkID,
-		grpc: struct {
-			client    pb.BroadcastServiceClient
-			ctx       context.Context
-			cancelCtx context.CancelFunc
-		}{
-			client:    client,
-			ctx:       grpcCtx,
-			cancelCtx: grpcCancelCtx,
-		},
+		bridgeCtrl:      bridge,
+		storage:         storage.(storageInterface),
+		etherMan:        ethMan,
+		ctx:             ctx,
+		cancelCtx:       cancel,
+		genBlockNumber:  genBlockNumber,
+		cfg:             cfg,
+		networkID:       networkID,
+		broadcastClient: broadcastClient,
 	}, nil
 }
 
@@ -168,6 +147,7 @@ func (s *ClientSynchronizer) Sync() error {
 					log.Fatalf("networkID: %d, error: latest Synced BatchNumber is higher than the latest Proposed BatchNumber in the rollup", s.networkID)
 				}
 			} else { // Sync Trusted GlobalExitRoots if L1 is synced
+				log.Info("Virtual state is synced, getting trusted state")
 				err = s.syncTrustedState()
 				if err != nil {
 					log.Error("error getting current trusted state")
@@ -183,7 +163,7 @@ func (s *ClientSynchronizer) Stop() {
 }
 
 func (s *ClientSynchronizer) syncTrustedState() error {
-	lastBatch, err := s.grpc.client.GetLastBatch(s.ctx, &emptypb.Empty{})
+	lastBatch, err := s.broadcastClient.GetLastBatch(s.ctx, &emptypb.Empty{})
 	if err != nil {
 		log.Error("error getting latest batch from grpc. Error: ", err)
 		return err
@@ -196,7 +176,6 @@ func (s *ClientSynchronizer) syncTrustedState() error {
 		},
 		GlobalExitRootNum: new(big.Int).SetUint64(lastBatch.BatchNumber),
 	}
-
 	err = s.storage.AddTrustedGlobalExitRoot(s.ctx, ger, nil)
 	if err != nil {
 		log.Error("error storing latest trusted globalExitRoot. Error: ", err)

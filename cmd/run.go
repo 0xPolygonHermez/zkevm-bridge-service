@@ -17,9 +17,12 @@ import (
 	"github.com/0xPolygonHermez/zkevm-bridge-service/synchronizer"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/utils/gerror"
 	"github.com/0xPolygonHermez/zkevm-node/log"
+	"github.com/0xPolygonHermez/zkevm-node/sequencer/broadcast/pb"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/urfave/cli/v2"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 func start(ctx *cli.Context) error {
@@ -139,7 +142,16 @@ func newEthermans(c config.Config) (*etherman.Client, []*etherman.Client, error)
 }
 
 func runSynchronizer(genBlockNumber uint64, brdigeCtrl *bridgectrl.BridgeController, etherman *etherman.Client, cfg synchronizer.Config, storage db.Storage) {
-	sy, err := synchronizer.NewSynchronizer(storage, brdigeCtrl, etherman, genBlockNumber, cfg)
+	ctx := context.Background()
+	opts := []grpc.DialOption{
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	}
+	conn, err := grpc.DialContext(ctx, cfg.GrpcURL, opts...)
+	if err != nil {
+		log.Fatal("error creating grpc connection. Error: ", err)
+	}
+	broadcastClient := pb.NewBroadcastServiceClient(conn)
+	sy, err := synchronizer.NewSynchronizer(storage, brdigeCtrl, etherman, broadcastClient, genBlockNumber, cfg)
 	if err != nil {
 		log.Fatal(err)
 	}
