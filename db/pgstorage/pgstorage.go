@@ -476,7 +476,7 @@ func (p *PostgresStorage) GetDepositCount(ctx context.Context, destAddr string, 
 
 // GetLastBatchState returns the lates verified batch number.
 func (p *PostgresStorage) GetLastBatchState(ctx context.Context, dbTx pgx.Tx) (uint64, uint64, bool, error) {
-	//TODO
+	// TODO REMOVE When e2e test is working
 	return 0, 0, false, nil
 }
 
