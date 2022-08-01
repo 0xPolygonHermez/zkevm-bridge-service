@@ -114,6 +114,7 @@ func (s *ClientSynchronizer) Sync() error {
 				}
 			}
 			if !s.synced {
+				// TODO: avoid the case of L2
 				if s.networkID != 0 {
 					continue
 				}
