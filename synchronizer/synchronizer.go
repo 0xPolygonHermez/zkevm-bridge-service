@@ -114,6 +114,10 @@ func (s *ClientSynchronizer) Sync() error {
 				}
 			}
 			if !s.synced {
+				if s.networkID != 0 {
+					continue
+				}
+
 				latestsequencedBatchNumber, err := s.etherMan.GetLatestBatchNumber()
 				if err != nil {
 					log.Warnf("networkID: %d, error getting latest sequenced batch in the rollup. Error: %s", s.networkID, err.Error())
