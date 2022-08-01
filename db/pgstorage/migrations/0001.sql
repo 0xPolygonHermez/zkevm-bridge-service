@@ -20,7 +20,7 @@ CREATE TABLE syncv2.block
 
 CREATE TABLE syncv2.exit_root
 (
-    block_id                BIGINT NOT NULL REFERENCES syncv2.block (id) ON DELETE CASCADE,
+    block_id                BIGINT REFERENCES syncv2.block (id) ON DELETE CASCADE,
     global_exit_root_num    BIGINT,
     global_exit_root        BYTEA,
     exit_roots              BYTEA[]

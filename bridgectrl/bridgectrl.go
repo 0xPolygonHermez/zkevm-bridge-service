@@ -77,7 +77,7 @@ func (bt *BridgeController) GetClaim(networkID uint, index uint) ([][KeyLen]byte
 	if networkID == MainNetworkID {
 		globalExitRoot, err = bt.storage.GetLatestL1SyncedExitRoot(ctx, nil)
 	} else {
-		globalExitRoot, err = bt.storage.GetLatestL2SyncedExitRoot(ctx, nil)
+		globalExitRoot, err = bt.storage.GetLatestTrustedExitRoot(ctx, nil)
 	}
 
 	if err != nil {

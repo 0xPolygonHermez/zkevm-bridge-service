@@ -71,7 +71,7 @@ type storageInterface interface {
 	GetLastBlock(ctx context.Context, networkID uint, dbTx pgx.Tx) (*etherman.Block, error)
 	GetLatestExitRoot(ctx context.Context, dbTx pgx.Tx) (*etherman.GlobalExitRoot, error)
 	GetLatestL1SyncedExitRoot(ctx context.Context, dbTx pgx.Tx) (*etherman.GlobalExitRoot, error)
-	GetLatestL2SyncedExitRoot(ctx context.Context, dbTx pgx.Tx) (*etherman.GlobalExitRoot, error)
+	GetLatestTrustedExitRoot(ctx context.Context, dbTx pgx.Tx) (*etherman.GlobalExitRoot, error)
 	GetLastBatchState(ctx context.Context, dbTx pgx.Tx) (uint64, uint64, bool, error)
 	GetTokenWrapped(ctx context.Context, originalNetwork uint, originalTokenAddress common.Address, dbTx pgx.Tx) (*etherman.TokenWrapped, error)
 }
@@ -505,7 +505,7 @@ func (m *Manager) SendL2Claim(ctx context.Context, deposit *pb.Deposit, smtProof
 
 // GetCurrentGlobalExitRootSynced reads the latest globalexitroot of a batch proposal from db
 func (m *Manager) GetCurrentGlobalExitRootSynced(ctx context.Context) (*etherman.GlobalExitRoot, error) {
-	return m.storage.GetLatestL2SyncedExitRoot(ctx, nil)
+	return m.storage.GetLatestTrustedExitRoot(ctx, nil)
 }
 
 // GetLatestGlobalExitRootFromL1 reads the latest globalexitroot apperard in l1 from db
