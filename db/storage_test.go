@@ -42,21 +42,21 @@ func TestTrustedReset(t *testing.T) {
 	require.NoError(t, err)
 	tx, err := pg.BeginDBTransaction(ctx)
 	require.NoError(t, err)
-	batch1 := etherman.Batch {
+	batch1 := etherman.Batch{
 		BatchNumber:    1,
 		Coinbase:       common.HexToAddress("0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9"),
 		BatchL2Data:    []byte{},
 		Timestamp:      time.Now(),
 		GlobalExitRoot: common.HexToHash("0x1d02f31780d083b996faee908120beef6366b5a6cab3f9efbe5a1f7e9ad47ba8"),
 	}
-	batch2 := etherman.Batch {
+	batch2 := etherman.Batch{
 		BatchNumber:    2,
 		Coinbase:       common.HexToAddress("0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9"),
 		BatchL2Data:    []byte{},
 		Timestamp:      time.Now(),
 		GlobalExitRoot: common.HexToHash("0x2d02f31780d083b996faee908120beef6366b5a6cab3f9efbe5a1f7e9ad47ba8"),
 	}
-	batch3 := etherman.Batch {
+	batch3 := etherman.Batch{
 		BatchNumber:    3,
 		Coinbase:       common.HexToAddress("0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9"),
 		BatchL2Data:    []byte{},
