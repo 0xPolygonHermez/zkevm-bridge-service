@@ -482,6 +482,7 @@ func (p *PostgresStorage) GetLastBatchState(ctx context.Context, dbTx pgx.Tx) (u
 
 // ResetTrustedState resets trusted batches from the storage.
 func (p *PostgresStorage) ResetTrustedState(ctx context.Context, batchNumber uint64, dbTx pgx.Tx) error {
-	//TODO
-	return nil
+	const resetTrustedStateSQL = "DELETE FROM syncv2.batch WHERE batch_num > $1"
+	_, err := p.getExecQuerier(dbTx).Exec(ctx, resetTrustedStateSQL, batchNumber)
+	return err
 }
