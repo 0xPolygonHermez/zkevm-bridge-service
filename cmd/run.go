@@ -131,14 +131,13 @@ func newEthermans(c config.Config) (*etherman.Client, []*etherman.Client, error)
 		log.Fatal("Environment configuration error. L2 bridge addresses and l2 hermezCore urls mismatch")
 	}
 	var l2Ethermans []*etherman.Client
-	// TODO
-	// for i, addr := range c.L2BridgeAddrs {
-	// 	l2Etherman, err := etherman.NewClient(c.Etherman.L2URLs[i], addr)
-	// 	if err != nil {
-	// 		return l1Etherman, nil, err
-	// 	}
-	// 	l2Ethermans = append(l2Ethermans, l2Etherman)
-	// }
+	for i, addr := range c.L2BridgeAddrs {
+		l2Etherman, err := etherman.NewL2Client(c.Etherman.L2URLs[i], addr)
+		if err != nil {
+			return l1Etherman, nil, err
+		}
+		l2Ethermans = append(l2Ethermans, l2Etherman)
+	}
 	return l1Etherman, l2Ethermans, nil
 }
 

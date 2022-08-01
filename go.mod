@@ -6,7 +6,7 @@ require (
 	github.com/0xPolygonHermez/zkevm-node v0.0.0-20220726070051-075b323a0fef
 	github.com/ethereum/go-ethereum v1.10.21
 	github.com/gobuffalo/packr/v2 v2.8.3
-	github.com/grpc-ecosystem/grpc-gateway/v2 v2.11.0
+	github.com/grpc-ecosystem/grpc-gateway/v2 v2.11.1
 	github.com/iden3/go-iden3-crypto v0.0.14-0.20220413123345-edc36bfa5247
 	github.com/jackc/pgconn v1.12.1
 	github.com/jackc/pgx/v4 v4.16.1
@@ -17,7 +17,7 @@ require (
 	github.com/stretchr/testify v1.8.0
 	github.com/urfave/cli/v2 v2.11.1
 	golang.org/x/crypto v0.0.0-20220411220226-7b82a4e95df4
-	google.golang.org/genproto v0.0.0-20220719170305-83ca9fad585f
+	google.golang.org/genproto v0.0.0-20220728213248-dd149ef739b9
 	google.golang.org/grpc v1.48.0
 	google.golang.org/protobuf v1.28.1
 )
