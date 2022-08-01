@@ -11,7 +11,7 @@ type Storage interface{}
 // NewStorage creates a new Storage
 func NewStorage(cfg Config, networksNumber uint) (Storage, error) {
 	if cfg.Database == "postgres" {
-		return pgstorage.NewPostgresStorage(pgstorage.Config{
+		pg, err := pgstorage.NewPostgresStorage(pgstorage.Config{
 			Name:     cfg.Name,
 			User:     cfg.User,
 			Password: cfg.Password,
@@ -19,6 +19,7 @@ func NewStorage(cfg Config, networksNumber uint) (Storage, error) {
 			Port:     cfg.Port,
 			MaxConns: cfg.MaxConns,
 		}, networksNumber)
+		return pg, err
 	}
 	return nil, gerror.ErrStorageNotRegister
 }
