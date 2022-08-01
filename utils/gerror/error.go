@@ -5,8 +5,6 @@ import "errors"
 var (
 	// ErrStorageNotFound is used when the object is not found in the storage
 	ErrStorageNotFound = errors.New("not found in the Storage")
-	// ErrDuplicatedRegister is used when the object is already in the storage
-	ErrDuplicatedRegister = errors.New("already storaged, duplicated entry")
 	// ErrStorageNotRegister is used when the object is not found in the synchronizer
 	ErrStorageNotRegister = errors.New("not registered storage")
 	// ErrNilDBTransaction indicates the db transaction has not been properly initialized

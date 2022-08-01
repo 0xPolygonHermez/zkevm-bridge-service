@@ -9,6 +9,7 @@ import (
 	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestExitRootStore(t *testing.T) {
@@ -49,9 +50,17 @@ func TestAddTrustedGERDuplicated(t *testing.T) {
 	}
 	err = pg.AddTrustedGlobalExitRoot(ctx, ger, tx)
 	require.NoError(t, err)
+	getCount := "select count(*) from syncv2.exit_root where block_id is null and global_exit_root_num = $1 AND global_exit_root = $2"
+	var result int
+	err = tx.QueryRow(ctx, getCount, ger.GlobalExitRootNum.String(), ger.GlobalExitRoot).Scan(&result)
+	require.NoError(t, err)
+	assert.Equal(t, 1, result)
 	err = pg.AddTrustedGlobalExitRoot(ctx, ger, tx)
-	require.Error(t, err)
-	require.Error(t, tx.Commit(ctx))
+	require.NoError(t, err)
+	err = tx.QueryRow(ctx, getCount, ger.GlobalExitRootNum.String(), ger.GlobalExitRoot).Scan(&result)
+	require.NoError(t, err)
+	assert.Equal(t, 1, result)
+	require.NoError(t, tx.Commit(ctx))
 
 	tx, err = pg.BeginDBTransaction(ctx)
 	require.NoError(t, err)
@@ -63,7 +72,14 @@ func TestAddTrustedGERDuplicated(t *testing.T) {
 	}
 	err = pg.AddTrustedGlobalExitRoot(ctx, ger, tx)
 	require.NoError(t, err)
+	err = tx.QueryRow(ctx, getCount, ger.GlobalExitRootNum.String(), ger.GlobalExitRoot).Scan(&result)
+	require.NoError(t, err)
+	assert.Equal(t, 1, result)
 	err = pg.AddTrustedGlobalExitRoot(ctx, ger1, tx)
 	require.NoError(t, err)
+	getCount2 := "select count(*) from syncv2.exit_root"
+	err = tx.QueryRow(ctx, getCount2).Scan(&result)
+	require.NoError(t, err)
+	assert.Equal(t, 2, result)
 	require.NoError(t, tx.Commit(ctx))
 }
