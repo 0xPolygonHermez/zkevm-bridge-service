@@ -137,7 +137,7 @@ func TestTrustedStateReorg(t *testing.T) {
 					Once()
 
 				m.Storage.
-					On("ResetTrustedState", ctx, sequencedBatch.BatchNumber, m.DbTx).
+					On("ResetTrustedState", ctx, sequencedBatch.BatchNumber-1, m.DbTx).
 					Return(nil).
 					Once()
 
@@ -157,7 +157,7 @@ func TestTrustedStateReorg(t *testing.T) {
 				m.Etherman.
 					On("EthBlockByNumber", ctx, uint64(1)).
 					Return(ethBlock, nil)
-					// Once()
+
 				m.Storage.
 					On("Commit", ctx, m.DbTx).
 					Run(func(args mock.Arguments) { sync.Stop() }).

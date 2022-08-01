@@ -485,12 +485,13 @@ func (p *PostgresStorage) GetDepositCount(ctx context.Context, destAddr string, 
 
 // GetLastBatchState returns the lates verified batch number.
 func (p *PostgresStorage) GetLastBatchState(ctx context.Context, dbTx pgx.Tx) (uint64, uint64, bool, error) {
-	//TODO
+	// TODO REMOVE When e2e test is working
 	return 0, 0, false, nil
 }
 
 // ResetTrustedState resets trusted batches from the storage.
 func (p *PostgresStorage) ResetTrustedState(ctx context.Context, batchNumber uint64, dbTx pgx.Tx) error {
-	//TODO
-	return nil
+	const resetTrustedStateSQL = "DELETE FROM syncv2.batch WHERE batch_num > $1"
+	_, err := p.getExecQuerier(dbTx).Exec(ctx, resetTrustedStateSQL, batchNumber)
+	return err
 }
