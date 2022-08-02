@@ -7,7 +7,7 @@ package bridge.v1;
 
 import "google/api/annotations.proto";
 
-option go_package = "github.com/0xPolygonHermez/zkevm-bridge-service/bridgetree/pb";
+option go_package = "github.com/hermeznetwork/hermez-bridge/bridgetree/pb";
 
 service BridgeService {
     // Getters
@@ -28,7 +28,7 @@ service BridgeService {
     /// Get the merkle proof for the specific deposit
     rpc GetProof(GetProofRequest) returns (GetProofResponse) {
         option (google.api.http) = {
-            get: "/merkle-proof"
+            get: "/merkle-proofs"
         };
     }
 
@@ -60,9 +60,6 @@ message TokenWrapped {
     string original_token_addr = 2;
     string wrapped_token_addr = 3;
     uint32 network_id = 4;
-    string name = 5;
-    string symbol = 6;
-    uint32 decimals = 7;
 }
 
 // Deposit message
@@ -77,8 +74,7 @@ message Deposit {
     uint32 network_id = 8;
     string tx_hash = 9;
     string claim_tx_hash = 10;
-    string metadata = 11;
-    bool ready_for_claim = 12;
+    bool ready_for_claim = 11;
 }
 
 // Claim message
