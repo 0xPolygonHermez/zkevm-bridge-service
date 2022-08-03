@@ -77,11 +77,9 @@ func (p *PostgresStorage) GetLastBlock(ctx context.Context, networkID uint, dbTx
 
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, gerror.ErrStorageNotFound
-	} else if err != nil {
-		return nil, err
 	}
 
-	return &block, nil
+	return &block, err
 }
 
 // GetLastBatchNumber gets the last batch number.
@@ -103,7 +101,6 @@ func (p *PostgresStorage) GetBatchByNumber(ctx context.Context, batchNumber uint
 	e := p.getExecQuerier(dbTx)
 	err := e.QueryRow(ctx, getBatchByNumberSQL, batchNumber).Scan(
 		&batch.BatchNumber, &batch.Coinbase, &batch.BatchL2Data, &batch.Timestamp, &batch.GlobalExitRoot)
-
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, gerror.ErrStorageNotFound
 	}
@@ -168,7 +165,6 @@ func (p *PostgresStorage) GetTokenMetadata(ctx context.Context, tokenWrapped *et
 	const getMetadataSQL = "SELECT metadata from syncv2.deposit WHERE network_id = $1 AND token_addr = $2 AND dest_net = $3 AND metadata IS NOT NULL LIMIT 1"
 	e := p.getExecQuerier(dbTx)
 	err := e.QueryRow(ctx, getMetadataSQL, tokenWrapped.OriginalNetwork, tokenWrapped.OriginalTokenAddress, tokenWrapped.NetworkID).Scan(&metadata)
-
 	return metadata, err
 }
 
@@ -202,6 +198,9 @@ func (p *PostgresStorage) GetPreviousBlock(ctx context.Context, networkID uint, 
 	const getPreviousBlockSQL = "SELECT block_num, block_hash, parent_hash, network_id, received_at FROM syncv2.block WHERE network_id = $1 ORDER BY block_num DESC LIMIT 1 OFFSET $2"
 	e := p.getExecQuerier(dbTx)
 	err := e.QueryRow(ctx, getPreviousBlockSQL, networkID, offset).Scan(&block.BlockNumber, &block.BlockHash, &block.ParentHash, &block.NetworkID, &block.ReceivedAt)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, gerror.ErrStorageNotFound
+	}
 	return &block, err
 }
 
@@ -279,6 +278,9 @@ func (p *PostgresStorage) GetClaim(ctx context.Context, depositCounterUser uint,
 	)
 	const getClaimSQL = "SELECT index, orig_net, token_addr, amount, dest_addr, block_id, network_id, tx_hash FROM syncv2.claim WHERE index = $1 AND network_id = $2"
 	err := p.getExecQuerier(dbTx).QueryRow(ctx, getClaimSQL, depositCounterUser, networkID).Scan(&claim.Index, &claim.OriginalNetwork, &claim.Token, &amount, &claim.DestinationAddress, &claim.BlockID, &claim.NetworkID, &claim.TxHash)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, gerror.ErrStorageNotFound
+	}
 	claim.Amount, _ = new(big.Int).SetString(amount, 10) //nolint:gomnd
 	return &claim, err
 }
@@ -291,6 +293,9 @@ func (p *PostgresStorage) GetDeposit(ctx context.Context, depositCounterUser uin
 	)
 	const getDepositSQL = "SELECT orig_net, token_addr, amount, dest_net, dest_addr, deposit_cnt, block_id, network_id, tx_hash, metadata FROM syncv2.deposit WHERE network_id = $1 AND deposit_cnt = $2"
 	err := p.getExecQuerier(dbTx).QueryRow(ctx, getDepositSQL, networkID, depositCounterUser).Scan(&deposit.OriginalNetwork, &deposit.TokenAddress, &amount, &deposit.DestinationNetwork, &deposit.DestinationAddress, &deposit.DepositCount, &deposit.BlockID, &deposit.NetworkID, &deposit.TxHash, &deposit.Metadata)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, gerror.ErrStorageNotFound
+	}
 	deposit.Amount, _ = new(big.Int).SetString(amount, 10) //nolint:gomnd
 	return &deposit, err
 }
@@ -307,9 +312,12 @@ func (p *PostgresStorage) GetLatestL1SyncedExitRoot(ctx context.Context, dbTx pg
 		exitRootNum int64
 		exitRoots   [][]byte
 	)
-	const getLatestL1SyncedExitRootSQL = "SELECT block_id, global_exit_root_num, global_exit_root, exit_roots FROM syncv2.exit_root ORDER BY global_exit_root_num DESC LIMIT 1"
+	const getLatestL1SyncedExitRootSQL = "SELECT block_id, global_exit_root_num, global_exit_root, exit_roots FROM syncv2.exit_root WHERE block_id IS NOT NULL ORDER BY global_exit_root_num DESC LIMIT 1"
 	err := p.getExecQuerier(dbTx).QueryRow(ctx, getLatestL1SyncedExitRootSQL).Scan(&ger.BlockID, &exitRootNum, &ger.GlobalExitRoot, pq.Array(&exitRoots))
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, gerror.ErrStorageNotFound
+		}
 		return nil, err
 	}
 	ger.GlobalExitRootNum = big.NewInt(exitRootNum)
@@ -327,6 +335,9 @@ func (p *PostgresStorage) GetLatestTrustedExitRoot(ctx context.Context, dbTx pgx
 	const getLatestTrustedExitRootSQL = "SELECT block_id, global_exit_root, exit_roots FROM syncv2.exit_root WHERE block_id IS NULL ORDER BY global_exit_root_num DESC LIMIT 1"
 	err := p.getExecQuerier(dbTx).QueryRow(ctx, getLatestTrustedExitRootSQL).Scan(&exitRootNum, &ger.GlobalExitRoot, pq.Array(&exitRoots))
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, gerror.ErrStorageNotFound
+		}
 		return nil, err
 	}
 	ger.GlobalExitRootNum = big.NewInt(exitRootNum)
@@ -339,7 +350,9 @@ func (p *PostgresStorage) GetTokenWrapped(ctx context.Context, originalNetwork u
 	const getWrappedTokenSQL = "SELECT network_id, orig_net, orig_token_addr, wrapped_token_addr, block_id, name, symbol, decimals FROM syncv2.token_wrapped WHERE orig_net = $1 AND orig_token_addr = $2"
 	var token etherman.TokenWrapped
 	err := p.getExecQuerier(dbTx).QueryRow(ctx, getWrappedTokenSQL, originalNetwork, originalTokenAddress).Scan(&token.NetworkID, &token.OriginalNetwork, &token.OriginalTokenAddress, &token.WrappedTokenAddress, &token.BlockID, &token.Name, &token.Symbol, &token.Decimals)
-
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, gerror.ErrStorageNotFound
+	}
 	return &token, err
 }
 
@@ -421,6 +434,9 @@ func (p *PostgresStorage) GetClaimCount(ctx context.Context, destAddr string, db
 	const getClaimCountSQL = "SELECT COUNT(*) FROM syncv2.claim WHERE dest_addr = $1"
 	var claimCount uint64
 	err := p.getExecQuerier(dbTx).QueryRow(ctx, getClaimCountSQL, common.FromHex(destAddr)).Scan(&claimCount)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return 0, gerror.ErrStorageNotFound
+	}
 	return claimCount, err
 }
 

@@ -16,15 +16,16 @@ Port = "5433"
 MaxConns = 20
 
 [Etherman]
-L1URL = "http://localhost"
-L2URLs = ["http://localhost"]
-PrivateKeyPath = "./test/test.keystore"
+L1URL = "http://localhost:8545"
+L2URLs = ["http://localhost:8123"]
+PrivateKeyPath = "../test/test.keystore"
 PrivateKeyPassword = "testonly"
 
 [Synchronizer]
-SyncInterval = "0s"
+SyncInterval = "2s"
 SyncChunkSize = 100
 ForceBatch = false
+GrpcURL = "localhost:61090"
 
 [BridgeController]
 Store = "postgres"
