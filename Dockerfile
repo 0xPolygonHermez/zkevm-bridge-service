@@ -15,8 +15,8 @@ RUN cd /src && make build
 # CONTAINER FOR RUNNING BINARY
 FROM golang:1.17
 WORKDIR /app
-COPY --from=build /src/dist/hezbridge /app/hezbridge
+COPY --from=build /src/dist/zkevm-bridge /app/zkevm-bridge
 COPY --from=build /src/test/vectors /app/test/vectors
 EXPOSE 8080
 EXPOSE 9090
-CMD ["./hezbridge", "run"]
+CMD ["./zkevm-bridge", "run"]
