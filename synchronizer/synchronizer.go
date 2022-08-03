@@ -114,37 +114,19 @@ func (s *ClientSynchronizer) Sync() error {
 				}
 			}
 			if !s.synced {
-				latestsequencedBatchNumber, err := s.etherMan.GetLatestBatchNumber()
+				// Check latest Block
+				header, err := s.etherMan.HeaderByNumber(s.ctx, nil)
 				if err != nil {
-					log.Warnf("networkID: %d, error getting latest sequenced batch in the rollup. Error: %s", s.networkID, err.Error())
+					log.Warnf("networkID: %d, error getting latest block from. Error: %s", s.networkID, err.Error())
 					continue
 				}
-				// Check latest Synced Batch
-				dbTx, err := s.storage.BeginDBTransaction(s.ctx)
-				if err != nil {
-					log.Fatalf("networkID: %d, error creating db transaction to get latest block", s.networkID)
-				}
-				latestSyncedBatch, err := s.storage.GetLastBatchNumber(s.ctx, dbTx)
-				errC := s.storage.Commit(s.ctx, dbTx)
-				if errC != nil {
-					log.Errorf("networkID: %d, error committing dbTx, err: %s", s.networkID, errC.Error())
-					rollbackErr := s.storage.Rollback(s.ctx, dbTx)
-					if rollbackErr != nil {
-						log.Fatalf("networkID: %d, error rolling back state. RollbackErr: %s, err: %s",
-							s.networkID, rollbackErr.Error(), errC.Error())
-					}
-					log.Fatalf("networkID: %d, error committing dbTx, err: %s", s.networkID, errC.Error())
-				}
-				if err != nil {
-					log.Warnf("networkID: %d, error getting latest batch synced. Error: %s", s.networkID, err.Error())
-					continue
-				}
-				if latestSyncedBatch == latestsequencedBatchNumber {
+				lastKnownBlock := header.Number
+				if lastBlockSynced.BlockNumber == lastKnownBlock.Uint64() {
 					waitDuration = s.cfg.SyncInterval.Duration
 					s.synced = true
 				}
-				if latestSyncedBatch > latestsequencedBatchNumber {
-					log.Fatalf("networkID: %d, error: latest Synced BatchNumber is higher than the latest Proposed BatchNumber in the rollup", s.networkID)
+				if lastBlockSynced.BlockNumber > lastKnownBlock.Uint64() {
+					log.Fatalf("networkID: %d, error: latest Synced BlockNumber is higher than the latest Proposed in the network", s.networkID)
 				}
 			} else { // Sync Trusted GlobalExitRoots if L1 is synced
 				log.Info("Virtual state is synced, getting trusted state")
