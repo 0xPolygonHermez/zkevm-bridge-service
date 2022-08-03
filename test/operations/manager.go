@@ -18,7 +18,6 @@ import (
 	"github.com/0xPolygonHermez/zkevm-node/etherman/smartcontracts/bridge"
 	"github.com/0xPolygonHermez/zkevm-node/etherman/smartcontracts/globalexitrootmanager"
 	erc20 "github.com/0xPolygonHermez/zkevm-node/etherman/smartcontracts/matic"
-	"github.com/0xPolygonHermez/zkevm-node/etherman/smartcontracts/proofofefficiency"
 	"github.com/0xPolygonHermez/zkevm-node/log"
 	"github.com/0xPolygonHermez/zkevm-node/test/contracts/bin/ERC20"
 	"github.com/0xPolygonHermez/zkevm-node/test/operations"
@@ -74,6 +73,7 @@ type storageInterface interface {
 	GetLatestTrustedExitRoot(ctx context.Context, dbTx pgx.Tx) (*etherman.GlobalExitRoot, error)
 	GetLastBatchState(ctx context.Context, dbTx pgx.Tx) (uint64, uint64, bool, error)
 	GetTokenWrapped(ctx context.Context, originalNetwork uint, originalTokenAddress common.Address, dbTx pgx.Tx) (*etherman.TokenWrapped, error)
+	GetDepositCountByRoot(ctx context.Context, root []byte, network uint8, dbTx pgx.Tx) (uint, error)
 }
 
 // Config is the main Manager configuration.
@@ -203,7 +203,7 @@ func (m *Manager) Setup() error {
 		log.Error("network start failed")
 		return err
 	}
-	const t time.Duration = 5
+	const t time.Duration = 3
 	time.Sleep(t * time.Second)
 
 	// Start prover container
@@ -237,7 +237,7 @@ func (m *Manager) Setup() error {
 	}
 
 	//Wait for sync
-	const t2 time.Duration = 15
+	const t2 time.Duration = 5
 	time.Sleep(t2 * time.Second)
 
 	return nil
@@ -381,7 +381,7 @@ func (m *Manager) startProver() error {
 		return err
 	}
 	// Wait prover to be ready
-	return poll(defaultInterval, defaultDeadline, proverUpCondition)
+	return poll(defaultInterval, defaultDeadline*2, proverUpCondition)
 }
 
 func stopProver() error {
@@ -485,6 +485,7 @@ func (m *Manager) SendL1Claim(ctx context.Context, deposit *pb.Deposit, smtProof
 	if err != nil {
 		return err
 	}
+
 	return client.SendClaim(ctx, deposit, smtProof, globalExitRoot.GlobalExitRootNum, globalExitRoot, common.HexToAddress(l1BridgeAddr), auth)
 }
 
@@ -496,7 +497,9 @@ func (m *Manager) SendL2Claim(ctx context.Context, deposit *pb.Deposit, smtProof
 		return err
 	}
 	auth.GasPrice = big.NewInt(0)
+	auth.GasLimit = 10 ^ 9 // TODO remove this option
 	err = client.SendClaim(ctx, deposit, smtProof, globalExitRoot.GlobalExitRootNum, globalExitRoot, common.HexToAddress(l2BridgeAddr), auth)
+	return err
 	if err != nil {
 		return err
 	}
@@ -547,60 +550,22 @@ func (m *Manager) GetCurrentGlobalExitRootFromSmc(ctx context.Context) (*etherma
 	return &result, nil
 }
 
-// ForceBatchProposal propose an empty batch
-func (m *Manager) ForceBatchProposal(ctx context.Context) error {
-	// Eth client
-	client := m.clients[L1]
-	auth, err := client.GetSigner(ctx, accHexPrivateKeys[L1])
-	if err != nil {
-		return err
-	}
-	poeAddr := common.HexToAddress(poeAddress)
-	poe, err := proofofefficiency.NewProofofefficiency(poeAddr, client)
-	if err != nil {
-		return err
-	}
-	maticAmount, err := poe.CalculateForceProverFee(&bind.CallOpts{Pending: false})
-	if err != nil {
-		return err
-	}
-	matic, err := erc20.NewMatic(common.HexToAddress(MaticTokenAddress), client)
-	if err != nil {
-		return err
-	}
-	txApprove, err := matic.Approve(auth, poeAddr, maticAmount)
-	if err != nil {
-		return err
-	}
-	// wait to process approve
-	const txETHTransferTimeout = 20 * time.Second
-	err = WaitTxToBeMined(ctx, client.Client, txApprove.Hash(), txETHTransferTimeout)
-	if err != nil {
-		return err
-	}
-	tx, err := poe.SequenceBatches(auth, nil)
-	if err != nil {
-		return err
-	}
-
-	// wait eth transfer to be mined
-	log.Infof("Waiting tx to be mined")
-	err = WaitTxToBeMined(ctx, client.Client, tx.Hash(), txETHTransferTimeout)
-	if err != nil {
-		return err
-	}
-	// wait for sync
-	err = m.WaitBatchToBeConsolidated(ctx)
-	if err != nil {
-		return err
-	}
-	// wait for new exit root
-	_, blockID, _, err := m.storage.GetLastBatchState(ctx, nil)
-	if err != nil {
-		return err
-	}
-
-	return m.WaitExitRootToBeSynced(ctx, blockID, false)
+// CheckTrustedExitRootSynced waits until the trusted exitroot is synced.
+func (m *Manager) CheckTrustedExitRootSynced(ctx context.Context, depositCnt uint64) error {
+	return operations.Poll(defaultInterval, defaultDeadline, func() (bool, error) {
+		ger, err := m.storage.GetLatestTrustedExitRoot(ctx, nil)
+		if err != nil {
+			return false, err
+		}
+		count, err := m.storage.GetDepositCountByRoot(ctx, ger.ExitRoots[0][:], 0, nil)
+		if err != nil {
+			if err == gerror.ErrStorageNotFound {
+				return false, nil
+			}
+			return false, err
+		}
+		return count >= uint(depositCnt), nil
+	})
 }
 
 // DeployERC20 deploys erc20 smc
@@ -610,7 +575,7 @@ func (m *Manager) DeployERC20(ctx context.Context, name, symbol string, network 
 	if err != nil {
 		return common.Address{}, nil, err
 	}
-
+	auth.GasLimit = 10 ^ 9 // TODO remove this option
 	return client.DeployERC20(ctx, name, symbol, auth)
 }
 
@@ -704,11 +669,11 @@ func (m *Manager) WaitExitRootToBeSynced(ctx context.Context, blockID uint64, is
 			}
 			return false, err
 		}
-		if exitRoot.BlockID < blockID {
-			return false, nil
-		}
+
 		if !isRollup {
-			return true, nil
+			if exitRoot.BlockID >= blockID {
+				return true, nil
+			}
 		}
 		return exitRoot.ExitRoots[1] != orgExitRoot.ExitRoots[1], nil
 	})

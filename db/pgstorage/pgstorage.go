@@ -333,7 +333,7 @@ func (p *PostgresStorage) GetLatestTrustedExitRoot(ctx context.Context, dbTx pgx
 		exitRootNum int64
 		exitRoots   [][]byte
 	)
-	const getLatestTrustedExitRootSQL = "SELECT block_id, global_exit_root, exit_roots FROM syncv2.exit_root WHERE block_id IS NULL ORDER BY global_exit_root_num DESC LIMIT 1"
+	const getLatestTrustedExitRootSQL = "SELECT global_exit_root_num, global_exit_root, exit_roots FROM syncv2.exit_root WHERE block_id IS NULL ORDER BY global_exit_root_num DESC LIMIT 1"
 	err := p.getExecQuerier(dbTx).QueryRow(ctx, getLatestTrustedExitRootSQL).Scan(&exitRootNum, &ger.GlobalExitRoot, pq.Array(&exitRoots))
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {

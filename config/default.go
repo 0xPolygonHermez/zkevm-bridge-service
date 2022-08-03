@@ -18,7 +18,7 @@ MaxConns = 20
 [Etherman]
 L1URL = "http://localhost:8545"
 L2URLs = ["http://localhost:8123"]
-PrivateKeyPath = "../test/test.keystore"
+PrivateKeyPath = "./test/test.keystore"
 PrivateKeyPassword = "testonly"
 
 [Synchronizer]

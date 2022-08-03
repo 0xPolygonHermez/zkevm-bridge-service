@@ -86,8 +86,8 @@ func TestE2E(t *testing.T) {
 			assert.Equal(t, 0, balance.Cmp(initL2Balance))
 			t.Log("Deposits: ", deposits)
 			t.Log("deposits[0].OrigNet: ", deposits[0].OrigNet, ". deposits[0].OrigNet: ", deposits[0].DepositCnt)
-			// Force to propose a new batch
-			err = opsman.ForceBatchProposal(ctx)
+			// Check the trusted exitroot is synced
+			err = opsman.CheckTrustedExitRootSynced(ctx, deposits[0].DepositCnt)
 			require.NoError(t, err)
 			// Get the claim data
 			smtProof, globaExitRoot, err := opsman.GetClaimData(uint(deposits[0].OrigNet), uint(deposits[0].DepositCnt))
@@ -227,7 +227,7 @@ func TestE2E(t *testing.T) {
 		require.NoError(t, err)
 		t.Log("Deposits 2: ", deposits)
 		// Force to propose a new batch
-		err = opsman.ForceBatchProposal(ctx)
+		// err = opsman.ForceBatchProposal(ctx)
 		require.NoError(t, err)
 		// Check globalExitRoot
 		globalExitRoot4, err := opsman.GetCurrentGlobalExitRootSynced(ctx)
@@ -298,7 +298,7 @@ func TestE2E(t *testing.T) {
 		t.Log("Deposits: ", deposits)
 		t.Log("Before getClaimData: ", deposits[0].NetworkId, deposits[0].DepositCnt)
 		// Force to propose a new batch
-		err = opsman.ForceBatchProposal(ctx)
+		// err = opsman.ForceBatchProposal(ctx)
 		require.NoError(t, err)
 		// Get the claim data
 		smtProof, globaExitRoot, err := opsman.GetClaimData(uint(deposits[0].NetworkId), uint(deposits[0].DepositCnt))
@@ -414,7 +414,7 @@ func TestE2E(t *testing.T) {
 		t.Log("Deposits: ", deposits)
 		t.Log("Before getClaimData: ", deposits[2].NetworkId, deposits[2].DepositCnt)
 		// Force to propose a new batch
-		err = opsman.ForceBatchProposal(ctx)
+		// err = opsman.ForceBatchProposal(ctx)
 		require.NoError(t, err)
 		// Fourth deposit
 		err = opsman.SendL1Deposit(ctx, tokenAddr, amount1, destNetwork, &origAddr)
@@ -497,7 +497,7 @@ func TestE2E(t *testing.T) {
 		err = opsman.SendL1Deposit(ctx, tokenAddr, amount1, destNetwork, &destAddr)
 		require.NoError(t, err)
 		// Force to propose a new batch
-		err = opsman.ForceBatchProposal(ctx)
+		// err = opsman.ForceBatchProposal(ctx)
 		require.NoError(t, err)
 		// Get Bridge Info By DestAddr
 		deposits, err := opsman.GetBridgeInfoByDestAddr(ctx, &destAddr)

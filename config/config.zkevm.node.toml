@@ -31,10 +31,10 @@ SyncChunkSize = 100
 TrustedSequencerURI = ""
 
 [Sequencer]
-WaitPeriodPoolIsEmpty = "15s"
-LastBatchVirtualizationTimeMaxWaitPeriod = "15s"
+WaitPeriodPoolIsEmpty = "1s"
+LastBatchVirtualizationTimeMaxWaitPeriod = "1s"
 WaitBlocksToUpdateGER = 10
-LastTimeBatchMaxWaitPeriod = "15s"
+LastTimeBatchMaxWaitPeriod = "1s"
 BlocksAmountForTxsToBeDeleted = 100
 FrequencyToCheckTxsForDelete = "12h"
 	[Sequencer.ProfitabilityChecker]
@@ -51,7 +51,7 @@ Type = "default"
 DefaultGasPriceWei = 1000000000
 
 [Prover]
-ProverURI = "zkevm-prover:50052"
+ProverURI = "zkevm-prover:50051"
 
 [MTServer]
 Host = "0.0.0.0"

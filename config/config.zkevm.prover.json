@@ -23,7 +23,7 @@
     "useMainExecGenerated" : false,
 
     "proverServerPort": 50051,
-    "proverServerMockPort": 50052,
+    "proverServerMockPort": 50051,
     "proverClientPort": 50051,
 
     "executorServerPort": 50071,
