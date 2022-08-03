@@ -645,14 +645,11 @@ func (etherMan *Client) GetLatestBatchNumber() (uint64, error) {
 	return uint64(latestBatch), err
 }
 
-// GetNetworkID gets the network id of the dedicated chain.
+// GetNetworkID gets the network ID of the dedicated chain.
 func (etherMan *Client) GetNetworkID(ctx context.Context) (uint, error) {
-	// networkID, err := etherMan.Bridge.NetworkID(&bind.CallOpts{Pending: false})
-	// return uint(networkID), err
-
-	// TODO: remove this part
-	if etherMan.PoE != nil {
-		return 0, nil
+	networkID, err := etherMan.Bridge.NetworkID(&bind.CallOpts{Pending: false})
+	if err != nil {
+		return 0, err
 	}
-	return 1, nil
+	return uint(networkID), nil
 }
