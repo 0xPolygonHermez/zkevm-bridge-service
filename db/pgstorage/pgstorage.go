@@ -123,7 +123,6 @@ func (p *PostgresStorage) AddBatch(ctx context.Context, batch *etherman.Batch, d
 	const addBatchSQL = "INSERT INTO syncv2.batch (batch_num, sequencer, raw_tx_data, timestamp, global_exit_root) VALUES ($1, $2, $3, $4, $5)"
 	e := p.getExecQuerier(dbTx)
 	_, err := e.Exec(ctx, addBatchSQL, batch.BatchNumber, batch.Coinbase, batch.BatchL2Data, batch.Timestamp, batch.GlobalExitRoot)
-
 	return err
 }
 
