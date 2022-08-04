@@ -80,9 +80,9 @@ type Client struct {
 // NewClient creates a new etherman.
 func NewClient(cfg Config, auth *bind.TransactOpts, PoEAddr, bridgeAddr, globalExitRootManAddr common.Address) (*Client, error) {
 	// Connect to ethereum node
-	ethClient, err := ethclient.Dial(cfg.URL)
+	ethClient, err := ethclient.Dial(cfg.L1URL)
 	if err != nil {
-		log.Errorf("error connecting to %s: %+v", cfg.URL, err)
+		log.Errorf("error connecting to %s: %+v", cfg.L1URL, err)
 		return nil, err
 	}
 	// Create smc clients
@@ -647,5 +647,12 @@ func (etherMan *Client) GetLatestBatchNumber() (uint64, error) {
 
 // GetNetworkID gets the network id of the dedicated chain.
 func (etherMan *Client) GetNetworkID(ctx context.Context) (uint, error) {
-	return 0, nil
+	// networkID, err := etherMan.Bridge.NetworkID(&bind.CallOpts{Pending: false})
+	// return uint(networkID), err
+
+	// TODO: remove this part
+	if etherMan.PoE != nil {
+		return 0, nil
+	}
+	return 1, nil
 }

@@ -213,17 +213,17 @@ func (m *Manager) Setup() error {
 		return err
 	}
 
-	//Send funds to hermezCore
+	//Send funds to zkevm node
 	err = m.AddFunds(m.ctx)
 	if err != nil {
 		log.Error("addfunds failed")
 		return err
 	}
 
-	// Run core container
-	err = m.startCore()
+	// Run zkevm node container
+	err = m.startZKEVMNode()
 	if err != nil {
-		log.Error("core start failed")
+		log.Error("zkevm node start failed")
 		return err
 	}
 	//Wait for set the genesis and sync
@@ -243,7 +243,7 @@ func (m *Manager) Setup() error {
 	return nil
 }
 
-// AddFunds adds matic and eth to the hermez core wallet.
+// AddFunds adds matic and eth to the zkevm node wallet.
 func (m *Manager) AddFunds(ctx context.Context) error {
 	// Eth client
 	log.Infof("Connecting to l1")
@@ -317,7 +317,7 @@ func Teardown() error {
 		return err
 	}
 
-	err = stopCore()
+	err = stopZKEVMNode()
 	if err != nil {
 		return err
 	}
@@ -353,21 +353,21 @@ func stopNetwork() error {
 	return runCmd(cmd)
 }
 
-func (m *Manager) startCore() error {
-	if err := stopCore(); err != nil {
+func (m *Manager) startZKEVMNode() error {
+	if err := stopZKEVMNode(); err != nil {
 		return err
 	}
-	cmd := exec.Command(makeCmd, "run-core")
+	cmd := exec.Command(makeCmd, "run-node")
 	err := runCmd(cmd)
 	if err != nil {
 		return err
 	}
-	// Wait core to be ready
-	return poll(defaultInterval, defaultDeadline, coreUpCondition)
+	// Wait zkevm node to be ready
+	return poll(defaultInterval, defaultDeadline, zkevmNodeUpCondition)
 }
 
-func stopCore() error {
-	cmd := exec.Command(makeCmd, "stop-core")
+func stopZKEVMNode() error {
+	cmd := exec.Command(makeCmd, "stop-node")
 	return runCmd(cmd)
 }
 

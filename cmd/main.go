@@ -51,14 +51,14 @@ func main() {
 		{
 			Name:    "run",
 			Aliases: []string{},
-			Usage:   "Run the hermez core",
+			Usage:   "Run the zkevm bridge",
 			Action:  start,
 			Flags:   flags,
 		},
 		{
 			Name:    "mockserver",
 			Aliases: []string{},
-			Usage:   "Run the hermez core",
+			Usage:   "Run the zkevm bridge mock server",
 			Action:  runMockServer,
 		},
 	}
