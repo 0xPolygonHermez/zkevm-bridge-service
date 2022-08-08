@@ -137,3 +137,75 @@ func TestTrustedReset(t *testing.T) {
 	assert.Equal(t, 1, result)
 	require.NoError(t, tx.Commit(ctx))
 }
+
+func TestGetLastBlock(t *testing.T) {
+	// Init database instance
+	cfg := pgstorage.NewConfigFromEnv()
+	err := pgstorage.InitOrReset(cfg)
+	require.NoError(t, err)
+	ctx := context.Background()
+	pg, err := pgstorage.NewPostgresStorage(cfg, 1)
+	require.NoError(t, err)
+	tx, err := pg.BeginDBTransaction(ctx)
+	require.NoError(t, err)
+	block1 := etherman.Block {
+		BlockNumber: 1,
+		BlockHash: common.HexToHash("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9f1"),
+		ParentHash: common.HexToHash("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9f2"),
+		NetworkID: 0,
+		ReceivedAt: time.Now(),
+	}
+	block2 := etherman.Block {
+		BlockNumber: 2,
+		BlockHash: common.HexToHash("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9f3"),
+		ParentHash: common.HexToHash("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9f4"),
+		NetworkID: 0,
+		ReceivedAt: time.Now(),
+	}
+	block3 := etherman.Block {
+		BlockNumber: 100,
+		BlockHash: common.HexToHash("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9f5"),
+		ParentHash: common.HexToHash("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9f6"),
+		NetworkID: 1,
+		ReceivedAt: time.Now(),
+	}
+	block4 := etherman.Block {
+		BlockNumber: 101,
+		BlockHash: common.HexToHash("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9f7"),
+		ParentHash: common.HexToHash("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9f8"),
+		NetworkID: 1,
+		ReceivedAt: time.Now(),
+	}
+	_, err = pg.AddBlock(ctx, &block1, tx)
+	require.NoError(t, err)
+	b, err := pg.GetLastBlock(ctx, 0, tx)
+	assert.Equal(t, block1.BlockNumber, b.BlockNumber)
+	assert.Equal(t, block1.BlockHash, b.BlockHash)
+	assert.Equal(t, block1.ParentHash, b.ParentHash)
+	assert.Equal(t, block1.NetworkID, b.NetworkID)
+
+	_, err = pg.AddBlock(ctx, &block2, tx)
+	require.NoError(t, err)
+	b, err = pg.GetLastBlock(ctx, 0, tx)
+	assert.Equal(t, block2.BlockNumber, b.BlockNumber)
+	assert.Equal(t, block2.BlockHash, b.BlockHash)
+	assert.Equal(t, block2.ParentHash, b.ParentHash)
+	assert.Equal(t, block2.NetworkID, b.NetworkID)
+
+	_, err = pg.AddBlock(ctx, &block3, tx)
+	require.NoError(t, err)
+	b, err = pg.GetLastBlock(ctx, 1, tx)
+	assert.Equal(t, block3.BlockNumber, b.BlockNumber)
+	assert.Equal(t, block3.BlockHash, b.BlockHash)
+	assert.Equal(t, block3.ParentHash, b.ParentHash)
+	assert.Equal(t, block3.NetworkID, b.NetworkID)
+
+	_, err = pg.AddBlock(ctx, &block4, tx)
+	require.NoError(t, err)
+	b, err = pg.GetLastBlock(ctx, 1, tx)
+	assert.Equal(t, block4.BlockNumber, b.BlockNumber)
+	assert.Equal(t, block4.BlockHash, b.BlockHash)
+	assert.Equal(t, block4.ParentHash, b.ParentHash)
+	assert.Equal(t, block4.NetworkID, b.NetworkID)
+	require.NoError(t, tx.Commit(ctx))
+}
