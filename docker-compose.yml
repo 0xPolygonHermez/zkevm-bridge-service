@@ -12,7 +12,11 @@ services:
     ports:
       - 5432:5432
     volumes:
+<<<<<<< HEAD
       - ./config/initproverdb.sql:/docker-entrypoint-initdb.d/init.sql
+=======
+      - ./test/vectors/src/prover/initproverdb.sql:/docker-entrypoint-initdb.d/init.sql
+>>>>>>> main
     environment:
       - POSTGRES_USER=test_user
       - POSTGRES_PASSWORD=test_password
@@ -34,7 +38,11 @@ services:
 
   zkevm-node:
     container_name: zkevm-node
+<<<<<<< HEAD
     image: zkevm-node
+=======
+    image: hermeznetwork/zkevm-node:develop
+>>>>>>> main
     ports:
       - 8123:8123
       - 61090:61090
@@ -44,11 +52,22 @@ services:
       - ZKEVM_NODE_DATABASE_NAME=test_db
       - ZKEVM_NODE_DATABASE_HOST=zkevm-node-db
       - ZKEVM_NODE_DATABASE_PORT=5432
+<<<<<<< HEAD
       - ZKEVM_NODE_ETHERMAN_PRIVATEKEYPATH=/pk/keystore
       - ZKEVM_NODE_RPC_BROADCASTURI=zkevm-node:61090
     volumes:
       - ./test/test.keystore:/pk/keystore
       - ./config/config.zkevm.node.toml:/app/config.toml
+=======
+      - ZKEVM_NODE_ETHERMAN_URL=http://zkevm-mock-l1-network:8545
+      - ZKEVM_NODE_ETHERMAN_PRIVATEKEYPATH=/pk/keystore
+      - ZKEVM_NODE_RPC_BROADCASTURI=zkevm-node:61090
+      - ZKEVM_NODE_PROVER_URI=zkevm-prover:50052
+      - ZKEVM_NODE_MTCLIENT_URI=zkevm-prover:50061
+      - ZKEVM_NODE_EXECUTOR_URI=zkevm-prover:50071
+    volumes:
+      - ./test/test.keystore:/pk/keystore
+>>>>>>> main
     command: 
       - "/bin/sh"
       - "-c"
@@ -66,11 +85,19 @@ services:
     image: hermeznetwork/zkprover-local@sha256:9adf1bb1e11e4063da4cfc9059f770506ccfd56b184c3f5e918a6f9d1571fd8e
     ports:
       # - 50051:50051 # Prover
+<<<<<<< HEAD
       - 50051:50052 # Mock prover
       - 50061:50061 # MT
       - 50071:50071 # Executor
     volumes:
       - ./config/config.zkevm.prover.json:/usr/src/app/config.json
+=======
+      - 50052:50052 # Mock prover
+      - 50061:50061 # MT
+      - 50071:50071 # Executor
+    volumes:
+      - ./test/vectors/src/prover/config.prover.json:/usr/src/app/config.json
+>>>>>>> main
     command: >
       zkprover input_executor.json
 
@@ -89,11 +116,16 @@ services:
       - ZKEVM_BRIDGE_ETHERMAN_PRIVATEKEYPATH=/pk/keystore
     volumes:
       - ./test/test.keystore:/pk/keystore
+<<<<<<< HEAD
       - ./config/config.zkevm.bridge.toml:/app/config.toml
     command:
       - "/bin/sh"
       - "-c"
       - "/app/zkevm-bridge run --network local --cfg /app/config.toml"
+=======
+      - ./config/config.local.toml:/app/config.toml
+    command: ["./zkevm-bridge", "run", "--network", "local", "--cfg", "/app/config.toml"]
+>>>>>>> main
 
   zkevm-bridge-service-mock:
     container_name: zkevm-bridge-service-mock
@@ -107,7 +139,11 @@ services:
       - ZKEVM_BRIDGE_DATABASE_NAME=test_db
       - ZKEVM_BRIDGE_DATABASE_HOST=zkevm-bridge-db
       - ZKEVM_BRIDGE_DATABASE_PORT=5433
+<<<<<<< HEAD
     command:
       - "/bin/sh"
       - "-c"
       - "/app/zkevm-bridge mockserver"
+=======
+    command: ["./zkevm-bridge", "mockserver"]
+>>>>>>> main

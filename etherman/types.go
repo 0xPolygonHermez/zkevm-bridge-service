@@ -120,15 +120,6 @@ type VerifiedBatch struct {
 	TxHash      common.Hash
 }
 
-// VirtualBatch represents a VirtualBatch
-type VirtualBatch struct {
-	BatchNumber uint64
-	BlockID     uint64
-	BlockNumber uint64
-	TxHash      common.Hash
-	Sequencer   common.Address
-}
-
 // TokenMetadata is a metadata of ERC20 token.
 type TokenMetadata struct {
 	Name     string

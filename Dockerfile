@@ -13,9 +13,18 @@ RUN cd /src/db && packr2
 RUN cd /src && make build
 
 # CONTAINER FOR RUNNING BINARY
+<<<<<<< HEAD
 FROM alpine:3.16.0
+=======
+FROM golang:1.17
+WORKDIR /app
+>>>>>>> main
 COPY --from=build /src/dist/zkevm-bridge /app/zkevm-bridge
 COPY --from=build /src/test/vectors /app/test/vectors
 EXPOSE 8080
 EXPOSE 9090
+<<<<<<< HEAD
 CMD ["/bin/sh", "-c", "/app/zkevm-bridge run"]
+=======
+CMD ["./zkevm-bridge", "run"]
+>>>>>>> main

@@ -28,7 +28,6 @@ type storageInterface interface {
 	Commit(ctx context.Context, dbTx pgx.Tx) error
 	AddBlock(ctx context.Context, block *etherman.Block, dbTx pgx.Tx) (uint64, error)
 	AddBatch(ctx context.Context, batch *etherman.Batch, dbTx pgx.Tx) error
-	// AddVirtualBatch(ctx context.Context, virtualBatch etherman.VirtualBatch, dbTx pgx.Tx) error
 	AddVerifiedBatch(ctx context.Context, verifiedBatch *etherman.VerifiedBatch, dbTx pgx.Tx) error
 	AddGlobalExitRoot(ctx context.Context, exitRoot *etherman.GlobalExitRoot, dbTx pgx.Tx) error
 	AddDeposit(ctx context.Context, deposit *etherman.Deposit, dbTx pgx.Tx) error

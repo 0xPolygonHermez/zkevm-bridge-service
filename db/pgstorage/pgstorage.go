@@ -79,7 +79,7 @@ func (p *PostgresStorage) GetLastBlock(ctx context.Context, networkID uint, dbTx
 		return nil, gerror.ErrStorageNotFound
 	}
 
-	return &block, nil
+	return &block, err
 }
 
 // GetLastBatchNumber gets the last batch number.
@@ -123,7 +123,6 @@ func (p *PostgresStorage) AddBatch(ctx context.Context, batch *etherman.Batch, d
 	const addBatchSQL = "INSERT INTO syncv2.batch (batch_num, sequencer, raw_tx_data, timestamp, global_exit_root) VALUES ($1, $2, $3, $4, $5)"
 	e := p.getExecQuerier(dbTx)
 	_, err := e.Exec(ctx, addBatchSQL, batch.BatchNumber, batch.Coinbase, batch.BatchL2Data, batch.Timestamp, batch.GlobalExitRoot)
-
 	return err
 }
 
@@ -294,6 +293,9 @@ func (p *PostgresStorage) GetDeposit(ctx context.Context, depositCounterUser uin
 	)
 	const getDepositSQL = "SELECT orig_net, token_addr, amount, dest_net, dest_addr, deposit_cnt, block_id, network_id, tx_hash, metadata FROM syncv2.deposit WHERE network_id = $1 AND deposit_cnt = $2"
 	err := p.getExecQuerier(dbTx).QueryRow(ctx, getDepositSQL, networkID, depositCounterUser).Scan(&deposit.OriginalNetwork, &deposit.TokenAddress, &amount, &deposit.DestinationNetwork, &deposit.DestinationAddress, &deposit.DepositCount, &deposit.BlockID, &deposit.NetworkID, &deposit.TxHash, &deposit.Metadata)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, gerror.ErrStorageNotFound
+	}
 	deposit.Amount, _ = new(big.Int).SetString(amount, 10) //nolint:gomnd
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, gerror.ErrStorageNotFound
