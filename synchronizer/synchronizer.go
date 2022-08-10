@@ -114,17 +114,8 @@ func (s *ClientSynchronizer) Sync() error {
 				}
 			}
 			if !s.synced {
-<<<<<<< HEAD
-				// TODO: avoid the case of L2
-				if s.networkID != 0 {
-					continue
-				}
-
-				latestsequencedBatchNumber, err := s.etherMan.GetLatestBatchNumber()
-=======
 				// Check latest Block
 				header, err := s.etherMan.HeaderByNumber(s.ctx, nil)
->>>>>>> main
 				if err != nil {
 					log.Warnf("networkID: %d, error getting latest block from. Error: %s", s.networkID, err.Error())
 					continue

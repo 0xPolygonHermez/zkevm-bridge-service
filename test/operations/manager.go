@@ -181,8 +181,8 @@ func (m *Manager) SendL2Deposit(ctx context.Context, tokenAddr common.Address, a
 		return err
 	}
 
-	auth.GasLimit = 10 ^ 9        // TODO remove when the executor is fixed to estimate gas
-	auth.GasPrice = big.NewInt(1) // TODO remove when the executor is fixed to estimate gas
+	// auth.GasLimit = 10 ^ 9        // TODO remove when the executor is fixed to estimate gas
+	// auth.GasPrice = big.NewInt(0) // TODO remove when the executor is fixed to estimate gas
 
 	lastBlockID, err := m.getLastBlockID(ctx)
 	if err != nil {
@@ -500,14 +500,12 @@ func (m *Manager) SendL2Claim(ctx context.Context, deposit *pb.Deposit, smtProof
 	if err != nil {
 		return err
 	}
-	auth.GasPrice = big.NewInt(0)
-	auth.GasLimit = 10 ^ 9 // TODO remove this option
+
+	// auth.GasLimit = 10 ^ 9        // TODO remove when the executor is fixed to estimate gas
+	// auth.GasPrice = big.NewInt(0) // TODO remove when the executor is fixed to estimate gas
+
 	err = client.SendClaim(ctx, deposit, smtProof, globalExitRoot.GlobalExitRootNum, globalExitRoot, common.HexToAddress(l2BridgeAddr), auth)
 	return err
-	if err != nil {
-		return err
-	}
-	return m.WaitBatchToBeConsolidated(ctx)
 }
 
 // GetCurrentGlobalExitRootSynced reads the latest globalexitroot of a batch proposal from db
@@ -579,7 +577,7 @@ func (m *Manager) DeployERC20(ctx context.Context, name, symbol string, network 
 	if err != nil {
 		return common.Address{}, nil, err
 	}
-	auth.GasLimit = 10 ^ 9 // TODO remove this option
+
 	return client.DeployERC20(ctx, name, symbol, auth)
 }
 
