@@ -24,7 +24,6 @@ PrivateKeyPassword = "testonly"
 [Synchronizer]
 SyncInterval = "2s"
 SyncChunkSize = 100
-ForceBatch = false
 GrpcURL = "localhost:61090"
 
 [BridgeController]
@@ -34,5 +33,4 @@ Height = 32
 [BridgeServer]
 GRPCPort = "9090"
 HTTPPort = "8080"
-
 `
