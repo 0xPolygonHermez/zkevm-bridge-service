@@ -40,7 +40,7 @@ const (
 	l1NetworkURL = "http://localhost:8545"
 	l2NetworkURL = "http://localhost:8123"
 
-	poeAddress = "0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9"
+	// poeAddress = "0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9"
 	// MaticTokenAddress token address
 	MaticTokenAddress = "0x5FbDB2315678afecb367f032d93F642f64180aa3" //nolint:gosec
 	l1BridgeAddr      = "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9"
@@ -181,8 +181,8 @@ func (m *Manager) SendL2Deposit(ctx context.Context, tokenAddr common.Address, a
 		return err
 	}
 
-	// auth.GasLimit = 10 ^ 9        // TODO remove when the executor is fixed to estimate gas
-	// auth.GasPrice = big.NewInt(0) // TODO remove when the executor is fixed to estimate gas
+	auth.GasLimit = 10 ^ 9        // TODO remove when the executor is fixed to estimate gas
+	auth.GasPrice = big.NewInt(0) // TODO remove when the executor is fixed to estimate gas
 
 	lastBlockID, err := m.getLastBlockID(ctx)
 	if err != nil {
@@ -385,7 +385,7 @@ func (m *Manager) startProver() error {
 		return err
 	}
 	// Wait prover to be ready
-	return poll(defaultInterval, defaultDeadline*2, proverUpCondition)
+	return poll(defaultInterval, defaultDeadline, proverUpCondition)
 }
 
 func stopProver() error {
@@ -501,8 +501,8 @@ func (m *Manager) SendL2Claim(ctx context.Context, deposit *pb.Deposit, smtProof
 		return err
 	}
 
-	// auth.GasLimit = 10 ^ 9        // TODO remove when the executor is fixed to estimate gas
-	// auth.GasPrice = big.NewInt(0) // TODO remove when the executor is fixed to estimate gas
+	auth.GasLimit = 10 ^ 9        // TODO remove when the executor is fixed to estimate gas
+	auth.GasPrice = big.NewInt(0) // TODO remove when the executor is fixed to estimate gas
 
 	err = client.SendClaim(ctx, deposit, smtProof, globalExitRoot.GlobalExitRootNum, globalExitRoot, common.HexToAddress(l2BridgeAddr), auth)
 	return err
