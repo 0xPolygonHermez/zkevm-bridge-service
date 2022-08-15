@@ -256,17 +256,13 @@ func (p *PostgresStorage) AddForcedBatch(ctx context.Context, forcedBatch *ether
 
 // AddTrustedGlobalExitRoot adds new global exit root which comes from the trusted sequencer.
 func (p *PostgresStorage) AddTrustedGlobalExitRoot(ctx context.Context, trustedExitRoot *etherman.GlobalExitRoot, dbTx pgx.Tx) error {
-	var count int
-	const checkTrustedExitRootSQL = "SELECT count(*) FROM syncv2.exit_root WHERE block_id IS NULL AND global_exit_root_num = $1 AND global_exit_root = $2"
-	err := p.getExecQuerier(dbTx).QueryRow(ctx, checkTrustedExitRootSQL, trustedExitRoot.GlobalExitRootNum.String(), trustedExitRoot.GlobalExitRoot).Scan(&count)
-	if err != nil {
-		return err
-	}
-	if count != 0 {
-		return nil
-	}
-	const addTrustedGerSQL = "INSERT INTO syncv2.exit_root (global_exit_root_num, global_exit_root, exit_roots) VALUES ($1, $2, $3)"
-	_, err = p.getExecQuerier(dbTx).Exec(ctx, addTrustedGerSQL, trustedExitRoot.GlobalExitRootNum.String(), trustedExitRoot.GlobalExitRoot, pq.Array([][]byte{trustedExitRoot.ExitRoots[0][:], trustedExitRoot.ExitRoots[1][:]}))
+	const addTrustedGerSQL = `
+		INSERT INTO syncv2.exit_root (block_id, global_exit_root_num, global_exit_root, exit_roots) 
+		VALUES (0, $1, $2, $3)
+		ON CONFLICT (block_id, global_exit_root_num) DO UPDATE
+			SET global_exit_root = $2,
+				exit_roots = $3;`
+	_, err := p.getExecQuerier(dbTx).Exec(ctx, addTrustedGerSQL, trustedExitRoot.GlobalExitRootNum.String(), trustedExitRoot.GlobalExitRoot, pq.Array([][]byte{trustedExitRoot.ExitRoots[0][:], trustedExitRoot.ExitRoots[1][:]}))
 	return err
 }
 
@@ -315,7 +311,7 @@ func (p *PostgresStorage) GetLatestL1SyncedExitRoot(ctx context.Context, dbTx pg
 		exitRootNum int64
 		exitRoots   [][]byte
 	)
-	const getLatestL1SyncedExitRootSQL = "SELECT block_id, global_exit_root_num, global_exit_root, exit_roots FROM syncv2.exit_root WHERE block_id IS NOT NULL ORDER BY global_exit_root_num DESC LIMIT 1"
+	const getLatestL1SyncedExitRootSQL = "SELECT block_id, global_exit_root_num, global_exit_root, exit_roots FROM syncv2.exit_root WHERE block_id > 0 ORDER BY global_exit_root_num DESC LIMIT 1"
 	err := p.getExecQuerier(dbTx).QueryRow(ctx, getLatestL1SyncedExitRootSQL).Scan(&ger.BlockID, &exitRootNum, &ger.GlobalExitRoot, pq.Array(&exitRoots))
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -335,7 +331,7 @@ func (p *PostgresStorage) GetLatestTrustedExitRoot(ctx context.Context, dbTx pgx
 		exitRootNum int64
 		exitRoots   [][]byte
 	)
-	const getLatestTrustedExitRootSQL = "SELECT global_exit_root_num, global_exit_root, exit_roots FROM syncv2.exit_root WHERE block_id IS NULL ORDER BY global_exit_root_num DESC LIMIT 1"
+	const getLatestTrustedExitRootSQL = "SELECT global_exit_root_num, global_exit_root, exit_roots FROM syncv2.exit_root WHERE block_id = 0 ORDER BY global_exit_root_num DESC LIMIT 1"
 	err := p.getExecQuerier(dbTx).QueryRow(ctx, getLatestTrustedExitRootSQL).Scan(&exitRootNum, &ger.GlobalExitRoot, pq.Array(&exitRoots))
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {

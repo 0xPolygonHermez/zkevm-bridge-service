@@ -51,7 +51,7 @@ func TestAddTrustedGERDuplicated(t *testing.T) {
 	}
 	err = pg.AddTrustedGlobalExitRoot(ctx, ger, tx)
 	require.NoError(t, err)
-	getCount := "select count(*) from syncv2.exit_root where block_id is null and global_exit_root_num = $1 AND global_exit_root = $2"
+	getCount := "select count(*) from syncv2.exit_root where block_id = 0 and global_exit_root_num = $1 AND global_exit_root = $2"
 	var result int
 	err = tx.QueryRow(ctx, getCount, ger.GlobalExitRootNum.String(), ger.GlobalExitRoot).Scan(&result)
 	require.NoError(t, err)

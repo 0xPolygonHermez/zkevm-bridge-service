@@ -20,7 +20,6 @@ PrivateKeyPassword = "testonly"
 [Synchronizer]
 SyncInterval = "2s"
 SyncChunkSize = 100
-ForceBatch = false
 GrpcURL = "zkevm-node:61090"
 
 [BridgeController]

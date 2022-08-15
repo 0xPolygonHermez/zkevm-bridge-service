@@ -18,12 +18,16 @@ CREATE TABLE syncv2.block
     received_at TIMESTAMP WITH TIME ZONE NOT NULL
 );
 
+-- insert the block with block_id = 0 for the trusted exit root table
+INSERT INTO syncv2.block (id, block_hash, received_at) VALUES (0, '\\x0', to_timestamp(0));
+
 CREATE TABLE syncv2.exit_root
 (
     block_id                BIGINT REFERENCES syncv2.block (id) ON DELETE CASCADE,
     global_exit_root_num    BIGINT,
     global_exit_root        BYTEA,
-    exit_roots              BYTEA[]
+    exit_roots              BYTEA[],
+    PRIMARY KEY (block_id, global_exit_root_num)
 );
 
 CREATE TABLE syncv2.batch

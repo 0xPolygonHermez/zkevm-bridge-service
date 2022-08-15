@@ -47,9 +47,6 @@ services:
       - ZKEVM_NODE_ETHERMAN_URL=http://zkevm-mock-l1-network:8545
       - ZKEVM_NODE_ETHERMAN_PRIVATEKEYPATH=/pk/keystore
       - ZKEVM_NODE_RPC_BROADCASTURI=zkevm-node:61090
-      - ZKEVM_NODE_PROVER_URI=zkevm-prover:50052
-      - ZKEVM_NODE_MTCLIENT_URI=zkevm-prover:50061
-      - ZKEVM_NODE_EXECUTOR_URI=zkevm-prover:50071
     volumes:
       - ./test/test.keystore:/pk/keystore
       - ./test/config/node/config.zkevm.node.toml:/app/config.toml
