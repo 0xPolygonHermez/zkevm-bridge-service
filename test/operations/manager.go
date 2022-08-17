@@ -225,19 +225,19 @@ func (m *Manager) Setup() error {
 	}
 
 	// Run zkevm node container
-	err = m.startZKEVMNode()
-	if err != nil {
-		log.Error("zkevm node start failed")
-		return err
-	}
-	//Wait for set the genesis and sync
-	time.Sleep(t * time.Second)
+	// err = m.startZKEVMNode()
+	// if err != nil {
+	// 	log.Error("zkevm node start failed")
+	// 	return err
+	// }
+	// //Wait for set the genesis and sync
+	// time.Sleep(t * time.Second)
 
 	// Run bridge container
 	err = m.startBridge()
 	if err != nil {
 		log.Error("bridge start failed")
-		return err
+		// return err
 	}
 
 	//Wait for sync
@@ -501,7 +501,7 @@ func (m *Manager) SendL2Claim(ctx context.Context, deposit *pb.Deposit, smtProof
 		return err
 	}
 
-	auth.GasLimit = 10 ^ 9        // TODO remove when the executor is fixed to estimate gas
+	// auth.GasLimit = 10 ^ 9        // TODO remove when the executor is fixed to estimate gas
 	auth.GasPrice = big.NewInt(0) // TODO remove when the executor is fixed to estimate gas
 
 	err = client.SendClaim(ctx, deposit, smtProof, globalExitRoot.GlobalExitRootNum, globalExitRoot, common.HexToAddress(l2BridgeAddr), auth)

@@ -45,7 +45,8 @@ func networkUpCondition() (bool, error) {
 }
 
 func proverUpCondition() (bool, error) {
-	return ops.ProverUpCondition()
+	return true, nil
+	// return ops.ProverUpCondition()
 }
 
 func zkevmNodeUpCondition() (done bool, err error) {
