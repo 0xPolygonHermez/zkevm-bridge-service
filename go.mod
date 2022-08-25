@@ -4,7 +4,7 @@ go 1.17
 
 require (
 	github.com/0xPolygonHermez/zkevm-node v0.0.0-20220726070051-075b323a0fef
-	github.com/ethereum/go-ethereum v1.10.21
+	github.com/ethereum/go-ethereum v1.10.23
 	github.com/gobuffalo/packr/v2 v2.8.3
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.11.2
 	github.com/iden3/go-iden3-crypto v0.0.14-0.20220413123345-edc36bfa5247
