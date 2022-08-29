@@ -34,13 +34,14 @@ type NetworkSID string
 const (
 	L1 NetworkSID = "l1"
 	L2 NetworkSID = "l2"
+
+	waitRootSyncDeadline = 300 * time.Second
 )
 
 const (
 	l1NetworkURL = "http://localhost:8545"
 	l2NetworkURL = "http://localhost:8123"
 
-	// poeAddress = "0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9"
 	// MaticTokenAddress token address
 	MaticTokenAddress = "0x5FbDB2315678afecb367f032d93F642f64180aa3" //nolint:gosec
 	l1BridgeAddr      = "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9"
@@ -61,14 +62,14 @@ var (
 		L2: 1,
 	}
 	accHexPrivateKeys = map[NetworkSID]string{
-		L1: "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",
-		L2: "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80", //0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
+		L1: "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80", //0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
+		L2: "0xdfd01798f92667dbf91df722434e8fbe96af0211d4d1b82bbbbc8f1def7a814f", //0xc949254d682d8c9ad5682521675b8f43b102aec4
 	}
 )
 
 type storageInterface interface {
 	GetLastBlock(ctx context.Context, networkID uint, dbTx pgx.Tx) (*etherman.Block, error)
-	GetLatestExitRoot(ctx context.Context, dbTx pgx.Tx) (*etherman.GlobalExitRoot, error)
+	GetLatestExitRoot(ctx context.Context, isRollup bool, dbTx pgx.Tx) (*etherman.GlobalExitRoot, error)
 	GetLatestL1SyncedExitRoot(ctx context.Context, dbTx pgx.Tx) (*etherman.GlobalExitRoot, error)
 	GetLatestTrustedExitRoot(ctx context.Context, dbTx pgx.Tx) (*etherman.GlobalExitRoot, error)
 	GetLastBatchState(ctx context.Context, dbTx pgx.Tx) (uint64, uint64, bool, error)
@@ -181,7 +182,6 @@ func (m *Manager) SendL2Deposit(ctx context.Context, tokenAddr common.Address, a
 		return err
 	}
 
-	auth.GasLimit = 10 ^ 9        // TODO remove when the executor is fixed to estimate gas
 	auth.GasPrice = big.NewInt(0) // TODO remove when the executor is fixed to estimate gas
 
 	lastBlockID, err := m.getLastBlockID(ctx)
@@ -225,13 +225,13 @@ func (m *Manager) Setup() error {
 	}
 
 	// Run zkevm node container
-	// err = m.startZKEVMNode()
-	// if err != nil {
-	// 	log.Error("zkevm node start failed")
-	// 	return err
-	// }
-	// //Wait for set the genesis and sync
-	// time.Sleep(t * time.Second)
+	err = m.startZKEVMNode()
+	if err != nil {
+		log.Error("zkevm node start failed")
+		return err
+	}
+	//Wait for set the genesis and sync
+	time.Sleep(t * time.Second)
 
 	// Run bridge container
 	err = m.startBridge()
@@ -515,7 +515,7 @@ func (m *Manager) GetCurrentGlobalExitRootSynced(ctx context.Context) (*etherman
 
 // GetLatestGlobalExitRootFromL1 reads the latest globalexitroot apperard in l1 from db
 func (m *Manager) GetLatestGlobalExitRootFromL1(ctx context.Context) (*etherman.GlobalExitRoot, error) {
-	return m.storage.GetLatestExitRoot(ctx, nil)
+	return m.storage.GetLatestL1SyncedExitRoot(ctx, nil)
 }
 
 // GetCurrentGlobalExitRootFromSmc reads the globalexitroot from the smc
@@ -659,12 +659,12 @@ func (m *Manager) WaitBatchToBeConsolidated(ctx context.Context) error {
 // WaitExitRootToBeSynced waits unitl new exit root is synced.
 func (m *Manager) WaitExitRootToBeSynced(ctx context.Context, blockID uint64, isRollup bool) error {
 	log.Debugf("WaitExitRootToBeSynced: %d\n", blockID)
-	orgExitRoot, err := m.storage.GetLatestExitRoot(ctx, nil)
+	orgExitRoot, err := m.storage.GetLatestExitRoot(ctx, isRollup, nil)
 	if err != nil && err != gerror.ErrStorageNotFound {
 		return err
 	}
-	return operations.Poll(defaultInterval, defaultDeadline, func() (bool, error) {
-		exitRoot, err := m.storage.GetLatestExitRoot(ctx, nil)
+	return operations.Poll(defaultInterval, waitRootSyncDeadline, func() (bool, error) {
+		exitRoot, err := m.storage.GetLatestExitRoot(ctx, isRollup, nil)
 		if err != nil {
 			if err == gerror.ErrStorageNotFound {
 				return false, nil
@@ -672,12 +672,14 @@ func (m *Manager) WaitExitRootToBeSynced(ctx context.Context, blockID uint64, is
 			return false, err
 		}
 
-		if !isRollup {
-			if exitRoot.BlockID >= blockID {
-				return true, nil
-			}
+		if orgExitRoot == nil {
+			return true, nil
 		}
-		return exitRoot.ExitRoots[1] != orgExitRoot.ExitRoots[1], nil
+		tID := 0
+		if isRollup {
+			tID = 1
+		}
+		return exitRoot.ExitRoots[tID] != orgExitRoot.ExitRoots[tID], nil
 	})
 }
 

@@ -300,7 +300,11 @@ func (p *PostgresStorage) GetDeposit(ctx context.Context, depositCounterUser uin
 }
 
 // GetLatestExitRoot gets the latest global exit root.
-func (p *PostgresStorage) GetLatestExitRoot(ctx context.Context, dbTx pgx.Tx) (*etherman.GlobalExitRoot, error) {
+func (p *PostgresStorage) GetLatestExitRoot(ctx context.Context, isRollup bool, dbTx pgx.Tx) (*etherman.GlobalExitRoot, error) {
+	if !isRollup {
+		return p.GetLatestTrustedExitRoot(ctx, dbTx)
+	}
+
 	return p.GetLatestL1SyncedExitRoot(ctx, dbTx)
 }
 

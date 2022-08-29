@@ -228,7 +228,10 @@ func (s *bridgeService) getDepositStatus(ctx context.Context, depositCount uint,
 	}
 	depositCnt, err := s.bridgeCtrl.storage.GetDepositCountByRoot(ctx, exitRoot.ExitRoots[tID][:], uint8(tID), nil)
 	if err != nil {
-		return "", false, err
+		if err != gerror.ErrStorageNotFound {
+			return "", false, err
+		}
+		depositCnt = 0
 	}
 
 	return claimTxHash, depositCnt > depositCount, nil
