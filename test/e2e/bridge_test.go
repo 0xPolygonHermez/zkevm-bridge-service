@@ -54,7 +54,7 @@ func TestE2E(t *testing.T) {
 	assert.NoError(t, err)
 
 	//Run environment
-	// assert.NoError(t, opsman.Setup())
+	assert.NoError(t, opsman.Setup())
 
 	for _, testCase := range testCases {
 		t.Run("Test id "+strconv.FormatUint(uint64(testCase.ID), 10), func(t *testing.T) {

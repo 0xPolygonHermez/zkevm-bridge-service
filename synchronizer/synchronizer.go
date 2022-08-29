@@ -146,7 +146,6 @@ func (s *ClientSynchronizer) Stop() {
 
 func (s *ClientSynchronizer) syncTrustedState() error {
 	lastBatch, err := s.broadcastClient.GetLastBatch(s.ctx, &emptypb.Empty{})
-	log.Errorf("last trusted batch : %v", lastBatch)
 	if err != nil {
 		log.Error("error getting latest batch from grpc. Error: ", err)
 		return err
