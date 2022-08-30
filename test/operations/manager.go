@@ -182,7 +182,7 @@ func (m *Manager) SendL2Deposit(ctx context.Context, tokenAddr common.Address, a
 		return err
 	}
 
-	auth.GasPrice = big.NewInt(0) // TODO remove when the executor is fixed to estimate gas
+	auth.GasPrice = big.NewInt(0) // TODO set the appropriate value
 
 	lastBlockID, err := m.getLastBlockID(ctx)
 	if err != nil {
@@ -501,8 +501,7 @@ func (m *Manager) SendL2Claim(ctx context.Context, deposit *pb.Deposit, smtProof
 		return err
 	}
 
-	// auth.GasLimit = 10 ^ 9        // TODO remove when the executor is fixed to estimate gas
-	auth.GasPrice = big.NewInt(0) // TODO remove when the executor is fixed to estimate gas
+	auth.GasPrice = big.NewInt(0)
 
 	err = client.SendClaim(ctx, deposit, smtProof, globalExitRoot.GlobalExitRootNum, globalExitRoot, common.HexToAddress(l2BridgeAddr), auth)
 	return err

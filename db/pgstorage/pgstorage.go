@@ -293,9 +293,7 @@ func (p *PostgresStorage) GetDeposit(ctx context.Context, depositCounterUser uin
 		return nil, gerror.ErrStorageNotFound
 	}
 	deposit.Amount, _ = new(big.Int).SetString(amount, 10) //nolint:gomnd
-	if errors.Is(err, pgx.ErrNoRows) {
-		return nil, gerror.ErrStorageNotFound
-	}
+
 	return &deposit, err
 }
 
