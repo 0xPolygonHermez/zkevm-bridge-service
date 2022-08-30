@@ -54,7 +54,7 @@ func TestE2E(t *testing.T) {
 	assert.NoError(t, err)
 
 	//Run environment
-	assert.NoError(t, opsman.Setup())
+	// assert.NoError(t, opsman.Setup())
 
 	for _, testCase := range testCases {
 		t.Run("Test id "+strconv.FormatUint(uint64(testCase.ID), 10), func(t *testing.T) {
@@ -86,8 +86,6 @@ func TestE2E(t *testing.T) {
 			assert.NotEqual(t, globalExitRootSMC.ExitRoots[0], globalExitRoot2.ExitRoots[0])
 			t.Logf("globalExitRootSMC.rollup: %v, globalExitRoot2.rollup: %v", globalExitRootSMC.ExitRoots[1], globalExitRoot2.ExitRoots[1])
 			assert.Equal(t, globalExitRootSMC.ExitRoots[1], globalExitRoot2.ExitRoots[1])
-			assert.Equal(t, common.HexToHash("0x573768af52d1354a7b83fb784ecbacecf8fead6ad49f25af8909a35b0a7bba05"), globalExitRoot2.ExitRoots[0])
-			assert.Equal(t, common.HexToHash("0x0000000000000000000000000000000000000000000000000000000000000000"), globalExitRoot2.ExitRoots[1])
 			// Get Bridge Info By DestAddr
 			deposits, err := opsman.GetBridgeInfoByDestAddr(ctx, &destAddr)
 			assert.NoError(t, err)
@@ -143,7 +141,6 @@ func TestE2E(t *testing.T) {
 			t.Logf("Global3 %+v: ", globalExitRoot3)
 			t.Logf("Global4 %+v: ", globalExitRoot4)
 			assert.NotEqual(t, globalExitRoot3.GlobalExitRootNum, globalExitRoot4.GlobalExitRootNum)
-			assert.Equal(t, common.HexToHash("0x573768af52d1354a7b83fb784ecbacecf8fead6ad49f25af8909a35b0a7bba05"), globalExitRoot3.ExitRoots[0])
 			// Check L1 funds
 			balance, err = opsman.CheckAccountBalance(ctx, operations.L1, &destAddr)
 			assert.NoError(t, err)
@@ -192,7 +189,7 @@ func TestE2E(t *testing.T) {
 		err = opsman.SendL2Deposit(ctx, tokenAddr, amount, destNetwork, &destAddr)
 		assert.NoError(t, err)
 		// Check globalExitRoot
-		globalExitRoot2, err := opsman.GetCurrentGlobalExitRootSynced(ctx)
+		globalExitRoot2, err := opsman.GetLatestGlobalExitRootFromL1(ctx)
 		assert.NoError(t, err)
 		t.Logf("globalExitRoot.GlobalExitRootNum: %d, globalExitRoot2.GlobalExitRootNum: %d", globalExitRootSMC.GlobalExitRootNum, globalExitRoot2.GlobalExitRootNum)
 		assert.NotEqual(t, globalExitRootSMC.GlobalExitRootNum, globalExitRoot2.GlobalExitRootNum)
@@ -222,11 +219,9 @@ func TestE2E(t *testing.T) {
 			err = opsman.SendL1Claim(ctx, deposits[0], smtProof, globaExitRoot)
 			assert.NoError(t, err)
 		}
-		// Wait for sync token_wrapped event.
-		time.Sleep(5 * time.Second)
-
 		// Get tokenWrappedAddr
 		t.Log("token Address:", tokenAddr)
+		time.Sleep(3 * time.Second) // wait for sync token_wrapped event
 		tokenWrapped, err := opsman.GetTokenWrapped(ctx, 1, tokenAddr, true)
 		assert.NoError(t, err)
 		// Check L2 funds to see if the amount has been increased
@@ -248,19 +243,12 @@ func TestE2E(t *testing.T) {
 		deposits, err = opsman.GetBridgeInfoByDestAddr(ctx, &destAddr)
 		assert.NoError(t, err)
 		t.Log("Deposits 2: ", deposits)
-		// Force to propose a new batch
-		// err = opsman.ForceBatchProposal(ctx)
-		assert.NoError(t, err)
 		// Check globalExitRoot
 		globalExitRoot4, err := opsman.GetCurrentGlobalExitRootSynced(ctx)
 		assert.NoError(t, err)
 		t.Logf("Global3 %+v: ", globalExitRoot3)
 		t.Logf("Global4 %+v: ", globalExitRoot4)
-		assert.NotEqual(t, globalExitRoot3.GlobalExitRootNum, globalExitRoot4.GlobalExitRootNum)
 		assert.NotEqual(t, globalExitRoot3.ExitRoots[0], globalExitRoot4.ExitRoots[0])
-		assert.Equal(t, common.HexToHash("0x573768af52d1354a7b83fb784ecbacecf8fead6ad49f25af8909a35b0a7bba05"), globalExitRoot3.ExitRoots[0])
-		assert.Equal(t, common.HexToHash("0xe9bab979a6f644ae7bd04f32f2d3d8b1043b29ff3db99c2f1344690ca3d193c4"), globalExitRoot3.ExitRoots[1])
-		assert.Equal(t, common.HexToHash("0xb6a9f62f9c7998457c2f1fec780066903f201a000936641040651c9fa550f4b1"), globalExitRoot4.ExitRoots[0])
 		// Check L2 funds
 		balance, err = opsman.CheckAccountTokenBalance(ctx, operations.L2, tokenAddr, &destAddr)
 		assert.NoError(t, err)
@@ -320,9 +308,6 @@ func TestE2E(t *testing.T) {
 		assert.NoError(t, err)
 		t.Log("Deposits: ", deposits)
 		t.Log("Before getClaimData: ", deposits[0].NetworkId, deposits[0].DepositCnt)
-		// Force to propose a new batch
-		// err = opsman.ForceBatchProposal(ctx)
-		assert.NoError(t, err)
 		// Get the claim data
 		smtProof, globaExitRoot, err := opsman.GetClaimData(uint(deposits[0].NetworkId), uint(deposits[0].DepositCnt))
 		assert.NoError(t, err)
@@ -334,6 +319,7 @@ func TestE2E(t *testing.T) {
 			err = opsman.SendL2Claim(ctx, deposits[0], smtProof, globaExitRoot)
 			assert.NoError(t, err)
 		}
+		time.Sleep(3 * time.Second) // wait for sync token_wrapped event
 		tokenWrapped, err := opsman.GetTokenWrapped(ctx, 0, tokenAddr, false)
 		assert.NoError(t, err)
 		t.Log("TokenWrapped: ", tokenWrapped)
@@ -361,9 +347,6 @@ func TestE2E(t *testing.T) {
 		t.Logf("Global3 %+v: ", globalExitRoot3)
 		t.Logf("Global4 %+v: ", globalExitRoot4)
 		assert.NotEqual(t, globalExitRoot3.GlobalExitRootNum, globalExitRoot4.GlobalExitRootNum)
-		assert.Equal(t, common.HexToHash("0x7b6d271ef15fc512b8c3993a75206a18001ac49c7c4060464767826a3c8e888f"), globalExitRoot3.ExitRoots[0])
-		assert.Equal(t, common.HexToHash("0xe9bab979a6f644ae7bd04f32f2d3d8b1043b29ff3db99c2f1344690ca3d193c4"), globalExitRoot3.ExitRoots[1])
-		assert.Equal(t, common.HexToHash("0x7b6d271ef15fc512b8c3993a75206a18001ac49c7c4060464767826a3c8e888f"), globalExitRoot4.ExitRoots[0])
 		// Check L1 funds
 		balance, err = opsman.CheckAccountTokenBalance(ctx, operations.L1, tokenAddr, &destAddr)
 		assert.NoError(t, err)
@@ -431,16 +414,11 @@ func TestE2E(t *testing.T) {
 		assert.NotEqual(t, globalExitRootSMC.ExitRoots[0], globalExitRoot2.ExitRoots[0])
 		t.Logf("globalExitRootSMC.rollup: %v, globalExitRoot2.rollup: %v", globalExitRootSMC.ExitRoots[1], globalExitRoot2.ExitRoots[1])
 		assert.Equal(t, globalExitRootSMC.ExitRoots[1], globalExitRoot2.ExitRoots[1])
-		assert.Equal(t, common.HexToHash("0x84202ff0ffb93e0b58c5338bd8e08319556a6b0f217c34a1c8afb1277e608c67"), globalExitRoot2.ExitRoots[0])
-		assert.Equal(t, common.HexToHash("0x90d2f2daddea67d339cf1a35677080b390a8fcda3f492c4d2b487449af1babe7"), globalExitRoot2.ExitRoots[1])
 		// Get Bridge Info By DestAddr
 		deposits, err := opsman.GetBridgeInfoByDestAddr(ctx, &destAddr)
 		assert.NoError(t, err)
 		t.Log("Deposits: ", deposits)
 		t.Log("Before getClaimData: ", deposits[2].NetworkId, deposits[2].DepositCnt)
-		// Force to propose a new batch
-		// err = opsman.ForceBatchProposal(ctx)
-		assert.NoError(t, err)
 		// Fourth deposit
 		err = opsman.SendL1Deposit(ctx, tokenAddr, amount1, destNetwork, &origAddr)
 		assert.NoError(t, err)
@@ -456,6 +434,7 @@ func TestE2E(t *testing.T) {
 		// Claim funds in L2
 		err = opsman.SendL2Claim(ctx, deposits[2], smtProof, globaExitRoot)
 		assert.NoError(t, err)
+		time.Sleep(3 * time.Second) // wait for sync token_wrapped event
 		tokenWrapped, err := opsman.GetTokenWrapped(ctx, 0, tokenAddr, false)
 		assert.NoError(t, err)
 		t.Log("TokenWrapped: ", tokenWrapped)
@@ -521,9 +500,6 @@ func TestE2E(t *testing.T) {
 		// First deposit
 		err = opsman.SendL1Deposit(ctx, tokenAddr, amount1, destNetwork, &destAddr)
 		assert.NoError(t, err)
-		// Force to propose a new batch
-		// err = opsman.ForceBatchProposal(ctx)
-		assert.NoError(t, err)
 		// Get Bridge Info By DestAddr
 		deposits, err := opsman.GetBridgeInfoByDestAddr(ctx, &destAddr)
 		assert.NoError(t, err)
@@ -538,6 +514,7 @@ func TestE2E(t *testing.T) {
 		// Claim funds in L2
 		err = opsman.SendL2Claim(ctx, deposits[0], smtProof, globaExitRoot)
 		assert.NoError(t, err)
+		time.Sleep(3 * time.Second) // wait for sync token_wrapped event
 		tokenWrapped, err := opsman.GetTokenWrapped(ctx, 0, tokenAddr, false)
 		assert.NoError(t, err)
 		balance2, err := opsman.CheckAccountTokenBalance(ctx, "l2", tokenWrapped.WrappedTokenAddress, &destAddr)
@@ -556,8 +533,6 @@ func TestE2E(t *testing.T) {
 		assert.NotEqual(t, globalExitRootSMC.ExitRoots[0], globalExitRoot2.ExitRoots[0])
 		t.Logf("globalExitRootSMC.rollup: %v, globalExitRoot2.rollup: %v", globalExitRootSMC.ExitRoots[1], globalExitRoot2.ExitRoots[1])
 		assert.Equal(t, globalExitRootSMC.ExitRoots[1], globalExitRoot2.ExitRoots[1])
-		assert.Equal(t, common.HexToHash("0x2442d14fe86e87dc21f839680c0cbe31ea2e0872886f24617213345deae20048"), globalExitRoot2.ExitRoots[0])
-		assert.Equal(t, common.HexToHash("0xd8076d8a9fbc049fd31ad074aaad7c90bd52407bb70f0d25c6bf4e4646bf0a84"), globalExitRoot2.ExitRoots[1])
 
 		destNetwork = 0
 		amount4 := new(big.Int).SetUint64(500000000000000000)
