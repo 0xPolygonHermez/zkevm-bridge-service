@@ -120,9 +120,13 @@ func (c Client) SendClaim(ctx context.Context, deposit *pb.Deposit, smtProof [][
 		return err
 	}
 	amount, _ := new(big.Int).SetString(deposit.Amount, encoding.Base10)
-	tx, err := br.Claim(auth, smtProof, uint32(deposit.DepositCnt), globalExitRoot.ExitRoots[0], globalExitRoot.ExitRoots[1], deposit.OrigNet, common.HexToAddress(deposit.TokenAddr), deposit.DestNet, common.HexToAddress(deposit.DestAddr), amount, []byte{})
+	tx, err := br.Claim(auth, smtProof, uint32(deposit.DepositCnt), globalExitRoot.ExitRoots[0], globalExitRoot.ExitRoots[1], deposit.OrigNet, common.HexToAddress(deposit.TokenAddr), deposit.DestNet, common.HexToAddress(deposit.DestAddr), amount, common.FromHex(deposit.Metadata))
 	if err != nil {
-		log.Error("Error: ", err, ". Tx Hash: ", tx.Hash())
+		txHash := ""
+		if tx != nil {
+			txHash = tx.Hash().String()
+		}
+		log.Error("Error: ", err, ". Tx Hash: ", txHash)
 		return err
 	}
 	log.Debug("Tx Hash: ", tx.Hash())

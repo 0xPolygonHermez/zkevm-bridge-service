@@ -45,11 +45,8 @@ func networkUpCondition() (bool, error) {
 }
 
 func proverUpCondition() (bool, error) {
-	// return ops.ProverUpCondition()
-	// TODO: remove time sleep (mock prover port is not matched in the condition check)
-	const t time.Duration = 5
-	time.Sleep(t * time.Second)
 	return true, nil
+	// return ops.ProverUpCondition()
 }
 
 func zkevmNodeUpCondition() (done bool, err error) {

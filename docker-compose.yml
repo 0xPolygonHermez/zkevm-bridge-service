@@ -12,7 +12,7 @@ services:
     ports:
       - 5432:5432
     volumes:
-      - ./test/vectors/src/prover/initproverdb.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./test/config/prover/initproverdb.sql:/docker-entrypoint-initdb.d/init.sql
     environment:
       - POSTGRES_USER=test_user
       - POSTGRES_PASSWORD=test_password
@@ -47,11 +47,9 @@ services:
       - ZKEVM_NODE_ETHERMAN_URL=http://zkevm-mock-l1-network:8545
       - ZKEVM_NODE_ETHERMAN_PRIVATEKEYPATH=/pk/keystore
       - ZKEVM_NODE_RPC_BROADCASTURI=zkevm-node:61090
-      - ZKEVM_NODE_PROVER_URI=zkevm-prover:50052
-      - ZKEVM_NODE_MTCLIENT_URI=zkevm-prover:50061
-      - ZKEVM_NODE_EXECUTOR_URI=zkevm-prover:50071
     volumes:
       - ./test/test.keystore:/pk/keystore
+      - ./test/config/node/config.zkevm.node.toml:/app/config.toml
     command: 
       - "/bin/sh"
       - "-c"
@@ -66,19 +64,20 @@ services:
 
   zkevm-prover:
     container_name: zkevm-prover
-    image: hermeznetwork/zkprover-local@sha256:9adf1bb1e11e4063da4cfc9059f770506ccfd56b184c3f5e918a6f9d1571fd8e
+    image: hermeznetwork/zkprover-local@sha256:0be88da4159de817f8a78666742eadf4cac367ace2cdb1fca428152057ae3a02
     ports:
-      # - 50051:50051 # Prover
-      - 50052:50052 # Mock prover
+      - 50051:50051 # Prover
+      - 50052:50052 # MockProver
       - 50061:50061 # MT
       - 50071:50071 # Executor
     volumes:
-      - ./test/vectors/src/prover/config.prover.json:/usr/src/app/config.json
+      - ./test/config/prover/config.prover.json:/usr/src/app/config.json
     command: >
       zkprover input_executor.json
 
   zkevm-bridge-service:
     container_name: zkevm-bridge-service
+    network_mode: host
     image: zkevm-bridge-service
     ports:
       - 8080:8080
@@ -87,13 +86,16 @@ services:
       - ZKEVM_BRIDGE_DATABASE_USER=test_user
       - ZKEVM_BRIDGE_DATABASE_PASSWORD=test_password
       - ZKEVM_BRIDGE_DATABASE_NAME=test_db
-      - ZKEVM_BRIDGE_DATABASE_HOST=zkevm-bridge-db
+      - ZKEVM_BRIDGE_DATABASE_HOST=localhost
       - ZKEVM_BRIDGE_DATABASE_PORT=5433
       - ZKEVM_BRIDGE_ETHERMAN_PRIVATEKEYPATH=/pk/keystore
     volumes:
       - ./test/test.keystore:/pk/keystore
       - ./config/config.local.toml:/app/config.toml
-    command: ["./zkevm-bridge", "run", "--network", "local", "--cfg", "/app/config.toml"]
+    command:
+      - "/bin/sh"
+      - "-c"
+      - "/app/zkevm-bridge run --network local --cfg /app/config.toml"
 
   zkevm-bridge-service-mock:
     container_name: zkevm-bridge-service-mock
@@ -107,4 +109,7 @@ services:
       - ZKEVM_BRIDGE_DATABASE_NAME=test_db
       - ZKEVM_BRIDGE_DATABASE_HOST=zkevm-bridge-db
       - ZKEVM_BRIDGE_DATABASE_PORT=5433
-    command: ["./zkevm-bridge", "mockserver"]
+    command:
+      - "/bin/sh"
+      - "-c"
+      - "/app/zkevm-bridge mockserver"
