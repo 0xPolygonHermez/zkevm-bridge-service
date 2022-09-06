@@ -35,11 +35,7 @@ const (
 	L1 NetworkSID = "l1"
 	L2 NetworkSID = "l2"
 
-<<<<<<< HEAD
 	waitRootSyncDeadline = 60 * time.Second
-=======
-	waitRootSyncDeadline = 300 * time.Second
->>>>>>> main
 )
 
 const (
@@ -183,13 +179,8 @@ func (m *Manager) SendL2Deposit(ctx context.Context, tokenAddr common.Address, a
 
 	auth.GasPrice = big.NewInt(0) // TODO set the appropriate value
 
-<<<<<<< HEAD
 	orgExitRoot, err := m.storage.GetLatestExitRoot(ctx, false, nil)
 	if err != nil && err != gerror.ErrStorageNotFound {
-=======
-	lastBlockID, err := m.getLastBlockID(ctx)
-	if err != nil {
->>>>>>> main
 		return err
 	}
 
@@ -555,27 +546,6 @@ func (m *Manager) GetCurrentGlobalExitRootFromSmc(ctx context.Context) (*etherma
 	return &result, nil
 }
 
-<<<<<<< HEAD
-=======
-// CheckTrustedExitRootSynced waits until the trusted exitroot is synced.
-func (m *Manager) CheckTrustedExitRootSynced(ctx context.Context, depositCnt uint64) error {
-	return operations.Poll(defaultInterval, defaultDeadline, func() (bool, error) {
-		ger, err := m.storage.GetLatestTrustedExitRoot(ctx, nil)
-		if err != nil {
-			return false, err
-		}
-		count, err := m.storage.GetDepositCountByRoot(ctx, ger.ExitRoots[0][:], 0, nil)
-		if err != nil {
-			if err == gerror.ErrStorageNotFound {
-				return false, nil
-			}
-			return false, err
-		}
-		return count >= uint(depositCnt), nil
-	})
-}
-
->>>>>>> main
 // DeployERC20 deploys erc20 smc
 func (m *Manager) DeployERC20(ctx context.Context, name, symbol string, network NetworkSID) (common.Address, *ERC20.ERC20, error) {
 	client := m.clients[network]
@@ -667,20 +637,12 @@ func (m *Manager) WaitBatchToBeConsolidated(ctx context.Context) error {
 }
 
 // WaitExitRootToBeSynced waits unitl new exit root is synced.
-<<<<<<< HEAD
 func (m *Manager) WaitExitRootToBeSynced(ctx context.Context, orgExitRoot *etherman.GlobalExitRoot, isRollup bool) error {
 	log.Debugf("WaitExitRootToBeSynced: %v\n", orgExitRoot)
 	if orgExitRoot == nil {
 		orgExitRoot = &etherman.GlobalExitRoot{
 			ExitRoots: []common.Hash{{}, {}},
 		}
-=======
-func (m *Manager) WaitExitRootToBeSynced(ctx context.Context, blockID uint64, isRollup bool) error {
-	log.Debugf("WaitExitRootToBeSynced: %d\n", blockID)
-	orgExitRoot, err := m.storage.GetLatestExitRoot(ctx, isRollup, nil)
-	if err != nil && err != gerror.ErrStorageNotFound {
-		return err
->>>>>>> main
 	}
 	return operations.Poll(defaultInterval, waitRootSyncDeadline, func() (bool, error) {
 		exitRoot, err := m.storage.GetLatestExitRoot(ctx, isRollup, nil)
@@ -690,21 +652,10 @@ func (m *Manager) WaitExitRootToBeSynced(ctx context.Context, blockID uint64, is
 			}
 			return false, err
 		}
-<<<<<<< HEAD
 		tID := 0
 		if isRollup {
 			tID = 1
 		}
-=======
-
-		if orgExitRoot == nil {
-			return true, nil
-		}
-		tID := 0
-		if isRollup {
-			tID = 1
-		}
->>>>>>> main
 		return exitRoot.ExitRoots[tID] != orgExitRoot.ExitRoots[tID], nil
 	})
 }
