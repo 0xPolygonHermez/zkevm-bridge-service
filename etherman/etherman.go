@@ -24,15 +24,18 @@ import (
 )
 
 var (
-	ownershipTransferredSignatureHash  = crypto.Keccak256Hash([]byte("OwnershipTransferred(address,address)"))
-	updateGlobalExitRootSignatureHash  = crypto.Keccak256Hash([]byte("UpdateGlobalExitRoot(uint256,bytes32,bytes32)"))
-	forcedBatchSignatureHash           = crypto.Keccak256Hash([]byte("ForceBatch(uint64,bytes32,address,bytes)"))
-	sequencedBatchesEventSignatureHash = crypto.Keccak256Hash([]byte("SequenceBatches(uint64)"))
-	forceSequencedBatchesSignatureHash = crypto.Keccak256Hash([]byte("SequenceForceBatches(uint64)"))
-	verifyBatchSignatureHash           = crypto.Keccak256Hash([]byte("VerifyBatch(uint64,address)"))
-	depositEventSignatureHash          = crypto.Keccak256Hash([]byte("BridgeEvent(uint32,address,uint32,address,uint256,bytes,uint32)"))
-	claimEventSignatureHash            = crypto.Keccak256Hash([]byte("ClaimEvent(uint32,uint32,address,address,uint256)"))
-	newWrappedTokenEventSignatureHash  = crypto.Keccak256Hash([]byte("NewWrappedToken(uint32,address,address)"))
+	updateGlobalExitRootSignatureHash   = crypto.Keccak256Hash([]byte("UpdateGlobalExitRoot(uint256,bytes32,bytes32)"))
+	forcedBatchSignatureHash            = crypto.Keccak256Hash([]byte("ForceBatch(uint64,bytes32,address,bytes)"))
+	sequencedBatchesEventSignatureHash  = crypto.Keccak256Hash([]byte("SequenceBatches(uint64)"))
+	forceSequencedBatchesSignatureHash  = crypto.Keccak256Hash([]byte("SequenceForceBatches(uint64)"))
+	verifyBatchSignatureHash            = crypto.Keccak256Hash([]byte("VerifyBatch(uint64,address)"))
+	depositEventSignatureHash           = crypto.Keccak256Hash([]byte("BridgeEvent(uint32,address,uint32,address,uint256,bytes,uint32)"))
+	claimEventSignatureHash             = crypto.Keccak256Hash([]byte("ClaimEvent(uint32,uint32,address,address,uint256)"))
+	newWrappedTokenEventSignatureHash   = crypto.Keccak256Hash([]byte("NewWrappedToken(uint32,address,address)"))
+	initializedSignatureHash            = crypto.Keccak256Hash([]byte("Initialized(uint8)"))
+	setTrustedSequencerSignatureHash    = crypto.Keccak256Hash([]byte("SetTrustedSequencer(address)"))
+	setForceBatchAllowedSignatureHash   = crypto.Keccak256Hash([]byte("SetForceBatchAllowed(bool)"))
+	setTrustedSequencerURLSignatureHash = crypto.Keccak256Hash([]byte("SetTrustedSequencerURL(string)"))
 
 	// ErrNotFound is used when the object is not found
 	ErrNotFound = errors.New("Not found")
@@ -167,8 +170,6 @@ func (etherMan *Client) processEvent(ctx context.Context, vLog types.Log, blocks
 	switch vLog.Topics[0] {
 	case sequencedBatchesEventSignatureHash:
 		return etherMan.sequencedBatchesEvent(ctx, vLog, blocks, blocksOrder)
-	case ownershipTransferredSignatureHash:
-		return etherMan.ownershipTransferredEvent(vLog)
 	case updateGlobalExitRootSignatureHash:
 		return etherMan.updateGlobalExitRootEvent(ctx, vLog, blocks, blocksOrder)
 	case forcedBatchSignatureHash:
@@ -183,24 +184,36 @@ func (etherMan *Client) processEvent(ctx context.Context, vLog types.Log, blocks
 		return etherMan.claimEvent(ctx, vLog, blocks, blocksOrder)
 	case newWrappedTokenEventSignatureHash:
 		return etherMan.tokenWrappedEvent(ctx, vLog, blocks, blocksOrder)
+	case initializedSignatureHash:
+		log.Debug("Initialized event detected")
+		return nil
+	case setTrustedSequencerSignatureHash:
+		log.Debug("setTrustedSequencer event detected")
+		return nil
+	case setForceBatchAllowedSignatureHash:
+		log.Debug("setForceBatchAllowed event detected")
+		return nil
+	case setTrustedSequencerURLSignatureHash:
+		log.Debug("setTrustedSequencerURL event detected")
+		return nil
 	}
-	log.Warn("Event not registered: ", vLog)
+	log.Warnf("Event not registered: %+v", vLog)
 	return nil
 }
 
-func (etherMan *Client) ownershipTransferredEvent(vLog types.Log) error {
-	ownership, err := etherMan.Bridge.ParseOwnershipTransferred(vLog)
-	if err != nil {
-		return err
-	}
-	emptyAddr := common.Address{}
-	if ownership.PreviousOwner == emptyAddr {
-		log.Debug("New rollup smc deployment detected. Deployment account: ", ownership.NewOwner)
-	} else {
-		log.Debug("Rollup smc OwnershipTransferred from account ", ownership.PreviousOwner, " to ", ownership.NewOwner)
-	}
-	return nil
-}
+// func (etherMan *Client) ownershipTransferredEvent(vLog types.Log) error {
+// 	ownership, err := etherMan.PoE.ParseOwnershipTransferred(vLog)
+// 	if err != nil {
+// 		return err
+// 	}
+// 	emptyAddr := common.Address{}
+// 	if ownership.PreviousOwner == emptyAddr {
+// 		log.Debug("New rollup smc deployment detected. Deployment account: ", ownership.NewOwner)
+// 	} else {
+// 		log.Debug("Rollup smc OwnershipTransferred from account ", ownership.PreviousOwner, " to ", ownership.NewOwner)
+// 	}
+// 	return nil
+// }
 
 func (etherMan *Client) updateGlobalExitRootEvent(ctx context.Context, vLog types.Log, blocks *[]Block, blocksOrder *map[common.Hash][]Order) error {
 	log.Debug("UpdateGlobalExitRoot event detected")

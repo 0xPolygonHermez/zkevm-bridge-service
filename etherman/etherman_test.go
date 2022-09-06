@@ -52,9 +52,8 @@ func TestGEREvent(t *testing.T) {
 	require.NoError(t, err)
 
 	amount := big.NewInt(1000000000000000)
-	a := etherman.auth
-	a.Value = amount
-	_, err = etherman.Bridge.Bridge(a, common.Address{}, 1, etherman.auth.From, amount)
+	etherman.auth.Value = amount
+	_, err = etherman.Bridge.Bridge(etherman.auth, common.Address{}, 1, etherman.auth.From, amount, []byte{})
 	require.NoError(t, err)
 
 	// Mine the tx in a block
@@ -84,7 +83,7 @@ func TestSequencedBatchesEvent(t *testing.T) {
 	// Make a bridge tx
 	a := etherman.auth
 	a.Value = big.NewInt(1000000000000000)
-	_, err = etherman.Bridge.Bridge(a, common.Address{}, 1, a.From, a.Value)
+	_, err = etherman.Bridge.Bridge(a, common.Address{}, 1, a.From, a.Value, []byte{})
 	require.NoError(t, err)
 	ethBackend.Commit()
 	a.Value = big.NewInt(0)
@@ -241,7 +240,7 @@ func TestBridgeEvents(t *testing.T) {
 	amount := big.NewInt(9000000000000000000)
 	var destNetwork uint32 = 1 // 0 is reserved to mainnet. This variable is set in the smc
 	destinationAddr := common.HexToAddress("0x61A1d716a74fb45d29f148C6C20A2eccabaFD753")
-	_, err = bridge.Bridge(etherman.auth, maticAddr, destNetwork, destinationAddr, amount)
+	_, err = bridge.Bridge(etherman.auth, maticAddr, destNetwork, destinationAddr, amount, []byte{})
 	require.NoError(t, err)
 
 	// Mine the tx in a block
