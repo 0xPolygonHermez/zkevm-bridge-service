@@ -7,20 +7,20 @@ Database = "postgres"
 User = "test_user"
 Password = "test_password"
 Name = "test_db"
-Host = "localhost"
+Host = "zkevm-bridge-db"
 Port = "5433"
 MaxConns = 20
 
 [Etherman]
-L1URL = "http://localhost:8545"
-L2URLs = ["http://localhost:8123"]
+L1URL = "http://zkevm-mock-l1-network:8545"
+L2URLs = ["http://zkevm-node:8123"]
 PrivateKeyPath = "../test/test.keystore"
 PrivateKeyPassword = "testonly"
 
 [Synchronizer]
 SyncInterval = "2s"
 SyncChunkSize = 100
-GrpcURL = "localhost:61090"
+GrpcURL = "zkevm-node:61090"
 
 [BridgeController]
 Store = "postgres"
