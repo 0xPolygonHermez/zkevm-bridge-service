@@ -73,7 +73,7 @@ services:
     volumes:
       - ./test/config/prover/config.prover.json:/usr/src/app/config.json
     command: >
-      zkprover input_executor.json
+      zkProver -c /usr/src/app/config.json
 
   zkevm-bridge-service:
     container_name: zkevm-bridge-service
