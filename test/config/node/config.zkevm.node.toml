@@ -79,7 +79,7 @@ Host = "0.0.0.0"
 Port = 61090
 
 [EthTxManager]
-MaxSendBatchTxRetries = 1
+MaxSendBatchTxRetries = 10
 MaxVerifyBatchTxRetries = 10
 FrequencyForResendingFailedSendBatches = "1s"
 FrequencyForResendingFailedVerifyBatch = "1s"

@@ -77,7 +77,6 @@ services:
 
   zkevm-bridge-service:
     container_name: zkevm-bridge-service
-    network_mode: host
     image: zkevm-bridge-service
     ports:
       - 8080:8080
@@ -86,7 +85,7 @@ services:
       - ZKEVM_BRIDGE_DATABASE_USER=test_user
       - ZKEVM_BRIDGE_DATABASE_PASSWORD=test_password
       - ZKEVM_BRIDGE_DATABASE_NAME=test_db
-      - ZKEVM_BRIDGE_DATABASE_HOST=localhost
+      - ZKEVM_BRIDGE_DATABASE_HOST=zkevm-bridge-db
       - ZKEVM_BRIDGE_DATABASE_PORT=5433
       - ZKEVM_BRIDGE_ETHERMAN_PRIVATEKEYPATH=/pk/keystore
     volumes:

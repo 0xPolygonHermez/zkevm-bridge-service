@@ -164,10 +164,9 @@ performance-test: ## Performance test of rest api and db transaction
 	go run ./test/performance/... 1000
 
 .PHONY: test-full
-test-full: build-docker ## Runs all tests checking race conditions
-	$(STOP_DBS)
-	$(RUN_DBS); sleep 7
-	trap '$(STOP_DBS)' EXIT; MallocNanoZone=0 go test -race -p 1 -timeout 2400s ./...
+test-full: build-docker stop run ## Runs all tests checking race conditions
+	sleep 5
+	trap '$(STOP)' EXIT; MallocNanoZone=0 go test -race -p 1 -timeout 2400s ./...
 
 .PHONY: validate
 validate: lint build test-full ## Validates the whole integrity of the code base

@@ -49,7 +49,7 @@ func (c Client) GetSigner(ctx context.Context, accHexPrivateKey string) (*bind.T
 
 // DeployERC20 deploys erc20 smc.
 func (c Client) DeployERC20(ctx context.Context, name, symbol string, auth *bind.TransactOpts) (common.Address, *ERC20.ERC20, error) {
-	const txMinedTimeoutLimit = 20 * time.Second
+	const txMinedTimeoutLimit = 60 * time.Second
 	addr, tx, instance, err := ERC20.DeployERC20(auth, c.Client, name, symbol)
 	if err != nil {
 		return common.Address{}, nil, err
@@ -83,7 +83,7 @@ func (c Client) MintERC20(ctx context.Context, erc20Addr common.Address, amount 
 	if err != nil {
 		return err
 	}
-	const txMinedTimeoutLimit = 20 * time.Second
+	const txMinedTimeoutLimit = 60 * time.Second
 	return WaitTxToBeMined(ctx, c.Client, tx.Hash(), txMinedTimeoutLimit)
 }
 
