@@ -201,20 +201,6 @@ func (etherMan *Client) processEvent(ctx context.Context, vLog types.Log, blocks
 	return nil
 }
 
-// func (etherMan *Client) ownershipTransferredEvent(vLog types.Log) error {
-// 	ownership, err := etherMan.PoE.ParseOwnershipTransferred(vLog)
-// 	if err != nil {
-// 		return err
-// 	}
-// 	emptyAddr := common.Address{}
-// 	if ownership.PreviousOwner == emptyAddr {
-// 		log.Debug("New rollup smc deployment detected. Deployment account: ", ownership.NewOwner)
-// 	} else {
-// 		log.Debug("Rollup smc OwnershipTransferred from account ", ownership.PreviousOwner, " to ", ownership.NewOwner)
-// 	}
-// 	return nil
-// }
-
 func (etherMan *Client) updateGlobalExitRootEvent(ctx context.Context, vLog types.Log, blocks *[]Block, blocksOrder *map[common.Hash][]Order) error {
 	log.Debug("UpdateGlobalExitRoot event detected")
 	globalExitRoot, err := etherMan.GlobalExitRootManager.ParseUpdateGlobalExitRoot(vLog)
