@@ -17,7 +17,7 @@ import (
 )
 
 var (
-	l1BridgeAddr = common.HexToAddress("0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9")
+	l1BridgeAddr = common.HexToAddress("0x0165878A594ca255338adfa4d48449f69242Eb8F")
 	l2BridgeAddr = common.HexToAddress("0x9d98deabc42dd696deb9e40b4f1cab7ddbf55988")
 )
 

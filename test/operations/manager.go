@@ -43,13 +43,13 @@ const (
 	l2NetworkURL = "http://localhost:8123"
 
 	// MaticTokenAddress token address
-	MaticTokenAddress = "0x0B5f1c0E6E3BFEc85e044dB01efc3a4B03d67c69" //nolint:gosec
-	l1BridgeAddr      = "0xc356f93aEB58153daC7Dd882EE2453A83F163A7B"
+	MaticTokenAddress = "0x5FbDB2315678afecb367f032d93F642f64180aa3" //nolint:gosec
+	l1BridgeAddr      = "0x0165878A594ca255338adfa4d48449f69242Eb8F"
 	l2BridgeAddr      = "0x9d98deabc42dd696deb9e40b4f1cab7ddbf55988"
 
 	l1AccHexAddress = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
 
-	sequencerAddress = "0x617b3a3528F9cDd6630fd3301B9c8911F7Bf063D"
+	sequencerAddress = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
 
 	makeCmd = "make"
 	cmdDir  = "../.."
