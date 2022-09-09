@@ -32,10 +32,15 @@ var (
 	depositEventSignatureHash           = crypto.Keccak256Hash([]byte("BridgeEvent(uint32,address,uint32,address,uint256,bytes,uint32)"))
 	claimEventSignatureHash             = crypto.Keccak256Hash([]byte("ClaimEvent(uint32,uint32,address,address,uint256)"))
 	newWrappedTokenEventSignatureHash   = crypto.Keccak256Hash([]byte("NewWrappedToken(uint32,address,address)"))
-	initializedSignatureHash            = crypto.Keccak256Hash([]byte("Initialized(uint8)"))
 	setTrustedSequencerSignatureHash    = crypto.Keccak256Hash([]byte("SetTrustedSequencer(address)"))
 	setForceBatchAllowedSignatureHash   = crypto.Keccak256Hash([]byte("SetForceBatchAllowed(bool)"))
 	setTrustedSequencerURLSignatureHash = crypto.Keccak256Hash([]byte("SetTrustedSequencerURL(string)"))
+
+	// Proxy events
+	initializedSignatureHash    = crypto.Keccak256Hash([]byte("Initialized(uint8)"))
+	adminChangedSignatureHash   = crypto.Keccak256Hash([]byte("AdminChanged(address,address)"))
+	beaconUpgradedSignatureHash = crypto.Keccak256Hash([]byte("BeaconUpgraded(address)"))
+	upgradedSignatureHash       = crypto.Keccak256Hash([]byte("Upgraded(address)"))
 
 	// ErrNotFound is used when the object is not found
 	ErrNotFound = errors.New("Not found")
@@ -195,6 +200,15 @@ func (etherMan *Client) processEvent(ctx context.Context, vLog types.Log, blocks
 		return nil
 	case setTrustedSequencerURLSignatureHash:
 		log.Debug("setTrustedSequencerURL event detected")
+		return nil
+	case adminChangedSignatureHash:
+		log.Debug("AdminChanged event detected")
+		return nil
+	case beaconUpgradedSignatureHash:
+		log.Debug("BeaconUpgraded event detected")
+		return nil
+	case upgradedSignatureHash:
+		log.Debug("Upgraded event detected")
 		return nil
 	}
 	log.Warnf("Event not registered: %+v", vLog)

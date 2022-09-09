@@ -44,12 +44,12 @@ const (
 
 	// MaticTokenAddress token address
 	MaticTokenAddress = "0x5FbDB2315678afecb367f032d93F642f64180aa3" //nolint:gosec
-	l1BridgeAddr      = "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9"
+	l1BridgeAddr      = "0x0165878A594ca255338adfa4d48449f69242Eb8F"
 	l2BridgeAddr      = "0x9d98deabc42dd696deb9e40b4f1cab7ddbf55988"
 
 	l1AccHexAddress = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
 
-	sequencerAddress = "0x617b3a3528F9cDd6630fd3301B9c8911F7Bf063D"
+	sequencerAddress = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
 
 	makeCmd = "make"
 	cmdDir  = "../.."
