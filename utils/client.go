@@ -104,7 +104,7 @@ func (c Client) SendBridge(ctx context.Context, tokenAddr common.Address, amount
 	}
 	tx, err := br.Bridge(auth, tokenAddr, destNetwork, *destAddr, amount, []byte{})
 	if err != nil {
-		log.Error("Error: ", err, ". Tx Hash: ", tx.Hash())
+		log.Error("Error: ", err)
 		return err
 	}
 	log.Debug("Tx Hash: ", tx.Hash())
