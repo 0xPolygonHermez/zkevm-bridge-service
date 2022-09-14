@@ -51,7 +51,7 @@ func main() {
 		panic(err)
 	}
 	dbCfg := pgstorage.NewConfigFromEnv()
-	store, err := pgstorage.NewPostgresStorage(dbCfg, 0)
+	store, err := pgstorage.NewPostgresStorage(dbCfg)
 	if err != nil {
 		panic(err)
 	}

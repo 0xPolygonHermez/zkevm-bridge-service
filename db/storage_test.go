@@ -13,24 +13,51 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestExitRootStore(t *testing.T) {
+func TestL1GlobalExitRoot(t *testing.T) {
 	cfg := pgstorage.NewConfigFromEnv()
 	// Init database instance
 	err := pgstorage.InitOrReset(cfg)
 	require.NoError(t, err)
 
-	storageCfg := Config{
-		Database: "postgres",
-		Name:     cfg.Name,
-		User:     cfg.User,
-		Password: cfg.Password,
-		Host:     cfg.Host,
-		Port:     cfg.Port,
-		MaxConns: 20,
-	}
-	var networksNumber uint = 2
-	_, err = NewStorage(storageCfg, networksNumber)
+	ctx := context.Background()
+	pg, err := pgstorage.NewPostgresStorage(cfg)
 	require.NoError(t, err)
+	tx, err := pg.BeginDBTransaction(ctx)
+	require.NoError(t, err)
+
+	block := &etherman.Block{
+		BlockNumber: 1,
+		BlockHash:   common.HexToHash("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9f1"),
+		ParentHash:  common.HexToHash("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9f2"),
+		NetworkID:   0,
+		ReceivedAt:  time.Now(),
+	}
+
+	blockID, err := pg.AddBlock(ctx, block, tx)
+	require.NoError(t, err)
+	require.Equal(t, blockID, uint64(1))
+
+	l1GER := &etherman.GlobalExitRoot{
+		BlockID:           1,
+		GlobalExitRootNum: big.NewInt(1),
+		ExitRoots:         []common.Hash{common.HexToHash("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9f1"), common.HexToHash("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9f1")},
+		GlobalExitRoot:    common.HexToHash("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9f1"),
+	}
+
+	err = pg.AddGlobalExitRoot(ctx, l1GER, tx)
+	require.NoError(t, err)
+
+	ger, err := pg.GetLatestL1SyncedExitRoot(ctx, tx)
+	require.NoError(t, err)
+	require.Equal(t, ger.BlockID, l1GER.BlockID)
+	require.Equal(t, ger.GlobalExitRootNum, l1GER.GlobalExitRootNum)
+	require.Equal(t, ger.GlobalExitRoot, l1GER.GlobalExitRoot)
+
+	latestGER, err := pg.GetLatestExitRoot(ctx, true, tx)
+	require.NoError(t, err)
+	require.Equal(t, latestGER.GlobalExitRootNum, l1GER.GlobalExitRootNum)
+
+	require.NoError(t, tx.Commit(ctx))
 }
 
 func TestAddTrustedGERDuplicated(t *testing.T) {
@@ -39,7 +66,7 @@ func TestAddTrustedGERDuplicated(t *testing.T) {
 	err := pgstorage.InitOrReset(cfg)
 	require.NoError(t, err)
 	ctx := context.Background()
-	pg, err := pgstorage.NewPostgresStorage(cfg, 1)
+	pg, err := pgstorage.NewPostgresStorage(cfg)
 	require.NoError(t, err)
 	tx, err := pg.BeginDBTransaction(ctx)
 	require.NoError(t, err)
@@ -82,6 +109,15 @@ func TestAddTrustedGERDuplicated(t *testing.T) {
 	err = tx.QueryRow(ctx, getCount2).Scan(&result)
 	require.NoError(t, err)
 	assert.Equal(t, 2, result)
+
+	tGER, err := pg.GetLatestTrustedExitRoot(ctx, tx)
+	require.NoError(t, err)
+	require.Equal(t, tGER.GlobalExitRoot, ger1.GlobalExitRoot)
+
+	latestGER, err := pg.GetLatestExitRoot(ctx, false, tx)
+	require.NoError(t, err)
+	require.Equal(t, latestGER.GlobalExitRootNum, ger1.GlobalExitRootNum)
+
 	require.NoError(t, tx.Commit(ctx))
 }
 
@@ -91,7 +127,7 @@ func TestTrustedReset(t *testing.T) {
 	err := pgstorage.InitOrReset(cfg)
 	require.NoError(t, err)
 	ctx := context.Background()
-	pg, err := pgstorage.NewPostgresStorage(cfg, 1)
+	pg, err := pgstorage.NewPostgresStorage(cfg)
 	require.NoError(t, err)
 	tx, err := pg.BeginDBTransaction(ctx)
 	require.NoError(t, err)
@@ -116,13 +152,19 @@ func TestTrustedReset(t *testing.T) {
 		Timestamp:      time.Now(),
 		GlobalExitRoot: common.HexToHash("0x3d02f31780d083b996faee908120beef6366b5a6cab3f9efbe5a1f7e9ad47ba8"),
 	}
-	insertBatch := "INSERT INTO syncv2.batch (batch_num, sequencer, raw_tx_data, global_exit_root, timestamp) VALUES ($1, $2, $3, $4, $5)"
-	_, err = tx.Exec(ctx, insertBatch, batch1.BatchNumber, batch1.Coinbase, batch1.BatchL2Data, batch1.GlobalExitRoot, batch1.Timestamp)
+	err = pg.AddBatch(ctx, &batch1, tx)
 	require.NoError(t, err)
-	_, err = tx.Exec(ctx, insertBatch, batch2.BatchNumber, batch2.Coinbase, batch2.BatchL2Data, batch2.GlobalExitRoot, batch2.Timestamp)
+	err = pg.AddBatch(ctx, &batch2, tx)
 	require.NoError(t, err)
-	_, err = tx.Exec(ctx, insertBatch, batch3.BatchNumber, batch3.Coinbase, batch3.BatchL2Data, batch3.GlobalExitRoot, batch3.Timestamp)
+	batchNum, err := pg.GetLastBatchNumber(ctx, tx)
 	require.NoError(t, err)
+	require.Equal(t, batchNum, uint64(2))
+	err = pg.AddBatch(ctx, &batch3, tx)
+	require.NoError(t, err)
+	lastBatch, err := pg.GetBatchByNumber(ctx, batch3.BatchNumber, tx)
+	require.NoError(t, err)
+	require.Equal(t, lastBatch.BatchNumber, batch3.BatchNumber)
+	require.Equal(t, lastBatch.GlobalExitRoot, batch3.GlobalExitRoot)
 
 	getCount := "select count(*) from syncv2.batch"
 	var result int
@@ -144,7 +186,7 @@ func TestGetLastBlock(t *testing.T) {
 	err := pgstorage.InitOrReset(cfg)
 	require.NoError(t, err)
 	ctx := context.Background()
-	pg, err := pgstorage.NewPostgresStorage(cfg, 1)
+	pg, err := pgstorage.NewPostgresStorage(cfg)
 	require.NoError(t, err)
 	tx, err := pg.BeginDBTransaction(ctx)
 	require.NoError(t, err)
@@ -211,5 +253,82 @@ func TestGetLastBlock(t *testing.T) {
 	assert.Equal(t, block4.BlockHash, b.BlockHash)
 	assert.Equal(t, block4.ParentHash, b.ParentHash)
 	assert.Equal(t, block4.NetworkID, b.NetworkID)
+
+	prevBlock, err := pg.GetPreviousBlock(ctx, 1, 1, tx)
+	require.NoError(t, err)
+	require.Equal(t, prevBlock.BlockNumber, block3.BlockNumber)
+	require.Equal(t, prevBlock.BlockHash, block3.BlockHash)
+
+	require.NoError(t, tx.Commit(ctx))
+}
+
+func TestForcedAndVerifiedBatch(t *testing.T) {
+	// Init database instance
+	cfg := pgstorage.NewConfigFromEnv()
+	err := pgstorage.InitOrReset(cfg)
+	require.NoError(t, err)
+	ctx := context.Background()
+	pg, err := pgstorage.NewPostgresStorage(cfg)
+	require.NoError(t, err)
+	tx, err := pg.BeginDBTransaction(ctx)
+	require.NoError(t, err)
+
+	block := &etherman.Block{
+		BlockNumber: 1,
+		BlockHash:   common.HexToHash("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9f1"),
+		ParentHash:  common.HexToHash("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9f2"),
+		NetworkID:   0,
+		ReceivedAt:  time.Now(),
+	}
+	_, err = pg.AddBlock(ctx, block, tx)
+	require.NoError(t, err)
+
+	batch := &etherman.Batch{
+		BatchNumber:    1,
+		Coinbase:       common.HexToAddress("0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9"),
+		BatchL2Data:    []byte{},
+		Timestamp:      time.Now(),
+		GlobalExitRoot: common.HexToHash("0x1d02f31780d083b996faee908120beef6366b5a6cab3f9efbe5a1f7e9ad47ba8"),
+	}
+	err = pg.AddBatch(ctx, batch, tx)
+	require.NoError(t, err)
+
+	fb := &etherman.ForcedBatch{
+		BlockID:           1,
+		BlockNumber:       1,
+		ForcedBatchNumber: 1,
+		Sequencer:         common.HexToAddress("0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9"),
+		GlobalExitRoot:    common.HexToHash("0x3d02f31780d083b996faee908120beef6366b5a6cab3f9efbe5a1f7e9ad47ba8"),
+		RawTxsData:        []byte{},
+		ForcedAt:          time.Now(),
+	}
+	err = pg.AddForcedBatch(ctx, fb, tx)
+	require.NoError(t, err)
+
+	vb := &etherman.VerifiedBatch{
+		BatchNumber: 1,
+		BlockID:     1,
+		BlockNumber: 1,
+		Aggregator:  common.HexToAddress("0x0165878A594ca255338adfa4d48449f69242Eb8F"),
+		TxHash:      common.HexToHash("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9f2"),
+	}
+	err = pg.AddVerifiedBatch(ctx, vb, tx)
+	require.NoError(t, err)
+
+	fbs, err := pg.GetNextForcedBatches(ctx, 1, tx)
+	require.NoError(t, err)
+	require.Equal(t, len(fbs), 1)
+	require.Equal(t, fbs[0].BlockID, fb.BlockID)
+	require.Equal(t, fbs[0].Sequencer, fb.Sequencer)
+	require.Equal(t, fbs[0].GlobalExitRoot, fb.GlobalExitRoot)
+	require.Equal(t, fbs[0].BatchNumber, fb.BatchNumber)
+	require.Equal(t, fbs[0].ForcedBatchNumber, fb.ForcedBatchNumber)
+
+	err = pg.AddBatchNumberInForcedBatch(ctx, 1, 2, tx)
+	require.NoError(t, err)
+	fbs, err = pg.GetNextForcedBatches(ctx, 1, tx)
+	require.NoError(t, err)
+	require.Equal(t, len(fbs), 0)
+
 	require.NoError(t, tx.Commit(ctx))
 }

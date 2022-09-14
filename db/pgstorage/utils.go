@@ -46,7 +46,7 @@ func runMigrations(cfg Config, direction migrate.MigrationDirection) error {
 // will reset all the known data and rerun the migrations
 func InitOrReset(cfg Config) error {
 	// connect to database
-	_, err := NewPostgresStorage(cfg, 0)
+	_, err := NewPostgresStorage(cfg)
 	if err != nil {
 		return err
 	}

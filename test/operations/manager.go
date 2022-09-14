@@ -111,11 +111,11 @@ func NewManager(ctx context.Context, cfg *Config) (*Manager, error) {
 		ctx: ctx,
 	}
 	//Init storage and mt
-	pgst, err := pgstorage.NewPostgresStorage(dbConfig, 0)
+	pgst, err := pgstorage.NewPostgresStorage(dbConfig)
 	if err != nil {
 		return nil, err
 	}
-	st, err := db.NewStorage(cfg.Storage, 0)
+	st, err := db.NewStorage(cfg.Storage)
 	if err != nil {
 		return nil, err
 	}

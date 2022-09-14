@@ -46,7 +46,7 @@ func TestBridgeTree(t *testing.T) {
 		Store:  "postgres",
 	}
 
-	store, err := pgstorage.NewPostgresStorage(dbCfg, 0)
+	store, err := pgstorage.NewPostgresStorage(dbCfg)
 	require.NoError(t, err)
 
 	id, err := store.AddBlock(context.TODO(), &etherman.Block{

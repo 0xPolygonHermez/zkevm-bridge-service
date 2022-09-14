@@ -30,7 +30,7 @@ func (p *PostgresStorage) getExecQuerier(dbTx pgx.Tx) execQuerier {
 }
 
 // NewPostgresStorage creates a new Storage DB
-func NewPostgresStorage(cfg Config, dbTxSize uint) (*PostgresStorage, error) {
+func NewPostgresStorage(cfg Config) (*PostgresStorage, error) {
 	log.Debugf("Create PostgresStorage with Config: %v\n", cfg)
 	config, err := pgxpool.ParseConfig(fmt.Sprintf("postgres://%s:%s@%s:%s/%s?pool_max_conns=%d", cfg.User, cfg.Password, cfg.Host, cfg.Port, cfg.Name, cfg.MaxConns))
 	if err != nil {
@@ -214,7 +214,7 @@ func (p *PostgresStorage) GetNumberDeposits(ctx context.Context, networkID uint,
 
 // GetNextForcedBatches gets the next forced batches from the queue.
 func (p *PostgresStorage) GetNextForcedBatches(ctx context.Context, nextForcedBatches int, dbTx pgx.Tx) ([]etherman.ForcedBatch, error) {
-	const getNextForcedBatchesSQL = "SELECT forced_batch_num, global_exit_root, timestamp, raw_txs_data, coinbase, batch_num, block_num FROM syncv2.forced_batch WHERE batch_num IS NULL LIMIT $1"
+	const getNextForcedBatchesSQL = "SELECT forced_batch_num, global_exit_root, raw_tx_data, sequencer, batch_num, block_id FROM syncv2.forced_batch WHERE batch_num IS NULL LIMIT $1"
 	e := p.getExecQuerier(dbTx)
 	// Get the next forced batches
 	rows, err := e.Query(ctx, getNextForcedBatchesSQL, nextForcedBatches)
@@ -229,7 +229,7 @@ func (p *PostgresStorage) GetNextForcedBatches(ctx context.Context, nextForcedBa
 	batches := make([]etherman.ForcedBatch, 0, len(rows.RawValues()))
 	var forcedBatch etherman.ForcedBatch
 	for rows.Next() {
-		err := rows.Scan(&forcedBatch.ForcedBatchNumber, &forcedBatch.GlobalExitRoot, &forcedBatch.ForcedAt, &forcedBatch.RawTxsData, &forcedBatch.Sequencer, &forcedBatch.BatchNumber, &forcedBatch.BlockNumber)
+		err := rows.Scan(&forcedBatch.ForcedBatchNumber, &forcedBatch.GlobalExitRoot, &forcedBatch.RawTxsData, &forcedBatch.Sequencer, &forcedBatch.BatchNumber, &forcedBatch.BlockID)
 		if err != nil {
 			return nil, err
 		}
@@ -249,8 +249,8 @@ func (p *PostgresStorage) AddBatchNumberInForcedBatch(ctx context.Context, force
 
 // AddForcedBatch adds a new ForcedBatch to the db.
 func (p *PostgresStorage) AddForcedBatch(ctx context.Context, forcedBatch *etherman.ForcedBatch, dbTx pgx.Tx) error {
-	const addForcedBatchSQL = "INSERT INTO syncv2.forced_batch (forced_batch_num, global_exit_root, timestamp, raw_txs_data, coinbase, batch_num, block_num) VALUES ($1, $2, $3, $4, $5, $6, $7)"
-	_, err := p.getExecQuerier(dbTx).Exec(ctx, addForcedBatchSQL, forcedBatch.ForcedBatchNumber, forcedBatch.GlobalExitRoot.String(), forcedBatch.ForcedAt, forcedBatch.RawTxsData, forcedBatch.Sequencer.String(), forcedBatch.BatchNumber, forcedBatch.BlockNumber)
+	const addForcedBatchSQL = "INSERT INTO syncv2.forced_batch (forced_batch_num, global_exit_root, raw_tx_data, sequencer, batch_num, block_id) VALUES ($1, $2, $3, $4, $5, $6)"
+	_, err := p.getExecQuerier(dbTx).Exec(ctx, addForcedBatchSQL, forcedBatch.ForcedBatchNumber, forcedBatch.GlobalExitRoot, forcedBatch.RawTxsData, forcedBatch.Sequencer, forcedBatch.BatchNumber, forcedBatch.BlockID)
 	return err
 }
 
@@ -497,12 +497,6 @@ func (p *PostgresStorage) GetDepositCount(ctx context.Context, destAddr string, 
 	var depositCount uint64
 	err := p.getExecQuerier(dbTx).QueryRow(ctx, getDepositCountSQL, common.FromHex(destAddr)).Scan(&depositCount)
 	return depositCount, err
-}
-
-// GetLastBatchState returns the lates verified batch number.
-func (p *PostgresStorage) GetLastBatchState(ctx context.Context, dbTx pgx.Tx) (uint64, uint64, bool, error) {
-	// TODO REMOVE When e2e test is working
-	return 0, 0, false, nil
 }
 
 // ResetTrustedState resets trusted batches from the storage.
