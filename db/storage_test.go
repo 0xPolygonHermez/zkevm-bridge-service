@@ -332,3 +332,151 @@ func TestForcedAndVerifiedBatch(t *testing.T) {
 
 	require.NoError(t, tx.Commit(ctx))
 }
+
+// Test MerkleTree storage
+func TestMTStorage(t *testing.T) {
+	// Init database instance
+	cfg := pgstorage.NewConfigFromEnv()
+	err := pgstorage.InitOrReset(cfg)
+	require.NoError(t, err)
+	ctx := context.Background()
+	pg, err := pgstorage.NewPostgresStorage(cfg)
+	require.NoError(t, err)
+	tx, err := pg.BeginDBTransaction(ctx)
+	require.NoError(t, err)
+
+	leaf1 := common.FromHex("0x8d84b047a969e9a2ea149d1755e8185b79f2007239bb1e7a151778b60b2cc580")
+	leaf2 := common.FromHex("0xd22867d19bc4b5254f8f0dcffe4dc5020e5f25cbb06c64faa058a84f7fcbd5d4")
+	root := common.FromHex("0xad5ffc65ca4a2235ac389fcc2f6464f639e61bdfc733dd01e2cf104fd71a454e")
+
+	err = pg.Set(ctx, root, [][]byte{leaf1, leaf2}, tx)
+	require.NoError(t, err)
+
+	err = pg.SetRoot(ctx, root, 1, 0, tx)
+	require.NoError(t, err)
+
+	vals, err := pg.Get(ctx, root, tx)
+	require.NoError(t, err)
+	require.Equal(t, vals[0], leaf1)
+	require.Equal(t, vals[1], leaf2)
+
+	rRoot, err := pg.GetRoot(ctx, 1, 0, tx)
+	require.NoError(t, err)
+	require.Equal(t, rRoot, root)
+
+	count, err := pg.GetLastDepositCount(ctx, 0, tx)
+	require.NoError(t, err)
+	require.Equal(t, count, uint(1))
+
+	dCount, err := pg.GetDepositCountByRoot(ctx, root, 0, tx)
+	require.NoError(t, err)
+	require.Equal(t, dCount, uint(1))
+
+	err = pg.ResetMT(ctx, 0, 0, tx)
+	require.NoError(t, err)
+	_, err = pg.GetRoot(ctx, 1, 0, tx)
+	require.Error(t, err)
+
+	require.NoError(t, tx.Commit(ctx))
+}
+
+// Test BridgeService storage
+func TestBSStorage(t *testing.T) {
+	// Init database instance
+	cfg := pgstorage.NewConfigFromEnv()
+	err := pgstorage.InitOrReset(cfg)
+	require.NoError(t, err)
+	ctx := context.Background()
+	pg, err := pgstorage.NewPostgresStorage(cfg)
+	require.NoError(t, err)
+	tx, err := pg.BeginDBTransaction(ctx)
+	require.NoError(t, err)
+
+	block := &etherman.Block{
+		BlockNumber: 1,
+		BlockHash:   common.HexToHash("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9f1"),
+		ParentHash:  common.HexToHash("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9f2"),
+		NetworkID:   0,
+		ReceivedAt:  time.Now(),
+	}
+	_, err = pg.AddBlock(ctx, block, tx)
+	require.NoError(t, err)
+
+	deposit := &etherman.Deposit{
+		OriginalNetwork:    0,
+		TokenAddress:       common.HexToAddress("0x6B175474E89094C44Da98b954EedeAC495271d0F"),
+		Amount:             big.NewInt(1000000),
+		DestinationNetwork: 1,
+		DestinationAddress: common.HexToAddress("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"),
+		BlockNumber:        0,
+		DepositCount:       1,
+		Metadata:           common.FromHex("0x000000000000000000000000000000000000000000000000000000000000006000000000000000000000000000000000000000000000000000000000000000a0000000000000000000000000000000000000000000000000000000000000000c0000000000000000000000000000000000000000000000000000000000000005436f696e410000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000003434f410000000000000000000000000000000000000000000000000000000000"),
+	}
+	err = pg.AddDeposit(ctx, deposit, tx)
+	require.NoError(t, err)
+
+	claim := &etherman.Claim{
+		Index:              1,
+		OriginalNetwork:    0,
+		Token:              common.HexToAddress("0x6B175474E89094C44Da98b954EedeAC495271d0F"),
+		Amount:             big.NewInt(1000000),
+		DestinationAddress: common.HexToAddress("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"),
+		BlockID:            1,
+		BlockNumber:        1,
+		NetworkID:          0,
+		TxHash:             common.HexToHash("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9f2"),
+	}
+	err = pg.AddClaim(ctx, claim, tx)
+	require.NoError(t, err)
+
+	count, err := pg.GetDepositCount(ctx, deposit.DestinationAddress.String(), tx)
+	require.NoError(t, err)
+	require.Equal(t, count, uint64(1))
+
+	rDeposit, err := pg.GetDeposit(ctx, 1, 0, tx)
+	require.NoError(t, err)
+	require.Equal(t, rDeposit.DestinationAddress, deposit.DestinationAddress)
+	require.Equal(t, rDeposit.DepositCount, deposit.DepositCount)
+
+	rDeposits, err := pg.GetDeposits(ctx, deposit.DestinationAddress.String(), 10, 0, tx)
+	require.NoError(t, err)
+	require.Equal(t, len(rDeposits), 1)
+
+	count, err = pg.GetClaimCount(ctx, claim.DestinationAddress.String(), tx)
+	require.NoError(t, err)
+	require.Equal(t, count, uint64(1))
+
+	rClaim, err := pg.GetClaim(ctx, 1, 0, tx)
+	require.NoError(t, err)
+	require.Equal(t, rClaim.DestinationAddress, claim.DestinationAddress)
+	require.Equal(t, rClaim.NetworkID, claim.NetworkID)
+	require.Equal(t, rClaim.Index, claim.Index)
+
+	rClaims, err := pg.GetClaims(ctx, claim.DestinationAddress.String(), 10, 0, tx)
+	require.NoError(t, err)
+	require.Equal(t, len(rClaims), 1)
+
+	wrappedToken := &etherman.TokenWrapped{
+		OriginalNetwork:      0,
+		OriginalTokenAddress: deposit.TokenAddress,
+		WrappedTokenAddress:  common.HexToAddress("0x187Bd40226A7073b49163b1f6c2b73d8F2aa8478"),
+		BlockID:              1,
+		BlockNumber:          1,
+		NetworkID:            1,
+	}
+	metadata, err := pg.GetTokenMetadata(ctx, wrappedToken, tx)
+	require.NoError(t, err)
+	require.Equal(t, metadata, deposit.Metadata)
+
+	err = pg.AddTokenWrapped(ctx, wrappedToken, tx)
+	require.NoError(t, err)
+
+	wt, err := pg.GetTokenWrapped(ctx, wrappedToken.OriginalNetwork, wrappedToken.OriginalTokenAddress, tx)
+	require.NoError(t, err)
+	require.Equal(t, wt.WrappedTokenAddress, wrappedToken.WrappedTokenAddress)
+	require.Equal(t, wt.TokenMetadata.Name, "CoinA")
+	require.Equal(t, wt.TokenMetadata.Symbol, "COA")
+	require.Equal(t, wt.TokenMetadata.Decimals, uint8(12))
+
+	require.NoError(t, tx.Commit(ctx))
+}
