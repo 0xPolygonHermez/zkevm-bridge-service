@@ -76,6 +76,22 @@ func (c NodeClient) GetChainID(ctx context.Context, network NetworkSID) (*big.In
 	return c.clients[network].ChainID(ctx)
 }
 
+// DeployERC20 deploys erc20 smc.
+func (c NodeClient) DeployERC20(ctx context.Context, name, symbol string, auth *bind.TransactOpts, network NetworkSID) (common.Address, error) {
+	addr, _, err := c.clients[network].DeployERC20(ctx, name, symbol, auth)
+	return addr, err
+}
+
+// ApproveERC20 approves erc20 tokens.
+func (c NodeClient) ApproveERC20(ctx context.Context, erc20Addr, spender common.Address, amount *big.Int, auth *bind.TransactOpts, network NetworkSID) error {
+	return c.clients[network].ApproveERC20(ctx, erc20Addr, spender, amount, auth)
+}
+
+// MintERC20 mint erc20 tokens.
+func (c NodeClient) MintERC20(ctx context.Context, erc20Addr common.Address, amount *big.Int, auth *bind.TransactOpts, network NetworkSID) error {
+	return c.clients[network].MintERC20(ctx, erc20Addr, amount, auth)
+}
+
 // SendBridge sends a bridge transaction.
 func (c NodeClient) SendBridge(ctx context.Context, tokenAddr common.Address, amount *big.Int,
 	destNetwork uint32, destAddr *common.Address, bridgeSCAddr common.Address,
