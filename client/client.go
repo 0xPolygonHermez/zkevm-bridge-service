@@ -71,6 +71,11 @@ func NewClient(ctx context.Context, cfg Config) (*Client, error) {
 	}, nil
 }
 
+// GetChainID returns a chain ID of the dedicated node.
+func (c NodeClient) GetChainID(ctx context.Context, network NetworkSID) (*big.Int, error) {
+	return c.clients[network].ChainID(ctx)
+}
+
 // SendBridge sends a bridge transaction.
 func (c NodeClient) SendBridge(ctx context.Context, tokenAddr common.Address, amount *big.Int,
 	destNetwork uint32, destAddr *common.Address, bridgeSCAddr common.Address,
