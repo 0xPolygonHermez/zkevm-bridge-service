@@ -210,9 +210,9 @@ func (s *bridgeService) getDepositStatus(ctx context.Context, depositCount uint,
 	}
 	// Get the claim readiness
 	if networkID == MainNetworkID {
-		exitRoot, err = s.bridgeCtrl.storage.GetLatestL1SyncedExitRoot(ctx, nil)
-	} else {
 		exitRoot, err = s.bridgeCtrl.storage.GetLatestTrustedExitRoot(ctx, nil)
+	} else {
+		exitRoot, err = s.bridgeCtrl.storage.GetLatestL1SyncedExitRoot(ctx, nil)
 	}
 
 	if err != nil {
