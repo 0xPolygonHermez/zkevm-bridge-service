@@ -4,19 +4,34 @@ IsTrustedSequencer = true
 Level = "debug"
 Outputs = ["stdout"]
 
-[Database]
-User = "test_user"
-Password = "test_password"
-Name = "test_db"
-Host = "zkevm-node-db"
+[StateDB]
+User = "state_user"
+Password = "state_password"
+Name = "state_db"
+Host = "zkevm-state-db"
 Port = "5432"
-EnableLog = true
+EnableLog = false
+MaxConns = 200
+
+[PoolDB]
+User = "pool_user"
+Password = "pool_password"
+Name = "pool_db"
+Host = "zkevm-pool-db"
+Port = "5432"
+EnableLog = false
 MaxConns = 200
 
 [Etherman]
 URL = "http://zkevm-mock-l1-network:8545"
 PrivateKeyPath = "./test/test.keystore"
 PrivateKeyPassword = "testonly"
+
+[EthTxManager]
+MaxSendBatchTxRetries = 10
+MaxVerifyBatchTxRetries = 10
+FrequencyForResendingFailedSendBatches = "1s"
+FrequencyForResendingFailedVerifyBatch = "1s"
 
 [RPC]
 Host = "0.0.0.0"
@@ -25,6 +40,14 @@ MaxRequestsPerIPAndSecond = 5000
 SequencerNodeURI = ""
 BroadcastURI = "127.0.0.1:61090"
 DefaultSenderAddress = "0x1111111111111111111111111111111111111111"
+	[RPC.DB]
+		User = "rpc_user"
+		Password = "rpc_password"
+		Name = "rpc_db"
+		Host = "zkevm-rpc-db"
+		Port = "5432"
+		EnableLog = false
+		MaxConns = 10
 
 [Synchronizer]
 SyncInterval = "1s"
@@ -33,9 +56,9 @@ TrustedSequencerURI = ""
 
 [Sequencer]
 WaitPeriodPoolIsEmpty = "1s"
-WaitPeriodSendSequence = "3s"
-LastBatchVirtualizationTimeMaxWaitPeriod = "10s"
-WaitBlocksToUpdateGER = 1
+WaitPeriodSendSequence = "5s"
+LastBatchVirtualizationTimeMaxWaitPeriod = "30s"
+WaitBlocksToUpdateGER = 2
 MaxTimeForBatchToBeOpen = "5s"
 BlocksAmountForTxsToBeDeleted = 100
 FrequencyToCheckTxsForDelete = "12h"
@@ -78,8 +101,3 @@ URI = "zkevm-prover:50071"
 Host = "0.0.0.0"
 Port = 61090
 
-[EthTxManager]
-MaxSendBatchTxRetries = 10
-MaxVerifyBatchTxRetries = 10
-FrequencyForResendingFailedSendBatches = "1s"
-FrequencyForResendingFailedVerifyBatch = "1s"
