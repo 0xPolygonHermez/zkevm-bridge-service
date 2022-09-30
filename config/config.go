@@ -70,7 +70,9 @@ func Load(configFilePath string, network string) (*Config, error) {
 		return nil, err
 	}
 	// Load genesis parameters
-	cfg.loadNetworkConfig(network)
+	if network != "" {
+		cfg.loadNetworkConfig(network)
+	}
 
 	cfgJSON, _ := json.MarshalIndent(cfg, "", "  ")
 	log.Infof("Configuration loaded: \n%s\n", string(cfgJSON))
