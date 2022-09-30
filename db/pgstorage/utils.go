@@ -66,7 +66,7 @@ func NewConfigFromEnv() Config {
 		Password: getEnv("ZKEVM_BRIDGE_DATABASE_PASSWORD", "test_password"),
 		Name:     getEnv("ZKEVM_BRIDGE_DATABASE_NAME", "test_db"),
 		Host:     getEnv("ZKEVM_BRIDGE_DATABASE_HOST", "localhost"),
-		Port:     getEnv("ZKEVM_BRIDGE_DATABASE_PORT", "5433"),
+		Port:     getEnv("ZKEVM_BRIDGE_DATABASE_PORT", "5435"),
 		MaxConns: maxConns,
 	}
 }

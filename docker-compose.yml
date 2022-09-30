@@ -1,7 +1,7 @@
 version: '3.5'
 services:
-  zkevm-node-db:
-    container_name: zkevm-node-db
+  zkevm-state-db:
+    container_name: zkevm-state-db
     image: postgres
     deploy:
       resources:
@@ -14,39 +14,69 @@ services:
     volumes:
       - ./test/config/prover/initproverdb.sql:/docker-entrypoint-initdb.d/init.sql
     environment:
-      - POSTGRES_USER=test_user
-      - POSTGRES_PASSWORD=test_password
-      - POSTGRES_DB=test_db
+      - POSTGRES_USER=state_user
+      - POSTGRES_PASSWORD=state_password
+      - POSTGRES_DB=state_db
+    command: ["postgres", "-N", "500"]
+
+  zkevm-pool-db:
+    container_name: zkevm-pool-db
+    image: postgres
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+        reservations:
+          memory: 1G
+    ports:
+      - 5433:5432
+    environment:
+      - POSTGRES_USER=pool_user
+      - POSTGRES_PASSWORD=pool_password
+      - POSTGRES_DB=pool_db
+    command: ["postgres", "-N", "500"]
+
+  zkevm-rpc-db:
+    container_name: zkevm-rpc-db
+    image: postgres
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+        reservations:
+          memory: 1G
+    ports:
+      - 5434:5432
+    environment:
+      - POSTGRES_USER=rpc_user
+      - POSTGRES_PASSWORD=rpc_password
+      - POSTGRES_DB=rpc_db
     command: ["postgres", "-N", "500"]
 
   zkevm-bridge-db:
     container_name: zkevm-bridge-db
     image: postgres
     expose:
-      - 5433
+      - 5435
     ports:
-      - 5433:5433
+      - 5435:5432
     environment:
       - POSTGRES_USER=test_user
       - POSTGRES_PASSWORD=test_password
       - POSTGRES_DB=test_db
-    command: -p 5433 -N 500
+    command: ["postgres", "-N", "500"]
 
   zkevm-node:
     container_name: zkevm-node
-    image: hermeznetwork/zkevm-node@sha256:16ae80cf78644e66d33c52b16e8907f831be0bdf5f1a991d8ccf13707f6e1a5a
+    image: hermeznetwork/zkevm-node:develop@sha256:516291b1923a7f9729863de63be3770945d3f6f78d6e3347cd2428f8c61e3599
     ports:
       - 8123:8123
       - 61090:61090
     environment:
-      - ZKEVM_NODE_DATABASE_USER=test_user
-      - ZKEVM_NODE_DATABASE_PASSWORD=test_password
-      - ZKEVM_NODE_DATABASE_NAME=test_db
-      - ZKEVM_NODE_DATABASE_HOST=zkevm-node-db
-      - ZKEVM_NODE_DATABASE_PORT=5432
-      - ZKEVM_NODE_ETHERMAN_URL=http://zkevm-mock-l1-network:8545
+      - ZKEVM_NODE_STATEDB_HOST=zkevm-state-db
+      - ZKEVM_NODE_POOL_HOST=zkevm-pool-db
+      - ZKEVM_NODE_RPC_DB_HOST=zkevm-rpc-db
       - ZKEVM_NODE_ETHERMAN_PRIVATEKEYPATH=/pk/keystore
-      - ZKEVM_NODE_RPC_BROADCASTURI=zkevm-node:61090
     volumes:
       - ./test/test.keystore:/pk/keystore
       - ./test/config/node/config.zkevm.node.toml:/app/config.toml
@@ -58,7 +88,7 @@ services:
 
   zkevm-mock-l1-network:
     container_name: zkevm-local-l1-network
-    image: hermeznetwork/geth-zkevm-contracts@sha256:b88d03a42ef4975d0b92c0dd192e1bf4d673fc4b761aaf4bcfdd606989c1b006
+    image: hermeznetwork/geth-zkevm-contracts@sha256:79f68f3be4f7c01efbb28e13eda5bc480c5920c714d432d19d51d3598239aafc
     ports:
       - 8545:8545
 
@@ -86,7 +116,7 @@ services:
       - ZKEVM_BRIDGE_DATABASE_PASSWORD=test_password
       - ZKEVM_BRIDGE_DATABASE_NAME=test_db
       - ZKEVM_BRIDGE_DATABASE_HOST=zkevm-bridge-db
-      - ZKEVM_BRIDGE_DATABASE_PORT=5433
+      - ZKEVM_BRIDGE_DATABASE_PORT=5432
       - ZKEVM_BRIDGE_ETHERMAN_PRIVATEKEYPATH=/pk/keystore
     volumes:
       - ./test/test.keystore:/pk/keystore
@@ -94,7 +124,7 @@ services:
     command:
       - "/bin/sh"
       - "-c"
-      - "/app/zkevm-bridge run --network local --cfg /app/config.toml"
+      - "/app/zkevm-bridge run --network local --cfg /app/config.toml --block_number 1"
 
   zkevm-bridge-service-mock:
     container_name: zkevm-bridge-service-mock

@@ -28,6 +28,8 @@ import (
 func start(ctx *cli.Context) error {
 	configFilePath := ctx.String(flagCfg)
 	network := ctx.String(flagNetwork)
+	genBlockNumber := ctx.Int64(flagL1GenBlockNumber)
+
 	c, err := config.Load(configFilePath, network)
 	if err != nil {
 		return err
@@ -101,7 +103,7 @@ func start(ctx *cli.Context) error {
 		return gerror.ErrStorageNotRegister
 	}
 
-	go runSynchronizer(c.NetworkConfig.GenBlockNumber, bridgeController, etherman, c.Synchronizer, storage)
+	go runSynchronizer(uint64(genBlockNumber), bridgeController, etherman, c.Synchronizer, storage)
 	for _, client := range l2Ethermans {
 		go runSynchronizer(0, bridgeController, client, c.Synchronizer, storage)
 	}

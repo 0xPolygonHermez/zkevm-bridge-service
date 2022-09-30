@@ -38,7 +38,7 @@ func TestE2E(t *testing.T) {
 			User:     "test_user",
 			Password: "test_password",
 			Host:     "localhost",
-			Port:     "5433",
+			Port:     "5435",
 			MaxConns: 10,
 		},
 		BT: bridgectrl.Config{
