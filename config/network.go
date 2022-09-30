@@ -7,7 +7,6 @@ import (
 
 //NetworkConfig is the configuration struct for the different environments
 type NetworkConfig struct {
-	Arity                 uint8
 	GenBlockNumber        uint64
 	PoEAddr               common.Address
 	BridgeAddr            common.Address
@@ -26,7 +25,6 @@ const (
 //nolint:gomnd
 var (
 	mainnetConfig = NetworkConfig{
-		Arity:                 4,
 		GenBlockNumber:        13808430,
 		PoEAddr:               common.HexToAddress("0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"),
 		BridgeAddr:            common.HexToAddress("0x11D0Dc8E2Ce3a93EB2b32f4C7c3fD9dDAf1211FA"),
@@ -36,7 +34,6 @@ var (
 		L1ChainID:             1, //Mainnet
 	}
 	testnetConfig = NetworkConfig{
-		Arity:                 4,
 		GenBlockNumber:        9817974,
 		PoEAddr:               common.HexToAddress("0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"),
 		BridgeAddr:            common.HexToAddress("0x21D0Dc8E2Ce3a93EB2b32f4C7c3fD9dDAf1211FA"),
@@ -46,7 +43,6 @@ var (
 		L1ChainID:             4, //Rinkeby
 	}
 	internalTestnetConfig = NetworkConfig{
-		Arity:                 4,
 		GenBlockNumber:        7674349,
 		PoEAddr:               common.HexToAddress("0x159113e5560c9CC2d8c4e716228CCf92c72E9603"),
 		BridgeAddr:            common.HexToAddress("0x47c1090bc966280000Fe4356a501f1D0887Ce840"),
@@ -56,7 +52,6 @@ var (
 		L1ChainID:             5, //Goerli
 	}
 	localConfig = NetworkConfig{
-		Arity:                 4,
 		GenBlockNumber:        1,
 		PoEAddr:               common.HexToAddress("0x2279B7A0a67DB372996a5FaB50D91eAA73d2eBe6"),
 		BridgeAddr:            common.HexToAddress("0x0165878A594ca255338adfa4d48449f69242Eb8F"),
