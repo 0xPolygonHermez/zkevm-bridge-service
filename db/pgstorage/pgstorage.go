@@ -207,7 +207,7 @@ func (p *PostgresStorage) GetPreviousBlock(ctx context.Context, networkID uint, 
 // GetNumberDeposits gets the number of  deposits.
 func (p *PostgresStorage) GetNumberDeposits(ctx context.Context, networkID uint, blockNumber uint64, dbTx pgx.Tx) (uint64, error) {
 	var nDeposits int64
-	const getNumDepositsSQL = "SELECT coalesce(MAX(deposit_cnt), -1) FROM syncv2.deposit WHERE network_id = $1 AND block_num <= $2"
+	const getNumDepositsSQL = "SELECT coalesce(MAX(deposit_cnt), -1) FROM syncv2.deposit as d INNER JOIN syncv2.block as b ON d.network_id = b.network_id AND d.block_id = b.id WHERE d.network_id = $1 AND b.block_num <= $2"
 	err := p.getExecQuerier(dbTx).QueryRow(ctx, getNumDepositsSQL, networkID, blockNumber).Scan(&nDeposits)
 	return uint64(nDeposits + 1), err
 }
