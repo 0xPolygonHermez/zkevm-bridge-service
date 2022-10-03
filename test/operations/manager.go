@@ -72,7 +72,6 @@ type storageInterface interface {
 	GetLatestExitRoot(ctx context.Context, isRollup bool, dbTx pgx.Tx) (*etherman.GlobalExitRoot, error)
 	GetLatestL1SyncedExitRoot(ctx context.Context, dbTx pgx.Tx) (*etherman.GlobalExitRoot, error)
 	GetLatestTrustedExitRoot(ctx context.Context, dbTx pgx.Tx) (*etherman.GlobalExitRoot, error)
-	GetLastBatchState(ctx context.Context, dbTx pgx.Tx) (uint64, uint64, bool, error)
 	GetTokenWrapped(ctx context.Context, originalNetwork uint, originalTokenAddress common.Address, dbTx pgx.Tx) (*etherman.TokenWrapped, error)
 	GetDepositCountByRoot(ctx context.Context, root []byte, network uint8, dbTx pgx.Tx) (uint, error)
 }
@@ -110,11 +109,11 @@ func NewManager(ctx context.Context, cfg *Config) (*Manager, error) {
 		ctx: ctx,
 	}
 	//Init storage and mt
-	pgst, err := pgstorage.NewPostgresStorage(dbConfig, 0)
+	pgst, err := pgstorage.NewPostgresStorage(dbConfig)
 	if err != nil {
 		return nil, err
 	}
-	st, err := db.NewStorage(cfg.Storage, 0)
+	st, err := db.NewStorage(cfg.Storage)
 	if err != nil {
 		return nil, err
 	}
@@ -614,25 +613,6 @@ func (m *Manager) GetTokenWrapped(ctx context.Context, originNetwork uint, origi
 		}
 	}
 	return m.storage.GetTokenWrapped(ctx, originNetwork, originalTokenAddr, nil)
-}
-
-// WaitBatchToBeConsolidated waits until new batch is verified
-func (m *Manager) WaitBatchToBeConsolidated(ctx context.Context) error {
-	orgBatchNumber, _, orgVerified, err := m.storage.GetLastBatchState(ctx, nil)
-	if err != nil {
-		return err
-	}
-
-	return operations.Poll(defaultInterval, defaultDeadline, func() (bool, error) {
-		batchNumber, _, verified, err := m.storage.GetLastBatchState(ctx, nil)
-		if !verified {
-			return false, err
-		}
-		if !orgVerified {
-			return true, nil
-		}
-		return batchNumber > orgBatchNumber, nil
-	})
 }
 
 // WaitExitRootToBeSynced waits unitl new exit root is synced.

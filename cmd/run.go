@@ -64,7 +64,7 @@ func start(ctx *cli.Context) error {
 		networkIDs = append(networkIDs, networkID)
 	}
 
-	storage, err := db.NewStorage(c.Database, uint(len(networkIDs)))
+	storage, err := db.NewStorage(c.Database)
 	if err != nil {
 		log.Error(err)
 		return err
@@ -80,7 +80,7 @@ func start(ctx *cli.Context) error {
 			Host:     c.Database.Host,
 			Port:     c.Database.Port,
 			MaxConns: c.Database.MaxConns,
-		}, uint(len(networkIDs)))
+		})
 		if err != nil {
 			log.Error(err)
 			return err

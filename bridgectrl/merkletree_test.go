@@ -90,7 +90,7 @@ func TestMTAddLeaf(t *testing.T) {
 			err = pgstorage.InitOrReset(dbCfg)
 			require.NoError(t, err)
 
-			store, err := pgstorage.NewPostgresStorage(dbCfg, 0)
+			store, err := pgstorage.NewPostgresStorage(dbCfg)
 			require.NoError(t, err)
 
 			mt, err := NewMerkleTree(ctx, store, uint8(32), uint8(0))
@@ -145,7 +145,7 @@ func TestMTGetProof(t *testing.T) {
 			err = pgstorage.InitOrReset(dbCfg)
 			require.NoError(t, err)
 
-			store, err := pgstorage.NewPostgresStorage(dbCfg, 0)
+			store, err := pgstorage.NewPostgresStorage(dbCfg)
 			require.NoError(t, err)
 
 			mt, err := NewMerkleTree(ctx, store, uint8(32), uint8(0))
