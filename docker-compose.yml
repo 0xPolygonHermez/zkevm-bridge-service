@@ -124,7 +124,7 @@ services:
     command:
       - "/bin/sh"
       - "-c"
-      - "/app/zkevm-bridge run --network local --cfg /app/config.toml --block_number 1"
+      - "/app/zkevm-bridge run --cfg /app/config.toml"
 
   zkevm-bridge-service-mock:
     container_name: zkevm-bridge-service-mock

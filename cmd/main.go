@@ -8,9 +8,8 @@ import (
 )
 
 const (
-	flagCfg              = "cfg"
-	flagNetwork          = "network"
-	flagL1GenBlockNumber = "block_number"
+	flagCfg     = "cfg"
+	flagNetwork = "network"
 )
 
 const (
@@ -39,12 +38,6 @@ func main() {
 			Name:     flagNetwork,
 			Aliases:  []string{"n"},
 			Usage:    "Network: mainnet, testnet, internaltestnet, local. By default it uses mainnet",
-			Required: false,
-		},
-		&cli.Int64Flag{
-			Name:     flagL1GenBlockNumber,
-			Aliases:  []string{"g"},
-			Usage:    "Initial L1 block number to start synchronizing`",
 			Required: false,
 		},
 	}

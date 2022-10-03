@@ -78,7 +78,6 @@ type storageInterface interface {
 
 // Config is the main Manager configuration.
 type Config struct {
-	// Arity   uint8
 	Storage db.Config
 	BT      bridgectrl.Config
 }
