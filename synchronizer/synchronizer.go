@@ -256,6 +256,7 @@ func (s *ClientSynchronizer) processBlockRange(blocks []etherman.Block, order ma
 				s.networkID, blocks[i].BlockNumber)
 		}
 		// Add block information
+		blocks[i].NetworkID = s.networkID
 		blockID, err := s.storage.AddBlock(s.ctx, &blocks[i], dbTx)
 		if err != nil {
 			rollbackErr := s.storage.Rollback(s.ctx, dbTx)
