@@ -57,7 +57,7 @@ TrustedSequencerURI = ""
 [Sequencer]
 WaitPeriodPoolIsEmpty = "1s"
 WaitPeriodSendSequence = "5s"
-LastBatchVirtualizationTimeMaxWaitPeriod = "30s"
+LastBatchVirtualizationTimeMaxWaitPeriod = "10s"
 WaitBlocksToUpdateGER = 2
 MaxTimeForBatchToBeOpen = "5s"
 BlocksAmountForTxsToBeDeleted = 100

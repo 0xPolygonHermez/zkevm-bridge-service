@@ -74,6 +74,7 @@ type storageInterface interface {
 	GetLatestTrustedExitRoot(ctx context.Context, dbTx pgx.Tx) (*etherman.GlobalExitRoot, error)
 	GetTokenWrapped(ctx context.Context, originalNetwork uint, originalTokenAddress common.Address, dbTx pgx.Tx) (*etherman.TokenWrapped, error)
 	GetDepositCountByRoot(ctx context.Context, root []byte, network uint8, dbTx pgx.Tx) (uint, error)
+	UpdateBlocks(ctx context.Context, networkID uint, blockNum uint64, dbTx pgx.Tx) error
 }
 
 // Config is the main Manager configuration.
@@ -227,7 +228,7 @@ func (m *Manager) Setup() error {
 	time.Sleep(t * time.Second)
 
 	// Run bridge container
-	err = m.startBridge()
+	err = m.StartBridge()
 	if err != nil {
 		log.Error("bridge start failed")
 		// return err
@@ -393,7 +394,7 @@ func runCmd(c *exec.Cmd) error {
 	return c.Run()
 }
 
-func (m *Manager) startBridge() error {
+func (m *Manager) StartBridge() error {
 	if err := stopBridge(); err != nil {
 		return err
 	}
@@ -613,6 +614,11 @@ func (m *Manager) GetTokenWrapped(ctx context.Context, originNetwork uint, origi
 		}
 	}
 	return m.storage.GetTokenWrapped(ctx, originNetwork, originalTokenAddr, nil)
+}
+
+// Update the hash of blocks.
+func (m *Manager) UpdateBlocks(ctx context.Context, networkID uint, blockNum uint64) error {
+	return m.storage.UpdateBlocks(ctx, networkID, blockNum, nil)
 }
 
 // WaitExitRootToBeSynced waits unitl new exit root is synced.
