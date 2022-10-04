@@ -506,7 +506,7 @@ func (p *PostgresStorage) ResetTrustedState(ctx context.Context, batchNumber uin
 	return err
 }
 
-// Update the hash of blocks.
+// UpdateBlocks updates the hash of blocks.
 func (p *PostgresStorage) UpdateBlocks(ctx context.Context, networkID uint, blockNum uint64, dbTx pgx.Tx) error {
 	const updateBlocksSQL = "UPDATE syncv2.block SET block_hash = $1 WHERE network_id = $2 AND block_num >= $3"
 	_, err := p.getExecQuerier(dbTx).Exec(ctx, updateBlocksSQL, common.Hash{}, networkID, blockNum)

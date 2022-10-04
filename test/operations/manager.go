@@ -394,6 +394,7 @@ func runCmd(c *exec.Cmd) error {
 	return c.Run()
 }
 
+// StartBridge restarts the bridge service.
 func (m *Manager) StartBridge() error {
 	if err := stopBridge(); err != nil {
 		return err
@@ -616,7 +617,7 @@ func (m *Manager) GetTokenWrapped(ctx context.Context, originNetwork uint, origi
 	return m.storage.GetTokenWrapped(ctx, originNetwork, originalTokenAddr, nil)
 }
 
-// Update the hash of blocks.
+// UpdateBlocks updates the hash of blocks.
 func (m *Manager) UpdateBlocks(ctx context.Context, networkID uint, blockNum uint64) error {
 	return m.storage.UpdateBlocks(ctx, networkID, blockNum, nil)
 }
