@@ -73,6 +73,7 @@ func TestEdgeCase(t *testing.T) {
 			Height: uint8(32),
 		},
 	}
+
 	opsman, err := operations.NewManager(ctx, opsCfg)
 	require.NoError(t, err)
 

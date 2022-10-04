@@ -698,7 +698,7 @@ func (s *ClientSynchronizer) processDeposit(deposit etherman.Deposit, blockID ui
 	err = s.bridgeCtrl.AddDeposit(&deposit)
 	if err != nil {
 		log.Fatalf("networkID: %d, failed to store new deposit in the bridge tree, BlockNumber: %d, Deposit: %+v err: %s",
-			s.networkID, &deposit.BlockNumber, deposit, err.Error())
+			s.networkID, deposit.BlockNumber, deposit, err.Error())
 	}
 }
 

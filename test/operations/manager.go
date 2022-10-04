@@ -137,8 +137,8 @@ func NewManager(ctx context.Context, cfg *Config) (*Manager, error) {
 	opsman.clients = make(map[NetworkSID]*utils.Client)
 	opsman.clients[L1] = l1Client
 	opsman.clients[L2] = l2Client
-
-	return opsman, nil
+	err = opsman.StartBridge()
+	return opsman, err
 }
 
 // SendL1Deposit sends a deposit from l1 to l2.
