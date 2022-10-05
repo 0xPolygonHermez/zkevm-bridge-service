@@ -4,6 +4,7 @@ import (
 	"context"
 	"math/big"
 	"testing"
+	"time"
 
 	"github.com/0xPolygonHermez/zkevm-bridge-service/bridgectrl"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/db"
@@ -76,9 +77,11 @@ func TestEdgeCase(t *testing.T) {
 
 	opsman, err := operations.NewManager(ctx, opsCfg)
 	require.NoError(t, err)
+	require.NoError(t, opsman.StartBridge())
+	const st time.Duration = 60
+	time.Sleep(st * time.Second)
 
 	t.Run("Test a case of restart with reorg.", func(t *testing.T) {
-		depositFromL1(ctx, opsman, t)
 		depositFromL1(ctx, opsman, t)
 		// Modify the L1 blocks
 		destAddr := common.HexToAddress("0xc949254d682d8c9ad5682521675b8f43b102aec4")

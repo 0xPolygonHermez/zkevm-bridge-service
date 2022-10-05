@@ -171,13 +171,20 @@ func (p *PostgresStorage) GetTokenMetadata(ctx context.Context, tokenWrapped *et
 // AddTokenWrapped adds new wrapped token to the storage.
 func (p *PostgresStorage) AddTokenWrapped(ctx context.Context, tokenWrapped *etherman.TokenWrapped, dbTx pgx.Tx) error {
 	metadata, err := p.GetTokenMetadata(ctx, tokenWrapped, dbTx)
+	var tokenMetadata *etherman.TokenMetadata
 	if err != nil {
-		return err
+		if err != pgx.ErrNoRows {
+			return err
+		}
+		// if err == pgx.ErrNoRows, this is due to missing the related deposit in the opposite network in fast sync mode.
+		tokenMetadata = &etherman.TokenMetadata{}
+	} else {
+		tokenMetadata, err = getDecodedToken(metadata)
+		if err != nil {
+			return err
+		}
 	}
-	tokenMetadata, err := getDecodedToken(metadata)
-	if err != nil {
-		return err
-	}
+
 	const addTokenWrappedSQL = "INSERT INTO syncv2.token_wrapped (network_id, orig_net, orig_token_addr, wrapped_token_addr, block_id, name, symbol, decimals) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"
 	e := p.getExecQuerier(dbTx)
 	_, err = e.Exec(ctx, addTokenWrappedSQL, tokenWrapped.NetworkID, tokenWrapped.OriginalNetwork, tokenWrapped.OriginalTokenAddress, tokenWrapped.WrappedTokenAddress, tokenWrapped.BlockID, tokenMetadata.Name, tokenMetadata.Symbol, tokenMetadata.Decimals)
