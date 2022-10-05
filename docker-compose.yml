@@ -68,7 +68,7 @@ services:
 
   zkevm-node:
     container_name: zkevm-node
-    image: hermeznetwork/zkevm-node:develop@sha256:516291b1923a7f9729863de63be3770945d3f6f78d6e3347cd2428f8c61e3599
+    image: hermeznetwork/zkevm-node:develop@sha256:8c17e7147f73001f423639709c1297a3abacb0ea7bf5013539433f030243b9eb
     ports:
       - 8123:8123
       - 61090:61090
@@ -88,13 +88,13 @@ services:
 
   zkevm-mock-l1-network:
     container_name: zkevm-local-l1-network
-    image: hermeznetwork/geth-zkevm-contracts@sha256:79f68f3be4f7c01efbb28e13eda5bc480c5920c714d432d19d51d3598239aafc
+    image: hermeznetwork/geth-zkevm-contracts@sha256:24754a773b803ce0de8278c02bb756757b09fda65dc993e560a0b76a09b88248
     ports:
       - 8545:8545
 
   zkevm-prover:
     container_name: zkevm-prover
-    image: hermeznetwork/zkprover-local@sha256:7afb29d1922e7312da2bf5a6d844266c9702c61506d15243506483b7e3a2fde3
+    image: hermeznetwork/zkevm-prover:develop@sha256:408855e37f4751260bfb206e6aeb3b53c773a1615e8d675166b3647770700701
     ports:
       - 50051:50051 # Prover
       - 50052:50052 # MockProver
