@@ -157,8 +157,7 @@ func TestE2E(t *testing.T) {
 		globalExitRootSMC, err := opsman.GetCurrentGlobalExitRootFromSmc(ctx)
 		require.NoError(t, err)
 		t.Logf("initial globalExitRootSMC: %+v,", globalExitRootSMC)
-
-		// Send L1 deposit
+		// Send L2 deposit
 		var destNetwork uint32 = 0
 		amount := new(big.Int).SetUint64(10000000000000000000)
 		tokenAddr, _, err := opsman.DeployERC20(ctx, "A COIN", "ACO", operations.L2)

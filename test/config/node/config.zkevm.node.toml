@@ -57,10 +57,10 @@ TrustedSequencerURI = ""
 [Sequencer]
 MaxSequenceSize = "2000000"
 WaitPeriodPoolIsEmpty = "1s"
-WaitPeriodSendSequence = "2s"
-LastBatchVirtualizationTimeMaxWaitPeriod = "5s"
-WaitBlocksToUpdateGER = 1
-MaxTimeForBatchToBeOpen = "3s"
+WaitPeriodSendSequence = "3s"
+LastBatchVirtualizationTimeMaxWaitPeriod = "30s"
+WaitBlocksToUpdateGER = 2
+MaxTimeForBatchToBeOpen = "5s"
 BlocksAmountForTxsToBeDeleted = 100
 FrequencyToCheckTxsForDelete = "12h"
 MaxCumulativeGasUsed = 30000000
@@ -75,8 +75,8 @@ MaxSteps = 8388608
 		SendBatchesEvenWhenNotProfitable = "true"
 
 [Aggregator]
-IntervalToConsolidateState = "5s"
-IntervalFrequencyToGetProofGenerationState = "3s"
+IntervalToConsolidateState = "10s"
+IntervalFrequencyToGetProofGenerationState = "5s"
 TxProfitabilityCheckerType = "acceptall"
 TxProfitabilityMinReward = "1.1"
 
