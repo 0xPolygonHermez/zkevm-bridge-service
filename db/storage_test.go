@@ -473,7 +473,7 @@ func TestBSStorage(t *testing.T) {
 		BlockNumber:          1,
 		NetworkID:            1,
 	}
-	metadata, err := pg.GetTokenMetadata(ctx, wrappedToken, tx)
+	metadata, err := pg.GetTokenMetadata(ctx, wrappedToken.OriginalNetwork, wrappedToken.NetworkID, wrappedToken.OriginalTokenAddress, tx)
 	require.NoError(t, err)
 	require.Equal(t, metadata, deposit.Metadata)
 

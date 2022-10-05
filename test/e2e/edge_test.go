@@ -78,7 +78,7 @@ func TestEdgeCase(t *testing.T) {
 	opsman, err := operations.NewManager(ctx, opsCfg)
 	require.NoError(t, err)
 	require.NoError(t, opsman.StartBridge())
-	const st time.Duration = 60
+	const st time.Duration = 10 // wait unitil the syncing is finished
 	time.Sleep(st * time.Second)
 
 	t.Run("Test a case of restart with reorg.", func(t *testing.T) {

@@ -160,17 +160,17 @@ func (p *PostgresStorage) AddClaim(ctx context.Context, claim *etherman.Claim, d
 }
 
 // GetTokenMetadata gets the metadata of the dedicated token.
-func (p *PostgresStorage) GetTokenMetadata(ctx context.Context, tokenWrapped *etherman.TokenWrapped, dbTx pgx.Tx) ([]byte, error) {
+func (p *PostgresStorage) GetTokenMetadata(ctx context.Context, networkID, destNet uint, originalTokenAddr common.Address, dbTx pgx.Tx) ([]byte, error) {
 	var metadata []byte
 	const getMetadataSQL = "SELECT metadata from syncv2.deposit WHERE network_id = $1 AND token_addr = $2 AND dest_net = $3 AND metadata IS NOT NULL LIMIT 1"
 	e := p.getExecQuerier(dbTx)
-	err := e.QueryRow(ctx, getMetadataSQL, tokenWrapped.OriginalNetwork, tokenWrapped.OriginalTokenAddress, tokenWrapped.NetworkID).Scan(&metadata)
+	err := e.QueryRow(ctx, getMetadataSQL, networkID, originalTokenAddr, destNet).Scan(&metadata)
 	return metadata, err
 }
 
 // AddTokenWrapped adds new wrapped token to the storage.
 func (p *PostgresStorage) AddTokenWrapped(ctx context.Context, tokenWrapped *etherman.TokenWrapped, dbTx pgx.Tx) error {
-	metadata, err := p.GetTokenMetadata(ctx, tokenWrapped, dbTx)
+	metadata, err := p.GetTokenMetadata(ctx, tokenWrapped.OriginalNetwork, tokenWrapped.NetworkID, tokenWrapped.OriginalTokenAddress, dbTx)
 	var tokenMetadata *etherman.TokenMetadata
 	if err != nil {
 		if err != pgx.ErrNoRows {
@@ -356,10 +356,32 @@ func (p *PostgresStorage) GetLatestTrustedExitRoot(ctx context.Context, dbTx pgx
 // GetTokenWrapped gets a specific wrapped token.
 func (p *PostgresStorage) GetTokenWrapped(ctx context.Context, originalNetwork uint, originalTokenAddress common.Address, dbTx pgx.Tx) (*etherman.TokenWrapped, error) {
 	const getWrappedTokenSQL = "SELECT network_id, orig_net, orig_token_addr, wrapped_token_addr, block_id, name, symbol, decimals FROM syncv2.token_wrapped WHERE orig_net = $1 AND orig_token_addr = $2"
+
 	var token etherman.TokenWrapped
 	err := p.getExecQuerier(dbTx).QueryRow(ctx, getWrappedTokenSQL, originalNetwork, originalTokenAddress).Scan(&token.NetworkID, &token.OriginalNetwork, &token.OriginalTokenAddress, &token.WrappedTokenAddress, &token.BlockID, &token.Name, &token.Symbol, &token.Decimals)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, gerror.ErrStorageNotFound
+	}
+
+	if token.Symbol == "" { // this is due to missing the related deposit in the opposite network in fast sync mode.
+		metadata, err := p.GetTokenMetadata(ctx, token.OriginalNetwork, token.NetworkID, token.OriginalTokenAddress, dbTx)
+		var tokenMetadata *etherman.TokenMetadata
+		if err != nil {
+			if err != pgx.ErrNoRows {
+				return nil, err
+			}
+		} else {
+			tokenMetadata, err = getDecodedToken(metadata)
+			if err != nil {
+				return nil, err
+			}
+			updateWrappedTokenSQL := "UPDATE syncv2.token_wrapped SET name = $3, symbol = $4, decimals = $5  WHERE orig_net = $1 AND orig_token_addr = $2" //nolint: gosec
+			_, err = p.getExecQuerier(dbTx).Exec(ctx, updateWrappedTokenSQL, originalNetwork, originalTokenAddress, tokenMetadata.Name, tokenMetadata.Symbol, tokenMetadata.Decimals)
+			if err != nil {
+				return nil, err
+			}
+			token.Name, token.Symbol, token.Decimals = tokenMetadata.Name, tokenMetadata.Symbol, tokenMetadata.Decimals
+		}
 	}
 	return &token, err
 }
