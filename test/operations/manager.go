@@ -74,7 +74,7 @@ type storageInterface interface {
 	GetLatestTrustedExitRoot(ctx context.Context, dbTx pgx.Tx) (*etherman.GlobalExitRoot, error)
 	GetTokenWrapped(ctx context.Context, originalNetwork uint, originalTokenAddress common.Address, dbTx pgx.Tx) (*etherman.TokenWrapped, error)
 	GetDepositCountByRoot(ctx context.Context, root []byte, network uint8, dbTx pgx.Tx) (uint, error)
-	UpdateBlocks(ctx context.Context, networkID uint, blockNum uint64, dbTx pgx.Tx) error
+	UpdateBlocksForTesting(ctx context.Context, networkID uint, blockNum uint64, dbTx pgx.Tx) error
 }
 
 // Config is the main Manager configuration.
@@ -616,9 +616,9 @@ func (m *Manager) GetTokenWrapped(ctx context.Context, originNetwork uint, origi
 	return m.storage.GetTokenWrapped(ctx, originNetwork, originalTokenAddr, nil)
 }
 
-// UpdateBlocks updates the hash of blocks.
-func (m *Manager) UpdateBlocks(ctx context.Context, networkID uint, blockNum uint64) error {
-	return m.storage.UpdateBlocks(ctx, networkID, blockNum, nil)
+// UpdateBlocksForTesting updates the hash of blocks.
+func (m *Manager) UpdateBlocksForTesting(ctx context.Context, networkID uint, blockNum uint64) error {
+	return m.storage.UpdateBlocksForTesting(ctx, networkID, blockNum, nil)
 }
 
 // WaitExitRootToBeSynced waits unitl new exit root is synced.

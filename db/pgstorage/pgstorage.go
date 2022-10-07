@@ -177,6 +177,7 @@ func (p *PostgresStorage) AddTokenWrapped(ctx context.Context, tokenWrapped *eth
 			return err
 		}
 		// if err == pgx.ErrNoRows, this is due to missing the related deposit in the opposite network in fast sync mode.
+		// ref: https://github.com/0xPolygonHermez/zkevm-bridge-service/issues/230
 		tokenMetadata = &etherman.TokenMetadata{}
 	} else {
 		tokenMetadata, err = getDecodedToken(metadata)
@@ -363,7 +364,9 @@ func (p *PostgresStorage) GetTokenWrapped(ctx context.Context, originalNetwork u
 		return nil, gerror.ErrStorageNotFound
 	}
 
-	if token.Symbol == "" { // this is due to missing the related deposit in the opposite network in fast sync mode.
+	// this is due to missing the related deposit in the opposite network in fast sync mode.
+	// ref: https://github.com/0xPolygonHermez/zkevm-bridge-service/issues/230
+	if token.Symbol == "" {
 		metadata, err := p.GetTokenMetadata(ctx, token.OriginalNetwork, token.NetworkID, token.OriginalTokenAddress, dbTx)
 		var tokenMetadata *etherman.TokenMetadata
 		if err != nil {
@@ -535,8 +538,8 @@ func (p *PostgresStorage) ResetTrustedState(ctx context.Context, batchNumber uin
 	return err
 }
 
-// UpdateBlocks updates the hash of blocks.
-func (p *PostgresStorage) UpdateBlocks(ctx context.Context, networkID uint, blockNum uint64, dbTx pgx.Tx) error {
+// UpdateBlocksForTesting updates the hash of blocks.
+func (p *PostgresStorage) UpdateBlocksForTesting(ctx context.Context, networkID uint, blockNum uint64, dbTx pgx.Tx) error {
 	const updateBlocksSQL = "UPDATE syncv2.block SET block_hash = $1 WHERE network_id = $2 AND block_num >= $3"
 	_, err := p.getExecQuerier(dbTx).Exec(ctx, updateBlocksSQL, common.Hash{}, networkID, blockNum)
 	return err
