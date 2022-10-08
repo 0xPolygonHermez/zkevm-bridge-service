@@ -73,7 +73,7 @@ func (mt *MerkleTree) getSiblings(ctx context.Context, index uint, root [KeyLen]
 	for h := mt.height - 1; ; h-- {
 		value, err := mt.store.Get(ctx, cur[:], nil)
 		if err != nil {
-			return nil, fmt.Errorf("height: %d, cur: %v, error: %v", h, cur, err)
+			return nil, fmt.Errorf("height: %d, cur: %v, error: %w", h, cur, err)
 		}
 
 		copy(left[:], value[0])
