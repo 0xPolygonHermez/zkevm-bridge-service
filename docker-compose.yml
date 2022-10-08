@@ -68,7 +68,7 @@ services:
 
   zkevm-node:
     container_name: zkevm-node
-    image: hermeznetwork/zkevm-node:develop@sha256:8c17e7147f73001f423639709c1297a3abacb0ea7bf5013539433f030243b9eb
+    image: hermeznetwork/zkevm-node:develop@sha256:9d2e46c50fe1b2dfe40ee18bd1b5dd5e987af015478021b3edf33eb2eda43ce9
     ports:
       - 8123:8123
       - 61090:61090
