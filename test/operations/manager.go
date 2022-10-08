@@ -401,6 +401,7 @@ func (m *Manager) StartBridge() error {
 	if err != nil {
 		return err
 	}
+	time.Sleep(defaultInterval)
 	// Wait bridge to be ready
 	return poll(defaultInterval, defaultDeadline, bridgeUpCondition)
 }
