@@ -552,9 +552,6 @@ func (m *Manager) DeployERC20(ctx context.Context, name, symbol string, network 
 	if err != nil {
 		return common.Address{}, nil, err
 	}
-	if network == L2 {
-		auth.GasPrice = big.NewInt(0) // TODO set the appropriate value
-	}
 
 	return client.DeployERC20(ctx, name, symbol, auth)
 }
@@ -570,7 +567,6 @@ func (m *Manager) MintERC20(ctx context.Context, erc20Addr common.Address, amoun
 	var bridgeAddress = l1BridgeAddr
 	if network == L2 {
 		bridgeAddress = l2BridgeAddr
-		auth.GasPrice = big.NewInt(0) // TODO set the appropriate value
 	}
 
 	err = client.ApproveERC20(ctx, erc20Addr, common.HexToAddress(bridgeAddress), amount, auth)
