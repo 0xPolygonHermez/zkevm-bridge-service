@@ -14,7 +14,7 @@ import (
 )
 
 func depositFromL1(ctx context.Context, opsman *operations.Manager, t *testing.T) {
-	amount := new(big.Int).SetUint64(10000000000000000000)
+	amount := new(big.Int).SetUint64(250000000000000000)
 	tokenAddr := common.Address{} // This means is eth
 	destAddr := common.HexToAddress("0xc949254d682d8c9ad5682521675b8f43b102aec4")
 	var destNetwork uint32 = 1
@@ -35,7 +35,7 @@ func depositFromL1(ctx context.Context, opsman *operations.Manager, t *testing.T
 func depositFromL2(ctx context.Context, opsman *operations.Manager, t *testing.T) {
 	// Send L2 Deposit to withdraw the some funds
 	var destNetwork uint32 = 0
-	amount := new(big.Int).SetUint64(1000000000000000000)
+	amount := new(big.Int).SetUint64(240000000000000000)
 	tokenAddr := common.Address{} // This means is eth
 	destAddr := common.HexToAddress("0xc949254d682d8c9ad5682521675b8f43b102aec4")
 	err := opsman.SendL2Deposit(ctx, tokenAddr, amount, destNetwork, &destAddr)
@@ -78,7 +78,7 @@ func TestEdgeCase(t *testing.T) {
 	opsman, err := operations.NewManager(ctx, opsCfg)
 	require.NoError(t, err)
 	require.NoError(t, opsman.StartBridge())
-	const st time.Duration = 10 // wait unitil the syncing is finished
+	const st time.Duration = 10 // wait until the syncing is finished
 	time.Sleep(st * time.Second)
 
 	t.Run("Test a case of restart with reorg.", func(t *testing.T) {

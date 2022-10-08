@@ -175,8 +175,6 @@ func (m *Manager) SendL2Deposit(ctx context.Context, tokenAddr common.Address, a
 		return err
 	}
 
-	auth.GasPrice = big.NewInt(0) // TODO set the appropriate value
-
 	orgExitRoot, err := m.storage.GetLatestExitRoot(ctx, false, nil)
 	if err != nil && err != gerror.ErrStorageNotFound {
 		return err
@@ -403,6 +401,7 @@ func (m *Manager) StartBridge() error {
 	if err != nil {
 		return err
 	}
+	time.Sleep(defaultInterval)
 	// Wait bridge to be ready
 	return poll(defaultInterval, defaultDeadline, bridgeUpCondition)
 }
