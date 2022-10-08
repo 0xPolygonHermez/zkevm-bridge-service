@@ -35,7 +35,7 @@ const (
 	L1 NetworkSID = "l1"
 	L2 NetworkSID = "l2"
 
-	waitRootSyncDeadline = 60 * time.Second
+	waitRootSyncDeadline = 90 * time.Second
 )
 
 const (
@@ -74,6 +74,7 @@ type storageInterface interface {
 	GetLatestTrustedExitRoot(ctx context.Context, dbTx pgx.Tx) (*etherman.GlobalExitRoot, error)
 	GetTokenWrapped(ctx context.Context, originalNetwork uint, originalTokenAddress common.Address, dbTx pgx.Tx) (*etherman.TokenWrapped, error)
 	GetDepositCountByRoot(ctx context.Context, root []byte, network uint8, dbTx pgx.Tx) (uint, error)
+	UpdateBlocksForTesting(ctx context.Context, networkID uint, blockNum uint64, dbTx pgx.Tx) error
 }
 
 // Config is the main Manager configuration.
@@ -136,8 +137,7 @@ func NewManager(ctx context.Context, cfg *Config) (*Manager, error) {
 	opsman.clients = make(map[NetworkSID]*utils.Client)
 	opsman.clients[L1] = l1Client
 	opsman.clients[L2] = l2Client
-
-	return opsman, nil
+	return opsman, err
 }
 
 // SendL1Deposit sends a deposit from l1 to l2.
@@ -227,7 +227,7 @@ func (m *Manager) Setup() error {
 	time.Sleep(t * time.Second)
 
 	// Run bridge container
-	err = m.startBridge()
+	err = m.StartBridge()
 	if err != nil {
 		log.Error("bridge start failed")
 		// return err
@@ -393,7 +393,8 @@ func runCmd(c *exec.Cmd) error {
 	return c.Run()
 }
 
-func (m *Manager) startBridge() error {
+// StartBridge restarts the bridge service.
+func (m *Manager) StartBridge() error {
 	if err := stopBridge(); err != nil {
 		return err
 	}
@@ -551,9 +552,6 @@ func (m *Manager) DeployERC20(ctx context.Context, name, symbol string, network 
 	if err != nil {
 		return common.Address{}, nil, err
 	}
-	if network == L2 {
-		auth.GasPrice = big.NewInt(0) // TODO set the appropriate value
-	}
 
 	return client.DeployERC20(ctx, name, symbol, auth)
 }
@@ -569,7 +567,6 @@ func (m *Manager) MintERC20(ctx context.Context, erc20Addr common.Address, amoun
 	var bridgeAddress = l1BridgeAddr
 	if network == L2 {
 		bridgeAddress = l2BridgeAddr
-		auth.GasPrice = big.NewInt(0) // TODO set the appropriate value
 	}
 
 	err = client.ApproveERC20(ctx, erc20Addr, common.HexToAddress(bridgeAddress), amount, auth)
@@ -613,6 +610,11 @@ func (m *Manager) GetTokenWrapped(ctx context.Context, originNetwork uint, origi
 		}
 	}
 	return m.storage.GetTokenWrapped(ctx, originNetwork, originalTokenAddr, nil)
+}
+
+// UpdateBlocksForTesting updates the hash of blocks.
+func (m *Manager) UpdateBlocksForTesting(ctx context.Context, networkID uint, blockNum uint64) error {
+	return m.storage.UpdateBlocksForTesting(ctx, networkID, blockNum, nil)
 }
 
 // WaitExitRootToBeSynced waits unitl new exit root is synced.

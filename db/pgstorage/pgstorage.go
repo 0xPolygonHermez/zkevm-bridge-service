@@ -160,24 +160,32 @@ func (p *PostgresStorage) AddClaim(ctx context.Context, claim *etherman.Claim, d
 }
 
 // GetTokenMetadata gets the metadata of the dedicated token.
-func (p *PostgresStorage) GetTokenMetadata(ctx context.Context, tokenWrapped *etherman.TokenWrapped, dbTx pgx.Tx) ([]byte, error) {
+func (p *PostgresStorage) GetTokenMetadata(ctx context.Context, networkID, destNet uint, originalTokenAddr common.Address, dbTx pgx.Tx) ([]byte, error) {
 	var metadata []byte
 	const getMetadataSQL = "SELECT metadata from syncv2.deposit WHERE network_id = $1 AND token_addr = $2 AND dest_net = $3 AND metadata IS NOT NULL LIMIT 1"
 	e := p.getExecQuerier(dbTx)
-	err := e.QueryRow(ctx, getMetadataSQL, tokenWrapped.OriginalNetwork, tokenWrapped.OriginalTokenAddress, tokenWrapped.NetworkID).Scan(&metadata)
+	err := e.QueryRow(ctx, getMetadataSQL, networkID, originalTokenAddr, destNet).Scan(&metadata)
 	return metadata, err
 }
 
 // AddTokenWrapped adds new wrapped token to the storage.
 func (p *PostgresStorage) AddTokenWrapped(ctx context.Context, tokenWrapped *etherman.TokenWrapped, dbTx pgx.Tx) error {
-	metadata, err := p.GetTokenMetadata(ctx, tokenWrapped, dbTx)
+	metadata, err := p.GetTokenMetadata(ctx, tokenWrapped.OriginalNetwork, tokenWrapped.NetworkID, tokenWrapped.OriginalTokenAddress, dbTx)
+	var tokenMetadata *etherman.TokenMetadata
 	if err != nil {
-		return err
+		if err != pgx.ErrNoRows {
+			return err
+		}
+		// if err == pgx.ErrNoRows, this is due to missing the related deposit in the opposite network in fast sync mode.
+		// ref: https://github.com/0xPolygonHermez/zkevm-bridge-service/issues/230
+		tokenMetadata = &etherman.TokenMetadata{}
+	} else {
+		tokenMetadata, err = getDecodedToken(metadata)
+		if err != nil {
+			return err
+		}
 	}
-	tokenMetadata, err := getDecodedToken(metadata)
-	if err != nil {
-		return err
-	}
+
 	const addTokenWrappedSQL = "INSERT INTO syncv2.token_wrapped (network_id, orig_net, orig_token_addr, wrapped_token_addr, block_id, name, symbol, decimals) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"
 	e := p.getExecQuerier(dbTx)
 	_, err = e.Exec(ctx, addTokenWrappedSQL, tokenWrapped.NetworkID, tokenWrapped.OriginalNetwork, tokenWrapped.OriginalTokenAddress, tokenWrapped.WrappedTokenAddress, tokenWrapped.BlockID, tokenMetadata.Name, tokenMetadata.Symbol, tokenMetadata.Decimals)
@@ -287,8 +295,8 @@ func (p *PostgresStorage) GetDeposit(ctx context.Context, depositCounterUser uin
 		deposit etherman.Deposit
 		amount  string
 	)
-	const getDepositSQL = "SELECT orig_net, token_addr, amount, dest_net, dest_addr, deposit_cnt, block_id, network_id, tx_hash, metadata FROM syncv2.deposit WHERE network_id = $1 AND deposit_cnt = $2"
-	err := p.getExecQuerier(dbTx).QueryRow(ctx, getDepositSQL, networkID, depositCounterUser).Scan(&deposit.OriginalNetwork, &deposit.TokenAddress, &amount, &deposit.DestinationNetwork, &deposit.DestinationAddress, &deposit.DepositCount, &deposit.BlockID, &deposit.NetworkID, &deposit.TxHash, &deposit.Metadata)
+	const getDepositSQL = "SELECT orig_net, token_addr, amount, dest_net, dest_addr, deposit_cnt, block_id, b.block_num, d.network_id, tx_hash, metadata FROM syncv2.deposit as d INNER JOIN syncv2.block as b ON d.network_id = b.network_id AND d.block_id = b.id WHERE d.network_id = $1 AND deposit_cnt = $2"
+	err := p.getExecQuerier(dbTx).QueryRow(ctx, getDepositSQL, networkID, depositCounterUser).Scan(&deposit.OriginalNetwork, &deposit.TokenAddress, &amount, &deposit.DestinationNetwork, &deposit.DestinationAddress, &deposit.DepositCount, &deposit.BlockID, &deposit.BlockNumber, &deposit.NetworkID, &deposit.TxHash, &deposit.Metadata)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, gerror.ErrStorageNotFound
 	}
@@ -349,10 +357,34 @@ func (p *PostgresStorage) GetLatestTrustedExitRoot(ctx context.Context, dbTx pgx
 // GetTokenWrapped gets a specific wrapped token.
 func (p *PostgresStorage) GetTokenWrapped(ctx context.Context, originalNetwork uint, originalTokenAddress common.Address, dbTx pgx.Tx) (*etherman.TokenWrapped, error) {
 	const getWrappedTokenSQL = "SELECT network_id, orig_net, orig_token_addr, wrapped_token_addr, block_id, name, symbol, decimals FROM syncv2.token_wrapped WHERE orig_net = $1 AND orig_token_addr = $2"
+
 	var token etherman.TokenWrapped
 	err := p.getExecQuerier(dbTx).QueryRow(ctx, getWrappedTokenSQL, originalNetwork, originalTokenAddress).Scan(&token.NetworkID, &token.OriginalNetwork, &token.OriginalTokenAddress, &token.WrappedTokenAddress, &token.BlockID, &token.Name, &token.Symbol, &token.Decimals)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, gerror.ErrStorageNotFound
+	}
+
+	// this is due to missing the related deposit in the opposite network in fast sync mode.
+	// ref: https://github.com/0xPolygonHermez/zkevm-bridge-service/issues/230
+	if token.Symbol == "" {
+		metadata, err := p.GetTokenMetadata(ctx, token.OriginalNetwork, token.NetworkID, token.OriginalTokenAddress, dbTx)
+		var tokenMetadata *etherman.TokenMetadata
+		if err != nil {
+			if err != pgx.ErrNoRows {
+				return nil, err
+			}
+		} else {
+			tokenMetadata, err = getDecodedToken(metadata)
+			if err != nil {
+				return nil, err
+			}
+			updateWrappedTokenSQL := "UPDATE syncv2.token_wrapped SET name = $3, symbol = $4, decimals = $5  WHERE orig_net = $1 AND orig_token_addr = $2" //nolint: gosec
+			_, err = p.getExecQuerier(dbTx).Exec(ctx, updateWrappedTokenSQL, originalNetwork, originalTokenAddress, tokenMetadata.Name, tokenMetadata.Symbol, tokenMetadata.Decimals)
+			if err != nil {
+				return nil, err
+			}
+			token.Name, token.Symbol, token.Decimals = tokenMetadata.Name, tokenMetadata.Symbol, tokenMetadata.Decimals
+		}
 	}
 	return &token, err
 }
@@ -467,7 +499,7 @@ func (p *PostgresStorage) GetClaims(ctx context.Context, destAddr string, limit 
 
 // GetDeposits gets the deposit list which be smaller than depositCount.
 func (p *PostgresStorage) GetDeposits(ctx context.Context, destAddr string, limit uint, offset uint, dbTx pgx.Tx) ([]*etherman.Deposit, error) {
-	const getDepositsSQL = "SELECT orig_net, token_addr, amount, dest_net, dest_addr, deposit_cnt, block_id, network_id, tx_hash, metadata FROM syncv2.deposit WHERE dest_addr = $1 ORDER BY block_id DESC LIMIT $2 OFFSET $3"
+	const getDepositsSQL = "SELECT orig_net, token_addr, amount, dest_net, dest_addr, deposit_cnt, block_id, b.block_num, d.network_id, tx_hash, metadata FROM syncv2.deposit as d INNER JOIN syncv2.block as b ON d.network_id = b.network_id AND d.block_id = b.id WHERE dest_addr = $1 ORDER BY d.block_id DESC LIMIT $2 OFFSET $3"
 	rows, err := p.getExecQuerier(dbTx).Query(ctx, getDepositsSQL, common.FromHex(destAddr), limit, offset)
 	if err != nil {
 		return nil, err
@@ -480,7 +512,7 @@ func (p *PostgresStorage) GetDeposits(ctx context.Context, destAddr string, limi
 			deposit etherman.Deposit
 			amount  string
 		)
-		err = rows.Scan(&deposit.OriginalNetwork, &deposit.TokenAddress, &amount, &deposit.DestinationNetwork, &deposit.DestinationAddress, &deposit.DepositCount, &deposit.BlockID, &deposit.NetworkID, &deposit.TxHash, &deposit.Metadata)
+		err = rows.Scan(&deposit.OriginalNetwork, &deposit.TokenAddress, &amount, &deposit.DestinationNetwork, &deposit.DestinationAddress, &deposit.DepositCount, &deposit.BlockID, &deposit.BlockNumber, &deposit.NetworkID, &deposit.TxHash, &deposit.Metadata)
 		if err != nil {
 			return nil, err
 		}
@@ -503,5 +535,12 @@ func (p *PostgresStorage) GetDepositCount(ctx context.Context, destAddr string, 
 func (p *PostgresStorage) ResetTrustedState(ctx context.Context, batchNumber uint64, dbTx pgx.Tx) error {
 	const resetTrustedStateSQL = "DELETE FROM syncv2.batch WHERE batch_num > $1"
 	_, err := p.getExecQuerier(dbTx).Exec(ctx, resetTrustedStateSQL, batchNumber)
+	return err
+}
+
+// UpdateBlocksForTesting updates the hash of blocks.
+func (p *PostgresStorage) UpdateBlocksForTesting(ctx context.Context, networkID uint, blockNum uint64, dbTx pgx.Tx) error {
+	const updateBlocksSQL = "UPDATE syncv2.block SET block_hash = $1 WHERE network_id = $2 AND block_num >= $3"
+	_, err := p.getExecQuerier(dbTx).Exec(ctx, updateBlocksSQL, common.Hash{}, networkID, blockNum)
 	return err
 }

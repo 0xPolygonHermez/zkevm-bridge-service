@@ -139,9 +139,9 @@ run: ## runs all services
 	$(RUN_L1_NETWORK)
 	sleep 5
 	$(RUN_ZKPROVER)
-	sleep 2
+	sleep 3
 	$(RUN_NODE)
-	sleep 5
+	sleep 7
 	$(RUN_BRIDGE)
 
 .PHONY: run-mockserver
@@ -169,8 +169,8 @@ performance-test: ## Performance test of rest api and db transaction
 
 .PHONY: test-full
 test-full: build-docker stop run ## Runs all tests checking race conditions
-	sleep 5
-	trap '$(STOP)' EXIT; MallocNanoZone=0 go test -race -p 1 -timeout 2400s ./...
+	sleep 3
+	trap '$(STOP)' EXIT; MallocNanoZone=0 go test -race -p 1 -timeout 2400s ./... -count 1
 
 .PHONY: validate
 validate: lint build test-full ## Validates the whole integrity of the code base

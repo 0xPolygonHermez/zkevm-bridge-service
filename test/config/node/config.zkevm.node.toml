@@ -55,8 +55,9 @@ SyncChunkSize = 100
 TrustedSequencerURI = ""
 
 [Sequencer]
+MaxSequenceSize = "2000000"
 WaitPeriodPoolIsEmpty = "1s"
-WaitPeriodSendSequence = "5s"
+WaitPeriodSendSequence = "3s"
 LastBatchVirtualizationTimeMaxWaitPeriod = "30s"
 WaitBlocksToUpdateGER = 2
 MaxTimeForBatchToBeOpen = "5s"
@@ -83,8 +84,8 @@ TxProfitabilityMinReward = "1.1"
 Type = "default"
 DefaultGasPriceWei = 1000000000
 
-[Prover]
-ProverURI = "zkevm-prover:50052"
+[Provers]
+ProverURIs = ["zkevm-prover:50052"]
 
 [MTServer]
 Host = "0.0.0.0"
@@ -100,4 +101,3 @@ URI = "zkevm-prover:50071"
 [BroadcastServer]
 Host = "0.0.0.0"
 Port = 61090
-
