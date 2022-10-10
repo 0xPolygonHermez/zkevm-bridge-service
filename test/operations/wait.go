@@ -56,7 +56,8 @@ func zkevmNodeUpCondition() (done bool, err error) {
 func bridgeUpCondition() (done bool, err error) {
 	res, err := http.Get("http://localhost:8080/healthz")
 	if err != nil {
-		return false, err
+		// we allow connection errors to wait for the container up
+		return false, nil
 	}
 	if res.Body != nil {
 		defer func() {
