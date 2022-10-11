@@ -175,8 +175,6 @@ func (m *Manager) SendL2Deposit(ctx context.Context, tokenAddr common.Address, a
 		return err
 	}
 
-	auth.GasPrice = big.NewInt(0) // TODO set the appropriate value
-
 	orgExitRoot, err := m.storage.GetLatestExitRoot(ctx, false, nil)
 	if err != nil && err != gerror.ErrStorageNotFound {
 		return err
