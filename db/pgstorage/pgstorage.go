@@ -108,6 +108,21 @@ func (p *PostgresStorage) GetBatchByNumber(ctx context.Context, batchNumber uint
 	return &batch, err
 }
 
+// GetFirstBatchByGER gets the specific batch by the batch number.
+func (p *PostgresStorage) GetFirstBatchByGER(ctx context.Context, globalExitRoot common.Hash, dbTx pgx.Tx) (*etherman.Batch, error) {
+	var batch etherman.Batch
+	const GetFirstBatchByGERSQL = "SELECT batch_num, sequencer, raw_tx_data, timestamp, global_exit_root FROM syncv2.batch WHERE global_exit_root = $1 ORDER BY batch_num ASC LIMIT 1"
+
+	e := p.getExecQuerier(dbTx)
+	err := e.QueryRow(ctx, GetFirstBatchByGERSQL, globalExitRoot).Scan(
+		&batch.BatchNumber, &batch.Coinbase, &batch.BatchL2Data, &batch.Timestamp, &batch.GlobalExitRoot)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, gerror.ErrStorageNotFound
+	}
+
+	return &batch, err
+}
+
 // AddBlock adds a new block to the storage.
 func (p *PostgresStorage) AddBlock(ctx context.Context, block *etherman.Block, dbTx pgx.Tx) (uint64, error) {
 	var blockID uint64

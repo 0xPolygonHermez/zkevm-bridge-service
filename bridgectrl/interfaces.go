@@ -20,11 +20,14 @@ type merkleTreeStore interface {
 
 // bridgeStorage interface for the Bridge Tree
 type bridgeStorage interface {
+	GetRoot(ctx context.Context, depositCount uint, network uint8, dbTx pgx.Tx) ([]byte, error)
 	GetDepositCountByRoot(ctx context.Context, root []byte, network uint8, dbTx pgx.Tx) (uint, error)
 	GetLatestL1SyncedExitRoot(ctx context.Context, dbTx pgx.Tx) (*etherman.GlobalExitRoot, error)
 	GetLatestTrustedExitRoot(ctx context.Context, dbTx pgx.Tx) (*etherman.GlobalExitRoot, error)
 	AddGlobalExitRoot(ctx context.Context, globalExitRoot *etherman.GlobalExitRoot, dbTx pgx.Tx) error
 	GetTokenWrapped(ctx context.Context, originalNetwork uint, originalTokenAddress common.Address, dbTx pgx.Tx) (*etherman.TokenWrapped, error)
+	GetFirstBatchByGER(ctx context.Context, globalExitRoot common.Hash, dbTx pgx.Tx) (*etherman.Batch, error)
+	GetLastBatchNumber(ctx context.Context, dbTx pgx.Tx) (uint64, error)
 }
 
 // BridgeServiceStorage interface for the Bridge Service.

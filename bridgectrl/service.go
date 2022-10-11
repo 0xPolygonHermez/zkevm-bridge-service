@@ -226,13 +226,22 @@ func (s *bridgeService) getDepositStatus(ctx context.Context, depositCount uint,
 	if !found {
 		return "", false, gerror.ErrNetworkNotRegister
 	}
-	depositCnt, err := s.bridgeCtrl.storage.GetDepositCountByRoot(ctx, exitRoot.ExitRoots[tID][:], uint8(tID), nil)
+	depositRoot, err := s.bridgeCtrl.storage.GetRoot(ctx, depositCount, uint8(tID), nil)
 	if err != nil {
-		if err != gerror.ErrStorageNotFound {
-			return "", false, err
-		}
-		depositCnt = 0
+		// TODO
+		return "", false, err
+	}
+	// Get depositBatchNumber using the root
+	depositBatch, err := s.bridgeCtrl.storage.GetFirstBatchByGER(ctx, common.BytesToHash(depositRoot), nil)
+	if err != nil {
+		return "", false, err
 	}
 
-	return claimTxHash, depositCnt > depositCount, nil
+	// Get latest BatchNumber
+	latestBatchNumber, err := s.bridgeCtrl.storage.GetLastBatchNumber(ctx, nil)
+	if err != nil {
+		return "", false, err
+	}
+
+	return claimTxHash, depositBatch.BatchNumber < latestBatchNumber, nil
 }
