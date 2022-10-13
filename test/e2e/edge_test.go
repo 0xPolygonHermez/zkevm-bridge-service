@@ -78,19 +78,20 @@ func TestEdgeCase(t *testing.T) {
 	opsman, err := operations.NewManager(ctx, opsCfg)
 	require.NoError(t, err)
 	require.NoError(t, opsman.StartBridge())
-	const st time.Duration = 10 // wait until the syncing is finished
+	const st time.Duration = 15 // wait until the syncing is finished
 	time.Sleep(st * time.Second)
 
 	t.Run("Test a case of restart with reorg.", func(t *testing.T) {
 		depositFromL1(ctx, opsman, t)
 		// Modify the L1 blocks for L1 reorg
-		destAddr := common.HexToAddress("0xc949254d682d8c9ad5682521675b8f43b102aec4")
-		deposits, err := opsman.GetBridgeInfoByDestAddr(ctx, &destAddr)
+		require.NoError(t, opsman.UpdateBlocksForTesting(ctx, 0, 0))
+		// Modify the batch data to check the trusted state reorg
+		batchNum, err := opsman.GetLastBatchNumber(ctx)
 		require.NoError(t, err)
-		require.NoError(t, opsman.UpdateBlocksForTesting(ctx, 0, deposits[0].BlockNum))
+		require.NoError(t, opsman.UpdateBatchesForTesting(ctx, batchNum))
 		// Restart the bridge service.
-		err = opsman.StartBridge()
-		require.NoError(t, err)
+		require.NoError(t, opsman.StartBridge())
+		time.Sleep(st * time.Second)
 
 		depositFromL2(ctx, opsman, t)
 		depositFromL1(ctx, opsman, t)
