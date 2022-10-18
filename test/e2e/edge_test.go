@@ -1,3 +1,6 @@
+//go:build edge
+// +build edge
+
 package e2e
 
 import (
@@ -35,7 +38,7 @@ func depositFromL1(ctx context.Context, opsman *operations.Manager, t *testing.T
 func depositFromL2(ctx context.Context, opsman *operations.Manager, t *testing.T) {
 	// Send L2 Deposit to withdraw the some funds
 	var destNetwork uint32 = 0
-	amount := new(big.Int).SetUint64(240000000000000000)
+	amount := new(big.Int).SetUint64(100000000000000000)
 	tokenAddr := common.Address{} // This means is eth
 	destAddr := common.HexToAddress("0xc949254d682d8c9ad5682521675b8f43b102aec4")
 	err := opsman.SendL2Deposit(ctx, tokenAddr, amount, destNetwork, &destAddr)
@@ -78,19 +81,21 @@ func TestEdgeCase(t *testing.T) {
 	opsman, err := operations.NewManager(ctx, opsCfg)
 	require.NoError(t, err)
 	require.NoError(t, opsman.StartBridge())
-	const st time.Duration = 10 // wait until the syncing is finished
+	const st time.Duration = 20 // wait until the syncing is finished
 	time.Sleep(st * time.Second)
 
 	t.Run("Test a case of restart with reorg.", func(t *testing.T) {
 		depositFromL1(ctx, opsman, t)
+		depositFromL2(ctx, opsman, t)
 		// Modify the L1 blocks for L1 reorg
-		destAddr := common.HexToAddress("0xc949254d682d8c9ad5682521675b8f43b102aec4")
-		deposits, err := opsman.GetBridgeInfoByDestAddr(ctx, &destAddr)
+		require.NoError(t, opsman.UpdateBlocksForTesting(ctx, 0, 1))
+		// Modify the batch data to check the trusted state reorg
+		batchNum, err := opsman.GetLastBatchNumber(ctx)
 		require.NoError(t, err)
-		require.NoError(t, opsman.UpdateBlocksForTesting(ctx, 0, deposits[0].BlockNum))
+		require.NoError(t, opsman.UpdateBatchesForTesting(ctx, batchNum))
 		// Restart the bridge service.
-		err = opsman.StartBridge()
-		require.NoError(t, err)
+		require.NoError(t, opsman.StartBridge())
+		time.Sleep(st * time.Second)
 
 		depositFromL2(ctx, opsman, t)
 		depositFromL1(ctx, opsman, t)

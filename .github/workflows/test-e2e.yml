@@ -10,7 +10,7 @@ on:
   repository_dispatch:
     types: [ok-to-test-command]
 jobs:
-  trusted-test:
+  trusted-test-e2e:
     if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
     strategy:
       matrix:
@@ -34,8 +34,8 @@ jobs:
         username: ${{ secrets.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_TOKEN }}
     - name: Test
-      run: make test
-  from-fork-test:
+      run: make test-full
+  from-fork-test-e2e:
     if:
       github.event_name == 'repository_dispatch' &&
       github.event.client_payload.slash_command.sha != '' &&
@@ -64,7 +64,7 @@ jobs:
         username: ${{ secrets.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_TOKEN }}
     - name: Test
-      run: make test
+      run: make test-full
 
     # Update check run
     - uses: actions/github-script@v5

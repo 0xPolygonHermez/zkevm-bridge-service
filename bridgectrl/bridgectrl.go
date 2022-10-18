@@ -2,6 +2,7 @@ package bridgectrl
 
 import (
 	"context"
+	"fmt"
 	"math/big"
 
 	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman"
@@ -81,11 +82,11 @@ func (bt *BridgeController) GetClaim(networkID uint, index uint) ([][KeyLen]byte
 	}
 
 	if err != nil {
-		return proof, nil, err
+		return proof, nil, fmt.Errorf("getting the last GER failed, error: %v", err)
 	}
 	depositCnt, err := bt.storage.GetDepositCountByRoot(ctx, globalExitRoot.ExitRoots[tID][:], tID, nil)
 	if err != nil {
-		return proof, nil, err
+		return proof, nil, fmt.Errorf("getting deposit count from the MT root failed, error: %v, root: %v, network: %d", err, globalExitRoot.ExitRoots[tID][:], tID)
 	}
 	if depositCnt < index {
 		return proof, nil, gerror.ErrDepositNotSynced
@@ -93,7 +94,7 @@ func (bt *BridgeController) GetClaim(networkID uint, index uint) ([][KeyLen]byte
 
 	proof, err = bt.exitTrees[tID].getSiblings(ctx, index, globalExitRoot.ExitRoots[tID])
 	if err != nil {
-		return proof, nil, err
+		return proof, nil, fmt.Errorf("getting the proof failed, errror: %v, index: %d, root: %v", err, index, globalExitRoot.ExitRoots[tID])
 	}
 
 	return proof, globalExitRoot, err

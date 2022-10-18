@@ -535,6 +535,7 @@ func (s *ClientSynchronizer) processSequenceBatches(sequencedBatches []etherman.
 			}
 			if !status {
 				// Reset trusted state
+				log.Debugf("NetworkID: %d, BatchNumber: %d, trusted state reorg detected. Reseting it...", s.networkID, batch.BatchNumber)
 				previousBatchNumber := batch.BatchNumber - 1
 				err := s.storage.ResetTrustedState(s.ctx, previousBatchNumber, dbTx) // This method has to reset the forced batches deleting the batchNumber for higher batchNumbers
 				if err != nil {

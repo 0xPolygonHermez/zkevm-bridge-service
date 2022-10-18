@@ -170,7 +170,12 @@ performance-test: ## Performance test of rest api and db transaction
 .PHONY: test-full
 test-full: build-docker stop run ## Runs all tests checking race conditions
 	sleep 3
-	trap '$(STOP)' EXIT; MallocNanoZone=0 go test -race -p 1 -timeout 2400s ./... -count 1
+	trap '$(STOP)' EXIT; MallocNanoZone=0 go test -race -p 1 -timeout 2400s ./test/e2e/... -count 1 -tags='e2e'
+
+.PHONY: test-edge
+test-edge: build-docker stop run ## Runs all tests checking race conditions
+	sleep 3
+	trap '$(STOP)' EXIT; MallocNanoZone=0 go test -race -p 1 -timeout 2400s ./test/e2e/... -count 1 -tags='edge'
 
 .PHONY: validate
 validate: lint build test-full ## Validates the whole integrity of the code base
