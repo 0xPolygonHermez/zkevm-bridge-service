@@ -64,7 +64,7 @@ jobs:
         username: ${{ secrets.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_TOKEN }}
     - name: Test
-      run: make test-full
+      run: make test
 
     # Update check run
     - uses: actions/github-script@v5
