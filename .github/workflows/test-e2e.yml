@@ -34,7 +34,7 @@ jobs:
         username: ${{ secrets.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_TOKEN }}
     - name: Test
-      run: make test
+      run: make test-full
   from-fork-test:
     if:
       github.event_name == 'repository_dispatch' &&
