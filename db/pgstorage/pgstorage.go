@@ -222,7 +222,7 @@ func (p *PostgresStorage) GetNumberDeposits(ctx context.Context, networkID uint,
 
 // GetNextForcedBatches gets the next forced batches from the queue.
 func (p *PostgresStorage) GetNextForcedBatches(ctx context.Context, nextForcedBatches int, dbTx pgx.Tx) ([]etherman.ForcedBatch, error) {
-	const getNextForcedBatchesSQL = "SELECT forced_batch_num, global_exit_root, raw_tx_data, sequencer, batch_num, block_id FROM syncv2.forced_batch WHERE batch_num IS NULL LIMIT $1"
+	const getNextForcedBatchesSQL = "SELECT forced_batch_num, global_exit_root, raw_tx_data, sequencer, batch_num, block_id FROM syncv2.forced_batch WHERE batch_num IS NULL ORDER BY forced_batch_num LIMIT $1"
 	e := p.getExecQuerier(dbTx)
 	// Get the next forced batches
 	rows, err := e.Query(ctx, getNextForcedBatchesSQL, nextForcedBatches)
@@ -533,8 +533,15 @@ func (p *PostgresStorage) GetDepositCount(ctx context.Context, destAddr string, 
 
 // ResetTrustedState resets trusted batches from the storage.
 func (p *PostgresStorage) ResetTrustedState(ctx context.Context, batchNumber uint64, dbTx pgx.Tx) error {
-	const resetTrustedStateSQL = "DELETE FROM syncv2.batch WHERE batch_num > $1"
+	const (
+		resetTrustedStateSQL = "DELETE FROM syncv2.batch WHERE batch_num > $1"
+		updateForcedBatchSQL = "UPDATE syncv2.forced_batch SET batch_num = NULL WHERE batch_num > $1"
+	)
 	_, err := p.getExecQuerier(dbTx).Exec(ctx, resetTrustedStateSQL, batchNumber)
+	if err != nil {
+		return err
+	}
+	_, err = p.getExecQuerier(dbTx).Exec(ctx, updateForcedBatchSQL, batchNumber)
 	return err
 }
 
@@ -542,5 +549,12 @@ func (p *PostgresStorage) ResetTrustedState(ctx context.Context, batchNumber uin
 func (p *PostgresStorage) UpdateBlocksForTesting(ctx context.Context, networkID uint, blockNum uint64, dbTx pgx.Tx) error {
 	const updateBlocksSQL = "UPDATE syncv2.block SET block_hash = $1 WHERE network_id = $2 AND block_num >= $3"
 	_, err := p.getExecQuerier(dbTx).Exec(ctx, updateBlocksSQL, common.Hash{}, networkID, blockNum)
+	return err
+}
+
+// UpdateBatchesForTesting updates raw_tx_data of batches.
+func (p *PostgresStorage) UpdateBatchesForTesting(ctx context.Context, batchNum uint64, dbTx pgx.Tx) error {
+	const updateBatchesSQL = "UPDATE syncv2.batch SET raw_tx_data = $1 WHERE batch_num >= $2"
+	_, err := p.getExecQuerier(dbTx).Exec(ctx, updateBatchesSQL, []byte{}, batchNum)
 	return err
 }

@@ -75,6 +75,8 @@ type storageInterface interface {
 	GetTokenWrapped(ctx context.Context, originalNetwork uint, originalTokenAddress common.Address, dbTx pgx.Tx) (*etherman.TokenWrapped, error)
 	GetDepositCountByRoot(ctx context.Context, root []byte, network uint8, dbTx pgx.Tx) (uint, error)
 	UpdateBlocksForTesting(ctx context.Context, networkID uint, blockNum uint64, dbTx pgx.Tx) error
+	GetLastBatchNumber(ctx context.Context, dbTx pgx.Tx) (uint64, error)
+	UpdateBatchesForTesting(ctx context.Context, batchNum uint64, dbTx pgx.Tx) error
 }
 
 // Config is the main Manager configuration.
@@ -613,6 +615,16 @@ func (m *Manager) GetTokenWrapped(ctx context.Context, originNetwork uint, origi
 // UpdateBlocksForTesting updates the hash of blocks.
 func (m *Manager) UpdateBlocksForTesting(ctx context.Context, networkID uint, blockNum uint64) error {
 	return m.storage.UpdateBlocksForTesting(ctx, networkID, blockNum, nil)
+}
+
+// GetLastBatchNumber returns the last batch number.
+func (m *Manager) GetLastBatchNumber(ctx context.Context) (uint64, error) {
+	return m.storage.GetLastBatchNumber(ctx, nil)
+}
+
+// UpdateBatchesForTesting updates batches for testing.
+func (m *Manager) UpdateBatchesForTesting(ctx context.Context, batchNum uint64) error {
+	return m.storage.UpdateBatchesForTesting(ctx, batchNum, nil)
 }
 
 // WaitExitRootToBeSynced waits unitl new exit root is synced.
