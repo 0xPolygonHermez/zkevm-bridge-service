@@ -17,7 +17,7 @@ import (
 )
 
 func depositFromL1(ctx context.Context, opsman *operations.Manager, t *testing.T) {
-	amount := new(big.Int).SetUint64(2500000000000000000)
+	amount := new(big.Int).SetUint64(250000000000000000)
 	tokenAddr := common.Address{} // This means is eth
 	destAddr := common.HexToAddress("0xc949254d682d8c9ad5682521675b8f43b102aec4")
 	var destNetwork uint32 = 1

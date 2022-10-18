@@ -82,7 +82,7 @@ func (bt *BridgeController) GetClaim(networkID uint, index uint) ([][KeyLen]byte
 	}
 
 	if err != nil {
-		return proof, nil, fmt.Errorf("getting the last GER failed")
+		return proof, nil, fmt.Errorf("getting the last GER failed, error: %v", err)
 	}
 	depositCnt, err := bt.storage.GetDepositCountByRoot(ctx, globalExitRoot.ExitRoots[tID][:], tID, nil)
 	if err != nil {
