@@ -280,7 +280,7 @@ func (m *Manager) AddFunds(ctx context.Context) error {
 	// Wait eth transfer to be mined
 	log.Infof("Waiting tx to be mined")
 	const txETHTransferTimeout = 5 * time.Second
-	err = WaitTxToBeMined(ctx, client.Client, signedTx.Hash(), txETHTransferTimeout)
+	err = WaitTxToBeMined(ctx, client.Client, signedTx, txETHTransferTimeout)
 	if err != nil {
 		return err
 	}
@@ -304,7 +304,7 @@ func (m *Manager) AddFunds(ctx context.Context) error {
 	// wait matic transfer to be mined
 	log.Infof("Waiting tx to be mined")
 	const txMaticTransferTimeout = 5 * time.Second
-	return WaitTxToBeMined(ctx, client.Client, tx.Hash(), txMaticTransferTimeout)
+	return WaitTxToBeMined(ctx, client.Client, tx, txMaticTransferTimeout)
 }
 
 // Teardown stops all the components.
