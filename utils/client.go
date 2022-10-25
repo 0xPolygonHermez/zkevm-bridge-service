@@ -15,6 +15,7 @@ import (
 	ops "github.com/0xPolygonHermez/zkevm-node/test/operations"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 )
@@ -54,7 +55,7 @@ func (c Client) DeployERC20(ctx context.Context, name, symbol string, auth *bind
 	if err != nil {
 		return common.Address{}, nil, err
 	}
-	err = WaitTxToBeMined(ctx, c.Client, tx.Hash(), txMinedTimeoutLimit)
+	err = WaitTxToBeMined(ctx, c.Client, tx, txMinedTimeoutLimit)
 
 	return addr, instance, err
 }
@@ -70,7 +71,7 @@ func (c Client) ApproveERC20(ctx context.Context, erc20Addr, spender common.Addr
 		return err
 	}
 	const txMinedTimeoutLimit = 60 * time.Second
-	return WaitTxToBeMined(ctx, c.Client, tx.Hash(), txMinedTimeoutLimit)
+	return WaitTxToBeMined(ctx, c.Client, tx, txMinedTimeoutLimit)
 }
 
 // MintERC20 mint erc20 tokens.
@@ -84,7 +85,7 @@ func (c Client) MintERC20(ctx context.Context, erc20Addr common.Address, amount 
 		return err
 	}
 	const txMinedTimeoutLimit = 60 * time.Second
-	return WaitTxToBeMined(ctx, c.Client, tx.Hash(), txMinedTimeoutLimit)
+	return WaitTxToBeMined(ctx, c.Client, tx, txMinedTimeoutLimit)
 }
 
 // SendBridge sends a bridge transaction.
@@ -107,10 +108,9 @@ func (c Client) SendBridge(ctx context.Context, tokenAddr common.Address, amount
 		log.Error("Error: ", err)
 		return err
 	}
-	log.Debug("Tx Hash: ", tx.Hash())
 	// wait transfer to be included in a batch
 	const txTimeout = 60 * time.Second
-	return WaitTxToBeMined(ctx, c.Client, tx.Hash(), txTimeout)
+	return WaitTxToBeMined(ctx, c.Client, tx, txTimeout)
 }
 
 // SendClaim send a claim transaction.
@@ -129,14 +129,13 @@ func (c Client) SendClaim(ctx context.Context, deposit *pb.Deposit, smtProof [][
 		log.Error("Error: ", err, ". Tx Hash: ", txHash)
 		return err
 	}
-	log.Debug("Tx Hash: ", tx.Hash())
 
 	// wait transfer to be mined
 	const txTimeout = 60 * time.Second
-	return WaitTxToBeMined(ctx, c.Client, tx.Hash(), txTimeout)
+	return WaitTxToBeMined(ctx, c.Client, tx, txTimeout)
 }
 
 // WaitTxToBeMined waits until a tx is mined or forged.
-func WaitTxToBeMined(ctx context.Context, client *ethclient.Client, hash common.Hash, timeout time.Duration) error {
-	return ops.WaitTxToBeMined(client, hash, timeout)
+func WaitTxToBeMined(ctx context.Context, client *ethclient.Client, tx *types.Transaction, timeout time.Duration) error {
+	return ops.WaitTxToBeMined(ctx, client, tx, timeout)
 }

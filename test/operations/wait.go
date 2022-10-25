@@ -8,7 +8,7 @@ import (
 	"time"
 
 	ops "github.com/0xPolygonHermez/zkevm-node/test/operations"
-	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 )
 
@@ -80,6 +80,6 @@ func bridgeUpCondition() (done bool, err error) {
 }
 
 // WaitTxToBeMined waits until a tx is mined or forged.
-func WaitTxToBeMined(ctx context.Context, client *ethclient.Client, hash common.Hash, timeout time.Duration) error {
-	return ops.WaitTxToBeMined(client, hash, timeout)
+func WaitTxToBeMined(ctx context.Context, client *ethclient.Client, tx *types.Transaction, timeout time.Duration) error {
+	return ops.WaitTxToBeMined(ctx, client, tx, timeout)
 }

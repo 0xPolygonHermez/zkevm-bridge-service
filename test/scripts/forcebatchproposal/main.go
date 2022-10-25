@@ -52,7 +52,7 @@ func main() {
 	// Wait eth transfer to be mined
 	log.Infof("Waiting tx to be mined")
 	const txETHTransferTimeout = 60 * time.Second
-	err = utils.WaitTxToBeMined(ctx, client.Client, tx.Hash(), txETHTransferTimeout)
+	err = utils.WaitTxToBeMined(ctx, client.Client, tx, txETHTransferTimeout)
 	if err != nil {
 		log.Fatal("Error: ", err)
 	}
