@@ -120,11 +120,7 @@ func setupLog(c log.Config) {
 }
 
 func newEthermans(c config.Config) (*etherman.Client, []*etherman.Client, error) {
-	auth, err := newAuthFromKeystore(c.Etherman.PrivateKeyPath, c.Etherman.PrivateKeyPassword, c.NetworkConfig.L1ChainID)
-	if err != nil {
-		return nil, nil, err
-	}
-	l1Etherman, err := etherman.NewClient(c.Etherman, auth, c.NetworkConfig.PoEAddr, c.NetworkConfig.BridgeAddr, c.NetworkConfig.GlobalExitRootManAddr)
+	l1Etherman, err := etherman.NewClient(c.Etherman, c.NetworkConfig.PoEAddr, c.NetworkConfig.BridgeAddr, c.NetworkConfig.GlobalExitRootManAddr)
 	if err != nil {
 		return nil, nil, err
 	}
