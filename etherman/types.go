@@ -19,7 +19,7 @@ type Block struct {
 	ForcedBatches         []ForcedBatch
 	SequencedBatches      [][]SequencedBatch
 	VerifiedBatches       []VerifiedBatch
-	SequencedForceBatches []SequencedForceBatch
+	SequencedForceBatches [][]SequencedForceBatch
 	Deposits              []Deposit
 	Claims                []Claim
 	Tokens                []TokenWrapped
@@ -57,10 +57,11 @@ type ForcedBatch struct {
 
 // SequencedForceBatch is a sturct to track the ForceSequencedBatches event.
 type SequencedForceBatch struct {
-	LastBatchSequenced uint64
-	ForceBatchNumber   uint64
-	Sequencer          common.Address
-	TxHash             common.Hash
+	BatchNumber uint64
+	Sequencer   common.Address
+	TxHash      common.Hash
+	Timestamp   time.Time
+	proofofefficiency.ProofOfEfficiencyForceBatchData
 }
 
 // Deposit struct
@@ -76,13 +77,14 @@ type Deposit struct {
 	NetworkID          uint
 	TxHash             common.Hash
 	Metadata           []byte
+	LeafType           uint8
 }
 
 // Claim struct
 type Claim struct {
 	Index              uint
 	OriginalNetwork    uint
-	Token              common.Address
+	OriginalAddress    common.Address
 	Amount             *big.Int
 	DestinationAddress common.Address
 	BlockID            uint64

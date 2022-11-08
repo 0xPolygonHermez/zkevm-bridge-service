@@ -6,6 +6,7 @@ import "./lib/DepositContract.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import "./lib/TokenWrapped.sol";
 import "./interfaces/IGlobalExitRootManager.sol";
+import "./interfaces/IBridgeMessageReceiver.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/ClonesUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/IERC20MetadataUpgradeable.sol";
 
@@ -27,6 +28,12 @@ contract Bridge is DepositContract {
 
     // Mainnet indentifier
     uint32 public constant MAINNET_NETWORK_ID = 0;
+
+    // Leaf type asset
+    uint8 public constant LEAF_TYPE_ASSET = 0;
+
+    // Leaf type message
+    uint8 public constant LEAF_TYPE_MESSAGE = 1;
 
     // Network identifier
     uint32 public networkID;
@@ -53,7 +60,7 @@ contract Bridge is DepositContract {
     function initialize(
         uint32 _networkID,
         IGlobalExitRootManager _globalExitRootManager
-    ) public initializer {
+    ) public virtual initializer {
         networkID = _networkID;
         globalExitRootManager = _globalExitRootManager;
         tokenImplementation = address(new TokenWrapped());
@@ -64,8 +71,9 @@ contract Bridge is DepositContract {
      * @dev Emitted when a bridge some tokens to another network
      */
     event BridgeEvent(
+        uint8 leafType,
         uint32 originNetwork,
-        address originTokenAddress,
+        address originAddress,
         uint32 destinationNetwork,
         address destinationAddress,
         uint256 amount,
@@ -79,7 +87,7 @@ contract Bridge is DepositContract {
     event ClaimEvent(
         uint32 index,
         uint32 originNetwork,
-        address originTokenAddress,
+        address originAddress,
         address destinationAddress,
         uint256 amount
     );
@@ -101,13 +109,13 @@ contract Bridge is DepositContract {
      * @param amount Amount of tokens
      * @param permitData Raw data of the call `permit` of the token
      */
-    function bridge(
+    function bridgeAsset(
         address token,
         uint32 destinationNetwork,
         address destinationAddress,
         uint256 amount,
         bytes calldata permitData
-    ) public payable {
+    ) public payable virtual {
         require(
             destinationNetwork != networkID,
             "Bridge::bridge: DESTINATION_CANT_BE_ITSELF"
@@ -137,15 +145,47 @@ contract Bridge is DepositContract {
                 IERC20MetadataUpgradeable(token).symbol(),
                 IERC20MetadataUpgradeable(token).decimals()
             );
-            
+
         }
 
         emit BridgeEvent(
+            LEAF_TYPE_ASSET,
             originNetwork,
             originTokenAddress,
             destinationNetwork,
             destinationAddress,
             amount,
+            metadata,
+            uint32(depositCount)
+        );
+
+        // Update the new exit root to the exit root manager
+        globalExitRootManager.updateExitRoot(getDepositRoot());
+    }
+
+    /**
+     * @notice Bridge message
+     * @param destinationNetwork Network destination
+     * @param destinationAddress Address destination
+     * @param metadata Message metadata
+     */
+    function bridgeMessage(
+        uint32 destinationNetwork,
+        address destinationAddress,
+        bytes memory metadata
+    ) public payable virtual {
+        require(
+            destinationNetwork != networkID,
+            "Bridge::bridge: DESTINATION_CANT_BE_ITSELF"
+        );
+
+        emit BridgeEvent(
+            LEAF_TYPE_MESSAGE,
+            networkID,
+            msg.sender,
+            destinationNetwork,
+            destinationAddress,
+            msg.value,
             metadata,
             uint32(depositCount)
         );
@@ -162,12 +202,12 @@ contract Bridge is DepositContract {
      * @param rollupExitRoot Rollup exit root
      * @param originNetwork Origin network
      * @param originTokenAddress  Origin token address, 0 address is reserved for ether
-     * @param destinationNetwork Network destination, must be 0 ( mainnet)
+     * @param destinationNetwork Network destination
      * @param destinationAddress Address destination
      * @param amount Amount of tokens
-     * @param metadata abi encoded metadata if any, empty otherwise
+     * @param metadata Abi encoded metadata if any, empty otherwise
      */
-    function claim(
+    function claimAsset(
         bytes32[] memory smtProof,
         uint32 index,
         bytes32 mainnetExitRoot,
@@ -192,7 +232,6 @@ contract Bridge is DepositContract {
         if (originTokenAddress == address(0)) {
 
         } else {
-            // Create a new wrapped erc20
             emit NewWrappedToken(
                 originNetwork,
                 originTokenAddress,
@@ -204,6 +243,50 @@ contract Bridge is DepositContract {
             index,
             originNetwork,
             originTokenAddress,
+            destinationAddress,
+            amount
+        );
+    }
+
+    /**
+     * @notice Verify merkle proof and execute message
+     * @param smtProof Smt proof
+     * @param index Index of the leaf
+     * @param mainnetExitRoot Mainnet exit root
+     * @param rollupExitRoot Rollup exit root
+     * @param originNetwork Origin network
+     * @param originAddress Origin address
+     * @param destinationNetwork Network destination
+     * @param destinationAddress Address destination
+     * @param amount Amount of tokens
+     * @param metadata Abi encoded metadata if any, empty otherwise
+     */
+    function claimMessage(
+        bytes32[] memory smtProof,
+        uint32 index,
+        bytes32 mainnetExitRoot,
+        bytes32 rollupExitRoot,
+        uint32 originNetwork,
+        address originAddress,
+        uint32 destinationNetwork,
+        address destinationAddress,
+        uint256 amount,
+        bytes memory metadata
+    ) public {
+        // Should check if is a claimMessage or a claimAssetl
+        // Check nullifier
+        require(
+            claimNullifier[index] == false,
+            "Bridge::claimMessage: ALREADY_CLAIMED"
+        );
+
+        // Update nullifier
+        claimNullifier[index] = true;
+
+        emit ClaimEvent(
+            index,
+            originNetwork,
+            originAddress,
             destinationAddress,
             amount
         );
@@ -269,10 +352,7 @@ contract Bridge is DepositContract {
         bytes calldata permitData
     ) internal {
         bytes4 sig = _getSelector(permitData);
-        require(
-            sig == _PERMIT_SIGNATURE,
-            "Bridge::_permit: NOT_VALID_CALL"
-        );
+        require(sig == _PERMIT_SIGNATURE, "Bridge::_permit: NOT_VALID_CALL");
         (
             address owner,
             address spender,
