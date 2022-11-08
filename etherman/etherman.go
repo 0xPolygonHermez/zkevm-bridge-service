@@ -81,12 +81,10 @@ type Client struct {
 	Bridge                *bridge.Bridge
 	GlobalExitRootManager *globalexitrootmanager.Globalexitrootmanager
 	SCAddresses           []common.Address
-
-	auth *bind.TransactOpts
 }
 
 // NewClient creates a new etherman.
-func NewClient(cfg Config, auth *bind.TransactOpts, PoEAddr, bridgeAddr, globalExitRootManAddr common.Address) (*Client, error) {
+func NewClient(cfg Config, PoEAddr, bridgeAddr, globalExitRootManAddr common.Address) (*Client, error) {
 	// Connect to ethereum node
 	ethClient, err := ethclient.Dial(cfg.L1URL)
 	if err != nil {
@@ -109,7 +107,7 @@ func NewClient(cfg Config, auth *bind.TransactOpts, PoEAddr, bridgeAddr, globalE
 	var scAddresses []common.Address
 	scAddresses = append(scAddresses, PoEAddr, globalExitRootManAddr, bridgeAddr)
 
-	return &Client{EtherClient: ethClient, PoE: poe, Bridge: bridge, GlobalExitRootManager: globalExitRoot, SCAddresses: scAddresses, auth: auth}, nil
+	return &Client{EtherClient: ethClient, PoE: poe, Bridge: bridge, GlobalExitRootManager: globalExitRoot, SCAddresses: scAddresses}, nil
 }
 
 // NewL2Client creates a new etherman for L2.

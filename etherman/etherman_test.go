@@ -26,12 +26,12 @@ func init() {
 }
 
 //This function prepare the blockchain, the wallet with funds and deploy the smc
-func newTestingEnv() (ethman *Client, ethBackend *backends.SimulatedBackend, maticAddr common.Address, bridge *mockbridge.Bridge) {
+func newTestingEnv() (ethman *Client, ethBackend *backends.SimulatedBackend, auth *bind.TransactOpts, maticAddr common.Address, bridge *mockbridge.Bridge) {
 	privateKey, err := crypto.GenerateKey()
 	if err != nil {
 		log.Fatal(err)
 	}
-	auth, err := bind.NewKeyedTransactorWithChainID(privateKey, big.NewInt(1337))
+	auth, err = bind.NewKeyedTransactorWithChainID(privateKey, big.NewInt(1337))
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -39,12 +39,12 @@ func newTestingEnv() (ethman *Client, ethBackend *backends.SimulatedBackend, mat
 	if err != nil {
 		log.Fatal(err)
 	}
-	return ethman, ethBackend, maticAddr, bridge
+	return ethman, ethBackend, auth, maticAddr, bridge
 }
 
 func TestGEREvent(t *testing.T) {
 	// Set up testing environment
-	etherman, ethBackend, _, _ := newTestingEnv()
+	etherman, ethBackend, auth, _, _ := newTestingEnv()
 
 	// Read currentBlock
 	ctx := context.Background()
@@ -52,8 +52,8 @@ func TestGEREvent(t *testing.T) {
 	require.NoError(t, err)
 
 	amount := big.NewInt(1000000000000000)
-	etherman.auth.Value = amount
-	_, err = etherman.Bridge.Bridge(etherman.auth, common.Address{}, 1, etherman.auth.From, amount, []byte{})
+	auth.Value = amount
+	_, err = etherman.Bridge.Bridge(auth, common.Address{}, 1, auth.From, amount, []byte{})
 	require.NoError(t, err)
 
 	// Mine the tx in a block
@@ -73,7 +73,7 @@ func TestGEREvent(t *testing.T) {
 
 func TestSequencedBatchesEvent(t *testing.T) {
 	// Set up testing environment
-	etherman, ethBackend, _, _ := newTestingEnv()
+	etherman, ethBackend, auth, _, _ := newTestingEnv()
 
 	// Read currentBlock
 	ctx := context.Background()
@@ -81,7 +81,7 @@ func TestSequencedBatchesEvent(t *testing.T) {
 	require.NoError(t, err)
 
 	// Make a bridge tx
-	a := etherman.auth
+	a := auth
 	a.Value = big.NewInt(1000000000000000)
 	_, err = etherman.Bridge.Bridge(a, common.Address{}, 1, a.From, a.Value, []byte{})
 	require.NoError(t, err)
@@ -97,7 +97,7 @@ func TestSequencedBatchesEvent(t *testing.T) {
 	rawTxs := "f84901843b9aca00827b0c945fbdb2315678afecb367f032d93f642f64180aa380a46057361d00000000000000000000000000000000000000000000000000000000000000048203e9808073efe1fa2d3e27f26f32208550ea9b0274d49050b816cadab05a771f4275d0242fd5d92b3fb89575c070e6c930587c520ee65a3aa8cfe382fcad20421bf51d621c"
 	data, err := hex.DecodeString(rawTxs)
 	require.NoError(t, err)
-	_, err = etherman.PoE.ForceBatch(etherman.auth, data, amount)
+	_, err = etherman.PoE.ForceBatch(auth, data, amount)
 	require.NoError(t, err)
 	ethBackend.Commit()
 
@@ -117,7 +117,7 @@ func TestSequencedBatchesEvent(t *testing.T) {
 		ForceBatchesTimestamp: []uint64{},
 		Transactions:          common.Hex2Bytes(rawTxs),
 	})
-	_, err = etherman.PoE.SequenceBatches(etherman.auth, sequences)
+	_, err = etherman.PoE.SequenceBatches(auth, sequences)
 	require.NoError(t, err)
 
 	// Mine the tx in a block
@@ -140,7 +140,7 @@ func TestSequencedBatchesEvent(t *testing.T) {
 
 func TestVerifyBatchEvent(t *testing.T) {
 	// Set up testing environment
-	etherman, ethBackend, _, _ := newTestingEnv()
+	etherman, ethBackend, auth, _, _ := newTestingEnv()
 
 	// Read currentBlock
 	ctx := context.Background()
@@ -155,7 +155,7 @@ func TestVerifyBatchEvent(t *testing.T) {
 		ForceBatchesTimestamp: []uint64{},
 		Transactions:          common.Hex2Bytes(rawTxs),
 	}
-	_, err = etherman.PoE.SequenceBatches(etherman.auth, []proofofefficiency.ProofOfEfficiencyBatchData{tx})
+	_, err = etherman.PoE.SequenceBatches(auth, []proofofefficiency.ProofOfEfficiencyBatchData{tx})
 	require.NoError(t, err)
 
 	// Mine the tx in a block
@@ -166,7 +166,7 @@ func TestVerifyBatchEvent(t *testing.T) {
 		proofC = [2]*big.Int{big.NewInt(1), big.NewInt(1)}
 		proofB = [2][2]*big.Int{proofC, proofC}
 	)
-	_, err = etherman.PoE.VerifyBatch(etherman.auth, common.Hash{}, common.Hash{}, 1, proofA, proofB, proofC)
+	_, err = etherman.PoE.VerifyBatch(auth, common.Hash{}, common.Hash{}, 1, proofA, proofB, proofC)
 	require.NoError(t, err)
 
 	// Mine the tx in a block
@@ -191,7 +191,7 @@ func TestVerifyBatchEvent(t *testing.T) {
 
 func TestSequenceForceBatchesEvent(t *testing.T) {
 	// Set up testing environment
-	etherman, ethBackend, _, _ := newTestingEnv()
+	etherman, ethBackend, auth, _, _ := newTestingEnv()
 
 	// Read currentBlock
 	ctx := context.Background()
@@ -203,7 +203,7 @@ func TestSequenceForceBatchesEvent(t *testing.T) {
 	rawTxs := "f84901843b9aca00827b0c945fbdb2315678afecb367f032d93f642f64180aa380a46057361d00000000000000000000000000000000000000000000000000000000000000048203e9808073efe1fa2d3e27f26f32208550ea9b0274d49050b816cadab05a771f4275d0242fd5d92b3fb89575c070e6c930587c520ee65a3aa8cfe382fcad20421bf51d621c"
 	data, err := hex.DecodeString(rawTxs)
 	require.NoError(t, err)
-	_, err = etherman.PoE.ForceBatch(etherman.auth, data, amount)
+	_, err = etherman.PoE.ForceBatch(auth, data, amount)
 	require.NoError(t, err)
 	ethBackend.Commit()
 
@@ -211,7 +211,7 @@ func TestSequenceForceBatchesEvent(t *testing.T) {
 	require.NoError(t, err)
 	ethBackend.Commit()
 
-	_, err = etherman.PoE.SequenceForceBatches(etherman.auth, 1)
+	_, err = etherman.PoE.SequenceForceBatches(auth, 1)
 	require.NoError(t, err)
 	ethBackend.Commit()
 
@@ -229,7 +229,7 @@ func TestSequenceForceBatchesEvent(t *testing.T) {
 
 func TestBridgeEvents(t *testing.T) {
 	// Set up testing environment
-	etherman, ethBackend, maticAddr, bridge := newTestingEnv()
+	etherman, ethBackend, auth, maticAddr, bridge := newTestingEnv()
 
 	// Read currentBlock
 	ctx := context.Background()
@@ -240,7 +240,7 @@ func TestBridgeEvents(t *testing.T) {
 	amount := big.NewInt(9000000000000000000)
 	var destNetwork uint32 = 1 // 0 is reserved to mainnet. This variable is set in the smc
 	destinationAddr := common.HexToAddress("0x61A1d716a74fb45d29f148C6C20A2eccabaFD753")
-	_, err = bridge.Bridge(etherman.auth, maticAddr, destNetwork, destinationAddr, amount, []byte{})
+	_, err = bridge.Bridge(auth, maticAddr, destNetwork, destinationAddr, amount, []byte{})
 	require.NoError(t, err)
 
 	// Mine the tx in a block
@@ -267,8 +267,8 @@ func TestBridgeEvents(t *testing.T) {
 	// globalExitRootNum := block[0].GlobalExitRoots[0].GlobalExitRootNum
 
 	destNetwork = 1
-	_, err = bridge.Claim(etherman.auth, smtProof, index, mainnetExitRoot, rollupExitRoot,
-		network, maticAddr, destNetwork, etherman.auth.From, big.NewInt(1000000000000000000), []byte{})
+	_, err = bridge.Claim(auth, smtProof, index, mainnetExitRoot, rollupExitRoot,
+		network, maticAddr, destNetwork, auth.From, big.NewInt(1000000000000000000), []byte{})
 	require.NoError(t, err)
 
 	// Mine the tx in a block
@@ -284,7 +284,7 @@ func TestBridgeEvents(t *testing.T) {
 	assert.Equal(t, big.NewInt(1000000000000000000), block[0].Claims[0].Amount)
 	assert.Equal(t, uint64(3), block[0].BlockNumber)
 	assert.NotEqual(t, common.Address{}, block[0].Claims[0].Token)
-	assert.Equal(t, etherman.auth.From, block[0].Claims[0].DestinationAddress)
+	assert.Equal(t, auth.From, block[0].Claims[0].DestinationAddress)
 	assert.Equal(t, uint(0), block[0].Claims[0].Index)
 	assert.Equal(t, uint(0), block[0].Claims[0].OriginalNetwork)
 	assert.Equal(t, uint64(3), block[0].Claims[0].BlockNumber)
