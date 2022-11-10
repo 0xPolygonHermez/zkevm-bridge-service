@@ -5,6 +5,10 @@ to interact with the [bridge smart contract](https://github.com/0xPolygonHermez/
 
 The software is currently not ready to be used, and more instructions for running and developing it will be provided in the very near future.
 
+## Running the bridge service
+
+- [Running localy](docs/running_local.md)
+
 ## Disclaimer
 
 This code has not yet been audited, and should not be used in any production systems.
