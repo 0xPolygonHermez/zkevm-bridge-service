@@ -102,7 +102,7 @@ func MockBridgeCtrl(store *pgstorage.PostgresStorage) (*BridgeController, error)
 		err = store.AddClaim(context.TODO(), &etherman.Claim{
 			Index:              testClaimVectors[i].Index,
 			OriginalNetwork:    testClaimVectors[i].OriginalNetwork,
-			Token:              common.HexToAddress(testClaimVectors[i].Token),
+			OriginalAddress:    common.HexToAddress(testClaimVectors[i].Token),
 			Amount:             amount,
 			NetworkID:          testClaimVectors[i].DestinationNetwork,
 			DestinationAddress: common.HexToAddress(testClaimVectors[i].DestinationAddress),

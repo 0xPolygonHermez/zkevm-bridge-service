@@ -420,7 +420,7 @@ func TestBSStorage(t *testing.T) {
 	claim := &etherman.Claim{
 		Index:              1,
 		OriginalNetwork:    0,
-		Token:              common.HexToAddress("0x6B175474E89094C44Da98b954EedeAC495271d0F"),
+		OriginalAddress:    common.HexToAddress("0x6B175474E89094C44Da98b954EedeAC495271d0F"),
 		Amount:             big.NewInt(1000000),
 		DestinationAddress: common.HexToAddress("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"),
 		BlockID:            1,

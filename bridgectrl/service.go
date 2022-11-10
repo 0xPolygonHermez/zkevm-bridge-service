@@ -108,7 +108,7 @@ func (s *bridgeService) GetClaims(ctx context.Context, req *pb.GetClaimsRequest)
 		pbClaims = append(pbClaims, &pb.Claim{
 			Index:     uint64(claim.Index),
 			OrigNet:   uint32(claim.OriginalNetwork),
-			TokenAddr: claim.Token.Hex(),
+			TokenAddr: claim.OriginalAddress.Hex(),
 			Amount:    claim.Amount.String(),
 			NetworkId: uint32(claim.NetworkID),
 			DestAddr:  claim.DestinationAddress.Hex(),
