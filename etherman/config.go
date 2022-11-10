@@ -4,7 +4,4 @@ package etherman
 type Config struct {
 	L1URL  string   `mapstructure:"L1URL"`
 	L2URLs []string `mapstructure:"L2URLs"`
-
-	PrivateKeyPath     string `mapstructure:"PrivateKeyPath"`
-	PrivateKeyPassword string `mapstructure:"PrivateKeyPassword"`
 }
