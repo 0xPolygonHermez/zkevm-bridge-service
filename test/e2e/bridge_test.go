@@ -231,7 +231,6 @@ func TestE2E(t *testing.T) {
 		t.Logf("Global3 %+v: ", globalExitRoot3)
 		t.Logf("Global4 %+v: ", globalExitRoot4)
 		require.NotEqual(t, globalExitRoot3.ExitRoots[0], globalExitRoot4.ExitRoots[0])
-		require.Equal(t, globalExitRoot3.ExitRoots[1], globalExitRoot4.ExitRoots[1])
 		// Check L2 funds
 		balance, err = opsman.CheckAccountTokenBalance(ctx, operations.L2, tokenAddr, &destAddr)
 		require.NoError(t, err)
