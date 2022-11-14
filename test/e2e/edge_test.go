@@ -28,10 +28,10 @@ func depositFromL1(ctx context.Context, opsman *operations.Manager, t *testing.T
 	deposits, err := opsman.GetBridgeInfoByDestAddr(ctx, &destAddr)
 	require.NoError(t, err)
 	// Get the claim data
-	smtProof, globaExitRoot, err := opsman.GetClaimData(uint(deposits[0].OrigNet), uint(deposits[0].DepositCnt))
+	smtProof, globalExitRoot, err := opsman.GetClaimData(uint(deposits[0].OrigNet), uint(deposits[0].DepositCnt))
 	require.NoError(t, err)
 	// Claim funds in L2
-	err = opsman.SendL2Claim(ctx, deposits[0], smtProof, globaExitRoot)
+	err = opsman.SendL2Claim(ctx, deposits[0], smtProof, globalExitRoot)
 	require.NoError(t, err)
 }
 
@@ -49,10 +49,10 @@ func depositFromL2(ctx context.Context, opsman *operations.Manager, t *testing.T
 	require.NoError(t, err)
 	// Check globalExitRoot
 	// Get the claim data
-	smtProof, globaExitRoot, err := opsman.GetClaimData(uint(deposits[0].NetworkId), uint(deposits[0].DepositCnt))
+	smtProof, globalExitRoot, err := opsman.GetClaimData(uint(deposits[0].NetworkId), uint(deposits[0].DepositCnt))
 	require.NoError(t, err)
 	// Claim funds in L1
-	err = opsman.SendL1Claim(ctx, deposits[0], smtProof, globaExitRoot)
+	err = opsman.SendL1Claim(ctx, deposits[0], smtProof, globalExitRoot)
 	require.NoError(t, err)
 }
 
@@ -87,6 +87,8 @@ func TestEdgeCase(t *testing.T) {
 	t.Run("Test a case of restart with reorg.", func(t *testing.T) {
 		depositFromL1(ctx, opsman, t)
 		depositFromL2(ctx, opsman, t)
+		// Stop the bridge service.
+		require.NoError(t, operations.StopBridge())
 		// Modify the L1 blocks for L1 reorg
 		require.NoError(t, opsman.UpdateBlocksForTesting(ctx, 0, 1))
 		// Modify the batch data to check the trusted state reorg
