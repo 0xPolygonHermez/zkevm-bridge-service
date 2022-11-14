@@ -177,7 +177,7 @@ func (m *Manager) SendL2Deposit(ctx context.Context, tokenAddr common.Address, a
 		return err
 	}
 
-	orgExitRoot, err := m.storage.GetLatestExitRoot(ctx, false, nil)
+	orgExitRoot, err := m.storage.GetLatestExitRoot(ctx, true, nil)
 	if err != nil && err != gerror.ErrStorageNotFound {
 		return err
 	}
@@ -309,7 +309,7 @@ func (m *Manager) AddFunds(ctx context.Context) error {
 
 // Teardown stops all the components.
 func Teardown() error {
-	err := stopBridge()
+	err := StopBridge()
 	if err != nil {
 		return err
 	}
@@ -395,7 +395,7 @@ func runCmd(c *exec.Cmd) error {
 
 // StartBridge restarts the bridge service.
 func (m *Manager) StartBridge() error {
-	if err := stopBridge(); err != nil {
+	if err := StopBridge(); err != nil {
 		return err
 	}
 	cmd := exec.Command(makeCmd, "run-bridge")
@@ -407,7 +407,8 @@ func (m *Manager) StartBridge() error {
 	return poll(defaultInterval, defaultDeadline, bridgeUpCondition)
 }
 
-func stopBridge() error {
+// StopBridge stops the bridge service.
+func StopBridge() error {
 	cmd := exec.Command(makeCmd, "stop-bridge")
 	return runCmd(cmd)
 }
