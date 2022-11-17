@@ -13,10 +13,6 @@ This documentation will help you running the following components:
 - zkEVM Node
 - zkEVM Bridge Service
 
-<p align="center">
-  <img src="./architecture.drawio.png"/>
-</p>
-
 ## Requirements
 
 The current version of the environment requires `go`, `docker` and `docker-compose` to be previously installed, check the links bellow to understand how to install them:
