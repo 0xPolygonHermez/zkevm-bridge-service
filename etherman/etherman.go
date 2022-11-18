@@ -263,7 +263,7 @@ func (etherMan *Client) depositEvent(ctx context.Context, vLog types.Log, blocks
 	deposit.OriginalNetwork = uint(d.OriginNetwork)
 	deposit.DestinationAddress = d.DestinationAddress
 	deposit.DestinationNetwork = uint(d.DestinationNetwork)
-	deposit.TokenAddress = d.OriginAddress
+	deposit.OriginalAddress = d.OriginAddress
 	deposit.DepositCount = uint(d.DepositCount)
 	deposit.TxHash = vLog.TxHash
 	deposit.Metadata = d.Metadata
@@ -438,7 +438,7 @@ func decodeSequences(txData []byte, lastBatchNumber uint64, sequencer common.Add
 
 	sequencedBatches := make([]SequencedBatch, len(sequences))
 	for i, seq := range sequences {
-		bn := lastBatchNumber - uint64(len(sequences) - (i + 1))
+		bn := lastBatchNumber - uint64(len(sequences)-(i+1))
 		sequencedBatches[i] = SequencedBatch{
 			BatchNumber:                bn,
 			Sequencer:                  sequencer,
@@ -637,7 +637,7 @@ func decodeSequencedForceBatches(txData []byte, lastBatchNumber uint64, sequence
 
 	sequencedForcedBatches := make([]SequencedForceBatch, len(forceBatches))
 	for i, force := range forceBatches {
-		bn := lastBatchNumber - uint64(len(forceBatches) - (i + 1))
+		bn := lastBatchNumber - uint64(len(forceBatches)-(i+1))
 		sequencedForcedBatches[i] = SequencedForceBatch{
 			BatchNumber:                     bn,
 			Sequencer:                       sequencer,

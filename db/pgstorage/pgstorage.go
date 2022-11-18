@@ -145,15 +145,15 @@ func (p *PostgresStorage) AddGlobalExitRoot(ctx context.Context, exitRoot *ether
 
 // AddDeposit adds new deposit to the storage.
 func (p *PostgresStorage) AddDeposit(ctx context.Context, deposit *etherman.Deposit, dbTx pgx.Tx) error {
-	const addDepositSQL = "INSERT INTO syncv2.deposit (network_id, orig_net, token_addr, amount, dest_net, dest_addr, block_id, deposit_cnt, tx_hash, metadata) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)"
+	const addDepositSQL = "INSERT INTO syncv2.deposit (leaf_type, network_id, orig_net, orig_addr, amount, dest_net, dest_addr, block_id, deposit_cnt, tx_hash, metadata) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)"
 	e := p.getExecQuerier(dbTx)
-	_, err := e.Exec(ctx, addDepositSQL, deposit.NetworkID, deposit.OriginalNetwork, deposit.TokenAddress, deposit.Amount.String(), deposit.DestinationNetwork, deposit.DestinationAddress, deposit.BlockID, deposit.DepositCount, deposit.TxHash, deposit.Metadata)
+	_, err := e.Exec(ctx, addDepositSQL, deposit.LeafType, deposit.NetworkID, deposit.OriginalNetwork, deposit.OriginalAddress, deposit.Amount.String(), deposit.DestinationNetwork, deposit.DestinationAddress, deposit.BlockID, deposit.DepositCount, deposit.TxHash, deposit.Metadata)
 	return err
 }
 
 // AddClaim adds new claim to the storage.
 func (p *PostgresStorage) AddClaim(ctx context.Context, claim *etherman.Claim, dbTx pgx.Tx) error {
-	const addClaimSQL = "INSERT INTO syncv2.claim (network_id, index, orig_net, token_addr, amount, dest_addr, block_id, tx_hash) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"
+	const addClaimSQL = "INSERT INTO syncv2.claim (network_id, index, orig_net, orig_addr, amount, dest_addr, block_id, tx_hash) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"
 	e := p.getExecQuerier(dbTx)
 	_, err := e.Exec(ctx, addClaimSQL, claim.NetworkID, claim.Index, claim.OriginalNetwork, claim.OriginalAddress, claim.Amount.String(), claim.DestinationAddress, claim.BlockID, claim.TxHash)
 	return err
@@ -162,7 +162,7 @@ func (p *PostgresStorage) AddClaim(ctx context.Context, claim *etherman.Claim, d
 // GetTokenMetadata gets the metadata of the dedicated token.
 func (p *PostgresStorage) GetTokenMetadata(ctx context.Context, networkID, destNet uint, originalTokenAddr common.Address, dbTx pgx.Tx) ([]byte, error) {
 	var metadata []byte
-	const getMetadataSQL = "SELECT metadata from syncv2.deposit WHERE network_id = $1 AND token_addr = $2 AND dest_net = $3 AND metadata IS NOT NULL LIMIT 1"
+	const getMetadataSQL = "SELECT metadata from syncv2.deposit WHERE network_id = $1 AND orig_addr = $2 AND dest_net = $3 AND metadata IS NOT NULL LIMIT 1"
 	e := p.getExecQuerier(dbTx)
 	err := e.QueryRow(ctx, getMetadataSQL, networkID, originalTokenAddr, destNet).Scan(&metadata)
 	return metadata, err
@@ -280,7 +280,7 @@ func (p *PostgresStorage) GetClaim(ctx context.Context, depositCounterUser uint,
 		claim  etherman.Claim
 		amount string
 	)
-	const getClaimSQL = "SELECT index, orig_net, token_addr, amount, dest_addr, block_id, network_id, tx_hash FROM syncv2.claim WHERE index = $1 AND network_id = $2"
+	const getClaimSQL = "SELECT index, orig_net, orig_addr, amount, dest_addr, block_id, network_id, tx_hash FROM syncv2.claim WHERE index = $1 AND network_id = $2"
 	err := p.getExecQuerier(dbTx).QueryRow(ctx, getClaimSQL, depositCounterUser, networkID).Scan(&claim.Index, &claim.OriginalNetwork, &claim.OriginalAddress, &amount, &claim.DestinationAddress, &claim.BlockID, &claim.NetworkID, &claim.TxHash)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, gerror.ErrStorageNotFound
@@ -295,8 +295,8 @@ func (p *PostgresStorage) GetDeposit(ctx context.Context, depositCounterUser uin
 		deposit etherman.Deposit
 		amount  string
 	)
-	const getDepositSQL = "SELECT orig_net, token_addr, amount, dest_net, dest_addr, deposit_cnt, block_id, b.block_num, d.network_id, tx_hash, metadata FROM syncv2.deposit as d INNER JOIN syncv2.block as b ON d.network_id = b.network_id AND d.block_id = b.id WHERE d.network_id = $1 AND deposit_cnt = $2"
-	err := p.getExecQuerier(dbTx).QueryRow(ctx, getDepositSQL, networkID, depositCounterUser).Scan(&deposit.OriginalNetwork, &deposit.TokenAddress, &amount, &deposit.DestinationNetwork, &deposit.DestinationAddress, &deposit.DepositCount, &deposit.BlockID, &deposit.BlockNumber, &deposit.NetworkID, &deposit.TxHash, &deposit.Metadata)
+	const getDepositSQL = "SELECT leaf_type, orig_net, orig_addr, amount, dest_net, dest_addr, deposit_cnt, block_id, b.block_num, d.network_id, tx_hash, metadata FROM syncv2.deposit as d INNER JOIN syncv2.block as b ON d.network_id = b.network_id AND d.block_id = b.id WHERE d.network_id = $1 AND deposit_cnt = $2"
+	err := p.getExecQuerier(dbTx).QueryRow(ctx, getDepositSQL, networkID, depositCounterUser).Scan(&deposit.LeafType, &deposit.OriginalNetwork, &deposit.OriginalAddress, &amount, &deposit.DestinationNetwork, &deposit.DestinationAddress, &deposit.DepositCount, &deposit.BlockID, &deposit.BlockNumber, &deposit.NetworkID, &deposit.TxHash, &deposit.Metadata)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, gerror.ErrStorageNotFound
 	}
@@ -475,7 +475,7 @@ func (p *PostgresStorage) GetClaimCount(ctx context.Context, destAddr string, db
 
 // GetClaims gets the claim list which be smaller than index.
 func (p *PostgresStorage) GetClaims(ctx context.Context, destAddr string, limit uint, offset uint, dbTx pgx.Tx) ([]*etherman.Claim, error) {
-	const getClaimsSQL = "SELECT index, orig_net, token_addr, amount, dest_addr, block_id, network_id, tx_hash FROM syncv2.claim WHERE dest_addr = $1 ORDER BY block_id DESC LIMIT $2 OFFSET $3"
+	const getClaimsSQL = "SELECT index, orig_net, orig_addr, amount, dest_addr, block_id, network_id, tx_hash FROM syncv2.claim WHERE dest_addr = $1 ORDER BY block_id DESC LIMIT $2 OFFSET $3"
 	rows, err := p.getExecQuerier(dbTx).Query(ctx, getClaimsSQL, common.FromHex(destAddr), limit, offset)
 	if err != nil {
 		return nil, err
@@ -499,7 +499,7 @@ func (p *PostgresStorage) GetClaims(ctx context.Context, destAddr string, limit 
 
 // GetDeposits gets the deposit list which be smaller than depositCount.
 func (p *PostgresStorage) GetDeposits(ctx context.Context, destAddr string, limit uint, offset uint, dbTx pgx.Tx) ([]*etherman.Deposit, error) {
-	const getDepositsSQL = "SELECT orig_net, token_addr, amount, dest_net, dest_addr, deposit_cnt, block_id, b.block_num, d.network_id, tx_hash, metadata FROM syncv2.deposit as d INNER JOIN syncv2.block as b ON d.network_id = b.network_id AND d.block_id = b.id WHERE dest_addr = $1 ORDER BY d.block_id DESC LIMIT $2 OFFSET $3"
+	const getDepositsSQL = "SELECT leaf_type, orig_net, orig_addr, amount, dest_net, dest_addr, deposit_cnt, block_id, b.block_num, d.network_id, tx_hash, metadata FROM syncv2.deposit as d INNER JOIN syncv2.block as b ON d.network_id = b.network_id AND d.block_id = b.id WHERE dest_addr = $1 ORDER BY d.block_id DESC LIMIT $2 OFFSET $3"
 	rows, err := p.getExecQuerier(dbTx).Query(ctx, getDepositsSQL, common.FromHex(destAddr), limit, offset)
 	if err != nil {
 		return nil, err
@@ -512,7 +512,7 @@ func (p *PostgresStorage) GetDeposits(ctx context.Context, destAddr string, limi
 			deposit etherman.Deposit
 			amount  string
 		)
-		err = rows.Scan(&deposit.OriginalNetwork, &deposit.TokenAddress, &amount, &deposit.DestinationNetwork, &deposit.DestinationAddress, &deposit.DepositCount, &deposit.BlockID, &deposit.BlockNumber, &deposit.NetworkID, &deposit.TxHash, &deposit.Metadata)
+		err = rows.Scan(&deposit.LeafType, &deposit.OriginalNetwork, &deposit.OriginalAddress, &amount, &deposit.DestinationNetwork, &deposit.DestinationAddress, &deposit.DepositCount, &deposit.BlockID, &deposit.BlockNumber, &deposit.NetworkID, &deposit.TxHash, &deposit.Metadata)
 		if err != nil {
 			return nil, err
 		}

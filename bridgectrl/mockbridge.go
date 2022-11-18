@@ -83,7 +83,7 @@ func MockBridgeCtrl(store *pgstorage.PostgresStorage) (*BridgeController, error)
 		amount, _ := new(big.Int).SetString(testDepositVectors[i].Amount, 10) //nolint:gomnd
 		deposit := &etherman.Deposit{
 			OriginalNetwork:    testDepositVectors[i].OriginalNetwork,
-			TokenAddress:       common.HexToAddress(testDepositVectors[i].TokenAddress),
+			OriginalAddress:    common.HexToAddress(testDepositVectors[i].TokenAddress),
 			Amount:             amount,
 			DestinationNetwork: testDepositVectors[i].DestinationNetwork,
 			DestinationAddress: common.HexToAddress(testDepositVectors[i].DestinationAddress),

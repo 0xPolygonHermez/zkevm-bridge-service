@@ -63,8 +63,9 @@ func (s *bridgeService) GetBridges(ctx context.Context, req *pb.GetBridgesReques
 		}
 		pbDeposits = append(
 			pbDeposits, &pb.Deposit{
+				LeafType:      uint32(deposit.LeafType),
 				OrigNet:       uint32(deposit.OriginalNetwork),
-				TokenAddr:     deposit.TokenAddress.Hex(),
+				OrigAddr:      deposit.OriginalAddress.Hex(),
 				Amount:        deposit.Amount.String(),
 				DestNet:       uint32(deposit.DestinationNetwork),
 				DestAddr:      deposit.DestinationAddress.Hex(),
@@ -108,7 +109,7 @@ func (s *bridgeService) GetClaims(ctx context.Context, req *pb.GetClaimsRequest)
 		pbClaims = append(pbClaims, &pb.Claim{
 			Index:     uint64(claim.Index),
 			OrigNet:   uint32(claim.OriginalNetwork),
-			TokenAddr: claim.OriginalAddress.Hex(),
+			OrigAddr:  claim.OriginalAddress.Hex(),
 			Amount:    claim.Amount.String(),
 			NetworkId: uint32(claim.NetworkID),
 			DestAddr:  claim.DestinationAddress.Hex(),
@@ -159,8 +160,9 @@ func (s *bridgeService) GetBridge(ctx context.Context, req *pb.GetBridgeRequest)
 
 	return &pb.GetBridgeResponse{
 		Deposit: &pb.Deposit{
+			LeafType:      uint32(deposit.LeafType),
 			OrigNet:       uint32(deposit.OriginalNetwork),
-			TokenAddr:     deposit.TokenAddress.Hex(),
+			OrigAddr:      deposit.OriginalAddress.Hex(),
 			Amount:        deposit.Amount.String(),
 			DestNet:       uint32(deposit.DestinationNetwork),
 			DestAddr:      deposit.DestinationAddress.Hex(),

@@ -405,7 +405,7 @@ func TestBSStorage(t *testing.T) {
 	deposit := &etherman.Deposit{
 		NetworkID:          0,
 		OriginalNetwork:    0,
-		TokenAddress:       common.HexToAddress("0x6B175474E89094C44Da98b954EedeAC495271d0F"),
+		OriginalAddress:    common.HexToAddress("0x6B175474E89094C44Da98b954EedeAC495271d0F"),
 		Amount:             big.NewInt(1000000),
 		DestinationNetwork: 1,
 		DestinationAddress: common.HexToAddress("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"),
@@ -467,7 +467,7 @@ func TestBSStorage(t *testing.T) {
 
 	wrappedToken := &etherman.TokenWrapped{
 		OriginalNetwork:      0,
-		OriginalTokenAddress: deposit.TokenAddress,
+		OriginalTokenAddress: deposit.OriginalAddress,
 		WrappedTokenAddress:  common.HexToAddress("0x187Bd40226A7073b49163b1f6c2b73d8F2aa8478"),
 		BlockID:              1,
 		BlockNumber:          1,
