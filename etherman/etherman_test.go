@@ -105,20 +105,20 @@ func TestSequencedBatchesEvent(t *testing.T) {
 	currentBlock, err := etherman.EtherClient.BlockByNumber(ctx, nil)
 	require.NoError(t, err)
 	currentBlockNumber := currentBlock.NumberU64()
-	blocks, order, err := etherman.GetRollupInfoByBlockRange(ctx, initBlock.NumberU64(), &currentBlockNumber)
+	blocks, _, err := etherman.GetRollupInfoByBlockRange(ctx, initBlock.NumberU64(), &currentBlockNumber)
 	require.NoError(t, err)
 	var sequences []proofofefficiency.ProofOfEfficiencyBatchData
 	sequences = append(sequences, proofofefficiency.ProofOfEfficiencyBatchData{
-		GlobalExitRoot:        ger,
-		Timestamp:             currentBlock.Time(),
-		MinForcedTimestamp:    uint64(blocks[1].ForcedBatches[0].ForcedAt.Unix()),
-		Transactions:          common.Hex2Bytes(rawTxs),
+		GlobalExitRoot:     ger,
+		Timestamp:          currentBlock.Time(),
+		MinForcedTimestamp: uint64(blocks[1].ForcedBatches[0].ForcedAt.Unix()),
+		Transactions:       common.Hex2Bytes(rawTxs),
 	})
 	sequences = append(sequences, proofofefficiency.ProofOfEfficiencyBatchData{
-		GlobalExitRoot:        ger,
-		Timestamp:             currentBlock.Time() + 1,
-		MinForcedTimestamp:    0,
-		Transactions:          common.Hex2Bytes(rawTxs),
+		GlobalExitRoot:     ger,
+		Timestamp:          currentBlock.Time() + 1,
+		MinForcedTimestamp: 0,
+		Transactions:       common.Hex2Bytes(rawTxs),
 	})
 	_, err = etherman.PoE.SequenceBatches(etherman.auth, sequences)
 	require.NoError(t, err)
@@ -130,7 +130,7 @@ func TestSequencedBatchesEvent(t *testing.T) {
 	finalBlock, err := etherman.EtherClient.BlockByNumber(ctx, nil)
 	require.NoError(t, err)
 	finalBlockNumber := finalBlock.NumberU64()
-	blocks, order, err = etherman.GetRollupInfoByBlockRange(ctx, initBlock.NumberU64(), &finalBlockNumber)
+	blocks, order, err := etherman.GetRollupInfoByBlockRange(ctx, initBlock.NumberU64(), &finalBlockNumber)
 	require.NoError(t, err)
 	assert.Equal(t, 3, len(blocks))
 	assert.Equal(t, 1, len(blocks[2].SequencedBatches))
@@ -153,10 +153,10 @@ func TestVerifyBatchEvent(t *testing.T) {
 
 	rawTxs := "f84901843b9aca00827b0c945fbdb2315678afecb367f032d93f642f64180aa380a46057361d00000000000000000000000000000000000000000000000000000000000000048203e9808073efe1fa2d3e27f26f32208550ea9b0274d49050b816cadab05a771f4275d0242fd5d92b3fb89575c070e6c930587c520ee65a3aa8cfe382fcad20421bf51d621c"
 	tx := proofofefficiency.ProofOfEfficiencyBatchData{
-		GlobalExitRoot:        common.Hash{},
-		Timestamp:             initBlock.Time(),
-		MinForcedTimestamp:    0,
-		Transactions:          common.Hex2Bytes(rawTxs),
+		GlobalExitRoot:     common.Hash{},
+		Timestamp:          initBlock.Time(),
+		MinForcedTimestamp: 0,
+		Transactions:       common.Hex2Bytes(rawTxs),
 	}
 	_, err = etherman.PoE.SequenceBatches(etherman.auth, []proofofefficiency.ProofOfEfficiencyBatchData{tx})
 	require.NoError(t, err)
@@ -218,7 +218,7 @@ func TestSequenceForceBatchesEvent(t *testing.T) {
 	finalBlock, err := etherman.EtherClient.BlockByNumber(ctx, nil)
 	require.NoError(t, err)
 	finalBlockNumber := finalBlock.NumberU64()
-	blocks, order, err := etherman.GetRollupInfoByBlockRange(ctx, initBlock.NumberU64(), &finalBlockNumber)
+	blocks, _, err := etherman.GetRollupInfoByBlockRange(ctx, initBlock.NumberU64(), &finalBlockNumber)
 	require.NoError(t, err)
 
 	forceBatchData := proofofefficiency.ProofOfEfficiencyForceBatchData{
@@ -234,7 +234,7 @@ func TestSequenceForceBatchesEvent(t *testing.T) {
 	finalBlock, err = etherman.EtherClient.BlockByNumber(ctx, nil)
 	require.NoError(t, err)
 	finalBlockNumber = finalBlock.NumberU64()
-	blocks, order, err = etherman.GetRollupInfoByBlockRange(ctx, initBlock.NumberU64(), &finalBlockNumber)
+	blocks, order, err := etherman.GetRollupInfoByBlockRange(ctx, initBlock.NumberU64(), &finalBlockNumber)
 	require.NoError(t, err)
 	assert.Equal(t, uint64(4), blocks[1].BlockNumber)
 	assert.Equal(t, uint64(1), blocks[1].SequencedForceBatches[0][0].BatchNumber)

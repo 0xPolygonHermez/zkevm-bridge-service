@@ -120,7 +120,7 @@ func (c Client) SendClaim(ctx context.Context, deposit *pb.Deposit, smtProof [][
 		return err
 	}
 	amount, _ := new(big.Int).SetString(deposit.Amount, encoding.Base10)
-	tx, err := br.ClaimAsset(auth, smtProof, uint32(deposit.DepositCnt), globalExitRoot.ExitRoots[0], globalExitRoot.ExitRoots[1], deposit.OrigNet, common.HexToAddress(deposit.TokenAddr), deposit.DestNet, common.HexToAddress(deposit.DestAddr), amount, common.FromHex(deposit.Metadata))
+	tx, err := br.ClaimAsset(auth, smtProof, uint32(deposit.DepositCnt), globalExitRoot.ExitRoots[0], globalExitRoot.ExitRoots[1], deposit.OrigNet, common.HexToAddress(deposit.OrigAddr), deposit.DestNet, common.HexToAddress(deposit.DestAddr), amount, common.FromHex(deposit.Metadata))
 	if err != nil {
 		txHash := ""
 		if tx != nil {

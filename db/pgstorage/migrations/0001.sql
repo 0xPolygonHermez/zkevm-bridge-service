@@ -59,9 +59,10 @@ CREATE TABLE syncv2.forced_batch
 
 CREATE TABLE syncv2.deposit
 (
+    leaf_type   INTEGER,
     network_id  INTEGER,
     orig_net    INTEGER,
-    token_addr  BYTEA NOT NULL,
+    orig_addr  BYTEA NOT NULL,
     amount      VARCHAR,
     dest_net    INTEGER NOT NULL,
     dest_addr   BYTEA NOT NULL,
@@ -77,7 +78,7 @@ CREATE TABLE syncv2.claim
     network_id  INTEGER NOT NULL,
     index       BIGINT, -- deposit count
     orig_net    INTEGER,
-    token_addr  BYTEA NOT NULL,
+    orig_addr  BYTEA NOT NULL,
     amount      VARCHAR,
     dest_addr   BYTEA NOT NULL,
     block_id    BIGINT NOT NULL REFERENCES syncv2.block (id) ON DELETE CASCADE,

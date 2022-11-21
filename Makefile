@@ -134,7 +134,7 @@ stop: ## Stops all services
 restart: stop run ## Executes `make stop` and `make run` commands
 
 .PHONY: run
-run: ## runs all services
+run: stop ## runs all services
 	$(RUN_DBS)
 	$(RUN_L1_NETWORK)
 	sleep 5

@@ -66,8 +66,9 @@ type SequencedForceBatch struct {
 
 // Deposit struct
 type Deposit struct {
+	LeafType           uint8
 	OriginalNetwork    uint
-	TokenAddress       common.Address
+	OriginalAddress    common.Address
 	Amount             *big.Int
 	DestinationNetwork uint
 	DestinationAddress common.Address
@@ -77,7 +78,6 @@ type Deposit struct {
 	NetworkID          uint
 	TxHash             common.Hash
 	Metadata           []byte
-	LeafType           uint8
 }
 
 // Claim struct

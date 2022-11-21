@@ -64,8 +64,9 @@ func TestBridgeTree(t *testing.T) {
 		for i, testVector := range testVectors {
 			amount, _ := new(big.Int).SetString(testVector.Amount, 0)
 			deposit := &etherman.Deposit{
+				LeafType:           0,
 				OriginalNetwork:    testVector.OriginalNetwork,
-				TokenAddress:       common.HexToAddress(testVector.TokenAddress),
+				OriginalAddress:    common.HexToAddress(testVector.TokenAddress),
 				Amount:             amount,
 				DestinationNetwork: testVector.DestinationNetwork,
 				DestinationAddress: common.HexToAddress(testVector.DestinationAddress),

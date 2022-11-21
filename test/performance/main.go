@@ -60,8 +60,9 @@ func main() {
 	start := time.Now()
 	for i := 0; i < preDepositCount; i++ {
 		deposit := &etherman.Deposit{
+			LeafType:           0,
 			OriginalNetwork:    networkIds[i%2],
-			TokenAddress:       addressList[i%addressCount],
+			OriginalAddress:    addressList[i%addressCount],
 			Amount:             depositAmount.Add(depositAmount, big.NewInt(int64(i+6))), //nolint:gomnd
 			DestinationNetwork: networkIds[(i+1)%2],
 			DestinationAddress: addressList[(i+1)%addressCount],
@@ -87,7 +88,7 @@ func main() {
 		for i := 0; i < preDepositCount; i++ {
 			deposit := &etherman.Deposit{
 				OriginalNetwork:    networkIds[i%2],
-				TokenAddress:       addressList[i%addressCount],
+				OriginalAddress:    addressList[i%addressCount],
 				Amount:             depositAmount.Add(depositAmount, big.NewInt(int64(i+preDepositCount+6))), //nolint:gomnd
 				DestinationNetwork: networkIds[(i+1)%2],
 				DestinationAddress: addressList[(i+1)%addressCount],
