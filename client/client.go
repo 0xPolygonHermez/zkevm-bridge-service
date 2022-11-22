@@ -105,7 +105,7 @@ func (c NodeClient) SendClaim(ctx context.Context, deposit *pb.Deposit, smtProof
 	globalExitRooNum *big.Int, globalExitRoot *etherman.GlobalExitRoot, bridgeSCAddr common.Address,
 	auth *bind.TransactOpts, network NetworkSID,
 ) error {
-	return c.clients[network].SendClaim(ctx, deposit, smtProof, globalExitRooNum, globalExitRoot, bridgeSCAddr, auth)
+	return c.clients[network].SendClaim(ctx, deposit, smtProof, globalExitRoot, bridgeSCAddr, auth)
 }
 
 // GetBridges returns bridge list for the specific destination address.

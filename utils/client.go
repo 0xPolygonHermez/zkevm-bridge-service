@@ -114,7 +114,7 @@ func (c Client) SendBridge(ctx context.Context, tokenAddr common.Address, amount
 }
 
 // SendClaim send a claim transaction.
-func (c Client) SendClaim(ctx context.Context, deposit *pb.Deposit, smtProof [][32]byte, globalExitRooNum *big.Int, globalExitRoot *etherman.GlobalExitRoot, bridgeSCAddr common.Address, auth *bind.TransactOpts) error {
+func (c Client) SendClaim(ctx context.Context, deposit *pb.Deposit, smtProof [][32]byte, globalExitRoot *etherman.GlobalExitRoot, bridgeSCAddr common.Address, auth *bind.TransactOpts) error {
 	br, err := bridge.NewBridge(bridgeSCAddr, c.Client)
 	if err != nil {
 		return err
