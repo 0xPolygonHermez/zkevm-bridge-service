@@ -30,7 +30,7 @@ type Block struct {
 type GlobalExitRoot struct {
 	BlockID           uint64
 	BlockNumber       uint64
-	GlobalExitRootNum *big.Int
+	Timestamp         time.Time
 	ExitRoots         []common.Hash
 	GlobalExitRoot    common.Hash
 }
@@ -119,6 +119,7 @@ type VerifiedBatch struct {
 	BlockID     uint64
 	BlockNumber uint64
 	Aggregator  common.Address
+	StateRoot   common.Hash
 	TxHash      common.Hash
 }
 
