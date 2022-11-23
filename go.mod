@@ -18,7 +18,7 @@ require (
 	github.com/urfave/cli/v2 v2.23.5
 	golang.org/x/crypto v0.0.0-20220722155217-630584e8d5aa
 	google.golang.org/genproto v0.0.0-20221024183307-1bc688fe9f3e
-	google.golang.org/grpc v1.50.1
+	google.golang.org/grpc v1.51.0
 	google.golang.org/protobuf v1.28.1
 )
 
