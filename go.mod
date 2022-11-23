@@ -3,7 +3,7 @@ module github.com/0xPolygonHermez/zkevm-bridge-service
 go 1.17
 
 require (
-	github.com/0xPolygonHermez/zkevm-node v0.0.0-20221104124241-e8d28f280f68
+	github.com/0xPolygonHermez/zkevm-node v0.0.0-20221123111608-7fe547c1025c
 	github.com/ethereum/go-ethereum v1.10.25
 	github.com/gobuffalo/packr/v2 v2.8.3
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.12.0
@@ -15,7 +15,7 @@ require (
 	github.com/rubenv/sql-migrate v0.0.0-20211023115951-9f02b1e13857
 	github.com/spf13/viper v1.14.0
 	github.com/stretchr/testify v1.8.1
-	github.com/urfave/cli/v2 v2.23.0
+	github.com/urfave/cli/v2 v2.23.5
 	golang.org/x/crypto v0.0.0-20220722155217-630584e8d5aa
 	google.golang.org/genproto v0.0.0-20221024183307-1bc688fe9f3e
 	google.golang.org/grpc v1.50.1
@@ -29,6 +29,7 @@ require (
 	github.com/VictoriaMetrics/fastcache v1.6.0 // indirect
 	github.com/acomagu/bufpipe v1.0.3 // indirect
 	github.com/allegro/bigcache v1.2.1 // indirect
+	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/btcsuite/btcd/btcec/v2 v2.2.0 // indirect
 	github.com/cespare/cp v1.1.1 // indirect
 	github.com/cespare/xxhash/v2 v2.1.2 // indirect
@@ -80,19 +81,24 @@ require (
 	github.com/markbates/oncer v1.0.0 // indirect
 	github.com/markbates/safe v1.0.1 // indirect
 	github.com/mattn/go-runewidth v0.0.9 // indirect
+	github.com/matttproud/golang_protobuf_extensions v1.0.1 // indirect
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	github.com/olekukonko/tablewriter v0.0.5 // indirect
 	github.com/pelletier/go-toml v1.9.5 // indirect
 	github.com/pelletier/go-toml/v2 v2.0.5 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
+	github.com/prometheus/client_golang v1.14.0 // indirect
+	github.com/prometheus/client_model v0.3.0 // indirect
+	github.com/prometheus/common v0.37.0 // indirect
+	github.com/prometheus/procfs v0.8.0 // indirect
 	github.com/prometheus/tsdb v0.10.0 // indirect
 	github.com/rjeczalik/notify v0.9.2 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/sergi/go-diff v1.1.0 // indirect
 	github.com/shirou/gopsutil v3.21.4-0.20210419000835-c7a38de76ee5+incompatible // indirect
 	github.com/sirupsen/logrus v1.8.1 // indirect
-	github.com/spf13/afero v1.9.2 // indirect
+	github.com/spf13/afero v1.9.3 // indirect
 	github.com/spf13/cast v1.5.0 // indirect
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
