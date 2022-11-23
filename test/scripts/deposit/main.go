@@ -39,7 +39,7 @@ func main() {
 	var destNetwork uint32 = 1
 	destAddr := common.HexToAddress(l1AccHexAddress)
 	log.Info("Sending bridge tx...")
-	err = client.SendBridge(ctx, tokenAddr, amount, destNetwork, &destAddr, common.HexToAddress(l1BridgeAddr), auth)
+	err = client.SendBridgeAsset(ctx, tokenAddr, amount, destNetwork, &destAddr, []byte{}, common.HexToAddress(l1BridgeAddr), auth)
 	if err != nil {
 		log.Fatal("Error: ", err)
 	}
