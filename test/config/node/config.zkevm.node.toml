@@ -43,6 +43,8 @@ PercentageToIncreaseGasLimit = 10
 [RPC]
 Host = "0.0.0.0"
 Port = 8123
+ReadTimeoutInSec = 60
+WriteTimeoutInSec = 60
 MaxRequestsPerIPAndSecond = 5000
 SequencerNodeURI = ""
 BroadcastURI = "127.0.0.1:61090"
@@ -60,17 +62,20 @@ DefaultSenderAddress = "0x1111111111111111111111111111111111111111"
 SyncInterval = "1s"
 SyncChunkSize = 100
 TrustedSequencerURI = ""
-GenBlockNumber = 1
 
 [Sequencer]
 MaxSequenceSize = "2000000"
 WaitPeriodPoolIsEmpty = "1s"
 WaitPeriodSendSequence = "3s"
-LastBatchVirtualizationTimeMaxWaitPeriod = "30s"
-WaitBlocksToUpdateGER = 2
+LastBatchVirtualizationTimeMaxWaitPeriod = "10s"
+WaitBlocksToUpdateGER = 1
+WaitBlocksToConsiderGerFinal = 10
+ElapsedTimeToCloseBatchWithoutTxsDueToNewGER = "5s"
 MaxTimeForBatchToBeOpen = "5s"
 BlocksAmountForTxsToBeDeleted = 100
 FrequencyToCheckTxsForDelete = "12h"
+MaxTxsPerBatch = 150
+MaxBatchBytesSize = 30000
 MaxCumulativeGasUsed = 30000000
 MaxKeccakHashes = 468
 MaxPoseidonHashes = 279620
@@ -79,12 +84,13 @@ MaxMemAligns = 262144
 MaxArithmetics = 262144
 MaxBinaries = 262144
 MaxSteps = 8388608
+MaxAllowedFailedCounter = 50
 	[Sequencer.ProfitabilityChecker]
 		SendBatchesEvenWhenNotProfitable = "true"
 
 [Aggregator]
-IntervalToConsolidateState = "10s"
-IntervalFrequencyToGetProofGenerationState = "5s"
+IntervalToConsolidateState = "1s"
+IntervalFrequencyToGetProofGenerationState = "100ms"
 TxProfitabilityCheckerType = "acceptall"
 TxProfitabilityMinReward = "1.1"
 
