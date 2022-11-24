@@ -39,7 +39,7 @@ func TestL1GlobalExitRoot(t *testing.T) {
 
 	l1GER := &etherman.GlobalExitRoot{
 		BlockID:           1,
-		GlobalExitRootNum: big.NewInt(1),
+		Timestamp:         time.Now(),
 		ExitRoots:         []common.Hash{common.HexToHash("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9f1"), common.HexToHash("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9f1")},
 		GlobalExitRoot:    common.HexToHash("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9f1"),
 	}
@@ -50,12 +50,12 @@ func TestL1GlobalExitRoot(t *testing.T) {
 	ger, err := pg.GetLatestL1SyncedExitRoot(ctx, tx)
 	require.NoError(t, err)
 	require.Equal(t, ger.BlockID, l1GER.BlockID)
-	require.Equal(t, ger.GlobalExitRootNum, l1GER.GlobalExitRootNum)
+	require.Equal(t, ger.Timestamp.Unix(), l1GER.Timestamp.Unix())
 	require.Equal(t, ger.GlobalExitRoot, l1GER.GlobalExitRoot)
 
 	latestGER, err := pg.GetLatestExitRoot(ctx, true, tx)
 	require.NoError(t, err)
-	require.Equal(t, latestGER.GlobalExitRootNum, l1GER.GlobalExitRootNum)
+	require.Equal(t, latestGER.Timestamp.Unix(), l1GER.Timestamp.Unix())
 
 	require.NoError(t, tx.Commit(ctx))
 }
@@ -72,20 +72,20 @@ func TestAddTrustedGERDuplicated(t *testing.T) {
 	require.NoError(t, err)
 
 	ger := &etherman.GlobalExitRoot{
-		GlobalExitRootNum: big.NewInt(1),
+		Timestamp:         time.Now(),
 		ExitRoots:         []common.Hash{common.HexToHash("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9f1"), common.HexToHash("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9f1")},
 		GlobalExitRoot:    common.HexToHash("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9f1"),
 	}
 	err = pg.AddTrustedGlobalExitRoot(ctx, ger, tx)
 	require.NoError(t, err)
-	getCount := "select count(*) from syncv2.exit_root where block_id = 0 and global_exit_root_num = $1 AND global_exit_root = $2"
+	getCount := "select count(*) from syncv2.exit_root where block_id = 0 and timestamp = $1 AND global_exit_root = $2"
 	var result int
-	err = tx.QueryRow(ctx, getCount, ger.GlobalExitRootNum.String(), ger.GlobalExitRoot).Scan(&result)
+	err = tx.QueryRow(ctx, getCount, ger.Timestamp, ger.GlobalExitRoot).Scan(&result)
 	require.NoError(t, err)
 	assert.Equal(t, 1, result)
 	err = pg.AddTrustedGlobalExitRoot(ctx, ger, tx)
 	require.NoError(t, err)
-	err = tx.QueryRow(ctx, getCount, ger.GlobalExitRootNum.String(), ger.GlobalExitRoot).Scan(&result)
+	err = tx.QueryRow(ctx, getCount, ger.Timestamp, ger.GlobalExitRoot).Scan(&result)
 	require.NoError(t, err)
 	assert.Equal(t, 1, result)
 	require.NoError(t, tx.Commit(ctx))
@@ -94,13 +94,13 @@ func TestAddTrustedGERDuplicated(t *testing.T) {
 	require.NoError(t, err)
 
 	ger1 := &etherman.GlobalExitRoot{
-		GlobalExitRootNum: big.NewInt(2),
+		Timestamp:         time.Now(),
 		ExitRoots:         []common.Hash{common.HexToHash("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9f1"), common.HexToHash("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9f1")},
 		GlobalExitRoot:    common.HexToHash("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9f1"),
 	}
 	err = pg.AddTrustedGlobalExitRoot(ctx, ger, tx)
 	require.NoError(t, err)
-	err = tx.QueryRow(ctx, getCount, ger.GlobalExitRootNum.String(), ger.GlobalExitRoot).Scan(&result)
+	err = tx.QueryRow(ctx, getCount, ger.Timestamp, ger.GlobalExitRoot).Scan(&result)
 	require.NoError(t, err)
 	assert.Equal(t, 1, result)
 	err = pg.AddTrustedGlobalExitRoot(ctx, ger1, tx)
@@ -116,7 +116,7 @@ func TestAddTrustedGERDuplicated(t *testing.T) {
 
 	latestGER, err := pg.GetLatestExitRoot(ctx, false, tx)
 	require.NoError(t, err)
-	require.Equal(t, latestGER.GlobalExitRootNum, ger1.GlobalExitRootNum)
+	require.Equal(t, latestGER.Timestamp.Unix(), ger1.Timestamp.Unix())
 
 	require.NoError(t, tx.Commit(ctx))
 }
