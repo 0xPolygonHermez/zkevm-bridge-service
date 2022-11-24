@@ -101,7 +101,7 @@ func (c NodeClient) SendBridgeAsset(ctx context.Context, tokenAddr common.Addres
 }
 
 // SendBridgeMessage sends a bridge message transaction.
-func (c NodeClient) SendBridgeMessage(ctx context.Context, destNetwork uint32, destAddr *common.Address, metadata []byte,
+func (c NodeClient) SendBridgeMessage(ctx context.Context, destNetwork uint32, destAddr common.Address, metadata []byte,
 	bridgeSCAddr common.Address, auth *bind.TransactOpts, network NetworkSID,
 ) error {
 	return c.clients[network].SendBridgeMessage(ctx, destNetwork, destAddr, metadata, bridgeSCAddr, auth)

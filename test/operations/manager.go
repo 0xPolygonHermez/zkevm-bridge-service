@@ -172,7 +172,6 @@ func (m *Manager) SendL2Deposit(ctx context.Context, tokenAddr common.Address, a
 ) error {
 	client := m.clients[L2]
 	auth, err := client.GetSigner(ctx, accHexPrivateKeys[L2])
-
 	if err != nil {
 		return err
 	}
@@ -189,6 +188,52 @@ func (m *Manager) SendL2Deposit(ctx context.Context, tokenAddr common.Address, a
 
 	// sync for new exit root
 	return m.WaitExitRootToBeSynced(ctx, orgExitRoot, true)
+}
+
+// SendL1BridgeMessage bridges a message from l1 to l2.
+func (m *Manager) SendL1BridgeMessage(ctx context.Context, destAddr common.Address, destNetwork uint32, amount *big.Int, metadata []byte) error {
+	client := m.clients[L1]
+	auth, err := client.GetSigner(ctx, accHexPrivateKeys[L1])
+	if err != nil {
+		return err
+	}
+
+	orgExitRoot, err := m.storage.GetLatestExitRoot(ctx, false, nil)
+	if err != nil && err != gerror.ErrStorageNotFound {
+		return err
+	}
+
+	auth.Value = amount
+	err = client.SendBridgeMessage(ctx, destNetwork, destAddr, metadata, common.HexToAddress(l1BridgeAddr), auth)
+	if err != nil {
+		return err
+	}
+
+	// sync for new exit root
+	return m.WaitExitRootToBeSynced(ctx, orgExitRoot, false)
+}
+
+// SendL2BridgeMessage bridges a message from l2 to l1.
+func (m *Manager) SendL2BridgeMessage(ctx context.Context, destAddr common.Address, destNetwork uint32, amount *big.Int, metadata []byte) error {
+	client := m.clients[L2]
+	auth, err := client.GetSigner(ctx, accHexPrivateKeys[L2])
+	if err != nil {
+		return err
+	}
+
+	orgExitRoot, err := m.storage.GetLatestExitRoot(ctx, false, nil)
+	if err != nil && err != gerror.ErrStorageNotFound {
+		return err
+	}
+
+	auth.Value = amount
+	err = client.SendBridgeMessage(ctx, destNetwork, destAddr, metadata, common.HexToAddress(l2BridgeAddr), auth)
+	if err != nil {
+		return err
+	}
+
+	// sync for new exit root
+	return m.WaitExitRootToBeSynced(ctx, orgExitRoot, false)
 }
 
 // Setup creates all the required components and initializes them according to
@@ -554,6 +599,17 @@ func (m *Manager) DeployERC20(ctx context.Context, name, symbol string, network 
 	}
 
 	return client.DeployERC20(ctx, name, symbol, auth)
+}
+
+// DeployBridgeMessageReceiver deploys the brdige message receiver smc.
+func (m *Manager) DeployBridgeMessageReceiver(ctx context.Context, network NetworkSID) (common.Address, error) {
+	client := m.clients[network]
+	auth, err := client.GetSigner(ctx, accHexPrivateKeys[network])
+	if err != nil {
+		return common.Address{}, err
+	}
+
+	return client.DeployBridgeMessageReceiver(ctx, auth)
 }
 
 // MintERC20 mint erc20 tokens

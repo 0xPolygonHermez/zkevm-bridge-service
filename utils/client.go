@@ -11,6 +11,7 @@ import (
 	"github.com/0xPolygonHermez/zkevm-node/encoding"
 	"github.com/0xPolygonHermez/zkevm-node/etherman/smartcontracts/bridge"
 	"github.com/0xPolygonHermez/zkevm-node/log"
+	"github.com/0xPolygonHermez/zkevm-node/test/contracts/bin/BridgeMessageReceiver"
 	"github.com/0xPolygonHermez/zkevm-node/test/contracts/bin/ERC20"
 	ops "github.com/0xPolygonHermez/zkevm-node/test/operations"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -67,6 +68,18 @@ func (c Client) DeployERC20(ctx context.Context, name, symbol string, auth *bind
 	return addr, instance, err
 }
 
+// DeployBridgeMessageReceiver deploys the brdige message receiver smc.
+func (c Client) DeployBridgeMessageReceiver(ctx context.Context, auth *bind.TransactOpts) (common.Address, error) {
+	const txMinedTimeoutLimit = 60 * time.Second
+	addr, tx, _, err := BridgeMessageReceiver.DeployBridgeMessageReceiver(auth, c.Client)
+	if err != nil {
+		return common.Address{}, err
+	}
+	err = WaitTxToBeMined(ctx, c.Client, tx, txMinedTimeoutLimit)
+
+	return addr, err
+}
+
 // ApproveERC20 approves erc20 tokens.
 func (c Client) ApproveERC20(ctx context.Context, erc20Addr, spender common.Address, amount *big.Int, auth *bind.TransactOpts) error {
 	erc20sc, err := ERC20.NewERC20(erc20Addr, c.Client)
@@ -121,17 +134,14 @@ func (c Client) SendBridgeAsset(ctx context.Context, tokenAddr common.Address, a
 }
 
 // SendBridgeMessage sends a bridge message transaction.
-func (c Client) SendBridgeMessage(ctx context.Context, destNetwork uint32, destAddr *common.Address, metadata []byte,
+func (c Client) SendBridgeMessage(ctx context.Context, destNetwork uint32, destAddr common.Address, metadata []byte,
 	bridgeSCAddr common.Address, auth *bind.TransactOpts,
 ) error {
-	if destAddr == nil {
-		destAddr = &auth.From
-	}
 	br, err := bridge.NewBridge(bridgeSCAddr, c.Client)
 	if err != nil {
 		return nil
 	}
-	tx, err := br.BridgeMessage(auth, destNetwork, *destAddr, metadata)
+	tx, err := br.BridgeMessage(auth, destNetwork, destAddr, metadata)
 	if err != nil {
 		log.Error("Error: ", err)
 		return err
