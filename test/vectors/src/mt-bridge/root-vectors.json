@@ -8,60 +8,60 @@
       "amount": "0x8ac7230489e80000",
       "destinationNetwork": 1,
       "destinationAddress": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
-      "currentLeafValue": "0x8d84b047a969e9a2ea149d1755e8185b79f2007239bb1e7a151778b60b2cc580",
+      "currentLeafValue": "0xa4bfa0908dc7b06d98da4309f859023d6947561bc19bc00d77f763dea1a0b9f5",
       "metadata": "0x"
     },
-    "newRoot": "0x7782d756ce2109dfb4385dd1ab6ce2f8bd87cce4ba1a298dfe64ab6b0b0356f8"
+    "newRoot": "0xbf7ddbb59aa018a4c74e061f5172973ff09e4cb7f58405af117fc521f1ca46aa"
   },
   {
     "previousLeafsValues": [
-      "0x8d84b047a969e9a2ea149d1755e8185b79f2007239bb1e7a151778b60b2cc580"
+      "0xa4bfa0908dc7b06d98da4309f859023d6947561bc19bc00d77f763dea1a0b9f5"
     ],
-    "currentRoot": "0x7782d756ce2109dfb4385dd1ab6ce2f8bd87cce4ba1a298dfe64ab6b0b0356f8",
+    "currentRoot": "0xbf7ddbb59aa018a4c74e061f5172973ff09e4cb7f58405af117fc521f1ca46aa",
     "newLeaf": {
       "originNetwork": 1,
       "tokenAddress": "0x6B175474E89094C44Da98b954EedeAC495271d0F",
       "amount": "0x8ac7230489e80000",
       "destinationNetwork": 0,
       "destinationAddress": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
-      "currentLeafValue": "0xd22867d19bc4b5254f8f0dcffe4dc5020e5f25cbb06c64faa058a84f7fcbd5d4",
+      "currentLeafValue": "0x315fee1aa202bf4a6bd0fde560c89be90b6e6e2aaf92dc5e8d118209abc3410f",
       "metadata": "0x12345670"
     },
-    "newRoot": "0xd1a5006b2018b8d3eed2461d04857f93312501a7f08ec7f3d3469bd0c80b3f90"
+    "newRoot": "0xa7042a3ce14f384bbff63f1cee6ee5579193c2d7002e0034854963322cda6128"
   },
   {
     "previousLeafsValues": [
-      "0x8d84b047a969e9a2ea149d1755e8185b79f2007239bb1e7a151778b60b2cc580",
-      "0xd22867d19bc4b5254f8f0dcffe4dc5020e5f25cbb06c64faa058a84f7fcbd5d4"
+      "0xa4bfa0908dc7b06d98da4309f859023d6947561bc19bc00d77f763dea1a0b9f5",
+      "0x315fee1aa202bf4a6bd0fde560c89be90b6e6e2aaf92dc5e8d118209abc3410f"
     ],
-    "currentRoot": "0xd1a5006b2018b8d3eed2461d04857f93312501a7f08ec7f3d3469bd0c80b3f90",
+    "currentRoot": "0xa7042a3ce14f384bbff63f1cee6ee5579193c2d7002e0034854963322cda6128",
     "newLeaf": {
       "originNetwork": 0,
       "tokenAddress": "0x0000000000000000000000000000000000000000",
       "amount": "0x8ac7230489e80000",
       "destinationNetwork": 1,
       "destinationAddress": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
-      "currentLeafValue": "0xed65b9b82c1015b7374ec1097e56971d6887db5a97eb81e7ecb1c710d725f761",
+      "currentLeafValue": "0xb598ce65aa15c08dda126a2985ba54f0559eaac562bb43ba430c7344261fbc5d",
       "metadata": "0x12345678"
     },
-    "newRoot": "0xad5ffc65ca4a2235ac389fcc2f6464f639e61bdfc733dd01e2cf104fd71a454e"
+    "newRoot": "0x88e652896cb1de5962a0173a222059f51e6b943a2ba6dfc9acbff051ceb1abb5"
   },
   {
     "previousLeafsValues": [
-      "0x8d84b047a969e9a2ea149d1755e8185b79f2007239bb1e7a151778b60b2cc580",
-      "0xd22867d19bc4b5254f8f0dcffe4dc5020e5f25cbb06c64faa058a84f7fcbd5d4",
-      "0xed65b9b82c1015b7374ec1097e56971d6887db5a97eb81e7ecb1c710d725f761"
+      "0xa4bfa0908dc7b06d98da4309f859023d6947561bc19bc00d77f763dea1a0b9f5",
+      "0x315fee1aa202bf4a6bd0fde560c89be90b6e6e2aaf92dc5e8d118209abc3410f",
+      "0xb598ce65aa15c08dda126a2985ba54f0559eaac562bb43ba430c7344261fbc5d"
     ],
-    "currentRoot": "0xad5ffc65ca4a2235ac389fcc2f6464f639e61bdfc733dd01e2cf104fd71a454e",
+    "currentRoot": "0x88e652896cb1de5962a0173a222059f51e6b943a2ba6dfc9acbff051ceb1abb5",
     "newLeaf": {
       "originNetwork": 10,
       "tokenAddress": "0x0000000000000000000000000000000000000000",
       "amount": "0x01",
       "destinationNetwork": 4,
       "destinationAddress": "0x0000000000000000000000000000000000000000",
-      "currentLeafValue": "0xb92d6d1debb1c2c2bb9c523ba3df72d6d759357a82220ea48f7b4189bdacb879",
+      "currentLeafValue": "0xe6585bdf74b6a46b9ede8b1b877e1232fb79ee93106c4db8ffd49cf1685bf242",
       "metadata": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb922661234e51aad88F6F4ce6aB8827279cffFb92266"
     },
-    "newRoot": "0x235e94b821dd82866038d02066796403d68d165cc19a8efb8c91f48734879b16"
+    "newRoot": "0x42d3339fe8eb57770953423f20a029e778a707e8d58aaf110b40d5eb4dd25721"
   }
 ]

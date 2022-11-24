@@ -345,9 +345,9 @@ func TestMTStorage(t *testing.T) {
 	tx, err := pg.BeginDBTransaction(ctx)
 	require.NoError(t, err)
 
-	leaf1 := common.FromHex("0x8d84b047a969e9a2ea149d1755e8185b79f2007239bb1e7a151778b60b2cc580")
-	leaf2 := common.FromHex("0xd22867d19bc4b5254f8f0dcffe4dc5020e5f25cbb06c64faa058a84f7fcbd5d4")
-	root := common.FromHex("0xad5ffc65ca4a2235ac389fcc2f6464f639e61bdfc733dd01e2cf104fd71a454e")
+	leaf1 := common.FromHex("0xa4bfa0908dc7b06d98da4309f859023d6947561bc19bc00d77f763dea1a0b9f5")
+	leaf2 := common.FromHex("0x315fee1aa202bf4a6bd0fde560c89be90b6e6e2aaf92dc5e8d118209abc3410f")
+	root := common.FromHex("0x88e652896cb1de5962a0173a222059f51e6b943a2ba6dfc9acbff051ceb1abb5")
 
 	err = pg.Set(ctx, root, [][]byte{leaf1, leaf2}, tx)
 	require.NoError(t, err)

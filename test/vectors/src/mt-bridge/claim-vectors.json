@@ -8,7 +8,7 @@
         "destinationNetwork": 1,
         "destinationAddress": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
         "metadata": "0x",
-        "leafValue": "0x8d84b047a969e9a2ea149d1755e8185b79f2007239bb1e7a151778b60b2cc580"
+        "leafValue": "0xa4bfa0908dc7b06d98da4309f859023d6947561bc19bc00d77f763dea1a0b9f5"
       },
       {
         "originNetwork": 1,
@@ -17,7 +17,7 @@
         "destinationNetwork": 0,
         "destinationAddress": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
         "metadata": "0x12345670",
-        "leafValue": "0xd22867d19bc4b5254f8f0dcffe4dc5020e5f25cbb06c64faa058a84f7fcbd5d4"
+        "leafValue": "0x315fee1aa202bf4a6bd0fde560c89be90b6e6e2aaf92dc5e8d118209abc3410f"
       },
       {
         "originNetwork": 0,
@@ -26,7 +26,7 @@
         "destinationNetwork": 1,
         "destinationAddress": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
         "metadata": "0x12345678",
-        "leafValue": "0xed65b9b82c1015b7374ec1097e56971d6887db5a97eb81e7ecb1c710d725f761"
+        "leafValue": "0xb598ce65aa15c08dda126a2985ba54f0559eaac562bb43ba430c7344261fbc5d"
       },
       {
         "originNetwork": 10,
@@ -35,13 +35,13 @@
         "destinationNetwork": 4,
         "destinationAddress": "0x0000000000000000000000000000000000000000",
         "metadata": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb922661234e51aad88F6F4ce6aB8827279cffFb92266",
-        "leafValue": "0xb92d6d1debb1c2c2bb9c523ba3df72d6d759357a82220ea48f7b4189bdacb879"
+        "leafValue": "0xe6585bdf74b6a46b9ede8b1b877e1232fb79ee93106c4db8ffd49cf1685bf242"
       }
     ],
     "index": 0,
     "proof": [
-      "0xd22867d19bc4b5254f8f0dcffe4dc5020e5f25cbb06c64faa058a84f7fcbd5d4",
-      "0x7eb83d0a04f8f4645df908d2050a64bf87702483c06f3ec4075c94d6a54c7837",
+      "0x315fee1aa202bf4a6bd0fde560c89be90b6e6e2aaf92dc5e8d118209abc3410f",
+      "0xb48c8301099f75206bc93b1512c7b3855b60b4f8cbaedf8679a184d1d450a4f1",
       "0xb4c11951957c6f8f642c4af61cd6b24640fec6dc7fc607ee8206a99e92410d30",
       "0x21ddb9a356815c3fac1026b6dec5df3124afbadb485c9ba5a3e3398a04b7ba85",
       "0xe58769b32a1beaf1ea27375a44095a0d1fb664ce2dd358e7fcbfb78c26a19344",
@@ -73,7 +73,7 @@
       "0x93237c50ba75ee485f4c22adf2f741400bdf8d6a9cc7df7ecae576221665d735",
       "0x8448818bb4ae4562849e949e17ac16e0be16688e156b5cf15e098c627c0056a9"
     ],
-    "root": "0x235e94b821dd82866038d02066796403d68d165cc19a8efb8c91f48734879b16"
+    "root": "0x42d3339fe8eb57770953423f20a029e778a707e8d58aaf110b40d5eb4dd25721"
   },
   {
     "leafs": [
@@ -84,7 +84,7 @@
         "destinationNetwork": 1,
         "destinationAddress": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
         "metadata": "0x",
-        "leafValue": "0x8d84b047a969e9a2ea149d1755e8185b79f2007239bb1e7a151778b60b2cc580"
+        "leafValue": "0xa4bfa0908dc7b06d98da4309f859023d6947561bc19bc00d77f763dea1a0b9f5"
       },
       {
         "originNetwork": 1,
@@ -93,7 +93,7 @@
         "destinationNetwork": 0,
         "destinationAddress": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
         "metadata": "0x12345670",
-        "leafValue": "0xd22867d19bc4b5254f8f0dcffe4dc5020e5f25cbb06c64faa058a84f7fcbd5d4"
+        "leafValue": "0x315fee1aa202bf4a6bd0fde560c89be90b6e6e2aaf92dc5e8d118209abc3410f"
       },
       {
         "originNetwork": 0,
@@ -102,7 +102,7 @@
         "destinationNetwork": 1,
         "destinationAddress": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
         "metadata": "0x12345678",
-        "leafValue": "0xed65b9b82c1015b7374ec1097e56971d6887db5a97eb81e7ecb1c710d725f761"
+        "leafValue": "0xb598ce65aa15c08dda126a2985ba54f0559eaac562bb43ba430c7344261fbc5d"
       },
       {
         "originNetwork": 10,
@@ -111,13 +111,13 @@
         "destinationNetwork": 4,
         "destinationAddress": "0x0000000000000000000000000000000000000000",
         "metadata": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb922661234e51aad88F6F4ce6aB8827279cffFb92266",
-        "leafValue": "0xb92d6d1debb1c2c2bb9c523ba3df72d6d759357a82220ea48f7b4189bdacb879"
+        "leafValue": "0xe6585bdf74b6a46b9ede8b1b877e1232fb79ee93106c4db8ffd49cf1685bf242"
       }
     ],
     "index": 1,
     "proof": [
-      "0x8d84b047a969e9a2ea149d1755e8185b79f2007239bb1e7a151778b60b2cc580",
-      "0x7eb83d0a04f8f4645df908d2050a64bf87702483c06f3ec4075c94d6a54c7837",
+      "0xa4bfa0908dc7b06d98da4309f859023d6947561bc19bc00d77f763dea1a0b9f5",
+      "0xb48c8301099f75206bc93b1512c7b3855b60b4f8cbaedf8679a184d1d450a4f1",
       "0xb4c11951957c6f8f642c4af61cd6b24640fec6dc7fc607ee8206a99e92410d30",
       "0x21ddb9a356815c3fac1026b6dec5df3124afbadb485c9ba5a3e3398a04b7ba85",
       "0xe58769b32a1beaf1ea27375a44095a0d1fb664ce2dd358e7fcbfb78c26a19344",
@@ -149,7 +149,7 @@
       "0x93237c50ba75ee485f4c22adf2f741400bdf8d6a9cc7df7ecae576221665d735",
       "0x8448818bb4ae4562849e949e17ac16e0be16688e156b5cf15e098c627c0056a9"
     ],
-    "root": "0x235e94b821dd82866038d02066796403d68d165cc19a8efb8c91f48734879b16"
+    "root": "0x42d3339fe8eb57770953423f20a029e778a707e8d58aaf110b40d5eb4dd25721"
   },
   {
     "leafs": [
@@ -160,7 +160,7 @@
         "destinationNetwork": 1,
         "destinationAddress": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
         "metadata": "0x",
-        "leafValue": "0x8d84b047a969e9a2ea149d1755e8185b79f2007239bb1e7a151778b60b2cc580"
+        "leafValue": "0xa4bfa0908dc7b06d98da4309f859023d6947561bc19bc00d77f763dea1a0b9f5"
       },
       {
         "originNetwork": 1,
@@ -169,7 +169,7 @@
         "destinationNetwork": 0,
         "destinationAddress": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
         "metadata": "0x12345670",
-        "leafValue": "0xd22867d19bc4b5254f8f0dcffe4dc5020e5f25cbb06c64faa058a84f7fcbd5d4"
+        "leafValue": "0x315fee1aa202bf4a6bd0fde560c89be90b6e6e2aaf92dc5e8d118209abc3410f"
       },
       {
         "originNetwork": 0,
@@ -178,7 +178,7 @@
         "destinationNetwork": 1,
         "destinationAddress": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
         "metadata": "0x12345678",
-        "leafValue": "0xed65b9b82c1015b7374ec1097e56971d6887db5a97eb81e7ecb1c710d725f761"
+        "leafValue": "0xb598ce65aa15c08dda126a2985ba54f0559eaac562bb43ba430c7344261fbc5d"
       },
       {
         "originNetwork": 10,
@@ -187,13 +187,13 @@
         "destinationNetwork": 4,
         "destinationAddress": "0x0000000000000000000000000000000000000000",
         "metadata": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb922661234e51aad88F6F4ce6aB8827279cffFb92266",
-        "leafValue": "0xb92d6d1debb1c2c2bb9c523ba3df72d6d759357a82220ea48f7b4189bdacb879"
+        "leafValue": "0xe6585bdf74b6a46b9ede8b1b877e1232fb79ee93106c4db8ffd49cf1685bf242"
       }
     ],
     "index": 2,
     "proof": [
-      "0xb92d6d1debb1c2c2bb9c523ba3df72d6d759357a82220ea48f7b4189bdacb879",
-      "0x939341cfd0fd114b9468447b3dc72522122aac6dcdf389e56dd04cc0b5819ee2",
+      "0xe6585bdf74b6a46b9ede8b1b877e1232fb79ee93106c4db8ffd49cf1685bf242",
+      "0x653142d4a4d6f7985a3f33cad31e011dbee8909846b34c38c7b235ca08828521",
       "0xb4c11951957c6f8f642c4af61cd6b24640fec6dc7fc607ee8206a99e92410d30",
       "0x21ddb9a356815c3fac1026b6dec5df3124afbadb485c9ba5a3e3398a04b7ba85",
       "0xe58769b32a1beaf1ea27375a44095a0d1fb664ce2dd358e7fcbfb78c26a19344",
@@ -225,7 +225,7 @@
       "0x93237c50ba75ee485f4c22adf2f741400bdf8d6a9cc7df7ecae576221665d735",
       "0x8448818bb4ae4562849e949e17ac16e0be16688e156b5cf15e098c627c0056a9"
     ],
-    "root": "0x235e94b821dd82866038d02066796403d68d165cc19a8efb8c91f48734879b16"
+    "root": "0x42d3339fe8eb57770953423f20a029e778a707e8d58aaf110b40d5eb4dd25721"
   },
   {
     "leafs": [
@@ -236,7 +236,7 @@
         "destinationNetwork": 1,
         "destinationAddress": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
         "metadata": "0x",
-        "leafValue": "0x8d84b047a969e9a2ea149d1755e8185b79f2007239bb1e7a151778b60b2cc580"
+        "leafValue": "0xa4bfa0908dc7b06d98da4309f859023d6947561bc19bc00d77f763dea1a0b9f5"
       },
       {
         "originNetwork": 1,
@@ -245,7 +245,7 @@
         "destinationNetwork": 0,
         "destinationAddress": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
         "metadata": "0x12345670",
-        "leafValue": "0xd22867d19bc4b5254f8f0dcffe4dc5020e5f25cbb06c64faa058a84f7fcbd5d4"
+        "leafValue": "0x315fee1aa202bf4a6bd0fde560c89be90b6e6e2aaf92dc5e8d118209abc3410f"
       },
       {
         "originNetwork": 0,
@@ -254,7 +254,7 @@
         "destinationNetwork": 1,
         "destinationAddress": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
         "metadata": "0x12345678",
-        "leafValue": "0xed65b9b82c1015b7374ec1097e56971d6887db5a97eb81e7ecb1c710d725f761"
+        "leafValue": "0xb598ce65aa15c08dda126a2985ba54f0559eaac562bb43ba430c7344261fbc5d"
       },
       {
         "originNetwork": 10,
@@ -263,13 +263,13 @@
         "destinationNetwork": 4,
         "destinationAddress": "0x0000000000000000000000000000000000000000",
         "metadata": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb922661234e51aad88F6F4ce6aB8827279cffFb92266",
-        "leafValue": "0xb92d6d1debb1c2c2bb9c523ba3df72d6d759357a82220ea48f7b4189bdacb879"
+        "leafValue": "0xe6585bdf74b6a46b9ede8b1b877e1232fb79ee93106c4db8ffd49cf1685bf242"
       }
     ],
     "index": 3,
     "proof": [
-      "0xed65b9b82c1015b7374ec1097e56971d6887db5a97eb81e7ecb1c710d725f761",
-      "0x939341cfd0fd114b9468447b3dc72522122aac6dcdf389e56dd04cc0b5819ee2",
+      "0xb598ce65aa15c08dda126a2985ba54f0559eaac562bb43ba430c7344261fbc5d",
+      "0x653142d4a4d6f7985a3f33cad31e011dbee8909846b34c38c7b235ca08828521",
       "0xb4c11951957c6f8f642c4af61cd6b24640fec6dc7fc607ee8206a99e92410d30",
       "0x21ddb9a356815c3fac1026b6dec5df3124afbadb485c9ba5a3e3398a04b7ba85",
       "0xe58769b32a1beaf1ea27375a44095a0d1fb664ce2dd358e7fcbfb78c26a19344",
@@ -301,6 +301,6 @@
       "0x93237c50ba75ee485f4c22adf2f741400bdf8d6a9cc7df7ecae576221665d735",
       "0x8448818bb4ae4562849e949e17ac16e0be16688e156b5cf15e098c627c0056a9"
     ],
-    "root": "0x235e94b821dd82866038d02066796403d68d165cc19a8efb8c91f48734879b16"
+    "root": "0x42d3339fe8eb57770953423f20a029e778a707e8d58aaf110b40d5eb4dd25721"
   }
 ]
