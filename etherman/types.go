@@ -28,11 +28,11 @@ type Block struct {
 
 // GlobalExitRoot struct
 type GlobalExitRoot struct {
-	BlockID           uint64
-	BlockNumber       uint64
-	Timestamp         time.Time
-	ExitRoots         []common.Hash
-	GlobalExitRoot    common.Hash
+	BlockID        uint64
+	BlockNumber    uint64
+	Timestamp      time.Time
+	ExitRoots      []common.Hash
+	GlobalExitRoot common.Hash
 }
 
 // SequencedBatch represents virtual batches

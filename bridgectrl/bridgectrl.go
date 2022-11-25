@@ -128,10 +128,10 @@ func (bt *BridgeController) MockAddDeposit(deposit *etherman.Deposit) error {
 		return err
 	}
 	return bt.storage.AddGlobalExitRoot(context.TODO(), &etherman.GlobalExitRoot{
-		BlockNumber:       0,
-		Timestamp:         time.Now(),
-		ExitRoots:         []common.Hash{common.BytesToHash(bt.exitTrees[0].root[:]), common.BytesToHash(bt.exitTrees[1].root[:])},
-		BlockID:           deposit.BlockID,
+		BlockNumber: 0,
+		Timestamp:   time.Now(),
+		ExitRoots:   []common.Hash{common.BytesToHash(bt.exitTrees[0].root[:]), common.BytesToHash(bt.exitTrees[1].root[:])},
+		BlockID:     deposit.BlockID,
 	}, nil)
 }
 

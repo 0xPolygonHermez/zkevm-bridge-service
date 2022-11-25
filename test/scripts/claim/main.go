@@ -65,7 +65,7 @@ func main() {
 	}
 	globalExitRoot := &etherman.GlobalExitRoot{
 		Timestamp: time.Unix(int64(proof.Timestamp), 0),
-		ExitRoots:         []common.Hash{common.HexToHash(proof.MainExitRoot), common.HexToHash(proof.RollupExitRoot)},
+		ExitRoots: []common.Hash{common.HexToHash(proof.MainExitRoot), common.HexToHash(proof.RollupExitRoot)},
 	}
 	log.Info("Sending claim tx...")
 	err = c.SendClaim(ctx, bridgeData, smt, globalExitRoot, common.HexToAddress(l2BridgeAddr), auth)

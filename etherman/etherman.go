@@ -35,14 +35,14 @@ var (
 	transferOwnershipSignatureHash         = crypto.Keccak256Hash([]byte("OwnershipTransferred(address,address)"))
 	setSecurityCouncilSignatureHash        = crypto.Keccak256Hash([]byte("SetSecurityCouncil(address)"))
 	proofDifferentStateSignatureHash       = crypto.Keccak256Hash([]byte("ProofDifferentState(bytes32,bytes32)"))
-	EmergencyStateActivatedSignatureHash   = crypto.Keccak256Hash([]byte("EmergencyStateActivated()"))
-	EmergencyStateDeactivatedSignatureHash = crypto.Keccak256Hash([]byte("EmergencyStateDeactivated()"))
+	emergencyStateActivatedSignatureHash   = crypto.Keccak256Hash([]byte("EmergencyStateActivated()"))
+	emergencyStateDeactivatedSignatureHash = crypto.Keccak256Hash([]byte("EmergencyStateDeactivated()"))
 
 	// Bridge events
-	depositEventSignatureHash           = crypto.Keccak256Hash([]byte("BridgeEvent(uint8,uint32,address,uint32,address,uint256,bytes,uint32)"))
-	claimEventSignatureHash             = crypto.Keccak256Hash([]byte("ClaimEvent(uint32,uint32,address,address,uint256)"))
-	newWrappedTokenEventSignatureHash   = crypto.Keccak256Hash([]byte("NewWrappedToken(uint32,address,address)"))
-    SetClaimTimeoutSignatureHash        = crypto.Keccak256Hash([]byte("SetClaimTimeout(uint256)"))
+	depositEventSignatureHash         = crypto.Keccak256Hash([]byte("BridgeEvent(uint8,uint32,address,uint32,address,uint256,bytes,uint32)"))
+	claimEventSignatureHash           = crypto.Keccak256Hash([]byte("ClaimEvent(uint32,uint32,address,address,uint256)"))
+	newWrappedTokenEventSignatureHash = crypto.Keccak256Hash([]byte("NewWrappedToken(uint32,address,address)"))
+	setClaimTimeoutSignatureHash      = crypto.Keccak256Hash([]byte("SetClaimTimeout(uint256)"))
 
 	// Proxy events
 	initializedSignatureHash    = crypto.Keccak256Hash([]byte("Initialized(uint8)"))
@@ -197,8 +197,8 @@ func (etherMan *Client) processEvent(ctx context.Context, vLog types.Log, blocks
 		return etherMan.claimEvent(ctx, vLog, blocks, blocksOrder)
 	case newWrappedTokenEventSignatureHash:
 		return etherMan.tokenWrappedEvent(ctx, vLog, blocks, blocksOrder)
-	case SetClaimTimeoutSignatureHash:
-		// TODO
+	case setClaimTimeoutSignatureHash:
+		// TODO issue #261
 		log.Debug("SetClaimTimeout event detected but not implemented yet")
 		return nil
 	case initializedSignatureHash:
@@ -228,10 +228,10 @@ func (etherMan *Client) processEvent(ctx context.Context, vLog types.Log, blocks
 	case proofDifferentStateSignatureHash:
 		log.Debug("ProofDifferentState event detected")
 		return nil
-	case EmergencyStateActivatedSignatureHash:
+	case emergencyStateActivatedSignatureHash:
 		log.Debug("EmergencyStateActivated event detected")
 		return nil
-	case EmergencyStateDeactivatedSignatureHash:
+	case emergencyStateDeactivatedSignatureHash:
 		log.Debug("EmergencyStateDeactivated event detected")
 		return nil
 	case transferOwnershipSignatureHash:

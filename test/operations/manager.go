@@ -535,7 +535,7 @@ func (m *Manager) GetCurrentGlobalExitRootFromSmc(ctx context.Context) (*etherma
 		return nil, err
 	}
 	result := etherman.GlobalExitRoot{
-		ExitRoots:         []common.Hash{gMainnet, gRollup},
+		ExitRoots: []common.Hash{gMainnet, gRollup},
 	}
 	return &result, nil
 }

@@ -38,10 +38,10 @@ func TestL1GlobalExitRoot(t *testing.T) {
 	require.Equal(t, blockID, uint64(1))
 
 	l1GER := &etherman.GlobalExitRoot{
-		BlockID:           1,
-		Timestamp:         time.Now(),
-		ExitRoots:         []common.Hash{common.HexToHash("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9f1"), common.HexToHash("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9f1")},
-		GlobalExitRoot:    common.HexToHash("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9f1"),
+		BlockID:        1,
+		Timestamp:      time.Now(),
+		ExitRoots:      []common.Hash{common.HexToHash("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9f1"), common.HexToHash("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9f1")},
+		GlobalExitRoot: common.HexToHash("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9f1"),
 	}
 
 	err = pg.AddGlobalExitRoot(ctx, l1GER, tx)
@@ -72,9 +72,9 @@ func TestAddTrustedGERDuplicated(t *testing.T) {
 	require.NoError(t, err)
 
 	ger := &etherman.GlobalExitRoot{
-		Timestamp:         time.Now(),
-		ExitRoots:         []common.Hash{common.HexToHash("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9f1"), common.HexToHash("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9f1")},
-		GlobalExitRoot:    common.HexToHash("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9f1"),
+		Timestamp:      time.Now(),
+		ExitRoots:      []common.Hash{common.HexToHash("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9f1"), common.HexToHash("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9f1")},
+		GlobalExitRoot: common.HexToHash("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9f1"),
 	}
 	err = pg.AddTrustedGlobalExitRoot(ctx, ger, tx)
 	require.NoError(t, err)
@@ -94,9 +94,9 @@ func TestAddTrustedGERDuplicated(t *testing.T) {
 	require.NoError(t, err)
 
 	ger1 := &etherman.GlobalExitRoot{
-		Timestamp:         time.Now(),
-		ExitRoots:         []common.Hash{common.HexToHash("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9f1"), common.HexToHash("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9f1")},
-		GlobalExitRoot:    common.HexToHash("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9f1"),
+		Timestamp:      time.Now(),
+		ExitRoots:      []common.Hash{common.HexToHash("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9f1"), common.HexToHash("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9f1")},
+		GlobalExitRoot: common.HexToHash("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9f1"),
 	}
 	err = pg.AddTrustedGlobalExitRoot(ctx, ger, tx)
 	require.NoError(t, err)

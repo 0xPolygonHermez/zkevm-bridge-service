@@ -317,8 +317,8 @@ func (p *PostgresStorage) GetLatestExitRoot(ctx context.Context, isRollup bool, 
 // GetLatestL1SyncedExitRoot gets the latest L1 synced global exit root.
 func (p *PostgresStorage) GetLatestL1SyncedExitRoot(ctx context.Context, dbTx pgx.Tx) (*etherman.GlobalExitRoot, error) {
 	var (
-		ger         etherman.GlobalExitRoot
-		exitRoots   [][]byte
+		ger       etherman.GlobalExitRoot
+		exitRoots [][]byte
 	)
 	const getLatestL1SyncedExitRootSQL = "SELECT block_id, timestamp, global_exit_root, exit_roots FROM syncv2.exit_root WHERE block_id > 0 ORDER BY id DESC LIMIT 1"
 	err := p.getExecQuerier(dbTx).QueryRow(ctx, getLatestL1SyncedExitRootSQL).Scan(&ger.BlockID, &ger.Timestamp, &ger.GlobalExitRoot, pq.Array(&exitRoots))
@@ -335,8 +335,8 @@ func (p *PostgresStorage) GetLatestL1SyncedExitRoot(ctx context.Context, dbTx pg
 // GetLatestTrustedExitRoot gets the latest trusted global exit root.
 func (p *PostgresStorage) GetLatestTrustedExitRoot(ctx context.Context, dbTx pgx.Tx) (*etherman.GlobalExitRoot, error) {
 	var (
-		ger         etherman.GlobalExitRoot
-		exitRoots   [][]byte
+		ger       etherman.GlobalExitRoot
+		exitRoots [][]byte
 	)
 	const getLatestTrustedExitRootSQL = "SELECT timestamp, global_exit_root, exit_roots FROM syncv2.exit_root WHERE block_id = 0 ORDER BY id DESC LIMIT 1"
 	err := p.getExecQuerier(dbTx).QueryRow(ctx, getLatestTrustedExitRootSQL).Scan(&ger.Timestamp, &ger.GlobalExitRoot, pq.Array(&exitRoots))
