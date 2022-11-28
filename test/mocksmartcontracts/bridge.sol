@@ -7,14 +7,21 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeab
 import "./lib/TokenWrapped.sol";
 import "./interfaces/IGlobalExitRootManager.sol";
 import "./interfaces/IBridgeMessageReceiver.sol";
-import "@openzeppelin/contracts-upgradeable/proxy/ClonesUpgradeable.sol";
+import "./interfaces/IBridge.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/IERC20MetadataUpgradeable.sol";
+import "./lib/EmergencyManager.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
 /**
  * Bridge that will be deployed on both networks Ethereum and Polygon zkEVM
  * Contract responsible to manage the token interactions with other networks
  */
-contract Bridge is DepositContract {
+contract Bridge is
+    DepositContract,
+    EmergencyManager,
+    IBridge,
+    OwnableUpgradeable
+{
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     // Wrapped Token information struct
@@ -24,7 +31,10 @@ contract Bridge is DepositContract {
     }
 
     // bytes4(keccak256(bytes("permit(address,address,uint256,uint256,uint8,bytes32,bytes32)")));
-    bytes4 constant _PERMIT_SIGNATURE = 0xd505accf;
+    bytes4 private constant _PERMIT_SIGNATURE = 0xd505accf;
+
+    // bytes4(keccak256(bytes("permit(address,address,uint256,uint256,bool,uint8,bytes32,bytes32)")));
+    bytes4 private constant _PERMIT_SIGNATURE_DAI = 0x8fcbaf0c;
 
     // Mainnet indentifier
     uint32 public constant MAINNET_NETWORK_ID = 0;
@@ -50,8 +60,11 @@ contract Bridge is DepositContract {
     // Global Exit Root address
     IGlobalExitRootManager public globalExitRootManager;
 
-    // Addres of the token wrapped implementation
-    address public tokenImplementation;
+    // Proof of Efficiency address
+    address public poeAddress;
+
+    // Claim timeout period
+    uint256 public claimTimeout;
 
     /**
      * @param _networkID networkID
@@ -59,12 +72,25 @@ contract Bridge is DepositContract {
      */
     function initialize(
         uint32 _networkID,
-        IGlobalExitRootManager _globalExitRootManager
+        IGlobalExitRootManager _globalExitRootManager,
+        address _poeAddress,
+        uint256 _claimTimeout
     ) public virtual initializer {
         networkID = _networkID;
         globalExitRootManager = _globalExitRootManager;
-        tokenImplementation = address(new TokenWrapped());
-        __DepositContract_init();
+        poeAddress = _poeAddress;
+        claimTimeout = _claimTimeout;
+
+        // Initialize OZ contracts
+        __Ownable_init_unchained();
+    }
+
+    modifier onlyProofOfEfficiency() {
+        require(
+            poeAddress == msg.sender,
+            "ProofOfEfficiency::onlyProofOfEfficiency: only Proof of Efficiency contract"
+        );
+        _;
     }
 
     /**
@@ -93,13 +119,18 @@ contract Bridge is DepositContract {
     );
 
     /**
-     * @dev Emitted when a a new wrapped token is created
+     * @dev Emitted when a new wrapped token is created
      */
     event NewWrappedToken(
         uint32 originNetwork,
         address originTokenAddress,
         address wrappedTokenAddress
     );
+
+    /**
+     * @dev Emitted when newClaimTimeout is updated
+     */
+    event SetClaimTimeout(uint256 newClaimTimeout);
 
     /**
      * @notice Deposit add a new leaf to the merkle tree
@@ -115,7 +146,7 @@ contract Bridge is DepositContract {
         address destinationAddress,
         uint256 amount,
         bytes calldata permitData
-    ) public payable virtual {
+    ) public payable virtual ifNotEmergencyState {
         require(
             destinationNetwork != networkID,
             "Bridge::bridge: DESTINATION_CANT_BE_ITSELF"
@@ -145,7 +176,6 @@ contract Bridge is DepositContract {
                 IERC20MetadataUpgradeable(token).symbol(),
                 IERC20MetadataUpgradeable(token).decimals()
             );
-
         }
 
         emit BridgeEvent(
@@ -173,7 +203,7 @@ contract Bridge is DepositContract {
         uint32 destinationNetwork,
         address destinationAddress,
         bytes memory metadata
-    ) public payable virtual {
+    ) public payable ifNotEmergencyState {
         require(
             destinationNetwork != networkID,
             "Bridge::bridge: DESTINATION_CANT_BE_ITSELF"
@@ -218,11 +248,20 @@ contract Bridge is DepositContract {
         address destinationAddress,
         uint256 amount,
         bytes memory metadata
-    ) public {
-        // Check nullifier
-        require(
-            claimNullifier[index] == false,
-            "Bridge::claim: ALREADY_CLAIMED"
+    ) public ifNotEmergencyState {
+        // Verify leaf exist and it does not have been claimed
+        _verifyLeaf(
+            smtProof,
+            index,
+            mainnetExitRoot,
+            rollupExitRoot,
+            originNetwork,
+            originTokenAddress,
+            destinationNetwork,
+            destinationAddress,
+            amount,
+            metadata,
+            LEAF_TYPE_ASSET
         );
 
         // Update nullifier
@@ -272,12 +311,20 @@ contract Bridge is DepositContract {
         address destinationAddress,
         uint256 amount,
         bytes memory metadata
-    ) public {
-        // Should check if is a claimMessage or a claimAssetl
-        // Check nullifier
-        require(
-            claimNullifier[index] == false,
-            "Bridge::claimMessage: ALREADY_CLAIMED"
+    ) public ifNotEmergencyState {
+        // Verify leaf exist and it does not have been claimed
+        _verifyLeaf(
+            smtProof,
+            index,
+            mainnetExitRoot,
+            rollupExitRoot,
+            originNetwork,
+            originAddress,
+            destinationNetwork,
+            destinationAddress,
+            amount,
+            metadata,
+            LEAF_TYPE_MESSAGE
         );
 
         // Update nullifier
@@ -299,16 +346,31 @@ contract Bridge is DepositContract {
      */
     function precalculatedWrapperAddress(
         uint32 originNetwork,
-        address originTokenAddress
+        address originTokenAddress,
+        string calldata name,
+        string calldata symbol,
+        uint8 decimals
     ) public view returns (address) {
         bytes32 salt = keccak256(
             abi.encodePacked(originNetwork, originTokenAddress)
         );
-        return
-            ClonesUpgradeable.predictDeterministicAddress(
-                tokenImplementation,
-                salt
-            );
+
+        bytes32 hashCreate2 = keccak256(
+            abi.encodePacked(
+                bytes1(0xff),
+                address(this),
+                salt,
+                keccak256(
+                    abi.encodePacked(
+                        type(TokenWrapped).creationCode,
+                        abi.encode(name, symbol, decimals)
+                    )
+                )
+            )
+        );
+
+        // last 20 bytes of hash to address
+        return address(uint160(uint256(hashCreate2)));
     }
 
     /**
@@ -327,14 +389,72 @@ contract Bridge is DepositContract {
     }
 
     /**
+     * @notice Function to activate the emergency state
+     " Only can be called by the proof of efficiency in extreme situations
+     */
+    function activateEmergencyState() external onlyProofOfEfficiency {
+        _activateEmergencyState();
+    }
+
+    /**
+     * @notice Function to deactivate the emergency state
+     " Only can be called by the proof of efficiency
+     */
+    function deactivateEmergencyState() external onlyProofOfEfficiency {
+        _deactivateEmergencyState();
+    }
+
+    /**
+     * @notice Function to update the claim timeout
+     * @param newClaimTimeout new claim timeout value
+     * Only can be called by the owner
+     */
+    function setClaimTimeout(uint256 newClaimTimeout) external onlyOwner {
+        claimTimeout = newClaimTimeout;
+        emit SetClaimTimeout(newClaimTimeout);
+    }
+
+    /**
+     * @notice Verify leaf and checks that it has not been claimed
+     * @param smtProof Smt proof
+     * @param index Index of the leaf
+     * @param mainnetExitRoot Mainnet exit root
+     * @param rollupExitRoot Rollup exit root
+     * @param originNetwork Origin network
+     * @param originAddress Origin address
+     * @param destinationNetwork Network destination
+     * @param destinationAddress Address destination
+     * @param amount Amount of tokens
+     * @param metadata Abi encoded metadata if any, empty otherwise
+     * @param leafType Leaf type -->  [0] transfer Ether / ERC20 tokens, [1] message
+     */
+    function _verifyLeaf(
+        bytes32[] memory smtProof,
+        uint32 index,
+        bytes32 mainnetExitRoot,
+        bytes32 rollupExitRoot,
+        uint32 originNetwork,
+        address originAddress,
+        uint32 destinationNetwork,
+        address destinationAddress,
+        uint256 amount,
+        bytes memory metadata,
+        uint8 leafType
+    ) internal {
+        // Check nullifier
+        require(
+            claimNullifier[index] == false,
+            "Bridge::_verifyLeaf: ALREADY_CLAIMED"
+        );
+    }
+
+    /**
      * @notice Function to extract the selector of a bytes calldata
      * @param _data The calldata bytes
      */
-    function _getSelector(bytes memory _data)
-        private
-        pure
-        returns (bytes4 sig)
-    {
+    function _getSelector(
+        bytes memory _data
+    ) private pure returns (bytes4 sig) {
         assembly {
             sig := mload(add(_data, 32))
         }
@@ -352,47 +472,110 @@ contract Bridge is DepositContract {
         bytes calldata permitData
     ) internal {
         bytes4 sig = _getSelector(permitData);
-        require(sig == _PERMIT_SIGNATURE, "Bridge::_permit: NOT_VALID_CALL");
-        (
-            address owner,
-            address spender,
-            uint256 value,
-            uint256 deadline,
-            uint8 v,
-            bytes32 r,
-            bytes32 s
-        ) = abi.decode(
-                permitData[4:],
-                (address, address, uint256, uint256, uint8, bytes32, bytes32)
+        if (sig == _PERMIT_SIGNATURE) {
+            (
+                address owner,
+                address spender,
+                uint256 value,
+                uint256 deadline,
+                uint8 v,
+                bytes32 r,
+                bytes32 s
+            ) = abi.decode(
+                    permitData[4:],
+                    (
+                        address,
+                        address,
+                        uint256,
+                        uint256,
+                        uint8,
+                        bytes32,
+                        bytes32
+                    )
+                );
+            require(
+                owner == msg.sender,
+                "Bridge::_permit: PERMIT_OWNER_MUST_BE_THE_SENDER"
             );
-        require(
-            owner == msg.sender,
-            "Bridge::_permit: PERMIT_OWNER_MUST_BE_THE_SENDER"
-        );
-        require(
-            spender == address(this),
-            "Bridge::_permit: SPENDER_MUST_BE_THIS"
-        );
-        require(
-            value == amount,
-            "Bridge::_permit: PERMIT_AMOUNT_DOES_NOT_MATCH"
-        );
+            require(
+                spender == address(this),
+                "Bridge::_permit: SPENDER_MUST_BE_THIS"
+            );
+            require(
+                value == amount,
+                "Bridge::_permit: PERMIT_AMOUNT_DOES_NOT_MATCH"
+            );
 
-        // we call without checking the result, in case it fails and he doesn't have enough balance
-        // the following transferFrom should be fail. This prevents DoS attacks from using a signature
-        // before the smartcontract call
-        /* solhint-disable avoid-low-level-calls */
-        address(token).call(
-            abi.encodeWithSelector(
-                _PERMIT_SIGNATURE,
-                owner,
-                spender,
-                value,
-                deadline,
-                v,
-                r,
-                s
-            )
-        );
+            // we call without checking the result, in case it fails and he doesn't have enough balance
+            // the following transferFrom should be fail. This prevents DoS attacks from using a signature
+            // before the smartcontract call
+            /* solhint-disable avoid-low-level-calls */
+            address(token).call(
+                abi.encodeWithSelector(
+                    _PERMIT_SIGNATURE,
+                    owner,
+                    spender,
+                    value,
+                    deadline,
+                    v,
+                    r,
+                    s
+                )
+            );
+        } else {
+            require(
+                sig == _PERMIT_SIGNATURE_DAI,
+                "Bridge::_permit: NOT_VALID_CALL"
+            );
+
+            (
+                address holder,
+                address spender,
+                uint256 nonce,
+                uint256 expiry,
+                bool allowed,
+                uint8 v,
+                bytes32 r,
+                bytes32 s
+            ) = abi.decode(
+                    permitData[4:],
+                    (
+                        address,
+                        address,
+                        uint256,
+                        uint256,
+                        bool,
+                        uint8,
+                        bytes32,
+                        bytes32
+                    )
+                );
+            require(
+                holder == msg.sender,
+                "Bridge::_permit: PERMIT_OWNER_MUST_BE_THE_SENDER"
+            );
+            require(
+                spender == address(this),
+                "Bridge::_permit: SPENDER_MUST_BE_THIS"
+            );
+
+            // we call without checking the result, in case it fails and he doesn't have enough balance
+            // the following transferFrom should be fail. This prevents DoS attacks from using a signature
+            // before the smartcontract call
+            /* solhint-disable avoid-low-level-calls */
+            address(token).call(
+                abi.encodeWithSelector(
+                    _PERMIT_SIGNATURE_DAI,
+                    holder,
+                    spender,
+                    nonce,
+                    expiry,
+                    allowed,
+                    v,
+                    r,
+                    s
+                )
+            );
+        }
     }
 }

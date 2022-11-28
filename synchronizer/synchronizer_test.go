@@ -180,7 +180,7 @@ func TestTrustedStateReorg(t *testing.T) {
 						common.HexToHash(broadcast.MainnetExitRoot),
 						common.HexToHash(broadcast.RollupExitRoot),
 					},
-					GlobalExitRootNum: big.NewInt(0),
+					Timestamp: time.Unix(0, 0),
 				}
 
 				m.Storage.
