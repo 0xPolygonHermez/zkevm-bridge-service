@@ -156,7 +156,7 @@ func (s *ClientSynchronizer) syncTrustedState() error {
 			common.HexToHash(lastBatch.MainnetExitRoot),
 			common.HexToHash(lastBatch.RollupExitRoot),
 		},
-		GlobalExitRootNum: new(big.Int).SetUint64(lastBatch.BatchNumber),
+		Timestamp: time.Unix(int64(lastBatch.GlobalExitRootTimestamp), 0),
 	}
 	err = s.storage.AddTrustedGlobalExitRoot(s.ctx, ger, nil)
 	if err != nil {

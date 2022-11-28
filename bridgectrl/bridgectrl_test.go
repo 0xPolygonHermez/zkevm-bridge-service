@@ -9,6 +9,7 @@ import (
 	"path"
 	"runtime"
 	"testing"
+	"time"
 
 	"github.com/0xPolygonHermez/zkevm-bridge-service/db/pgstorage"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman"
@@ -93,18 +94,18 @@ func TestBridgeTree(t *testing.T) {
 			assert.Equal(t, orgRoot, newRoot)
 
 			err = store.AddGlobalExitRoot(context.TODO(), &etherman.GlobalExitRoot{
-				BlockNumber:       uint64(i + 1),
-				GlobalExitRootNum: big.NewInt(int64(i)),
-				ExitRoots:         []common.Hash{common.BytesToHash(bt.exitTrees[0].root[:]), common.BytesToHash(bt.exitTrees[1].root[:])},
-				BlockID:           id,
+				BlockNumber: uint64(i + 1),
+				Timestamp:   time.Now(),
+				ExitRoots:   []common.Hash{common.BytesToHash(bt.exitTrees[0].root[:]), common.BytesToHash(bt.exitTrees[1].root[:])},
+				BlockID:     id,
 			}, nil)
 			require.NoError(t, err)
 
 			err = store.AddTrustedGlobalExitRoot(context.TODO(), &etherman.GlobalExitRoot{
-				BlockNumber:       0,
-				GlobalExitRootNum: big.NewInt(int64(i)),
-				ExitRoots:         []common.Hash{common.BytesToHash(bt.exitTrees[0].root[:]), common.BytesToHash(bt.exitTrees[1].root[:])},
-				BlockID:           id,
+				BlockNumber: 0,
+				Timestamp:   time.Now(),
+				ExitRoots:   []common.Hash{common.BytesToHash(bt.exitTrees[0].root[:]), common.BytesToHash(bt.exitTrees[1].root[:])},
+				BlockID:     id,
 			}, nil)
 			require.NoError(t, err)
 		}
