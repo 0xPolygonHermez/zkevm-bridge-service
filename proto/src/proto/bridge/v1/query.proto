@@ -98,9 +98,8 @@ message Claim {
 message Proof {
     repeated string merkle_proof = 1;
     uint64 timestamp = 2;
-    uint64 l2_timestamp = 3;
-    string main_exit_root = 4;
-    string rollup_exit_root = 5;
+    string main_exit_root = 3;
+    string rollup_exit_root = 4;
 }
 
 // Get requests

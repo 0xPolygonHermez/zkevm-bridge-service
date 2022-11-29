@@ -55,7 +55,6 @@ func main() {
 	log.Debug("bridge: ", bridgeData)
 	log.Debug("mainnetExitRoot: ", proof.MainExitRoot)
 	log.Debug("rollupExitRoot: ", proof.RollupExitRoot)
-	log.Debug("L2Timestamp: ", proof.L2Timestamp)
 	log.Debug("Timestamp: ", proof.Timestamp)
 
 	var smt [][32]byte

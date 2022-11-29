@@ -5,7 +5,6 @@ import (
 	"encoding/hex"
 
 	"github.com/0xPolygonHermez/zkevm-bridge-service/bridgectrl/pb"
-	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/utils/gerror"
 	"github.com/ethereum/go-ethereum/common"
 )
@@ -199,7 +198,6 @@ func (s *bridgeService) GetTokenWrapped(ctx context.Context, req *pb.GetTokenWra
 func (s *bridgeService) getDepositStatus(ctx context.Context, depositCount uint, networkID uint, destNetworkID uint) (string, bool, error) {
 	var (
 		claimTxHash string
-		exitRoot    *etherman.GlobalExitRoot
 	)
 	// Get the claim tx hash
 	claim, err := s.storage.GetClaim(ctx, depositCount, destNetworkID, nil)
@@ -211,12 +209,12 @@ func (s *bridgeService) getDepositStatus(ctx context.Context, depositCount uint,
 		claimTxHash = claim.TxHash.String()
 	}
 	// Get the claim readiness
-	if networkID == MainNetworkID {
-		exitRoot, err = s.bridgeCtrl.storage.GetLatestTrustedExitRoot(ctx, nil)
-	} else {
-		exitRoot, err = s.bridgeCtrl.storage.GetLatestL1SyncedExitRoot(ctx, nil)
+	tID, found := s.bridgeCtrl.networkIDs[networkID]
+	if !found {
+		return "", false, gerror.ErrNetworkNotRegister
 	}
 
+	localExitRoot, err := s.bridgeCtrl.storage.GetRoot(ctx, depositCount+1, tID, nil)
 	if err != nil {
 		if err != gerror.ErrStorageNotFound {
 			return "", false, err
@@ -224,17 +222,13 @@ func (s *bridgeService) getDepositStatus(ctx context.Context, depositCount uint,
 		return claimTxHash, false, nil
 	}
 
-	tID, found := s.bridgeCtrl.networkIDs[networkID]
-	if !found {
-		return "", false, gerror.ErrNetworkNotRegister
-	}
-	depositCnt, err := s.bridgeCtrl.storage.GetDepositCountByRoot(ctx, exitRoot.ExitRoots[tID][:], uint8(tID), nil)
+	_, err = s.bridgeCtrl.storage.GetGERByLocalExitRoot(ctx, common.BytesToHash(localExitRoot), uint8(tID+1), nil)
 	if err != nil {
 		if err != gerror.ErrStorageNotFound {
 			return "", false, err
 		}
-		depositCnt = 0
+		return claimTxHash, false, nil
 	}
 
-	return claimTxHash, depositCnt > depositCount, nil
+	return claimTxHash, true, nil
 }

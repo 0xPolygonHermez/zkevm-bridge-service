@@ -540,7 +540,9 @@ func (m *Manager) SendL2Claim(ctx context.Context, deposit *pb.Deposit, smtProof
 		return err
 	}
 
-	auth.GasPrice = big.NewInt(0)
+	if deposit.LeafType == utils.LeafTypeAsset {
+		auth.GasPrice = big.NewInt(0)
+	}
 
 	err = client.SendClaim(ctx, deposit, smtProof, globalExitRoot, common.HexToAddress(l2BridgeAddr), auth)
 	return err
