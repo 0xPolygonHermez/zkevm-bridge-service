@@ -371,8 +371,8 @@ cloud.google.com/go/workflows v1.8.0/go.mod h1:ysGhmEajwZxGn1OhGOGKsTXc5PyxOc0vf
 cloud.google.com/go/workflows v1.9.0/go.mod h1:ZGkj1aFIOd9c8Gerkjjq7OW7I5+l6cSvT3ujaO/WwSA=
 collectd.org v0.3.0/go.mod h1:A/8DzQBkF6abtvrT2j/AU/4tiBgJWYyh0y/oB/4MlWE=
 dmitri.shuralyov.com/gpu/mtl v0.0.0-20190408044501-666a987793e9/go.mod h1:H6x//7gZCb22OMCxBHrMx7a5I7Hp++hsVxbQ4BYO7hU=
-github.com/0xPolygonHermez/zkevm-node v0.0.0-20221125083245-0d9f898e8640 h1:PVCYWGtX9EtzXFoEnWYBndtfLhM511PXYntMsgN0cXc=
-github.com/0xPolygonHermez/zkevm-node v0.0.0-20221125083245-0d9f898e8640/go.mod h1:Xc397jt2YdMKO2hLYT2WA50SDRTOKWPY9YRTF5ZPofE=
+github.com/0xPolygonHermez/zkevm-node v0.0.0-20221129113551-d1e257076591 h1:ZjBpW4vcxJAxSyK46hfi2nue131i2bN6gCySlJzq7rs=
+github.com/0xPolygonHermez/zkevm-node v0.0.0-20221129113551-d1e257076591/go.mod h1:Xc397jt2YdMKO2hLYT2WA50SDRTOKWPY9YRTF5ZPofE=
 github.com/Azure/azure-sdk-for-go/sdk/azcore v0.21.1/go.mod h1:fBF9PQNqB8scdgpZ3ufzaLntG0AG7C1WjPMsiFOmfHM=
 github.com/Azure/azure-sdk-for-go/sdk/internal v0.8.3/go.mod h1:KLF4gFr6DcKFZwSuH8w8yEK6DpFl3LP5rhdvAb7Yz5I=
 github.com/Azure/azure-sdk-for-go/sdk/storage/azblob v0.3.0/go.mod h1:tPaiy8S5bQ+S5sOiDlINkp7+Ef339+Nz5L5XO+cnOHo=
