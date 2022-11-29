@@ -53,7 +53,7 @@ func TestGEREvent(t *testing.T) {
 
 	amount := big.NewInt(1000000000000000)
 	auth.Value = amount
-	_, err = etherman.Bridge.Bridge(auth, common.Address{}, 1, auth.From, amount, []byte{})
+	_, err = etherman.Bridge.BridgeAsset(auth, common.Address{}, 1, auth.From, amount, []byte{})
 	require.NoError(t, err)
 
 	// Mine the tx in a block
@@ -169,7 +169,7 @@ func TestVerifyBatchEvent(t *testing.T) {
 		proofC = [2]*big.Int{big.NewInt(1), big.NewInt(1)}
 		proofB = [2][2]*big.Int{proofC, proofC}
 	)
-	_, err = etherman.PoE.VerifyBatch(auth, common.Hash{}, common.Hash{}, 1, proofA, proofB, proofC)
+	_, err = etherman.PoE.VerifyBatches(auth, 0, 1, common.Hash{}, common.Hash{}, proofA, proofB, proofC)
 	require.NoError(t, err)
 
 	// Mine the tx in a block
@@ -214,7 +214,19 @@ func TestSequenceForceBatchesEvent(t *testing.T) {
 	require.NoError(t, err)
 	ethBackend.Commit()
 
-	_, err = etherman.PoE.SequenceForceBatches(auth, 1)
+	// Now read the event
+	finalBlock, err := etherman.EtherClient.BlockByNumber(ctx, nil)
+	require.NoError(t, err)
+	finalBlockNumber := finalBlock.NumberU64()
+	blocks, _, err := etherman.GetRollupInfoByBlockRange(ctx, initBlock.NumberU64(), &finalBlockNumber)
+	require.NoError(t, err)
+
+	forceBatchData := proofofefficiency.ProofOfEfficiencyForceBatchData{
+		Transactions:       blocks[0].ForcedBatches[0].RawTxsData,
+		GlobalExitRoot:     blocks[0].ForcedBatches[0].GlobalExitRoot,
+		MinForcedTimestamp: uint64(blocks[0].ForcedBatches[0].ForcedAt.Unix()),
+	}
+	_, err = etherman.PoE.SequenceForceBatches(auth, []proofofefficiency.ProofOfEfficiencyForceBatchData{forceBatchData})
 	require.NoError(t, err)
 	ethBackend.Commit()
 
@@ -243,7 +255,7 @@ func TestBridgeEvents(t *testing.T) {
 	amount := big.NewInt(9000000000000000000)
 	var destNetwork uint32 = 1 // 0 is reserved to mainnet. This variable is set in the smc
 	destinationAddr := common.HexToAddress("0x61A1d716a74fb45d29f148C6C20A2eccabaFD753")
-	_, err = bridge.Bridge(auth, maticAddr, destNetwork, destinationAddr, amount, []byte{})
+	_, err = bridge.BridgeAsset(auth, maticAddr, destNetwork, destinationAddr, amount, []byte{})
 	require.NoError(t, err)
 
 	// Mine the tx in a block
@@ -270,7 +282,7 @@ func TestBridgeEvents(t *testing.T) {
 	// globalExitRootNum := block[0].GlobalExitRoots[0].GlobalExitRootNum
 
 	destNetwork = 1
-	_, err = bridge.Claim(auth, smtProof, index, mainnetExitRoot, rollupExitRoot,
+	_, err = bridge.ClaimAsset(auth, smtProof, index, mainnetExitRoot, rollupExitRoot,
 		network, maticAddr, destNetwork, auth.From, big.NewInt(1000000000000000000), []byte{})
 	require.NoError(t, err)
 
@@ -286,7 +298,7 @@ func TestBridgeEvents(t *testing.T) {
 	assert.Equal(t, ClaimsOrder, order[block[0].BlockHash][1].Name)
 	assert.Equal(t, big.NewInt(1000000000000000000), block[0].Claims[0].Amount)
 	assert.Equal(t, uint64(3), block[0].BlockNumber)
-	assert.NotEqual(t, common.Address{}, block[0].Claims[0].Token)
+	assert.NotEqual(t, common.Address{}, block[0].Claims[0].OriginalAddress)
 	assert.Equal(t, auth.From, block[0].Claims[0].DestinationAddress)
 	assert.Equal(t, uint(0), block[0].Claims[0].Index)
 	assert.Equal(t, uint(0), block[0].Claims[0].OriginalNetwork)
