@@ -305,6 +305,24 @@ func (p *PostgresStorage) GetDeposit(ctx context.Context, depositCounterUser uin
 	return &deposit, err
 }
 
+// GetGERByLocalExitRoot gets the global exit root by the local exit root.
+func (p *PostgresStorage) GetGERByLocalExitRoot(ctx context.Context, exitRoot common.Hash, networkID uint8, dbTx pgx.Tx) (*etherman.GlobalExitRoot, error) {
+	var (
+		ger       etherman.GlobalExitRoot
+		exitRoots [][]byte
+	)
+	const getGERByLocalExitRootSQL = "SELECT block_id, timestamp, global_exit_root, exit_roots FROM syncv2.exit_root WHERE exit_roots[$1] = $2"
+	err := p.getExecQuerier(dbTx).QueryRow(ctx, getGERByLocalExitRootSQL, networkID, exitRoot).Scan(&ger.BlockID, &ger.Timestamp, &ger.GlobalExitRoot, pq.Array(&exitRoots))
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, gerror.ErrStorageNotFound
+		}
+		return nil, err
+	}
+	ger.ExitRoots = []common.Hash{common.BytesToHash(exitRoots[0]), common.BytesToHash(exitRoots[1])}
+	return &ger, nil
+}
+
 // GetLatestExitRoot gets the latest global exit root.
 func (p *PostgresStorage) GetLatestExitRoot(ctx context.Context, isRollup bool, dbTx pgx.Tx) (*etherman.GlobalExitRoot, error) {
 	if !isRollup {

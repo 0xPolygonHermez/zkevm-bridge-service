@@ -72,7 +72,7 @@ func TestBridgeTree(t *testing.T) {
 				DestinationNetwork: testVector.DestinationNetwork,
 				DestinationAddress: common.HexToAddress(testVector.DestinationAddress),
 				BlockNumber:        0,
-				DepositCount:       uint(i + 1),
+				DepositCount:       uint(i),
 				Metadata:           common.FromHex(testVector.Metadata),
 			}
 			leafHash := hashDeposit(deposit)
@@ -82,7 +82,6 @@ func TestBridgeTree(t *testing.T) {
 			require.NoError(t, err)
 
 			// test reorg
-
 			orgRoot, err := bt.exitTrees[0].store.GetRoot(ctx, uint(i+1), 0, nil)
 			require.NoError(t, err)
 			err = bt.ReorgMT(uint(i), testVectors[i].OriginalNetwork)
@@ -111,7 +110,7 @@ func TestBridgeTree(t *testing.T) {
 		}
 
 		for i, testVector := range testVectors {
-			proof, _, err := bt.GetClaim(testVector.OriginalNetwork, uint(i+1))
+			proof, _, err := bt.GetClaim(testVector.OriginalNetwork, uint(i))
 			require.NoError(t, err)
 			require.Equal(t, len(proof), 32)
 		}

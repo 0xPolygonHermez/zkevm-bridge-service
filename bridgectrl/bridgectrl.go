@@ -75,20 +75,16 @@ func (bt *BridgeController) GetClaim(networkID uint, index uint) ([][KeyLen]byte
 		return proof, nil, gerror.ErrNetworkNotRegister
 	}
 	ctx := context.TODO()
-	if networkID == MainNetworkID {
-		globalExitRoot, err = bt.storage.GetLatestTrustedExitRoot(ctx, nil)
-	} else {
-		globalExitRoot, err = bt.storage.GetLatestL1SyncedExitRoot(ctx, nil)
+	localExitRoot, err := bt.storage.GetRoot(ctx, index+1, tID, nil)
+	if err != nil {
+		return proof, nil, fmt.Errorf("getting the local exit root from the merkle tree failed, error: %v", err)
 	}
 
+	globalExitRoot, err = bt.storage.GetGERByLocalExitRoot(ctx, common.BytesToHash(localExitRoot), uint8(tID+1), nil)
 	if err != nil {
-		return proof, nil, fmt.Errorf("getting the last GER failed, error: %v", err)
-	}
-	depositCnt, err := bt.storage.GetDepositCountByRoot(ctx, globalExitRoot.ExitRoots[tID][:], tID, nil)
-	if err != nil {
-		return proof, nil, fmt.Errorf("getting deposit count from the MT root failed, error: %v, root: %v, network: %d", err, globalExitRoot.ExitRoots[tID][:], tID)
-	}
-	if depositCnt < index {
+		if err != gerror.ErrStorageNotFound {
+			return proof, nil, fmt.Errorf("getting the GER failed, error: %v", err)
+		}
 		return proof, nil, gerror.ErrDepositNotSynced
 	}
 

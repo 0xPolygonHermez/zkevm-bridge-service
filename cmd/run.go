@@ -2,11 +2,8 @@ package main
 
 import (
 	"context"
-	"io/ioutil"
-	"math/big"
 	"os"
 	"os/signal"
-	"path/filepath"
 
 	"github.com/0xPolygonHermez/zkevm-bridge-service/bridgectrl"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/config"
@@ -18,8 +15,6 @@ import (
 	"github.com/0xPolygonHermez/zkevm-bridge-service/utils/gerror"
 	"github.com/0xPolygonHermez/zkevm-node/log"
 	"github.com/0xPolygonHermez/zkevm-node/sequencer/broadcast/pb"
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/urfave/cli/v2"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -47,6 +42,7 @@ func start(ctx *cli.Context) error {
 	}
 
 	networkID, err := etherman.GetNetworkID(context.Background())
+	log.Infof("main network id: %d", networkID)
 	if err != nil {
 		log.Error(err)
 		return err
@@ -60,7 +56,7 @@ func start(ctx *cli.Context) error {
 			log.Error(err)
 			return err
 		}
-
+		log.Infof("l2 network id: %d", networkID)
 		networkIDs = append(networkIDs, networkID)
 	}
 
@@ -120,11 +116,7 @@ func setupLog(c log.Config) {
 }
 
 func newEthermans(c config.Config) (*etherman.Client, []*etherman.Client, error) {
-	auth, err := newAuthFromKeystore(c.Etherman.PrivateKeyPath, c.Etherman.PrivateKeyPassword, c.NetworkConfig.L1ChainID)
-	if err != nil {
-		return nil, nil, err
-	}
-	l1Etherman, err := etherman.NewClient(c.Etherman, auth, c.NetworkConfig.PoEAddr, c.NetworkConfig.BridgeAddr, c.NetworkConfig.GlobalExitRootManAddr)
+	l1Etherman, err := etherman.NewClient(c.Etherman, c.NetworkConfig.PoEAddr, c.NetworkConfig.BridgeAddr, c.NetworkConfig.GlobalExitRootManAddr)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -159,32 +151,4 @@ func runSynchronizer(genBlockNumber uint64, brdigeCtrl *bridgectrl.BridgeControl
 	if err := sy.Sync(); err != nil {
 		log.Fatal(err)
 	}
-}
-
-func newKeyFromKeystore(path, password string) (*keystore.Key, error) {
-	if path == "" && password == "" {
-		return nil, nil
-	}
-	keystoreEncrypted, err := ioutil.ReadFile(filepath.Clean(path))
-	if err != nil {
-		return nil, err
-	}
-	key, err := keystore.DecryptKey(keystoreEncrypted, password)
-	if err != nil {
-		return nil, err
-	}
-	return key, nil
-}
-
-func newAuthFromKeystore(path, password string, chainID uint64) (*bind.TransactOpts, error) {
-	key, err := newKeyFromKeystore(path, password)
-	if err != nil {
-		log.Fatal(err)
-	}
-	log.Info("addr: ", key.Address.Hex())
-	auth, err := bind.NewKeyedTransactorWithChainID(key.PrivateKey, new(big.Int).SetUint64(chainID))
-	if err != nil {
-		log.Fatal(err)
-	}
-	return auth, nil
 }

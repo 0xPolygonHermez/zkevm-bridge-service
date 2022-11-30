@@ -95,7 +95,7 @@ services:
 
   zkevm-prover:
     container_name: zkevm-prover
-    image: hermeznetwork/zkevm-prover:98676e8
+    image: hermeznetwork/zkevm-prover:develop
     ports:
       - 50051:50051 # Prover
       - 50052:50052 # MockProver
@@ -118,9 +118,7 @@ services:
       - ZKEVM_BRIDGE_DATABASE_NAME=test_db
       - ZKEVM_BRIDGE_DATABASE_HOST=zkevm-bridge-db
       - ZKEVM_BRIDGE_DATABASE_PORT=5432
-      - ZKEVM_BRIDGE_ETHERMAN_PRIVATEKEYPATH=/pk/keystore
     volumes:
-      - ./test/test.keystore:/pk/keystore
       - ./config/config.local.toml:/app/config.toml
     command:
       - "/bin/sh"
