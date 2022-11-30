@@ -109,18 +109,6 @@ func (bt *BridgeController) ReorgMT(depositCount uint, networkID uint) error {
 	return bt.exitTrees[tID].resetLeaf(context.TODO(), depositCount)
 }
 
-// CheckExitRoot checks if each exitRoot is synchronized exactly
-func (bt *BridgeController) CheckExitRoot(globalExitRoot etherman.GlobalExitRoot) error {
-	for i, exitRoot := range globalExitRoot.ExitRoots {
-		_, err := bt.storage.GetDepositCountByRoot(context.TODO(), exitRoot[:], uint8(i), nil)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
 // MockAddDeposit adds deposit information to the bridge tree with globalExitRoot.
 func (bt *BridgeController) MockAddDeposit(deposit *etherman.Deposit) error {
 	err := bt.AddDeposit(deposit)
