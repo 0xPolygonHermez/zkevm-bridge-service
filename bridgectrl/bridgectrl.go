@@ -29,7 +29,7 @@ var (
 )
 
 // NewBridgeController creates new BridgeController.
-func NewBridgeController(cfg Config, networks []uint, storage bridgeStorage, store merkleTreeStore) (*BridgeController, error) {
+func NewBridgeController(cfg Config, networks []uint, bridgeStore interface{}, mtStore interface{}) (*BridgeController, error) {
 	var (
 		networkIDs = make(map[uint]uint8)
 		exitTrees  []*MerkleTree
@@ -37,7 +37,7 @@ func NewBridgeController(cfg Config, networks []uint, storage bridgeStorage, sto
 
 	for i, network := range networks {
 		networkIDs[network] = uint8(i)
-		mt, err := NewMerkleTree(context.TODO(), store, cfg.Height, uint8(i))
+		mt, err := NewMerkleTree(context.TODO(), mtStore.(merkleTreeStore), cfg.Height, uint8(i))
 		if err != nil {
 			return nil, err
 		}
@@ -47,7 +47,7 @@ func NewBridgeController(cfg Config, networks []uint, storage bridgeStorage, sto
 	return &BridgeController{
 		exitTrees:  exitTrees,
 		networkIDs: networkIDs,
-		storage:    storage,
+		storage:    bridgeStore.(bridgeStorage),
 	}, nil
 }
 

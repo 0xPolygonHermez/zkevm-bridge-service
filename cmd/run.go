@@ -8,7 +8,6 @@ import (
 	"github.com/0xPolygonHermez/zkevm-bridge-service/bridgectrl"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/config"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/db"
-	"github.com/0xPolygonHermez/zkevm-bridge-service/db/pgstorage"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/server"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/synchronizer"
@@ -68,26 +67,13 @@ func start(ctx *cli.Context) error {
 	var bridgeController *bridgectrl.BridgeController
 
 	if c.BridgeController.Store == "postgres" {
-		pgStorage, err := pgstorage.NewPostgresStorage(pgstorage.Config{
-			User:     c.Database.User,
-			Password: c.Database.Password,
-			Name:     c.Database.Name,
-			Host:     c.Database.Host,
-			Port:     c.Database.Port,
-			MaxConns: c.Database.MaxConns,
-		})
+		bridgeController, err = bridgectrl.NewBridgeController(c.BridgeController, networkIDs, storage, storage)
 		if err != nil {
 			log.Error(err)
 			return err
 		}
 
-		bridgeController, err = bridgectrl.NewBridgeController(c.BridgeController, networkIDs, pgStorage, pgStorage)
-		if err != nil {
-			log.Error(err)
-			return err
-		}
-
-		err = server.RunServer(pgStorage, bridgeController, c.BridgeServer)
+		err = server.RunServer(storage, bridgeController, c.BridgeServer)
 		if err != nil {
 			log.Error(err)
 			return err
