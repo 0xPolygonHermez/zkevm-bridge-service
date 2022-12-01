@@ -24,12 +24,12 @@ type MerkleTree struct {
 }
 
 func init() {
-	/* 
+	/*
 	* We set 64 levels because the height is not known yet. Also it is initialized here to avoid run this
 	* function twice (one for mainnetExitTree and another for RollupExitTree).
 	* If we receive a height of 32, we would need to use only the first 32 values of the array.
 	* If we need more level than 64 for the mt we need to edit this value here and set for example 128.
-	*/
+	 */
 	zeroHashes = generateZeroHashes(64) // nolint
 }
 
@@ -89,25 +89,25 @@ func (mt *MerkleTree) getSiblings(ctx context.Context, index uint, root [KeyLen]
 		copy(right[:], value[1])
 
 		/*
-		*        Root                (level h=3 => height=4)
-		*      /     \
-		*	 O5       O6             (level h=2)
-		*	/ \      / \
-		*  O1  O2   O3  O4           (level h=1)
-        *  /\   /\   /\ /\
-		* 0  1 2  3 4 5 6 7 Leafs    (level h=0)
-		* Example 1:
-		* Choose index = 3 => 011 binary
-		* Assuming we are in level 1 => h=1; 1<<h = 010 binary
-		* Now, let's do AND operation => 011&010=010 which is higher than 0 so we need the left sibling (O1)
-		* Example 2:
-		* Choose index = 4 => 100 binary
-		* Assuming we are in level 1 => h=1; 1<<h = 010 binary
-		* Now, let's do AND operation => 100&010=000 which is not higher than 0 so we need the right sibling (O4)
-		* Example 3:
-		* Choose index = 4 => 100 binary
-		* Assuming we are in level 2 => h=2; 1<<h = 100 binary
-		* Now, let's do AND operation => 100&100=100 which is higher than 0 so we need the left sibling (O5)
+					*        Root                (level h=3 => height=4)
+					*      /     \
+					*	 O5       O6             (level h=2)
+					*	/ \      / \
+					*  O1  O2   O3  O4           (level h=1)
+			        *  /\   /\   /\ /\
+					* 0  1 2  3 4 5 6 7 Leafs    (level h=0)
+					* Example 1:
+					* Choose index = 3 => 011 binary
+					* Assuming we are in level 1 => h=1; 1<<h = 010 binary
+					* Now, let's do AND operation => 011&010=010 which is higher than 0 so we need the left sibling (O1)
+					* Example 2:
+					* Choose index = 4 => 100 binary
+					* Assuming we are in level 1 => h=1; 1<<h = 010 binary
+					* Now, let's do AND operation => 100&010=000 which is not higher than 0 so we need the right sibling (O4)
+					* Example 3:
+					* Choose index = 4 => 100 binary
+					* Assuming we are in level 2 => h=2; 1<<h = 100 binary
+					* Now, let's do AND operation => 100&100=100 which is higher than 0 so we need the left sibling (O5)
 		*/
 
 		if index&(1<<h) > 0 {

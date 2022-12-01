@@ -5,8 +5,8 @@ import (
 	"math/big"
 	"time"
 
-	clientUtils "github.com/0xPolygonHermez/zkevm-bridge-service/test/client"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman"
+	clientUtils "github.com/0xPolygonHermez/zkevm-bridge-service/test/client"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/utils"
 	"github.com/0xPolygonHermez/zkevm-node/log"
 	"github.com/ethereum/go-ethereum/common"
