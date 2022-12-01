@@ -16,6 +16,9 @@ import (
 	"github.com/lib/pq"
 )
 
+// MainNetworkID identify the main network ID
+const MainNetworkID = 1
+
 // PostgresStorage implements the Storage interface.
 type PostgresStorage struct {
 	*pgxpool.Pool
@@ -308,10 +311,16 @@ func (p *PostgresStorage) GetDeposit(ctx context.Context, depositCounterUser uin
 // GetGERByLocalExitRoot gets the global exit root by the local exit root.
 func (p *PostgresStorage) GetGERByLocalExitRoot(ctx context.Context, exitRoot common.Hash, networkID uint8, dbTx pgx.Tx) (*etherman.GlobalExitRoot, error) {
 	var (
-		ger       etherman.GlobalExitRoot
-		exitRoots [][]byte
+		ger                      etherman.GlobalExitRoot
+		exitRoots                [][]byte
+		getGERByLocalExitRootSQL string
 	)
-	const getGERByLocalExitRootSQL = "SELECT block_id, timestamp, global_exit_root, exit_roots FROM syncv2.exit_root WHERE exit_roots[$1] = $2"
+	if networkID == MainNetworkID {
+		getGERByLocalExitRootSQL = "SELECT block_id, timestamp, global_exit_root, exit_roots FROM syncv2.exit_root WHERE exit_roots[$1] = $2 AND block_id = 0"
+	} else {
+		getGERByLocalExitRootSQL = "SELECT block_id, timestamp, global_exit_root, exit_roots FROM syncv2.exit_root WHERE exit_roots[$1] = $2 AND block_id > 0"
+	}
+
 	err := p.getExecQuerier(dbTx).QueryRow(ctx, getGERByLocalExitRootSQL, networkID, exitRoot).Scan(&ger.BlockID, &ger.Timestamp, &ger.GlobalExitRoot, pq.Array(&exitRoots))
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
