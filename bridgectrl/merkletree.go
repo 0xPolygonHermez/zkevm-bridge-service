@@ -24,6 +24,12 @@ type MerkleTree struct {
 }
 
 func init() {
+	/* 
+	* We set 64 levels because the height is not known yet. Also it is initialized here to avoid run this
+	* function twice (one for mainnetExitTree and another for RollupExitTree).
+	* If we receive a height of 32, we would need to use only the first 32 values of the array.
+	* If we need more level than 64 for the mt we need to edit this value here and set for example 128.
+	*/
 	zeroHashes = generateZeroHashes(64) // nolint
 }
 
@@ -33,6 +39,8 @@ func NewMerkleTree(ctx context.Context, store merkleTreeStore, height, network u
 	if err != nil {
 		if err == gerror.ErrStorageNotFound {
 			for h := uint8(0); h < height; h++ {
+				// h+1 is the position of the parent node and h is the position of the values of the children nodes. As all the nodes of the same nodes has the same values
+				// we can only store the info ones
 				err := store.Set(ctx, zeroHashes[h+1][:], [][]byte{zeroHashes[h][:], zeroHashes[h][:]}, nil)
 				if err != nil {
 					return nil, err
@@ -70,6 +78,7 @@ func (mt *MerkleTree) getSiblings(ctx context.Context, index uint, root [KeyLen]
 	)
 
 	cur := root
+	// It starts in height-1 because 0 is the level of the leafs
 	for h := mt.height - 1; ; h-- {
 		value, err := mt.store.Get(ctx, cur[:], nil)
 		if err != nil {
@@ -78,6 +87,28 @@ func (mt *MerkleTree) getSiblings(ctx context.Context, index uint, root [KeyLen]
 
 		copy(left[:], value[0])
 		copy(right[:], value[1])
+
+		/*
+		*        Root                (level h=3 => height=4)
+		*      /     \
+		*	 O5       O6             (level h=2)
+		*	/ \      / \
+		*  O1  O2   O3  O4           (level h=1)
+        *  /\   /\   /\ /\
+		* 0  1 2  3 4 5 6 7 Leafs    (level h=0)
+		* Example 1:
+		* Choose index = 3 => 011 binary
+		* Assuming we are in level 1 => h=1; 1<<h = 010 binary
+		* Now, let's do AND operation => 011&010=010 which is higher than 0 so we need the left sibling (O1)
+		* Example 2:
+		* Choose index = 4 => 100 binary
+		* Assuming we are in level 1 => h=1; 1<<h = 010 binary
+		* Now, let's do AND operation => 100&010=000 which is not higher than 0 so we need the right sibling (O4)
+		* Example 3:
+		* Choose index = 4 => 100 binary
+		* Assuming we are in level 2 => h=2; 1<<h = 100 binary
+		* Now, let's do AND operation => 100&100=100 which is higher than 0 so we need the left sibling (O5)
+		*/
 
 		if index&(1<<h) > 0 {
 			siblings = append(siblings, left)
@@ -92,6 +123,7 @@ func (mt *MerkleTree) getSiblings(ctx context.Context, index uint, root [KeyLen]
 		}
 	}
 
+	// We need to invert the siblings to go from leafs to the top
 	for st, en := 0, len(siblings)-1; st < en; st, en = st+1, en-1 {
 		siblings[st], siblings[en] = siblings[en], siblings[st]
 	}
