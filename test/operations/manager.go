@@ -221,7 +221,7 @@ func (m *Manager) SendL2BridgeMessage(ctx context.Context, destAddr common.Addre
 		return err
 	}
 
-	orgExitRoot, err := m.storage.GetLatestExitRoot(ctx, false, nil)
+	orgExitRoot, err := m.storage.GetLatestExitRoot(ctx, true, nil)
 	if err != nil && err != gerror.ErrStorageNotFound {
 		return err
 	}
@@ -233,7 +233,7 @@ func (m *Manager) SendL2BridgeMessage(ctx context.Context, destAddr common.Addre
 	}
 
 	// sync for new exit root
-	return m.WaitExitRootToBeSynced(ctx, orgExitRoot, false)
+	return m.WaitExitRootToBeSynced(ctx, orgExitRoot, true)
 }
 
 // Setup creates all the required components and initializes them according to
