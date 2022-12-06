@@ -270,9 +270,7 @@ func (p *PostgresStorage) AddTrustedGlobalExitRoot(ctx context.Context, trustedE
 	const addTrustedGerSQL = `
 		INSERT INTO syncv2.exit_root (block_id, timestamp, global_exit_root, exit_roots) 
 		VALUES (0, $1, $2, $3)
-		ON CONFLICT (block_id, timestamp) DO UPDATE
-			SET global_exit_root = $2,
-				exit_roots = $3;`
+		ON CONFLICT ON CONSTRAINT UC DO NOTHING;`
 	_, err := p.getExecQuerier(dbTx).Exec(ctx, addTrustedGerSQL, trustedExitRoot.Timestamp, trustedExitRoot.GlobalExitRoot, pq.Array([][]byte{trustedExitRoot.ExitRoots[0][:], trustedExitRoot.ExitRoots[1][:]}))
 	return err
 }

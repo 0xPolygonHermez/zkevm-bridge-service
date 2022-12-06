@@ -29,7 +29,7 @@ CREATE TABLE syncv2.exit_root
     global_exit_root        BYTEA,
     exit_roots              BYTEA[],
     PRIMARY KEY (id),
-    CONSTRAINT UC UNIQUE (block_id, timestamp)
+    CONSTRAINT UC UNIQUE (block_id, timestamp, global_exit_root)
 );
 
 CREATE TABLE syncv2.batch

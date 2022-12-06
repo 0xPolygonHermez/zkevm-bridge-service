@@ -35,7 +35,7 @@ const (
 	L1 NetworkSID = "l1"
 	L2 NetworkSID = "l2"
 
-	waitRootSyncDeadline = 90 * time.Second
+	waitRootSyncDeadline = 120 * time.Second
 )
 
 const (
