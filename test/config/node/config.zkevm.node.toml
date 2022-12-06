@@ -39,6 +39,7 @@ MaxVerifyBatchTxRetries = 10
 FrequencyForResendingFailedSendBatches = "1s"
 FrequencyForResendingFailedVerifyBatch = "1s"
 WaitTxToBeMined = "2m"
+WaitTxToBeSynced = "10s"
 PercentageToIncreaseGasPrice = 10
 PercentageToIncreaseGasLimit = 10
 
@@ -93,8 +94,8 @@ MaxAllowedFailedCounter = 50
 [Aggregator]
 Host = "0.0.0.0"
 Port = 50081
-IntervalToConsolidateState = "5s"
-IntervalToSendFinalProof = "10s"
+IntervalToConsolidateState = "3s"
+IntervalToSendFinalProof = "5s"
 TxProfitabilityCheckerType = "acceptall"
 TxProfitabilityMinReward = "1.1"
 IntervalFrequencyToGetProofGenerationState = "5s"
