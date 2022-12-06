@@ -198,7 +198,7 @@ func (m *Manager) SendL1BridgeMessage(ctx context.Context, destAddr common.Addre
 		return err
 	}
 
-	orgExitRoot, err := m.storage.GetLatestExitRoot(ctx, false, nil)
+	orgExitRoot, err := m.storage.GetLatestExitRoot(ctx, true, nil)
 	if err != nil && err != gerror.ErrStorageNotFound {
 		return err
 	}
