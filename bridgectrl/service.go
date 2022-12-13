@@ -214,15 +214,7 @@ func (s *bridgeService) getDepositStatus(ctx context.Context, depositCount uint,
 		return "", false, gerror.ErrNetworkNotRegister
 	}
 
-	localExitRoot, err := s.bridgeCtrl.storage.GetRoot(ctx, depositCount+1, tID, nil)
-	if err != nil {
-		if err != gerror.ErrStorageNotFound {
-			return "", false, err
-		}
-		return claimTxHash, false, nil
-	}
-
-	_, err = s.bridgeCtrl.storage.GetGERByLocalExitRoot(ctx, common.BytesToHash(localExitRoot), uint8(tID+1), nil)
+	_, err = s.bridgeCtrl.storage.GetGERByDepositCnt(ctx, uint8(tID+1), depositCount, nil)
 	if err != nil {
 		if err != gerror.ErrStorageNotFound {
 			return "", false, err

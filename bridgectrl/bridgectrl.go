@@ -73,12 +73,7 @@ func (bt *BridgeController) GetClaim(networkID uint, index uint) ([][KeyLen]byte
 		return proof, nil, gerror.ErrNetworkNotRegister
 	}
 	ctx := context.TODO()
-	localExitRoot, err := bt.storage.GetRoot(ctx, index+1, tID, nil)
-	if err != nil {
-		return proof, nil, fmt.Errorf("getting the local exit root from the merkle tree failed, error: %v", err)
-	}
-
-	globalExitRoot, err = bt.storage.GetGERByLocalExitRoot(ctx, common.BytesToHash(localExitRoot), uint8(tID+1), nil)
+	globalExitRoot, err = bt.storage.GetGERByDepositCnt(ctx, uint8(tID+1), index, nil)
 	if err != nil {
 		if err != gerror.ErrStorageNotFound {
 			return proof, nil, fmt.Errorf("getting the GER failed, error: %v", err)

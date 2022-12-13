@@ -306,20 +306,20 @@ func (p *PostgresStorage) GetDeposit(ctx context.Context, depositCounterUser uin
 	return &deposit, err
 }
 
-// GetGERByLocalExitRoot gets the global exit root by the local exit root.
-func (p *PostgresStorage) GetGERByLocalExitRoot(ctx context.Context, exitRoot common.Hash, networkID uint8, dbTx pgx.Tx) (*etherman.GlobalExitRoot, error) {
+// GetGERByDepositCnt gets the oldest global exit root which the deposit count is greater than the given value.
+func (p *PostgresStorage) GetGERByDepositCnt(ctx context.Context, networkID uint8, depositCnt uint, dbTx pgx.Tx) (*etherman.GlobalExitRoot, error) {
 	var (
 		ger                      etherman.GlobalExitRoot
 		exitRoots                [][]byte
 		getGERByLocalExitRootSQL string
 	)
 	if networkID == MainNetworkID {
-		getGERByLocalExitRootSQL = "SELECT block_id, timestamp, global_exit_root, exit_roots FROM syncv2.exit_root WHERE exit_roots[$1] = $2 AND block_id = 0"
+		getGERByLocalExitRootSQL = "SELECT e.block_id, e.timestamp, e.global_exit_root, e.exit_roots FROM syncv2.exit_root AS e INNER JOIN mtv2.root AS r ON e.exit_roots[$1] = r.root WHERE r.deposit_cnt > $2 AND e.block_id = 0 ORDER BY r.deposit_cnt ASC LIMIT 1"
 	} else {
-		getGERByLocalExitRootSQL = "SELECT block_id, timestamp, global_exit_root, exit_roots FROM syncv2.exit_root WHERE exit_roots[$1] = $2 AND block_id > 0"
+		getGERByLocalExitRootSQL = "SELECT e.block_id, e.timestamp, e.global_exit_root, e.exit_roots FROM syncv2.exit_root AS e INNER JOIN mtv2.root AS r ON e.exit_roots[$1] = r.root WHERE r.deposit_cnt > $2 AND e.block_id > 0 ORDER BY r.deposit_cnt ASC LIMIT 1"
 	}
 
-	err := p.getExecQuerier(dbTx).QueryRow(ctx, getGERByLocalExitRootSQL, networkID, exitRoot).Scan(&ger.BlockID, &ger.Timestamp, &ger.GlobalExitRoot, pq.Array(&exitRoots))
+	err := p.getExecQuerier(dbTx).QueryRow(ctx, getGERByLocalExitRootSQL, networkID, depositCnt).Scan(&ger.BlockID, &ger.Timestamp, &ger.GlobalExitRoot, pq.Array(&exitRoots))
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, gerror.ErrStorageNotFound
