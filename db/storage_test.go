@@ -78,7 +78,7 @@ func TestAddTrustedGERDuplicated(t *testing.T) {
 	}
 	err = pg.AddTrustedGlobalExitRoot(ctx, ger, tx)
 	require.NoError(t, err)
-	getCount := "select count(*) from syncv2.exit_root where block_id = 0 AND global_exit_root = $2"
+	getCount := "select count(*) from syncv2.exit_root where block_id = 0 AND global_exit_root = $1"
 	var result int
 	err = tx.QueryRow(ctx, getCount, ger.GlobalExitRoot).Scan(&result)
 	require.NoError(t, err)
@@ -94,8 +94,8 @@ func TestAddTrustedGERDuplicated(t *testing.T) {
 	require.NoError(t, err)
 
 	ger1 := &etherman.GlobalExitRoot{
-		ExitRoots:      []common.Hash{common.HexToHash("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9f1"), common.HexToHash("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9f1")},
-		GlobalExitRoot: common.HexToHash("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9f1"),
+		ExitRoots:      []common.Hash{common.HexToHash("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9f2"), common.HexToHash("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9f2")},
+		GlobalExitRoot: common.HexToHash("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9f2"),
 	}
 	err = pg.AddTrustedGlobalExitRoot(ctx, ger, tx)
 	require.NoError(t, err)

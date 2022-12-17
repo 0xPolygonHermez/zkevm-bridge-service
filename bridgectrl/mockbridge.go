@@ -119,6 +119,7 @@ func MockBridgeCtrl(store *pgstorage.PostgresStorage) (*BridgeController, error)
 		}
 		err = store.AddGlobalExitRoot(context.TODO(), &etherman.GlobalExitRoot{
 			BlockNumber: uint64(i + 1),
+			GlobalExitRoot: hash(common.BytesToHash(bt.exitTrees[0].root[:]), common.BytesToHash(bt.exitTrees[1].root[:])),
 			ExitRoots:   []common.Hash{common.BytesToHash(bt.exitTrees[0].root[:]), common.BytesToHash(bt.exitTrees[1].root[:])},
 			BlockID:     id,
 		}, nil)
@@ -127,6 +128,7 @@ func MockBridgeCtrl(store *pgstorage.PostgresStorage) (*BridgeController, error)
 		}
 		err = store.AddTrustedGlobalExitRoot(context.TODO(), &etherman.GlobalExitRoot{
 			BlockNumber: 0,
+			GlobalExitRoot: hash(common.BytesToHash(bt.exitTrees[0].root[:]), common.BytesToHash(bt.exitTrees[1].root[:])),
 			ExitRoots:   []common.Hash{common.BytesToHash(bt.exitTrees[0].root[:]), common.BytesToHash(bt.exitTrees[1].root[:])},
 			BlockID:     id,
 		}, nil)

@@ -159,7 +159,7 @@ func (p *PostgresStorage) GetLastVerifiedBatch(ctx context.Context, dbTx pgx.Tx)
 
 // AddGlobalExitRoot adds a new ExitRoot to the db.
 func (p *PostgresStorage) AddGlobalExitRoot(ctx context.Context, exitRoot *etherman.GlobalExitRoot, dbTx pgx.Tx) error {
-	const addExitRootSQL = "INSERT INTO syncv2.exit_root (block_id, global_exit_root, exit_roots) VALUES ($1, $2, $3, $4)"
+	const addExitRootSQL = "INSERT INTO syncv2.exit_root (block_id, global_exit_root, exit_roots) VALUES ($1, $2, $3)"
 	e := p.getExecQuerier(dbTx)
 	_, err := e.Exec(ctx, addExitRootSQL, exitRoot.BlockID, exitRoot.GlobalExitRoot, pq.Array([][]byte{exitRoot.ExitRoots[0][:], exitRoot.ExitRoots[1][:]}))
 	return err
@@ -288,7 +288,7 @@ func (p *PostgresStorage) AddForcedBatch(ctx context.Context, forcedBatch *ether
 func (p *PostgresStorage) AddTrustedGlobalExitRoot(ctx context.Context, trustedExitRoot *etherman.GlobalExitRoot, dbTx pgx.Tx) error {
 	const addTrustedGerSQL = `
 		INSERT INTO syncv2.exit_root (block_id, global_exit_root, exit_roots) 
-		VALUES (0, $1, $2, $3)
+		VALUES (0, $1, $2)
 		ON CONFLICT ON CONSTRAINT UC DO NOTHING;`
 	_, err := p.getExecQuerier(dbTx).Exec(ctx, addTrustedGerSQL, trustedExitRoot.GlobalExitRoot, pq.Array([][]byte{trustedExitRoot.ExitRoots[0][:], trustedExitRoot.ExitRoots[1][:]}))
 	return err
