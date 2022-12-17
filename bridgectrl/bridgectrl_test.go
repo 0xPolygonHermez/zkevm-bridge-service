@@ -92,18 +92,18 @@ func TestBridgeTree(t *testing.T) {
 			assert.Equal(t, orgRoot, newRoot)
 
 			err = store.AddGlobalExitRoot(context.TODO(), &etherman.GlobalExitRoot{
-				BlockNumber: uint64(i + 1),
+				BlockNumber:    uint64(i + 1),
 				GlobalExitRoot: hash(common.BytesToHash(bt.exitTrees[0].root[:]), common.BytesToHash(bt.exitTrees[1].root[:])),
-				ExitRoots:   []common.Hash{common.BytesToHash(bt.exitTrees[0].root[:]), common.BytesToHash(bt.exitTrees[1].root[:])},
-				BlockID:     id,
+				ExitRoots:      []common.Hash{common.BytesToHash(bt.exitTrees[0].root[:]), common.BytesToHash(bt.exitTrees[1].root[:])},
+				BlockID:        id,
 			}, nil)
 			require.NoError(t, err)
 
 			err = store.AddTrustedGlobalExitRoot(context.TODO(), &etherman.GlobalExitRoot{
-				BlockNumber: 0,
+				BlockNumber:    0,
 				GlobalExitRoot: hash(common.BytesToHash(bt.exitTrees[0].root[:]), common.BytesToHash(bt.exitTrees[1].root[:])),
-				ExitRoots:   []common.Hash{common.BytesToHash(bt.exitTrees[0].root[:]), common.BytesToHash(bt.exitTrees[1].root[:])},
-				BlockID:     id,
+				ExitRoots:      []common.Hash{common.BytesToHash(bt.exitTrees[0].root[:]), common.BytesToHash(bt.exitTrees[1].root[:])},
+				BlockID:        id,
 			}, nil)
 			require.NoError(t, err)
 		}
