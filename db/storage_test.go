@@ -58,7 +58,6 @@ func TestL1GlobalExitRoot(t *testing.T) {
 	require.Equal(t, latestGER.ExitRoots[0], l1GER.ExitRoots[0])
 	require.Equal(t, latestGER.ExitRoots[1], l1GER.ExitRoots[1])
 
-
 	require.NoError(t, tx.Commit(ctx))
 }
 

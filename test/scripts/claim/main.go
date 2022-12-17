@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"math/big"
-	"time"
 
 	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman"
 	clientUtils "github.com/0xPolygonHermez/zkevm-bridge-service/test/client"

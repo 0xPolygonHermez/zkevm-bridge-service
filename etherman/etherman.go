@@ -43,7 +43,6 @@ var (
 	depositEventSignatureHash         = crypto.Keccak256Hash([]byte("BridgeEvent(uint8,uint32,address,uint32,address,uint256,bytes,uint32)"))
 	claimEventSignatureHash           = crypto.Keccak256Hash([]byte("ClaimEvent(uint32,uint32,address,address,uint256)"))
 	newWrappedTokenEventSignatureHash = crypto.Keccak256Hash([]byte("NewWrappedToken(uint32,address,address)"))
-	setClaimTimeoutSignatureHash      = crypto.Keccak256Hash([]byte("SetClaimTimeout(uint256)"))
 
 	// Proxy events
 	initializedSignatureHash    = crypto.Keccak256Hash([]byte("Initialized(uint8)"))
@@ -663,10 +662,10 @@ func decodeSequencedForceBatches(txData []byte, lastBatchNumber uint64, sequence
 	for i, force := range forceBatches {
 		bn := lastBatchNumber - uint64(len(forceBatches)-(i+1))
 		sequencedForcedBatches[i] = SequencedForceBatch{
-			BatchNumber:                     bn,
-			Sequencer:                       sequencer,
-			TxHash:                          txHash,
-			Timestamp:                       time.Unix(int64(block.Time()), 0),
+			BatchNumber:                      bn,
+			Sequencer:                        sequencer,
+			TxHash:                           txHash,
+			Timestamp:                        time.Unix(int64(block.Time()), 0),
 			ProofOfEfficiencyForcedBatchData: force,
 		}
 	}
