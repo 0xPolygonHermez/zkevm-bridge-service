@@ -138,11 +138,30 @@ func (p *PostgresStorage) AddVerifiedBatch(ctx context.Context, verifiedBatch *e
 	return err
 }
 
+// GetLastVerifiedBatch gets last verified batch
+func (p *PostgresStorage) GetLastVerifiedBatch(ctx context.Context, dbTx pgx.Tx) (*etherman.VerifiedBatch, error) {
+	const query = "SELECT block_id, batch_num, tx_hash, aggregator FROM syncv2.verified_batch ORDER BY batch_num DESC LIMIT 1"
+	var (
+		verifiedBatch etherman.VerifiedBatch
+		txHash, agg   string
+	)
+	e := p.getExecQuerier(dbTx)
+	err := e.QueryRow(ctx, query).Scan(&verifiedBatch.BlockID, &verifiedBatch.BatchNumber, &txHash, &agg)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, gerror.ErrStorageNotFound
+	} else if err != nil {
+		return nil, err
+	}
+	verifiedBatch.Aggregator = common.HexToAddress(agg)
+	verifiedBatch.TxHash = common.HexToHash(txHash)
+	return &verifiedBatch, nil
+}
+
 // AddGlobalExitRoot adds a new ExitRoot to the db.
 func (p *PostgresStorage) AddGlobalExitRoot(ctx context.Context, exitRoot *etherman.GlobalExitRoot, dbTx pgx.Tx) error {
-	const addExitRootSQL = "INSERT INTO syncv2.exit_root (block_id, timestamp, global_exit_root, exit_roots) VALUES ($1, $2, $3, $4)"
+	const addExitRootSQL = "INSERT INTO syncv2.exit_root (block_id, global_exit_root, exit_roots) VALUES ($1, $2, $3, $4)"
 	e := p.getExecQuerier(dbTx)
-	_, err := e.Exec(ctx, addExitRootSQL, exitRoot.BlockID, exitRoot.Timestamp, exitRoot.GlobalExitRoot, pq.Array([][]byte{exitRoot.ExitRoots[0][:], exitRoot.ExitRoots[1][:]}))
+	_, err := e.Exec(ctx, addExitRootSQL, exitRoot.BlockID, exitRoot.GlobalExitRoot, pq.Array([][]byte{exitRoot.ExitRoots[0][:], exitRoot.ExitRoots[1][:]}))
 	return err
 }
 
@@ -268,10 +287,10 @@ func (p *PostgresStorage) AddForcedBatch(ctx context.Context, forcedBatch *ether
 // AddTrustedGlobalExitRoot adds new global exit root which comes from the trusted sequencer.
 func (p *PostgresStorage) AddTrustedGlobalExitRoot(ctx context.Context, trustedExitRoot *etherman.GlobalExitRoot, dbTx pgx.Tx) error {
 	const addTrustedGerSQL = `
-		INSERT INTO syncv2.exit_root (block_id, timestamp, global_exit_root, exit_roots) 
+		INSERT INTO syncv2.exit_root (block_id, global_exit_root, exit_roots) 
 		VALUES (0, $1, $2, $3)
 		ON CONFLICT ON CONSTRAINT UC DO NOTHING;`
-	_, err := p.getExecQuerier(dbTx).Exec(ctx, addTrustedGerSQL, trustedExitRoot.Timestamp, trustedExitRoot.GlobalExitRoot, pq.Array([][]byte{trustedExitRoot.ExitRoots[0][:], trustedExitRoot.ExitRoots[1][:]}))
+	_, err := p.getExecQuerier(dbTx).Exec(ctx, addTrustedGerSQL, trustedExitRoot.GlobalExitRoot, pq.Array([][]byte{trustedExitRoot.ExitRoots[0][:], trustedExitRoot.ExitRoots[1][:]}))
 	return err
 }
 
@@ -314,12 +333,12 @@ func (p *PostgresStorage) GetGERByDepositCnt(ctx context.Context, networkID uint
 		getGERByLocalExitRootSQL string
 	)
 	if networkID == MainNetworkID {
-		getGERByLocalExitRootSQL = "SELECT e.block_id, e.timestamp, e.global_exit_root, e.exit_roots FROM syncv2.exit_root AS e INNER JOIN mtv2.root AS r ON e.exit_roots[$1] = r.root WHERE r.deposit_cnt > $2 AND e.block_id = 0 ORDER BY r.deposit_cnt ASC LIMIT 1"
+		getGERByLocalExitRootSQL = "SELECT e.block_id, e.global_exit_root, e.exit_roots FROM syncv2.exit_root AS e INNER JOIN mtv2.root AS r ON e.exit_roots[$1] = r.root WHERE r.deposit_cnt > $2 AND e.block_id = 0 ORDER BY r.deposit_cnt ASC LIMIT 1"
 	} else {
-		getGERByLocalExitRootSQL = "SELECT e.block_id, e.timestamp, e.global_exit_root, e.exit_roots FROM syncv2.exit_root AS e INNER JOIN mtv2.root AS r ON e.exit_roots[$1] = r.root WHERE r.deposit_cnt > $2 AND e.block_id > 0 ORDER BY r.deposit_cnt ASC LIMIT 1"
+		getGERByLocalExitRootSQL = "SELECT e.block_id, e.global_exit_root, e.exit_roots FROM syncv2.exit_root AS e INNER JOIN mtv2.root AS r ON e.exit_roots[$1] = r.root WHERE r.deposit_cnt > $2 AND e.block_id > 0 ORDER BY r.deposit_cnt ASC LIMIT 1"
 	}
 
-	err := p.getExecQuerier(dbTx).QueryRow(ctx, getGERByLocalExitRootSQL, networkID, depositCnt).Scan(&ger.BlockID, &ger.Timestamp, &ger.GlobalExitRoot, pq.Array(&exitRoots))
+	err := p.getExecQuerier(dbTx).QueryRow(ctx, getGERByLocalExitRootSQL, networkID, depositCnt).Scan(&ger.BlockID, &ger.GlobalExitRoot, pq.Array(&exitRoots))
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, gerror.ErrStorageNotFound
@@ -345,8 +364,8 @@ func (p *PostgresStorage) GetLatestL1SyncedExitRoot(ctx context.Context, dbTx pg
 		ger       etherman.GlobalExitRoot
 		exitRoots [][]byte
 	)
-	const getLatestL1SyncedExitRootSQL = "SELECT block_id, timestamp, global_exit_root, exit_roots FROM syncv2.exit_root WHERE block_id > 0 ORDER BY id DESC LIMIT 1"
-	err := p.getExecQuerier(dbTx).QueryRow(ctx, getLatestL1SyncedExitRootSQL).Scan(&ger.BlockID, &ger.Timestamp, &ger.GlobalExitRoot, pq.Array(&exitRoots))
+	const getLatestL1SyncedExitRootSQL = "SELECT block_id, global_exit_root, exit_roots FROM syncv2.exit_root WHERE block_id > 0 ORDER BY id DESC LIMIT 1"
+	err := p.getExecQuerier(dbTx).QueryRow(ctx, getLatestL1SyncedExitRootSQL).Scan(&ger.BlockID, &ger.GlobalExitRoot, pq.Array(&exitRoots))
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, gerror.ErrStorageNotFound
@@ -363,8 +382,8 @@ func (p *PostgresStorage) GetLatestTrustedExitRoot(ctx context.Context, dbTx pgx
 		ger       etherman.GlobalExitRoot
 		exitRoots [][]byte
 	)
-	const getLatestTrustedExitRootSQL = "SELECT timestamp, global_exit_root, exit_roots FROM syncv2.exit_root WHERE block_id = 0 ORDER BY id DESC LIMIT 1"
-	err := p.getExecQuerier(dbTx).QueryRow(ctx, getLatestTrustedExitRootSQL).Scan(&ger.Timestamp, &ger.GlobalExitRoot, pq.Array(&exitRoots))
+	const getLatestTrustedExitRootSQL = "SELECT global_exit_root, exit_roots FROM syncv2.exit_root WHERE block_id = 0 ORDER BY id DESC LIMIT 1"
+	err := p.getExecQuerier(dbTx).QueryRow(ctx, getLatestTrustedExitRootSQL).Scan(&ger.GlobalExitRoot, pq.Array(&exitRoots))
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, gerror.ErrStorageNotFound

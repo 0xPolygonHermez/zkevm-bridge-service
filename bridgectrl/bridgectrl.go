@@ -3,7 +3,6 @@ package bridgectrl
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/utils/gerror"
@@ -106,7 +105,6 @@ func (bt *BridgeController) MockAddDeposit(deposit *etherman.Deposit) error {
 	}
 	return bt.storage.AddGlobalExitRoot(context.TODO(), &etherman.GlobalExitRoot{
 		BlockNumber: 0,
-		Timestamp:   time.Now(),
 		ExitRoots:   []common.Hash{common.BytesToHash(bt.exitTrees[0].root[:]), common.BytesToHash(bt.exitTrees[1].root[:])},
 		BlockID:     deposit.BlockID,
 	}, nil)
