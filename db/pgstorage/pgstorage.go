@@ -143,17 +143,14 @@ func (p *PostgresStorage) GetLastVerifiedBatch(ctx context.Context, dbTx pgx.Tx)
 	const query = "SELECT block_id, batch_num, tx_hash, aggregator FROM syncv2.verified_batch ORDER BY batch_num DESC LIMIT 1"
 	var (
 		verifiedBatch etherman.VerifiedBatch
-		txHash, agg   string
 	)
 	e := p.getExecQuerier(dbTx)
-	err := e.QueryRow(ctx, query).Scan(&verifiedBatch.BlockID, &verifiedBatch.BatchNumber, &txHash, &agg)
+	err := e.QueryRow(ctx, query).Scan(&verifiedBatch.BlockID, &verifiedBatch.BatchNumber, &verifiedBatch.TxHash, &verifiedBatch.Aggregator)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, gerror.ErrStorageNotFound
 	} else if err != nil {
 		return nil, err
 	}
-	verifiedBatch.Aggregator = common.HexToAddress(agg)
-	verifiedBatch.TxHash = common.HexToHash(txHash)
 	return &verifiedBatch, nil
 }
 

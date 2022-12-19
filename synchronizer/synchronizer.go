@@ -686,7 +686,11 @@ func (s *ClientSynchronizer) processGlobalExitRoot(globalExitRoot etherman.Globa
 
 func (s *ClientSynchronizer) processTrustedVerifyBatch(verifiedBatch etherman.VerifiedBatch, blockID, blockNumber uint64, dbTx pgx.Tx) {
 	lastVBatch, err := s.storage.GetLastVerifiedBatch(s.ctx, dbTx)
-	if err != nil {
+	if errors.Is(err, gerror.ErrStorageNotFound) {
+		lastVBatch = &etherman.VerifiedBatch{
+			BatchNumber: 0,
+		}
+	} else if err != nil {
 		log.Errorf("error getting lastVerifiedBatch stored in db in processTrustedVerifyBatches. Processing synced blockNumber: %d", blockNumber)
 		rollbackErr := dbTx.Rollback(s.ctx)
 		if rollbackErr != nil {
