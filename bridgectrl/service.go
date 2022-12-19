@@ -138,7 +138,6 @@ func (s *bridgeService) GetProof(ctx context.Context, req *pb.GetProofRequest) (
 	return &pb.GetProofResponse{
 		Proof: &pb.Proof{
 			MerkleProof:    proof,
-			Timestamp:      uint64(exitRoot.Timestamp.Unix()),
 			MainExitRoot:   exitRoot.ExitRoots[0].Hex(),
 			RollupExitRoot: exitRoot.ExitRoots[1].Hex(),
 		},

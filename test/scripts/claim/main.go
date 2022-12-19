@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"math/big"
-	"time"
 
 	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman"
 	clientUtils "github.com/0xPolygonHermez/zkevm-bridge-service/test/client"
@@ -55,7 +54,6 @@ func main() {
 	log.Debug("bridge: ", bridgeData)
 	log.Debug("mainnetExitRoot: ", proof.MainExitRoot)
 	log.Debug("rollupExitRoot: ", proof.RollupExitRoot)
-	log.Debug("Timestamp: ", proof.Timestamp)
 
 	var smt [][32]byte
 	for i := 0; i < len(proof.MerkleProof); i++ {
@@ -63,7 +61,6 @@ func main() {
 		smt = append(smt, common.HexToHash(proof.MerkleProof[i]))
 	}
 	globalExitRoot := &etherman.GlobalExitRoot{
-		Timestamp: time.Unix(int64(proof.Timestamp), 0),
 		ExitRoots: []common.Hash{common.HexToHash(proof.MainExitRoot), common.HexToHash(proof.RollupExitRoot)},
 	}
 	log.Info("Sending claim tx...")

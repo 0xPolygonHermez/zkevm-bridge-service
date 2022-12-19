@@ -30,7 +30,6 @@ type Block struct {
 type GlobalExitRoot struct {
 	BlockID        uint64
 	BlockNumber    uint64
-	Timestamp      time.Time
 	ExitRoots      []common.Hash
 	GlobalExitRoot common.Hash
 }
@@ -61,7 +60,7 @@ type SequencedForceBatch struct {
 	Sequencer   common.Address
 	TxHash      common.Hash
 	Timestamp   time.Time
-	proofofefficiency.ProofOfEfficiencyForceBatchData
+	proofofefficiency.ProofOfEfficiencyForcedBatchData
 }
 
 // Deposit struct
@@ -117,7 +116,6 @@ type Batch struct {
 type VerifiedBatch struct {
 	BatchNumber uint64
 	BlockID     uint64
-	BlockNumber uint64
 	Aggregator  common.Address
 	StateRoot   common.Hash
 	TxHash      common.Hash

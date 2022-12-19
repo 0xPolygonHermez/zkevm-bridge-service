@@ -25,11 +25,10 @@ CREATE TABLE syncv2.exit_root
 (
     id                      SERIAL,
     block_id                BIGINT REFERENCES syncv2.block (id) ON DELETE CASCADE,
-    timestamp               TIMESTAMP WITH TIME ZONE NOT NULL,
     global_exit_root        BYTEA,
     exit_roots              BYTEA[],
     PRIMARY KEY (id),
-    CONSTRAINT UC UNIQUE (block_id, timestamp, global_exit_root)
+    CONSTRAINT UC UNIQUE (block_id, global_exit_root)
 );
 
 CREATE TABLE syncv2.batch

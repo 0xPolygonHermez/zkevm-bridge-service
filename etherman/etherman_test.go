@@ -66,7 +66,6 @@ func TestGEREvent(t *testing.T) {
 	blocks, _, err := etherman.GetRollupInfoByBlockRange(ctx, initBlock.NumberU64(), &finalBlockNumber)
 	require.NoError(t, err)
 
-	assert.Equal(t, finalBlock.Time(), uint64(blocks[0].GlobalExitRoots[0].Timestamp.Unix()))
 	assert.NotEqual(t, common.Hash{}, blocks[0].GlobalExitRoots[0].ExitRoots[0])
 	assert.Equal(t, common.Hash{}, blocks[0].GlobalExitRoots[0].ExitRoots[1])
 }
@@ -92,7 +91,7 @@ func TestSequencedBatchesEvent(t *testing.T) {
 	ger, err := etherman.GlobalExitRootManager.GetLastGlobalExitRoot(nil)
 	require.NoError(t, err)
 
-	amount, err := etherman.PoE.CalculateForceProverFee(&bind.CallOpts{Pending: false})
+	amount, err := etherman.PoE.GetCurrentBatchFee(&bind.CallOpts{Pending: false})
 	require.NoError(t, err)
 	rawTxs := "f84901843b9aca00827b0c945fbdb2315678afecb367f032d93f642f64180aa380a46057361d00000000000000000000000000000000000000000000000000000000000000048203e9808073efe1fa2d3e27f26f32208550ea9b0274d49050b816cadab05a771f4275d0242fd5d92b3fb89575c070e6c930587c520ee65a3aa8cfe382fcad20421bf51d621c"
 	data, err := hex.DecodeString(rawTxs)
@@ -169,7 +168,7 @@ func TestVerifyBatchEvent(t *testing.T) {
 		proofC = [2]*big.Int{big.NewInt(1), big.NewInt(1)}
 		proofB = [2][2]*big.Int{proofC, proofC}
 	)
-	_, err = etherman.PoE.VerifyBatches(auth, 0, 1, common.Hash{}, common.Hash{}, proofA, proofB, proofC)
+	_, err = etherman.PoE.TrustedVerifyBatches(auth, 0, 0, 1, common.Hash{}, common.Hash{}, proofA, proofB, proofC)
 	require.NoError(t, err)
 
 	// Mine the tx in a block
@@ -187,7 +186,7 @@ func TestVerifyBatchEvent(t *testing.T) {
 	assert.NotEqual(t, common.Address{}, blocks[1].VerifiedBatches[0].Aggregator)
 	assert.NotEqual(t, common.Hash{}, blocks[1].VerifiedBatches[0].TxHash)
 	assert.Equal(t, GlobalExitRootsOrder, order[blocks[1].BlockHash][0].Name)
-	assert.Equal(t, VerifyBatchOrder, order[blocks[1].BlockHash][1].Name)
+	assert.Equal(t, TrustedVerifyBatchOrder, order[blocks[1].BlockHash][1].Name)
 	assert.Equal(t, 0, order[blocks[1].BlockHash][0].Pos)
 	assert.Equal(t, 0, order[blocks[1].BlockHash][1].Pos)
 }
@@ -201,7 +200,7 @@ func TestSequenceForceBatchesEvent(t *testing.T) {
 	initBlock, err := etherman.EtherClient.BlockByNumber(ctx, nil)
 	require.NoError(t, err)
 
-	amount, err := etherman.PoE.CalculateForceProverFee(&bind.CallOpts{Pending: false})
+	amount, err := etherman.PoE.GetCurrentBatchFee(&bind.CallOpts{Pending: false})
 	require.NoError(t, err)
 	rawTxs := "f84901843b9aca00827b0c945fbdb2315678afecb367f032d93f642f64180aa380a46057361d00000000000000000000000000000000000000000000000000000000000000048203e9808073efe1fa2d3e27f26f32208550ea9b0274d49050b816cadab05a771f4275d0242fd5d92b3fb89575c070e6c930587c520ee65a3aa8cfe382fcad20421bf51d621c"
 	data, err := hex.DecodeString(rawTxs)
@@ -221,12 +220,12 @@ func TestSequenceForceBatchesEvent(t *testing.T) {
 	blocks, _, err := etherman.GetRollupInfoByBlockRange(ctx, initBlock.NumberU64(), &finalBlockNumber)
 	require.NoError(t, err)
 
-	forceBatchData := proofofefficiency.ProofOfEfficiencyForceBatchData{
+	forceBatchData := proofofefficiency.ProofOfEfficiencyForcedBatchData{
 		Transactions:       blocks[0].ForcedBatches[0].RawTxsData,
 		GlobalExitRoot:     blocks[0].ForcedBatches[0].GlobalExitRoot,
 		MinForcedTimestamp: uint64(blocks[0].ForcedBatches[0].ForcedAt.Unix()),
 	}
-	_, err = etherman.PoE.SequenceForceBatches(auth, []proofofefficiency.ProofOfEfficiencyForceBatchData{forceBatchData})
+	_, err = etherman.PoE.SequenceForceBatches(auth, []proofofefficiency.ProofOfEfficiencyForcedBatchData{forceBatchData})
 	require.NoError(t, err)
 	ethBackend.Commit()
 
@@ -238,7 +237,7 @@ func TestSequenceForceBatchesEvent(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, uint64(4), blocks[1].BlockNumber)
 	assert.Equal(t, uint64(1), blocks[1].SequencedForceBatches[0][0].BatchNumber)
-	assert.Equal(t, uint64(20), blocks[1].SequencedForceBatches[0][0].ProofOfEfficiencyForceBatchData.MinForcedTimestamp)
+	assert.Equal(t, uint64(20), blocks[1].SequencedForceBatches[0][0].ProofOfEfficiencyForcedBatchData.MinForcedTimestamp)
 	assert.Equal(t, 0, order[blocks[1].BlockHash][0].Pos)
 }
 

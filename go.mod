@@ -3,7 +3,7 @@ module github.com/0xPolygonHermez/zkevm-bridge-service
 go 1.17
 
 require (
-	github.com/0xPolygonHermez/zkevm-node v0.0.1-RC1.0.20221206101840-c2b3abdf5f0b
+	github.com/0xPolygonHermez/zkevm-node v0.0.1-RC3.0.20221219094532-78bba5f169fd
 	github.com/ethereum/go-ethereum v1.10.26
 	github.com/gobuffalo/packr/v2 v2.8.3
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.14.0

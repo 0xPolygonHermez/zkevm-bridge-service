@@ -267,6 +267,29 @@ func (_m *storageMock) GetLastBlock(ctx context.Context, networkID uint, dbTx pg
 	return r0, r1
 }
 
+// GetLastVerifiedBatch provides a mock function with given fields: ctx, dbTx
+func (_m *storageMock) GetLastVerifiedBatch(ctx context.Context, dbTx pgx.Tx) (*etherman.VerifiedBatch, error) {
+	ret := _m.Called(ctx, dbTx)
+
+	var r0 *etherman.VerifiedBatch
+	if rf, ok := ret.Get(0).(func(context.Context, pgx.Tx) *etherman.VerifiedBatch); ok {
+		r0 = rf(ctx, dbTx)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*etherman.VerifiedBatch)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, pgx.Tx) error); ok {
+		r1 = rf(ctx, dbTx)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // GetNextForcedBatches provides a mock function with given fields: ctx, nextForcedBatches, dbTx
 func (_m *storageMock) GetNextForcedBatches(ctx context.Context, nextForcedBatches int, dbTx pgx.Tx) ([]etherman.ForcedBatch, error) {
 	ret := _m.Called(ctx, nextForcedBatches, dbTx)
