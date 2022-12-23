@@ -1,8 +1,9 @@
 IsTrustedSequencer = true
 
 [Log]
+Environment = "development" # "production" or "development"
 Level = "debug"
-Outputs = ["stdout"]
+Outputs = ["stderr"]
 
 [StateDB]
 User = "state_user"
@@ -39,7 +40,6 @@ MaxVerifyBatchTxRetries = 10
 FrequencyForResendingFailedSendBatches = "1s"
 FrequencyForResendingFailedVerifyBatch = "1s"
 WaitTxToBeMined = "2m"
-WaitTxToBeSynced = "10s"
 PercentageToIncreaseGasPrice = 10
 PercentageToIncreaseGasLimit = 10
 
@@ -52,14 +52,9 @@ MaxRequestsPerIPAndSecond = 5000
 SequencerNodeURI = ""
 BroadcastURI = "127.0.0.1:61090"
 DefaultSenderAddress = "0x1111111111111111111111111111111111111111"
-	[RPC.DB]
-		User = "rpc_user"
-		Password = "rpc_password"
-		Name = "rpc_db"
-		Host = "zkevm-rpc-db"
-		Port = "5432"
-		EnableLog = false
-		MaxConns = 10
+	[RPC.WebSockets]
+		Enabled = true
+		Port = 8133
 
 [Synchronizer]
 SyncInterval = "1s"
@@ -78,7 +73,7 @@ MaxTimeForBatchToBeOpen = "5s"
 BlocksAmountForTxsToBeDeleted = 100
 FrequencyToCheckTxsForDelete = "12h"
 MaxTxsPerBatch = 150
-MaxBatchBytesSize = 30000
+MaxBatchBytesSize = 150000
 MaxCumulativeGasUsed = 30000000
 MaxKeccakHashes = 468
 MaxPoseidonHashes = 279620
@@ -94,11 +89,11 @@ MaxAllowedFailedCounter = 50
 [Aggregator]
 Host = "0.0.0.0"
 Port = 50081
-IntervalToConsolidateState = "3s"
-IntervalToSendFinalProof = "5s"
+RetryTime = "3s"
+VerifyProofInterval = "5s"
 TxProfitabilityCheckerType = "acceptall"
 TxProfitabilityMinReward = "1.1"
-IntervalFrequencyToGetProofGenerationState = "5s"
+ProofStatePollingInterval = "5s"
 
 [GasPriceEstimator]
 Type = "default"
