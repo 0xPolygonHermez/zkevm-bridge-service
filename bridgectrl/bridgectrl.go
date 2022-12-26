@@ -12,6 +12,8 @@ import (
 const (
 	// KeyLen is the length of key and value in the Merkle Tree
 	KeyLen = 32
+	// MainNetworkID is the chain ID for the main network
+	MainNetworkID = uint(0)
 )
 
 // BridgeController struct
@@ -72,7 +74,22 @@ func (bt *BridgeController) GetClaim(networkID uint, index uint) ([][KeyLen]byte
 		return proof, nil, gerror.ErrNetworkNotRegister
 	}
 	ctx := context.TODO()
-	globalExitRoot, err = bt.storage.GetGERByDepositCnt(ctx, uint8(tID+1), index, nil)
+	if networkID == MainNetworkID {
+		globalExitRoot, err = bt.storage.GetLatestTrustedExitRoot(ctx, nil)
+	} else {
+		globalExitRoot, err = bt.storage.GetLatestL1SyncedExitRoot(ctx, nil)
+	}
+	if err != nil {
+		return proof, nil, fmt.Errorf("getting the last GER failed, error: %v", err)
+	}
+	depositCnt, err := bt.storage.GetDepositCountByRoot(ctx, globalExitRoot.ExitRoots[tID][:], tID, nil)
+	if err != nil {
+		return proof, nil, fmt.Errorf("getting deposit count from the MT root failed, error: %v, root: %v, network: %d", err, globalExitRoot.ExitRoots[tID][:], tID)
+	}
+	if depositCnt < index {
+		return proof, nil, gerror.ErrDepositNotSynced
+	}
+
 	if err != nil {
 		if err != gerror.ErrStorageNotFound {
 			return proof, nil, fmt.Errorf("getting the GER failed, error: %v", err)
