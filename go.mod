@@ -6,7 +6,7 @@ require (
 	github.com/0xPolygonHermez/zkevm-node v0.0.1-RC1.0.20221223140359-16a3a3144654
 	github.com/ethereum/go-ethereum v1.10.26
 	github.com/gobuffalo/packr/v2 v2.8.3
-	github.com/grpc-ecosystem/grpc-gateway/v2 v2.14.0
+	github.com/grpc-ecosystem/grpc-gateway/v2 v2.15.0
 	github.com/iden3/go-iden3-crypto v0.0.14-0.20220413123345-edc36bfa5247
 	github.com/jackc/pgconn v1.13.0
 	github.com/jackc/pgx/v4 v4.17.2
@@ -17,7 +17,7 @@ require (
 	github.com/stretchr/testify v1.8.1
 	github.com/urfave/cli/v2 v2.23.7
 	golang.org/x/crypto v0.0.0-20220722155217-630584e8d5aa
-	google.golang.org/genproto v0.0.0-20221114212237-e4508ebdbee1
+	google.golang.org/genproto v0.0.0-20221207170731-23e4bf6bdc37
 	google.golang.org/grpc v1.51.0
 	google.golang.org/protobuf v1.28.1
 )
@@ -116,10 +116,10 @@ require (
 	go.uber.org/atomic v1.9.0 // indirect
 	go.uber.org/multierr v1.8.0 // indirect
 	go.uber.org/zap v1.24.0 // indirect
-	golang.org/x/net v0.2.0 // indirect
-	golang.org/x/sys v0.2.0 // indirect
-	golang.org/x/term v0.2.0 // indirect
-	golang.org/x/text v0.4.0 // indirect
+	golang.org/x/net v0.3.0 // indirect
+	golang.org/x/sys v0.3.0 // indirect
+	golang.org/x/term v0.3.0 // indirect
+	golang.org/x/text v0.5.0 // indirect
 	golang.org/x/time v0.0.0-20220609170525-579cf78fd858 // indirect
 	gopkg.in/gorp.v1 v1.7.2 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
