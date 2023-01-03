@@ -16,9 +16,6 @@ import (
 	"github.com/lib/pq"
 )
 
-// MainNetworkID identify the main network ID
-const MainNetworkID = 1
-
 // PostgresStorage implements the Storage interface.
 type PostgresStorage struct {
 	*pgxpool.Pool
