@@ -38,10 +38,9 @@ func TestL1GlobalExitRoot(t *testing.T) {
 	require.Equal(t, blockID, uint64(1))
 
 	l1GER := &etherman.GlobalExitRoot{
-		BlockID:           1,
-		GlobalExitRootNum: big.NewInt(1),
-		ExitRoots:         []common.Hash{common.HexToHash("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9f1"), common.HexToHash("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9f1")},
-		GlobalExitRoot:    common.HexToHash("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9f1"),
+		BlockID:        1,
+		ExitRoots:      []common.Hash{common.HexToHash("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9f1"), common.HexToHash("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9f1")},
+		GlobalExitRoot: common.HexToHash("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9f1"),
 	}
 
 	err = pg.AddGlobalExitRoot(ctx, l1GER, tx)
@@ -50,12 +49,14 @@ func TestL1GlobalExitRoot(t *testing.T) {
 	ger, err := pg.GetLatestL1SyncedExitRoot(ctx, tx)
 	require.NoError(t, err)
 	require.Equal(t, ger.BlockID, l1GER.BlockID)
-	require.Equal(t, ger.GlobalExitRootNum, l1GER.GlobalExitRootNum)
 	require.Equal(t, ger.GlobalExitRoot, l1GER.GlobalExitRoot)
 
 	latestGER, err := pg.GetLatestExitRoot(ctx, true, tx)
 	require.NoError(t, err)
-	require.Equal(t, latestGER.GlobalExitRootNum, l1GER.GlobalExitRootNum)
+	require.Equal(t, latestGER.GlobalExitRoot, l1GER.GlobalExitRoot)
+	require.Equal(t, latestGER.BlockNumber, l1GER.BlockNumber)
+	require.Equal(t, latestGER.ExitRoots[0], l1GER.ExitRoots[0])
+	require.Equal(t, latestGER.ExitRoots[1], l1GER.ExitRoots[1])
 
 	require.NoError(t, tx.Commit(ctx))
 }
@@ -72,20 +73,19 @@ func TestAddTrustedGERDuplicated(t *testing.T) {
 	require.NoError(t, err)
 
 	ger := &etherman.GlobalExitRoot{
-		GlobalExitRootNum: big.NewInt(1),
-		ExitRoots:         []common.Hash{common.HexToHash("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9f1"), common.HexToHash("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9f1")},
-		GlobalExitRoot:    common.HexToHash("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9f1"),
+		ExitRoots:      []common.Hash{common.HexToHash("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9f1"), common.HexToHash("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9f1")},
+		GlobalExitRoot: common.HexToHash("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9f1"),
 	}
 	err = pg.AddTrustedGlobalExitRoot(ctx, ger, tx)
 	require.NoError(t, err)
-	getCount := "select count(*) from syncv2.exit_root where block_id = 0 and global_exit_root_num = $1 AND global_exit_root = $2"
+	getCount := "select count(*) from syncv2.exit_root where block_id = 0 AND global_exit_root = $1"
 	var result int
-	err = tx.QueryRow(ctx, getCount, ger.GlobalExitRootNum.String(), ger.GlobalExitRoot).Scan(&result)
+	err = tx.QueryRow(ctx, getCount, ger.GlobalExitRoot).Scan(&result)
 	require.NoError(t, err)
 	assert.Equal(t, 1, result)
 	err = pg.AddTrustedGlobalExitRoot(ctx, ger, tx)
 	require.NoError(t, err)
-	err = tx.QueryRow(ctx, getCount, ger.GlobalExitRootNum.String(), ger.GlobalExitRoot).Scan(&result)
+	err = tx.QueryRow(ctx, getCount, ger.GlobalExitRoot).Scan(&result)
 	require.NoError(t, err)
 	assert.Equal(t, 1, result)
 	require.NoError(t, tx.Commit(ctx))
@@ -94,13 +94,12 @@ func TestAddTrustedGERDuplicated(t *testing.T) {
 	require.NoError(t, err)
 
 	ger1 := &etherman.GlobalExitRoot{
-		GlobalExitRootNum: big.NewInt(2),
-		ExitRoots:         []common.Hash{common.HexToHash("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9f1"), common.HexToHash("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9f1")},
-		GlobalExitRoot:    common.HexToHash("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9f1"),
+		ExitRoots:      []common.Hash{common.HexToHash("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9f2"), common.HexToHash("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9f2")},
+		GlobalExitRoot: common.HexToHash("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9f2"),
 	}
 	err = pg.AddTrustedGlobalExitRoot(ctx, ger, tx)
 	require.NoError(t, err)
-	err = tx.QueryRow(ctx, getCount, ger.GlobalExitRootNum.String(), ger.GlobalExitRoot).Scan(&result)
+	err = tx.QueryRow(ctx, getCount, ger.GlobalExitRoot).Scan(&result)
 	require.NoError(t, err)
 	assert.Equal(t, 1, result)
 	err = pg.AddTrustedGlobalExitRoot(ctx, ger1, tx)
@@ -116,7 +115,10 @@ func TestAddTrustedGERDuplicated(t *testing.T) {
 
 	latestGER, err := pg.GetLatestExitRoot(ctx, false, tx)
 	require.NoError(t, err)
-	require.Equal(t, latestGER.GlobalExitRootNum, ger1.GlobalExitRootNum)
+	require.Equal(t, latestGER.GlobalExitRoot, ger1.GlobalExitRoot)
+	require.Equal(t, latestGER.BlockNumber, ger1.BlockNumber)
+	require.Equal(t, latestGER.ExitRoots[0], ger1.ExitRoots[0])
+	require.Equal(t, latestGER.ExitRoots[1], ger1.ExitRoots[1])
 
 	require.NoError(t, tx.Commit(ctx))
 }
@@ -308,7 +310,6 @@ func TestForcedAndVerifiedBatch(t *testing.T) {
 	vb := &etherman.VerifiedBatch{
 		BatchNumber: 1,
 		BlockID:     1,
-		BlockNumber: 1,
 		Aggregator:  common.HexToAddress("0x0165878A594ca255338adfa4d48449f69242Eb8F"),
 		TxHash:      common.HexToHash("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9f2"),
 	}
@@ -345,9 +346,9 @@ func TestMTStorage(t *testing.T) {
 	tx, err := pg.BeginDBTransaction(ctx)
 	require.NoError(t, err)
 
-	leaf1 := common.FromHex("0x8d84b047a969e9a2ea149d1755e8185b79f2007239bb1e7a151778b60b2cc580")
-	leaf2 := common.FromHex("0xd22867d19bc4b5254f8f0dcffe4dc5020e5f25cbb06c64faa058a84f7fcbd5d4")
-	root := common.FromHex("0xad5ffc65ca4a2235ac389fcc2f6464f639e61bdfc733dd01e2cf104fd71a454e")
+	leaf1 := common.FromHex("0xa4bfa0908dc7b06d98da4309f859023d6947561bc19bc00d77f763dea1a0b9f5")
+	leaf2 := common.FromHex("0x315fee1aa202bf4a6bd0fde560c89be90b6e6e2aaf92dc5e8d118209abc3410f")
+	root := common.FromHex("0x88e652896cb1de5962a0173a222059f51e6b943a2ba6dfc9acbff051ceb1abb5")
 
 	err = pg.Set(ctx, root, [][]byte{leaf1, leaf2}, tx)
 	require.NoError(t, err)
@@ -405,7 +406,7 @@ func TestBSStorage(t *testing.T) {
 	deposit := &etherman.Deposit{
 		NetworkID:          0,
 		OriginalNetwork:    0,
-		TokenAddress:       common.HexToAddress("0x6B175474E89094C44Da98b954EedeAC495271d0F"),
+		OriginalAddress:    common.HexToAddress("0x6B175474E89094C44Da98b954EedeAC495271d0F"),
 		Amount:             big.NewInt(1000000),
 		DestinationNetwork: 1,
 		DestinationAddress: common.HexToAddress("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"),
@@ -420,7 +421,7 @@ func TestBSStorage(t *testing.T) {
 	claim := &etherman.Claim{
 		Index:              1,
 		OriginalNetwork:    0,
-		Token:              common.HexToAddress("0x6B175474E89094C44Da98b954EedeAC495271d0F"),
+		OriginalAddress:    common.HexToAddress("0x6B175474E89094C44Da98b954EedeAC495271d0F"),
 		Amount:             big.NewInt(1000000),
 		DestinationAddress: common.HexToAddress("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"),
 		BlockID:            1,
@@ -467,7 +468,7 @@ func TestBSStorage(t *testing.T) {
 
 	wrappedToken := &etherman.TokenWrapped{
 		OriginalNetwork:      0,
-		OriginalTokenAddress: deposit.TokenAddress,
+		OriginalTokenAddress: deposit.OriginalAddress,
 		WrappedTokenAddress:  common.HexToAddress("0x187Bd40226A7073b49163b1f6c2b73d8F2aa8478"),
 		BlockID:              1,
 		BlockNumber:          1,

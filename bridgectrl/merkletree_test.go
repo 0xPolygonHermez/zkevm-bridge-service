@@ -59,7 +59,7 @@ func TestLeafHash(t *testing.T) {
 
 			deposit := &etherman.Deposit{
 				OriginalNetwork:    testVector.OriginalNetwork,
-				TokenAddress:       common.HexToAddress(testVector.TokenAddress),
+				OriginalAddress:    common.HexToAddress(testVector.TokenAddress),
 				Amount:             amount,
 				DestinationNetwork: testVector.DestinationNetwork,
 				DestinationAddress: common.HexToAddress(testVector.DestinationAddress),
@@ -111,7 +111,7 @@ func TestMTAddLeaf(t *testing.T) {
 
 			deposit := &etherman.Deposit{
 				OriginalNetwork:    testVector.NewLeaf.OriginalNetwork,
-				TokenAddress:       common.HexToAddress(testVector.NewLeaf.TokenAddress),
+				OriginalAddress:    common.HexToAddress(testVector.NewLeaf.TokenAddress),
 				Amount:             amount,
 				DestinationNetwork: testVector.NewLeaf.DestinationNetwork,
 				DestinationAddress: common.HexToAddress(testVector.NewLeaf.DestinationAddress),
@@ -157,7 +157,7 @@ func TestMTGetProof(t *testing.T) {
 
 				deposit := &etherman.Deposit{
 					OriginalNetwork:    leaf.OriginalNetwork,
-					TokenAddress:       common.HexToAddress(leaf.TokenAddress),
+					OriginalAddress:    common.HexToAddress(leaf.TokenAddress),
 					Amount:             amount,
 					DestinationNetwork: leaf.DestinationNetwork,
 					DestinationAddress: common.HexToAddress(leaf.DestinationAddress),

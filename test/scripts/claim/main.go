@@ -4,8 +4,8 @@ import (
 	"context"
 	"math/big"
 
-	clientUtils "github.com/0xPolygonHermez/zkevm-bridge-service/client"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman"
+	clientUtils "github.com/0xPolygonHermez/zkevm-bridge-service/test/client"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/utils"
 	"github.com/0xPolygonHermez/zkevm-node/log"
 	"github.com/ethereum/go-ethereum/common"
@@ -54,8 +54,6 @@ func main() {
 	log.Debug("bridge: ", bridgeData)
 	log.Debug("mainnetExitRoot: ", proof.MainExitRoot)
 	log.Debug("rollupExitRoot: ", proof.RollupExitRoot)
-	log.Debug("L2ExitRootNum: ", proof.L2ExitRootNum)
-	log.Debug("ExitRootNum: ", proof.ExitRootNum)
 
 	var smt [][32]byte
 	for i := 0; i < len(proof.MerkleProof); i++ {
@@ -63,11 +61,10 @@ func main() {
 		smt = append(smt, common.HexToHash(proof.MerkleProof[i]))
 	}
 	globalExitRoot := &etherman.GlobalExitRoot{
-		GlobalExitRootNum: new(big.Int).SetUint64(proof.ExitRootNum),
-		ExitRoots:         []common.Hash{common.HexToHash(proof.MainExitRoot), common.HexToHash(proof.RollupExitRoot)},
+		ExitRoots: []common.Hash{common.HexToHash(proof.MainExitRoot), common.HexToHash(proof.RollupExitRoot)},
 	}
 	log.Info("Sending claim tx...")
-	err = c.SendClaim(ctx, bridgeData, smt, &big.Int{}, globalExitRoot, common.HexToAddress(l2BridgeAddr), auth)
+	err = c.SendClaim(ctx, bridgeData, smt, globalExitRoot, common.HexToAddress(l2BridgeAddr), auth)
 	if err != nil {
 		log.Fatal("error: ", err)
 	}

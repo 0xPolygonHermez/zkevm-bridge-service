@@ -19,7 +19,7 @@ type Block struct {
 	ForcedBatches         []ForcedBatch
 	SequencedBatches      [][]SequencedBatch
 	VerifiedBatches       []VerifiedBatch
-	SequencedForceBatches []SequencedForceBatch
+	SequencedForceBatches [][]SequencedForceBatch
 	Deposits              []Deposit
 	Claims                []Claim
 	Tokens                []TokenWrapped
@@ -28,11 +28,10 @@ type Block struct {
 
 // GlobalExitRoot struct
 type GlobalExitRoot struct {
-	BlockID           uint64
-	BlockNumber       uint64
-	GlobalExitRootNum *big.Int
-	ExitRoots         []common.Hash
-	GlobalExitRoot    common.Hash
+	BlockID        uint64
+	BlockNumber    uint64
+	ExitRoots      []common.Hash
+	GlobalExitRoot common.Hash
 }
 
 // SequencedBatch represents virtual batches
@@ -57,16 +56,18 @@ type ForcedBatch struct {
 
 // SequencedForceBatch is a sturct to track the ForceSequencedBatches event.
 type SequencedForceBatch struct {
-	LastBatchSequenced uint64
-	ForceBatchNumber   uint64
-	Sequencer          common.Address
-	TxHash             common.Hash
+	BatchNumber uint64
+	Sequencer   common.Address
+	TxHash      common.Hash
+	Timestamp   time.Time
+	proofofefficiency.ProofOfEfficiencyForcedBatchData
 }
 
 // Deposit struct
 type Deposit struct {
+	LeafType           uint8
 	OriginalNetwork    uint
-	TokenAddress       common.Address
+	OriginalAddress    common.Address
 	Amount             *big.Int
 	DestinationNetwork uint
 	DestinationAddress common.Address
@@ -82,7 +83,7 @@ type Deposit struct {
 type Claim struct {
 	Index              uint
 	OriginalNetwork    uint
-	Token              common.Address
+	OriginalAddress    common.Address
 	Amount             *big.Int
 	DestinationAddress common.Address
 	BlockID            uint64
@@ -115,8 +116,8 @@ type Batch struct {
 type VerifiedBatch struct {
 	BatchNumber uint64
 	BlockID     uint64
-	BlockNumber uint64
 	Aggregator  common.Address
+	StateRoot   common.Hash
 	TxHash      common.Hash
 }
 

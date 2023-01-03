@@ -92,20 +92,26 @@ func (c NodeClient) MintERC20(ctx context.Context, erc20Addr common.Address, amo
 	return c.clients[network].MintERC20(ctx, erc20Addr, amount, auth)
 }
 
-// SendBridge sends a bridge transaction.
-func (c NodeClient) SendBridge(ctx context.Context, tokenAddr common.Address, amount *big.Int,
-	destNetwork uint32, destAddr *common.Address, bridgeSCAddr common.Address,
+// SendBridgeAsset sends a bridge asset transaction.
+func (c NodeClient) SendBridgeAsset(ctx context.Context, tokenAddr common.Address, amount *big.Int,
+	destNetwork uint32, destAddr *common.Address, metadata []byte, bridgeSCAddr common.Address,
 	auth *bind.TransactOpts, network NetworkSID,
 ) error {
-	return c.clients[network].SendBridge(ctx, tokenAddr, amount, destNetwork, destAddr, bridgeSCAddr, auth)
+	return c.clients[network].SendBridgeAsset(ctx, tokenAddr, amount, destNetwork, destAddr, metadata, bridgeSCAddr, auth)
+}
+
+// SendBridgeMessage sends a bridge message transaction.
+func (c NodeClient) SendBridgeMessage(ctx context.Context, destNetwork uint32, destAddr common.Address, metadata []byte,
+	bridgeSCAddr common.Address, auth *bind.TransactOpts, network NetworkSID,
+) error {
+	return c.clients[network].SendBridgeMessage(ctx, destNetwork, destAddr, metadata, bridgeSCAddr, auth)
 }
 
 // SendClaim send a claim transaction.
-func (c NodeClient) SendClaim(ctx context.Context, deposit *pb.Deposit, smtProof [][32]byte,
-	globalExitRooNum *big.Int, globalExitRoot *etherman.GlobalExitRoot, bridgeSCAddr common.Address,
-	auth *bind.TransactOpts, network NetworkSID,
+func (c NodeClient) SendClaim(ctx context.Context, deposit *pb.Deposit, smtProof [][32]byte, globalExitRoot *etherman.GlobalExitRoot,
+	bridgeSCAddr common.Address, auth *bind.TransactOpts, network NetworkSID,
 ) error {
-	return c.clients[network].SendClaim(ctx, deposit, smtProof, globalExitRooNum, globalExitRoot, bridgeSCAddr, auth)
+	return c.clients[network].SendClaim(ctx, deposit, smtProof, globalExitRoot, bridgeSCAddr, auth)
 }
 
 // GetBridges returns bridge list for the specific destination address.

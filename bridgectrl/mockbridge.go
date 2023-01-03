@@ -83,7 +83,7 @@ func MockBridgeCtrl(store *pgstorage.PostgresStorage) (*BridgeController, error)
 		amount, _ := new(big.Int).SetString(testDepositVectors[i].Amount, 10) //nolint:gomnd
 		deposit := &etherman.Deposit{
 			OriginalNetwork:    testDepositVectors[i].OriginalNetwork,
-			TokenAddress:       common.HexToAddress(testDepositVectors[i].TokenAddress),
+			OriginalAddress:    common.HexToAddress(testDepositVectors[i].TokenAddress),
 			Amount:             amount,
 			DestinationNetwork: testDepositVectors[i].DestinationNetwork,
 			DestinationAddress: common.HexToAddress(testDepositVectors[i].DestinationAddress),
@@ -102,7 +102,7 @@ func MockBridgeCtrl(store *pgstorage.PostgresStorage) (*BridgeController, error)
 		err = store.AddClaim(context.TODO(), &etherman.Claim{
 			Index:              testClaimVectors[i].Index,
 			OriginalNetwork:    testClaimVectors[i].OriginalNetwork,
-			Token:              common.HexToAddress(testClaimVectors[i].Token),
+			OriginalAddress:    common.HexToAddress(testClaimVectors[i].Token),
 			Amount:             amount,
 			NetworkID:          testClaimVectors[i].DestinationNetwork,
 			DestinationAddress: common.HexToAddress(testClaimVectors[i].DestinationAddress),
@@ -118,19 +118,19 @@ func MockBridgeCtrl(store *pgstorage.PostgresStorage) (*BridgeController, error)
 			return nil, err
 		}
 		err = store.AddGlobalExitRoot(context.TODO(), &etherman.GlobalExitRoot{
-			BlockNumber:       uint64(i + 1),
-			GlobalExitRootNum: big.NewInt(int64(i)),
-			ExitRoots:         []common.Hash{common.BytesToHash(bt.exitTrees[0].root[:]), common.BytesToHash(bt.exitTrees[1].root[:])},
-			BlockID:           id,
+			BlockNumber:    uint64(i + 1),
+			GlobalExitRoot: hash(common.BytesToHash(bt.exitTrees[0].root[:]), common.BytesToHash(bt.exitTrees[1].root[:])),
+			ExitRoots:      []common.Hash{common.BytesToHash(bt.exitTrees[0].root[:]), common.BytesToHash(bt.exitTrees[1].root[:])},
+			BlockID:        id,
 		}, nil)
 		if err != nil {
 			return nil, err
 		}
 		err = store.AddTrustedGlobalExitRoot(context.TODO(), &etherman.GlobalExitRoot{
-			BlockNumber:       0,
-			GlobalExitRootNum: big.NewInt(int64(i)),
-			ExitRoots:         []common.Hash{common.BytesToHash(bt.exitTrees[0].root[:]), common.BytesToHash(bt.exitTrees[1].root[:])},
-			BlockID:           id,
+			BlockNumber:    0,
+			GlobalExitRoot: hash(common.BytesToHash(bt.exitTrees[0].root[:]), common.BytesToHash(bt.exitTrees[1].root[:])),
+			ExitRoots:      []common.Hash{common.BytesToHash(bt.exitTrees[0].root[:]), common.BytesToHash(bt.exitTrees[1].root[:])},
+			BlockID:        id,
 		}, nil)
 		if err != nil {
 			return nil, err

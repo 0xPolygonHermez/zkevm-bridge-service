@@ -23,11 +23,12 @@ INSERT INTO syncv2.block (id, block_hash, received_at) VALUES (0, '\\x0', to_tim
 
 CREATE TABLE syncv2.exit_root
 (
+    id                      SERIAL,
     block_id                BIGINT REFERENCES syncv2.block (id) ON DELETE CASCADE,
-    global_exit_root_num    BIGINT,
     global_exit_root        BYTEA,
     exit_roots              BYTEA[],
-    PRIMARY KEY (block_id, global_exit_root_num)
+    PRIMARY KEY (id),
+    CONSTRAINT UC UNIQUE (block_id, global_exit_root)
 );
 
 CREATE TABLE syncv2.batch
@@ -59,9 +60,10 @@ CREATE TABLE syncv2.forced_batch
 
 CREATE TABLE syncv2.deposit
 (
+    leaf_type   INTEGER,
     network_id  INTEGER,
     orig_net    INTEGER,
-    token_addr  BYTEA NOT NULL,
+    orig_addr  BYTEA NOT NULL,
     amount      VARCHAR,
     dest_net    INTEGER NOT NULL,
     dest_addr   BYTEA NOT NULL,
@@ -77,7 +79,7 @@ CREATE TABLE syncv2.claim
     network_id  INTEGER NOT NULL,
     index       BIGINT, -- deposit count
     orig_net    INTEGER,
-    token_addr  BYTEA NOT NULL,
+    orig_addr  BYTEA NOT NULL,
     amount      VARCHAR,
     dest_addr   BYTEA NOT NULL,
     block_id    BIGINT NOT NULL REFERENCES syncv2.block (id) ON DELETE CASCADE,

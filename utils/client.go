@@ -8,6 +8,7 @@ import (
 
 	"github.com/0xPolygonHermez/zkevm-bridge-service/bridgectrl/pb"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/test/mocksmartcontracts/BridgeMessageReceiver"
 	"github.com/0xPolygonHermez/zkevm-node/encoding"
 	"github.com/0xPolygonHermez/zkevm-node/etherman/smartcontracts/bridge"
 	"github.com/0xPolygonHermez/zkevm-node/log"
@@ -18,6 +19,13 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
+)
+
+const (
+	// LeafTypeAsset represents a bridge asset
+	LeafTypeAsset uint32 = 0
+	// LeafTypeMessage represents a bridge message
+	LeafTypeMessage uint32 = 1
 )
 
 // Client is the utillity client
@@ -60,6 +68,18 @@ func (c Client) DeployERC20(ctx context.Context, name, symbol string, auth *bind
 	return addr, instance, err
 }
 
+// DeployBridgeMessageReceiver deploys the brdige message receiver smc.
+func (c Client) DeployBridgeMessageReceiver(ctx context.Context, auth *bind.TransactOpts) (common.Address, error) {
+	const txMinedTimeoutLimit = 60 * time.Second
+	addr, tx, _, err := BridgeMessageReceiver.DeployBridgeMessageReceiver(auth, c.Client)
+	if err != nil {
+		return common.Address{}, err
+	}
+	err = WaitTxToBeMined(ctx, c.Client, tx, txMinedTimeoutLimit)
+
+	return addr, err
+}
+
 // ApproveERC20 approves erc20 tokens.
 func (c Client) ApproveERC20(ctx context.Context, erc20Addr, spender common.Address, amount *big.Int, auth *bind.TransactOpts) error {
 	erc20sc, err := ERC20.NewERC20(erc20Addr, c.Client)
@@ -88,9 +108,9 @@ func (c Client) MintERC20(ctx context.Context, erc20Addr common.Address, amount 
 	return WaitTxToBeMined(ctx, c.Client, tx, txMinedTimeoutLimit)
 }
 
-// SendBridge sends a bridge transaction.
-func (c Client) SendBridge(ctx context.Context, tokenAddr common.Address, amount *big.Int,
-	destNetwork uint32, destAddr *common.Address, bridgeSCAddr common.Address, auth *bind.TransactOpts,
+// SendBridgeAsset sends a bridge asset transaction.
+func (c Client) SendBridgeAsset(ctx context.Context, tokenAddr common.Address, amount *big.Int, destNetwork uint32,
+	destAddr *common.Address, metadata []byte, bridgeSCAddr common.Address, auth *bind.TransactOpts,
 ) error {
 	emptyAddr := common.Address{}
 	if tokenAddr == emptyAddr {
@@ -103,7 +123,7 @@ func (c Client) SendBridge(ctx context.Context, tokenAddr common.Address, amount
 	if err != nil {
 		return nil
 	}
-	tx, err := br.Bridge(auth, tokenAddr, destNetwork, *destAddr, amount, []byte{})
+	tx, err := br.BridgeAsset(auth, tokenAddr, destNetwork, *destAddr, amount, metadata)
 	if err != nil {
 		log.Error("Error: ", err)
 		return err
@@ -113,14 +133,37 @@ func (c Client) SendBridge(ctx context.Context, tokenAddr common.Address, amount
 	return WaitTxToBeMined(ctx, c.Client, tx, txTimeout)
 }
 
-// SendClaim send a claim transaction.
-func (c Client) SendClaim(ctx context.Context, deposit *pb.Deposit, smtProof [][32]byte, globalExitRooNum *big.Int, globalExitRoot *etherman.GlobalExitRoot, bridgeSCAddr common.Address, auth *bind.TransactOpts) error {
+// SendBridgeMessage sends a bridge message transaction.
+func (c Client) SendBridgeMessage(ctx context.Context, destNetwork uint32, destAddr common.Address, metadata []byte,
+	bridgeSCAddr common.Address, auth *bind.TransactOpts,
+) error {
+	br, err := bridge.NewBridge(bridgeSCAddr, c.Client)
+	if err != nil {
+		return nil
+	}
+	tx, err := br.BridgeMessage(auth, destNetwork, destAddr, metadata)
+	if err != nil {
+		log.Error("Error: ", err)
+		return err
+	}
+	// wait transfer to be included in a batch
+	const txTimeout = 60 * time.Second
+	return WaitTxToBeMined(ctx, c.Client, tx, txTimeout)
+}
+
+// SendClaim sends a claim transaction.
+func (c Client) SendClaim(ctx context.Context, deposit *pb.Deposit, smtProof [][32]byte, globalExitRoot *etherman.GlobalExitRoot, bridgeSCAddr common.Address, auth *bind.TransactOpts) error {
 	br, err := bridge.NewBridge(bridgeSCAddr, c.Client)
 	if err != nil {
 		return err
 	}
 	amount, _ := new(big.Int).SetString(deposit.Amount, encoding.Base10)
-	tx, err := br.Claim(auth, smtProof, uint32(deposit.DepositCnt), globalExitRoot.ExitRoots[0], globalExitRoot.ExitRoots[1], deposit.OrigNet, common.HexToAddress(deposit.TokenAddr), deposit.DestNet, common.HexToAddress(deposit.DestAddr), amount, common.FromHex(deposit.Metadata))
+	var tx *types.Transaction
+	if deposit.LeafType == LeafTypeAsset {
+		tx, err = br.ClaimAsset(auth, smtProof, uint32(deposit.DepositCnt), globalExitRoot.ExitRoots[0], globalExitRoot.ExitRoots[1], deposit.OrigNet, common.HexToAddress(deposit.OrigAddr), deposit.DestNet, common.HexToAddress(deposit.DestAddr), amount, common.FromHex(deposit.Metadata))
+	} else if deposit.LeafType == LeafTypeMessage {
+		tx, err = br.ClaimMessage(auth, smtProof, uint32(deposit.DepositCnt), globalExitRoot.ExitRoots[0], globalExitRoot.ExitRoots[1], deposit.OrigNet, common.HexToAddress(deposit.OrigAddr), deposit.DestNet, common.HexToAddress(deposit.DestAddr), amount, common.FromHex(deposit.Metadata))
+	}
 	if err != nil {
 		txHash := ""
 		if tx != nil {

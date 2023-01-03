@@ -41,6 +41,7 @@ func start(ctx *cli.Context) error {
 	}
 
 	networkID, err := etherman.GetNetworkID(context.Background())
+	log.Infof("main network id: %d", networkID)
 	if err != nil {
 		log.Error(err)
 		return err
@@ -54,7 +55,7 @@ func start(ctx *cli.Context) error {
 			log.Error(err)
 			return err
 		}
-
+		log.Infof("l2 network id: %d", networkID)
 		networkIDs = append(networkIDs, networkID)
 	}
 

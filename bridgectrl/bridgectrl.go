@@ -3,7 +3,6 @@ package bridgectrl
 import (
 	"context"
 	"fmt"
-	"math/big"
 
 	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/utils/gerror"
@@ -80,7 +79,6 @@ func (bt *BridgeController) GetClaim(networkID uint, index uint) ([][KeyLen]byte
 	} else {
 		globalExitRoot, err = bt.storage.GetLatestL1SyncedExitRoot(ctx, nil)
 	}
-
 	if err != nil {
 		return proof, nil, fmt.Errorf("getting the last GER failed, error: %v", err)
 	}
@@ -89,6 +87,13 @@ func (bt *BridgeController) GetClaim(networkID uint, index uint) ([][KeyLen]byte
 		return proof, nil, fmt.Errorf("getting deposit count from the MT root failed, error: %v, root: %v, network: %d", err, globalExitRoot.ExitRoots[tID][:], tID)
 	}
 	if depositCnt < index {
+		return proof, nil, gerror.ErrDepositNotSynced
+	}
+
+	if err != nil {
+		if err != gerror.ErrStorageNotFound {
+			return proof, nil, fmt.Errorf("getting the GER failed, error: %v", err)
+		}
 		return proof, nil, gerror.ErrDepositNotSynced
 	}
 
@@ -116,10 +121,9 @@ func (bt *BridgeController) MockAddDeposit(deposit *etherman.Deposit) error {
 		return err
 	}
 	return bt.storage.AddGlobalExitRoot(context.TODO(), &etherman.GlobalExitRoot{
-		BlockNumber:       0,
-		GlobalExitRootNum: big.NewInt(int64(deposit.DepositCount)),
-		ExitRoots:         []common.Hash{common.BytesToHash(bt.exitTrees[0].root[:]), common.BytesToHash(bt.exitTrees[1].root[:])},
-		BlockID:           deposit.BlockID,
+		BlockNumber: 0,
+		ExitRoots:   []common.Hash{common.BytesToHash(bt.exitTrees[0].root[:]), common.BytesToHash(bt.exitTrees[1].root[:])},
+		BlockID:     deposit.BlockID,
 	}, nil)
 }
 

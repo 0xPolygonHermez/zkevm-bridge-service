@@ -35,7 +35,7 @@ const (
 	L1 NetworkSID = "l1"
 	L2 NetworkSID = "l2"
 
-	waitRootSyncDeadline = 90 * time.Second
+	waitRootSyncDeadline = 120 * time.Second
 )
 
 const (
@@ -157,7 +157,7 @@ func (m *Manager) SendL1Deposit(ctx context.Context, tokenAddr common.Address, a
 		return err
 	}
 
-	err = client.SendBridge(ctx, tokenAddr, amount, destNetwork, destAddr, common.HexToAddress(l1BridgeAddr), auth)
+	err = client.SendBridgeAsset(ctx, tokenAddr, amount, destNetwork, destAddr, []byte{}, common.HexToAddress(l1BridgeAddr), auth)
 	if err != nil {
 		return err
 	}
@@ -172,7 +172,6 @@ func (m *Manager) SendL2Deposit(ctx context.Context, tokenAddr common.Address, a
 ) error {
 	client := m.clients[L2]
 	auth, err := client.GetSigner(ctx, accHexPrivateKeys[L2])
-
 	if err != nil {
 		return err
 	}
@@ -182,7 +181,53 @@ func (m *Manager) SendL2Deposit(ctx context.Context, tokenAddr common.Address, a
 		return err
 	}
 
-	err = client.SendBridge(ctx, tokenAddr, amount, destNetwork, destAddr, common.HexToAddress(l2BridgeAddr), auth)
+	err = client.SendBridgeAsset(ctx, tokenAddr, amount, destNetwork, destAddr, []byte{}, common.HexToAddress(l2BridgeAddr), auth)
+	if err != nil {
+		return err
+	}
+
+	// sync for new exit root
+	return m.WaitExitRootToBeSynced(ctx, orgExitRoot, true)
+}
+
+// SendL1BridgeMessage bridges a message from l1 to l2.
+func (m *Manager) SendL1BridgeMessage(ctx context.Context, destAddr common.Address, destNetwork uint32, amount *big.Int, metadata []byte) error {
+	client := m.clients[L1]
+	auth, err := client.GetSigner(ctx, accHexPrivateKeys[L1])
+	if err != nil {
+		return err
+	}
+
+	orgExitRoot, err := m.storage.GetLatestExitRoot(ctx, true, nil)
+	if err != nil && err != gerror.ErrStorageNotFound {
+		return err
+	}
+
+	auth.Value = amount
+	err = client.SendBridgeMessage(ctx, destNetwork, destAddr, metadata, common.HexToAddress(l1BridgeAddr), auth)
+	if err != nil {
+		return err
+	}
+
+	// sync for new exit root
+	return m.WaitExitRootToBeSynced(ctx, orgExitRoot, false)
+}
+
+// SendL2BridgeMessage bridges a message from l2 to l1.
+func (m *Manager) SendL2BridgeMessage(ctx context.Context, destAddr common.Address, destNetwork uint32, amount *big.Int, metadata []byte) error {
+	client := m.clients[L2]
+	auth, err := client.GetSigner(ctx, accHexPrivateKeys[L2])
+	if err != nil {
+		return err
+	}
+
+	orgExitRoot, err := m.storage.GetLatestExitRoot(ctx, true, nil)
+	if err != nil && err != gerror.ErrStorageNotFound {
+		return err
+	}
+
+	auth.Value = amount
+	err = client.SendBridgeMessage(ctx, destNetwork, destAddr, metadata, common.HexToAddress(l2BridgeAddr), auth)
 	if err != nil {
 		return err
 	}
@@ -485,7 +530,7 @@ func (m *Manager) SendL1Claim(ctx context.Context, deposit *pb.Deposit, smtProof
 		return err
 	}
 
-	return client.SendClaim(ctx, deposit, smtProof, globalExitRoot.GlobalExitRootNum, globalExitRoot, common.HexToAddress(l1BridgeAddr), auth)
+	return client.SendClaim(ctx, deposit, smtProof, globalExitRoot, common.HexToAddress(l1BridgeAddr), auth)
 }
 
 // SendL2Claim send an L2 claim
@@ -496,9 +541,11 @@ func (m *Manager) SendL2Claim(ctx context.Context, deposit *pb.Deposit, smtProof
 		return err
 	}
 
-	auth.GasPrice = big.NewInt(0)
+	if deposit.LeafType == utils.LeafTypeAsset {
+		auth.GasPrice = big.NewInt(0)
+	}
 
-	err = client.SendClaim(ctx, deposit, smtProof, globalExitRoot.GlobalExitRootNum, globalExitRoot, common.HexToAddress(l2BridgeAddr), auth)
+	err = client.SendClaim(ctx, deposit, smtProof, globalExitRoot, common.HexToAddress(l2BridgeAddr), auth)
 	return err
 }
 
@@ -527,10 +574,6 @@ func (m *Manager) GetCurrentGlobalExitRootFromSmc(ctx context.Context) (*etherma
 	if err != nil {
 		return nil, err
 	}
-	gNum, err := globalManager.LastGlobalExitRootNum(&bind.CallOpts{Pending: false})
-	if err != nil {
-		return nil, err
-	}
 	gMainnet, err := globalManager.LastMainnetExitRoot(&bind.CallOpts{Pending: false})
 	if err != nil {
 		return nil, err
@@ -540,8 +583,7 @@ func (m *Manager) GetCurrentGlobalExitRootFromSmc(ctx context.Context) (*etherma
 		return nil, err
 	}
 	result := etherman.GlobalExitRoot{
-		GlobalExitRootNum: gNum,
-		ExitRoots:         []common.Hash{gMainnet, gRollup},
+		ExitRoots: []common.Hash{gMainnet, gRollup},
 	}
 	return &result, nil
 }
@@ -555,6 +597,17 @@ func (m *Manager) DeployERC20(ctx context.Context, name, symbol string, network 
 	}
 
 	return client.DeployERC20(ctx, name, symbol, auth)
+}
+
+// DeployBridgeMessageReceiver deploys the brdige message receiver smc.
+func (m *Manager) DeployBridgeMessageReceiver(ctx context.Context, network NetworkSID) (common.Address, error) {
+	client := m.clients[network]
+	auth, err := client.GetSigner(ctx, accHexPrivateKeys[network])
+	if err != nil {
+		return common.Address{}, err
+	}
+
+	return client.DeployBridgeMessageReceiver(ctx, auth)
 }
 
 // MintERC20 mint erc20 tokens
