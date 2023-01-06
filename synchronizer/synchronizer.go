@@ -51,16 +51,28 @@ func NewSynchronizer(
 		log.Fatal("error getting networkID. Error: ", err)
 	}
 
+	if networkID == 0 {
+		return &ClientSynchronizer{
+			bridgeCtrl:      bridge,
+			storage:         storage.(storageInterface),
+			etherMan:        ethMan,
+			ctx:             ctx,
+			cancelCtx:       cancel,
+			genBlockNumber:  genBlockNumber,
+			cfg:             cfg,
+			networkID:       networkID,
+			broadcastClient: broadcastClient,
+		}, nil
+	}
 	return &ClientSynchronizer{
-		bridgeCtrl:      bridge,
-		storage:         storage.(storageInterface),
-		etherMan:        ethMan,
-		ctx:             ctx,
-		cancelCtx:       cancel,
-		genBlockNumber:  genBlockNumber,
-		cfg:             cfg,
-		networkID:       networkID,
-		broadcastClient: broadcastClient,
+		bridgeCtrl:     bridge,
+		storage:        storage.(storageInterface),
+		etherMan:       ethMan,
+		ctx:            ctx,
+		cancelCtx:      cancel,
+		genBlockNumber: genBlockNumber,
+		cfg:            cfg,
+		networkID:      networkID,
 	}, nil
 }
 
@@ -79,7 +91,7 @@ func (s *ClientSynchronizer) Sync() error {
 	lastBlockSynced, err := s.storage.GetLastBlock(s.ctx, s.networkID, dbTx)
 	if err != nil {
 		if err == gerror.ErrStorageNotFound {
-			log.Warn("error getting the latest ethereum block. No data stored. Setting genesis block. Error: ", err)
+			log.Warnf("networkID: %d, error getting the latest ethereum block. No data stored. Setting genesis block. Error: %w", s.networkID, err)
 			lastBlockSynced = &etherman.Block{
 				BlockNumber: s.genBlockNumber,
 				NetworkID:   s.networkID,
@@ -129,10 +141,13 @@ func (s *ClientSynchronizer) Sync() error {
 					log.Fatalf("networkID: %d, error: latest Synced BlockNumber is higher than the latest Proposed in the network", s.networkID)
 				}
 			} else { // Sync Trusted GlobalExitRoots if L1 is synced
-				log.Info("Virtual state is synced, getting trusted state")
+				if s.networkID != 0 {
+					continue
+				}
+				log.Infof("networkID: %d, Virtual state is synced, getting trusted state", s.networkID)
 				err = s.syncTrustedState()
 				if err != nil {
-					log.Error("error getting current trusted state")
+					log.Errorf("networkID: %d, error getting current trusted state", s.networkID)
 				}
 			}
 		}
@@ -147,7 +162,7 @@ func (s *ClientSynchronizer) Stop() {
 func (s *ClientSynchronizer) syncTrustedState() error {
 	lastBatch, err := s.broadcastClient.GetLastBatch(s.ctx, &emptypb.Empty{})
 	if err != nil {
-		log.Error("error getting latest batch from grpc. Error: ", err)
+		log.Errorf("networkID: %d, error getting latest batch from grpc. Error: %w", s.networkID, err)
 		return err
 	}
 	ger := &etherman.GlobalExitRoot{
@@ -159,7 +174,7 @@ func (s *ClientSynchronizer) syncTrustedState() error {
 	}
 	err = s.storage.AddTrustedGlobalExitRoot(s.ctx, ger, nil)
 	if err != nil {
-		log.Error("error storing latest trusted globalExitRoot. Error: ", err)
+		log.Error("networkID: %d, error storing latest trusted globalExitRoot. Error: %w", s.networkID, err)
 		return err
 	}
 	return nil
