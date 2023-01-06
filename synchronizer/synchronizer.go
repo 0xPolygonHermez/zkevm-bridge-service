@@ -309,7 +309,7 @@ func (s *ClientSynchronizer) resetState(blockNumber uint64) error {
 		log.Errorf("networkID: %d, Error starting a db transaction to reset the state. Error: %s", s.networkID, err.Error())
 		return err
 	}
-	err = s.storage.Reset(s.ctx, blockNumber, dbTx)
+	err = s.storage.Reset(s.ctx, blockNumber, s.networkID, dbTx)
 	if err != nil {
 		rollbackErr := s.storage.Rollback(s.ctx, dbTx)
 		if rollbackErr != nil {
@@ -691,12 +691,12 @@ func (s *ClientSynchronizer) processTrustedVerifyBatch(verifiedBatch etherman.Ve
 			BatchNumber: 0,
 		}
 	} else if err != nil {
-		log.Errorf("error getting lastVerifiedBatch stored in db in processTrustedVerifyBatches. Processing synced blockNumber: %d", blockNumber)
+		log.Errorf("networkID: %d, error getting lastVerifiedBatch stored in db in processTrustedVerifyBatches. Processing synced blockNumber: %d", s.networkID, blockNumber)
 		rollbackErr := dbTx.Rollback(s.ctx)
 		if rollbackErr != nil {
-			log.Fatalf("error rolling back state. Processing synced blockNumber: %d, rollbackErr: %s, error : %w", blockNumber, rollbackErr.Error(), err)
+			log.Fatalf("networkID: %d, error rolling back state. Processing synced blockNumber: %d, rollbackErr: %s, error : %w", s.networkID, blockNumber, rollbackErr.Error(), err)
 		}
-		log.Fatalf("error getting lastVerifiedBatch stored in db in processTrustedVerifyBatches. Processing synced blockNumber: %d, error: %w", blockNumber, err)
+		log.Fatalf("networkID: %d, error getting lastVerifiedBatch stored in db in processTrustedVerifyBatches. Processing synced blockNumber: %d, error: %w", s.networkID, blockNumber, err)
 	}
 	nbatches := verifiedBatch.BatchNumber - lastVBatch.BatchNumber
 	var i uint64
@@ -710,12 +710,12 @@ func (s *ClientSynchronizer) processTrustedVerifyBatch(verifiedBatch etherman.Ve
 		}
 		err = s.storage.AddVerifiedBatch(s.ctx, &verifiedB, dbTx)
 		if err != nil {
-			log.Errorf("error storing the verifiedB in processTrustedVerifyBatches. verifiedBatch: %+v, verifiedBatch: %+v", verifiedB, verifiedBatch)
+			log.Errorf("networkID: %d, error storing the verifiedB in processTrustedVerifyBatches. verifiedBatch: %+v, verifiedBatch: %+v", s.networkID, verifiedB, verifiedBatch)
 			rollbackErr := dbTx.Rollback(s.ctx)
 			if rollbackErr != nil {
-				log.Fatalf("error rolling back state. BlockNumber: %d, rollbackErr: %s, error : %w", blockNumber, rollbackErr.Error(), err)
+				log.Fatalf("networkID: %d, error rolling back state. BlockNumber: %d, rollbackErr: %s, error : %w", s.networkID, blockNumber, rollbackErr.Error(), err)
 			}
-			log.Fatalf("error storing the verifiedB in processTrustedVerifyBatches. BlockNumber: %d, error: %w", blockNumber, err)
+			log.Fatalf("networkID: %d, error storing the verifiedB in processTrustedVerifyBatches. BlockNumber: %d, error: %w", s.networkID, blockNumber, err)
 		}
 	}
 }

@@ -357,13 +357,13 @@ func (_m *storageMock) GetPreviousBlock(ctx context.Context, networkID uint, off
 	return r0, r1
 }
 
-// Reset provides a mock function with given fields: ctx, blockNumber, dbTx
-func (_m *storageMock) Reset(ctx context.Context, blockNumber uint64, dbTx pgx.Tx) error {
-	ret := _m.Called(ctx, blockNumber, dbTx)
+// Reset provides a mock function with given fields: ctx, blockNumber, networkID, dbTx
+func (_m *storageMock) Reset(ctx context.Context, blockNumber uint64, networkID uint, dbTx pgx.Tx) error {
+	ret := _m.Called(ctx, blockNumber, networkID, dbTx)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, uint64, pgx.Tx) error); ok {
-		r0 = rf(ctx, blockNumber, dbTx)
+	if rf, ok := ret.Get(0).(func(context.Context, uint64, uint, pgx.Tx) error); ok {
+		r0 = rf(ctx, blockNumber, networkID, dbTx)
 	} else {
 		r0 = ret.Error(0)
 	}
