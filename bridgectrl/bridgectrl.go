@@ -114,19 +114,6 @@ func (bt *BridgeController) ReorgMT(depositCount uint, networkID uint) error {
 	return bt.exitTrees[tID].resetLeaf(context.TODO(), depositCount)
 }
 
-// MockAddDeposit adds deposit information to the bridge tree with globalExitRoot.
-func (bt *BridgeController) MockAddDeposit(deposit *etherman.Deposit) error {
-	err := bt.AddDeposit(deposit)
-	if err != nil {
-		return err
-	}
-	return bt.storage.AddGlobalExitRoot(context.TODO(), &etherman.GlobalExitRoot{
-		BlockNumber: 0,
-		ExitRoots:   []common.Hash{common.BytesToHash(bt.exitTrees[0].root[:]), common.BytesToHash(bt.exitTrees[1].root[:])},
-		BlockID:     deposit.BlockID,
-	}, nil)
-}
-
 // GetTokenWrapped returns tokenWrapped information.
 func (bt *BridgeController) GetTokenWrapped(origNetwork uint, origTokenAddr common.Address) (*etherman.TokenWrapped, error) {
 	tokenWrapped, err := bt.storage.GetTokenWrapped(context.Background(), origNetwork, origTokenAddr, nil)

@@ -56,12 +56,6 @@ func main() {
 			Action:  start,
 			Flags:   flags,
 		},
-		{
-			Name:    "mockserver",
-			Aliases: []string{},
-			Usage:   "Run the zkevm bridge mock server",
-			Action:  runMockServer,
-		},
 	}
 
 	err := app.Run(os.Args)
