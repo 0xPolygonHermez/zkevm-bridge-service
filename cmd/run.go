@@ -84,9 +84,17 @@ func start(ctx *cli.Context) error {
 		return gerror.ErrStorageNotRegister
 	}
 
-	go runSynchronizer(c.NetworkConfig.GenBlockNumber, bridgeController, etherman, c.Synchronizer, storage)
+	opts := []grpc.DialOption{
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	}
+	conn, err := grpc.DialContext(ctx.Context, c.Synchronizer.GrpcURL, opts...)
+	if err != nil {
+		log.Fatal("error creating grpc connection. Error: ", err)
+	}
+	broadcastClient := pb.NewBroadcastServiceClient(conn)
+	go runSynchronizer(c.NetworkConfig.GenBlockNumber, bridgeController, etherman, c.Synchronizer, storage, broadcastClient)
 	for _, client := range l2Ethermans {
-		go runSynchronizer(0, bridgeController, client, c.Synchronizer, storage)
+		go runSynchronizer(0, bridgeController, client, c.Synchronizer, storage, broadcastClient)
 	}
 
 	// Wait for an in interrupt.
@@ -120,16 +128,7 @@ func newEthermans(c config.Config) (*etherman.Client, []*etherman.Client, error)
 	return l1Etherman, l2Ethermans, nil
 }
 
-func runSynchronizer(genBlockNumber uint64, brdigeCtrl *bridgectrl.BridgeController, etherman *etherman.Client, cfg synchronizer.Config, storage db.Storage) {
-	ctx := context.Background()
-	opts := []grpc.DialOption{
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	}
-	conn, err := grpc.DialContext(ctx, cfg.GrpcURL, opts...)
-	if err != nil {
-		log.Fatal("error creating grpc connection. Error: ", err)
-	}
-	broadcastClient := pb.NewBroadcastServiceClient(conn)
+func runSynchronizer(genBlockNumber uint64, brdigeCtrl *bridgectrl.BridgeController, etherman *etherman.Client, cfg synchronizer.Config, storage db.Storage, broadcastClient pb.BroadcastServiceClient) {
 	sy, err := synchronizer.NewSynchronizer(storage, brdigeCtrl, etherman, broadcastClient, genBlockNumber, cfg)
 	if err != nil {
 		log.Fatal(err)
