@@ -78,7 +78,7 @@ type Manager struct {
 	cfg *Config
 	ctx context.Context
 
-	storage       storageInterface
+	storage       StorageInterface
 	bridgetree    *bridgectrl.BridgeController
 	bridgeService pb.BridgeServiceServer
 
@@ -120,7 +120,7 @@ func NewManager(ctx context.Context, cfg *Config) (*Manager, error) {
 		return nil, err
 	}
 	bService := bridgectrl.NewBridgeService(pgst, bt)
-	opsman.storage = st.(storageInterface)
+	opsman.storage = st.(StorageInterface)
 	opsman.bridgetree = bt
 	opsman.bridgeService = bService
 	opsman.clients = make(map[NetworkSID]*utils.Client)

@@ -144,13 +144,13 @@ func (mt *MerkleTree) addLeaf(ctx context.Context, leaf [KeyLen]byte) error {
 
 	for h := uint8(0); h < mt.height; h++ {
 		if index&(1<<h) > 0 {
-			parent = hash(siblings[h], cur)
+			parent = Hash(siblings[h], cur)
 			err := mt.store.Set(ctx, parent[:], [][]byte{siblings[h][:], cur[:]}, nil)
 			if err != nil {
 				return err
 			}
 		} else {
-			parent = hash(cur, siblings[h])
+			parent = Hash(cur, siblings[h])
 			err := mt.store.Set(ctx, parent[:], [][]byte{cur[:], siblings[h][:]}, nil)
 			if err != nil {
 				return err

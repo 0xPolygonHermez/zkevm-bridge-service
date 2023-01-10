@@ -8,7 +8,8 @@ import (
 	"github.com/jackc/pgx/v4"
 )
 
-type storageInterface interface {
+// StorageInterface is a storage interface.
+type StorageInterface interface {
 	GetLastBlock(ctx context.Context, networkID uint, dbTx pgx.Tx) (*etherman.Block, error)
 	GetLatestExitRoot(ctx context.Context, isRollup bool, dbTx pgx.Tx) (*etherman.GlobalExitRoot, error)
 	GetLatestL1SyncedExitRoot(ctx context.Context, dbTx pgx.Tx) (*etherman.GlobalExitRoot, error)
@@ -23,7 +24,12 @@ type storageInterface interface {
 	AddBatch(ctx context.Context, batch *etherman.Batch, dbTx pgx.Tx) error
 	AddVerifiedBatch(ctx context.Context, verifiedBatch *etherman.VerifiedBatch, dbTx pgx.Tx) error
 	AddGlobalExitRoot(ctx context.Context, exitRoot *etherman.GlobalExitRoot, dbTx pgx.Tx) error
+	AddTrustedGlobalExitRoot(ctx context.Context, trustedExitRoot *etherman.GlobalExitRoot, dbTx pgx.Tx) error
 	AddDeposit(ctx context.Context, deposit *etherman.Deposit, dbTx pgx.Tx) error
 	AddClaim(ctx context.Context, claim *etherman.Claim, dbTx pgx.Tx) error
 	AddTokenWrapped(ctx context.Context, tokenWrapped *etherman.TokenWrapped, dbTx pgx.Tx) error
+	// atomic
+	Rollback(ctx context.Context, dbTx pgx.Tx) error
+	BeginDBTransaction(ctx context.Context) (pgx.Tx, error)
+	Commit(ctx context.Context, dbTx pgx.Tx) error
 }

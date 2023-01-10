@@ -154,9 +154,18 @@ generate-code-from-proto:
 stop-mockserver: ## Stops the mock bridge service
 	$(STOP_BRIDGE_MOCK)
 
-.PHONY: performance-test
-performance-test: ## Performance test of rest api and db transaction
-	go run ./test/performance/... 1000
+.PHONY: bench
+bench: ## benchmark test
+	$(STOP_BRIDGE_DB) || true
+	$(RUN_BRIDGE_DB); sleep 3
+	trap '$(STOP_BRIDGE_DB)' EXIT; go test -run=NOTEST -bench=Small ./test/benchmark/...
+
+.PHONY: bench-full
+bench-full: ## benchmark full test
+	cd test/benchmark && \
+		go test -run=NOTEST -bench=Small . && \
+		go test -run=NOTEST -bench=Medium . && \
+		go test -run=NOTEST -timeout=30m -bench=Large . && \
 
 .PHONY: test-full
 test-full: build-docker stop run ## Runs all tests checking race conditions

@@ -65,6 +65,8 @@ jobs:
         password: ${{ secrets.DOCKERHUB_TOKEN }}
     - name: Test
       run: make test
+    - name: Benchmark Test
+      run: make bench
 
     # Update check run
     - uses: actions/github-script@v5

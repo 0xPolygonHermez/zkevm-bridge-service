@@ -122,3 +122,8 @@ func (bt *BridgeController) GetTokenWrapped(origNetwork uint, origTokenAddr comm
 	}
 	return tokenWrapped, err
 }
+
+// GetExitRoot returns the dedicated merkle tree's root
+func (bt *BridgeController) GetExitRoot(networkID int) []byte {
+	return bt.exitTrees[networkID].root[:]
+}
