@@ -35,6 +35,8 @@ jobs:
         password: ${{ secrets.DOCKERHUB_TOKEN }}
     - name: Test
       run: make test
+    - name: Benchmark Test
+      run: make bench
   from-fork-test:
     if:
       github.event_name == 'repository_dispatch' &&
