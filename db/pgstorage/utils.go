@@ -60,7 +60,7 @@ func InitOrReset(cfg Config) error {
 
 // NewConfigFromEnv creates config from standard postgres environment variables,
 func NewConfigFromEnv() Config {
-	maxConns, _ := strconv.Atoi(getEnv("ZKEVM_BRIDGE_DATABASE_MAXCONNS", "20"))
+	maxConns, _ := strconv.Atoi(getEnv("ZKEVM_BRIDGE_DATABASE_MAXCONNS", "500"))
 	return Config{
 		User:     getEnv("ZKEVM_BRIDGE_DATABASE_USER", "test_user"),
 		Password: getEnv("ZKEVM_BRIDGE_DATABASE_PASSWORD", "test_password"),

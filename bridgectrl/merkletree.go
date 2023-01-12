@@ -142,16 +142,21 @@ func (mt *MerkleTree) addLeaf(ctx context.Context, leaf [KeyLen]byte) error {
 		return err
 	}
 
+	dbTx, err := mt.store.BeginDBTransaction(ctx)
+	if err != nil {
+		return err
+	}
+
 	for h := uint8(0); h < mt.height; h++ {
 		if index&(1<<h) > 0 {
 			parent = Hash(siblings[h], cur)
-			err := mt.store.Set(ctx, parent[:], [][]byte{siblings[h][:], cur[:]}, nil)
+			err := mt.store.Set(ctx, parent[:], [][]byte{siblings[h][:], cur[:]}, dbTx)
 			if err != nil {
 				return err
 			}
 		} else {
 			parent = Hash(cur, siblings[h])
-			err := mt.store.Set(ctx, parent[:], [][]byte{cur[:], siblings[h][:]}, nil)
+			err := mt.store.Set(ctx, parent[:], [][]byte{cur[:], siblings[h][:]}, dbTx)
 			if err != nil {
 				return err
 			}
@@ -162,8 +167,8 @@ func (mt *MerkleTree) addLeaf(ctx context.Context, leaf [KeyLen]byte) error {
 	// Set the root value
 	mt.root = cur
 	mt.count++
-	err = mt.store.SetRoot(ctx, cur[:], mt.count, mt.network, nil)
-	return err
+	err = mt.store.SetRoot(ctx, cur[:], mt.count, mt.network, dbTx)
+	return mt.store.Commit(ctx, dbTx)
 }
 
 func (mt *MerkleTree) resetLeaf(ctx context.Context, depositCount uint) error {

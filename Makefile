@@ -161,11 +161,12 @@ bench: ## benchmark test
 	trap '$(STOP_BRIDGE_DB)' EXIT; go test -run=NOTEST -bench=Small ./test/benchmark/...
 
 .PHONY: bench-full
+bench-full: export ZKEVM_BRIDGE_DATABASE_PORT = 5432
 bench-full: ## benchmark full test
 	cd test/benchmark && \
-		go test -run=NOTEST -bench=Small . && \
-		go test -run=NOTEST -bench=Medium . && \
-		go test -run=NOTEST -timeout=30m -bench=Large . && \
+	go test -run=NOTEST -bench=Small . && \
+	go test -run=NOTEST -bench=Medium . && \
+	go test -run=NOTEST -timeout=30m -bench=Large .
 
 .PHONY: test-full
 test-full: build-docker stop run ## Runs all tests checking race conditions

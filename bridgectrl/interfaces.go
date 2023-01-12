@@ -16,6 +16,10 @@ type merkleTreeStore interface {
 	GetRoot(ctx context.Context, depositCount uint, network uint8, dbTx pgx.Tx) ([]byte, error)
 	SetRoot(ctx context.Context, root []byte, depositCount uint, network uint8, dbTx pgx.Tx) error
 	GetLastDepositCount(ctx context.Context, network uint8, dbTx pgx.Tx) (uint, error)
+	// atomic
+	Rollback(ctx context.Context, dbTx pgx.Tx) error
+	BeginDBTransaction(ctx context.Context) (pgx.Tx, error)
+	Commit(ctx context.Context, dbTx pgx.Tx) error
 }
 
 // bridgeStorage interface for the Bridge Tree
