@@ -168,6 +168,9 @@ func (mt *MerkleTree) addLeaf(ctx context.Context, leaf [KeyLen]byte) error {
 	mt.root = cur
 	mt.count++
 	err = mt.store.SetRoot(ctx, cur[:], mt.count, mt.network, dbTx)
+	if err != nil {
+		return err
+	}
 	return mt.store.Commit(ctx, dbTx)
 }
 
