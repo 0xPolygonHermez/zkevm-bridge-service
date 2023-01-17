@@ -78,7 +78,7 @@ func TestAddTrustedGERDuplicated(t *testing.T) {
 	}
 	err = pg.AddTrustedGlobalExitRoot(ctx, ger, tx)
 	require.NoError(t, err)
-	getCount := "select count(*) from syncv2.exit_root where block_id = 0 AND global_exit_root = $1"
+	getCount := "select count(*) from sync.exit_root where block_id = 0 AND global_exit_root = $1"
 	var result int
 	err = tx.QueryRow(ctx, getCount, ger.GlobalExitRoot).Scan(&result)
 	require.NoError(t, err)
@@ -104,7 +104,7 @@ func TestAddTrustedGERDuplicated(t *testing.T) {
 	assert.Equal(t, 1, result)
 	err = pg.AddTrustedGlobalExitRoot(ctx, ger1, tx)
 	require.NoError(t, err)
-	getCount2 := "select count(*) from syncv2.exit_root"
+	getCount2 := "select count(*) from sync.exit_root"
 	err = tx.QueryRow(ctx, getCount2).Scan(&result)
 	require.NoError(t, err)
 	assert.Equal(t, 2, result)
@@ -168,7 +168,7 @@ func TestTrustedReset(t *testing.T) {
 	require.Equal(t, lastBatch.BatchNumber, batch3.BatchNumber)
 	require.Equal(t, lastBatch.GlobalExitRoot, batch3.GlobalExitRoot)
 
-	getCount := "select count(*) from syncv2.batch"
+	getCount := "select count(*) from sync.batch"
 	var result int
 	err = tx.QueryRow(ctx, getCount).Scan(&result)
 	require.NoError(t, err)
@@ -350,10 +350,10 @@ func TestMTStorage(t *testing.T) {
 	leaf2 := common.FromHex("0x315fee1aa202bf4a6bd0fde560c89be90b6e6e2aaf92dc5e8d118209abc3410f")
 	root := common.FromHex("0x88e652896cb1de5962a0173a222059f51e6b943a2ba6dfc9acbff051ceb1abb5")
 
-	err = pg.Set(ctx, root, [][]byte{leaf1, leaf2}, tx)
+	rootID, err := pg.SetRoot(ctx, root, 1, 0, tx)
 	require.NoError(t, err)
 
-	err = pg.SetRoot(ctx, root, 1, 0, tx)
+	err = pg.Set(ctx, root, [][]byte{leaf1, leaf2}, rootID, tx)
 	require.NoError(t, err)
 
 	vals, err := pg.Get(ctx, root, tx)
