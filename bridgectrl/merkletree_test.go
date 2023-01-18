@@ -100,7 +100,7 @@ func TestMTAddLeaf(t *testing.T) {
 				leafValue, err := formatBytes32String(leaf[2:])
 				require.NoError(t, err)
 
-				err = mt.addLeaf(ctx, leafValue)
+				err = mt.addLeaf(ctx, leafValue, nil)
 				require.NoError(t, err)
 			}
 
@@ -120,7 +120,7 @@ func TestMTAddLeaf(t *testing.T) {
 				Metadata:           common.FromHex(testVector.NewLeaf.Metadata),
 			}
 			leafHash := hashDeposit(deposit)
-			err = mt.addLeaf(ctx, leafHash)
+			err = mt.addLeaf(ctx, leafHash, nil)
 			require.NoError(t, err)
 
 			assert.Equal(t, hex.EncodeToString(mt.root[:]), testVector.NewRoot[2:])
@@ -167,13 +167,13 @@ func TestMTGetProof(t *testing.T) {
 				}
 
 				leafHash := hashDeposit(deposit)
-				err = mt.addLeaf(ctx, leafHash)
+				err = mt.addLeaf(ctx, leafHash, nil)
 				require.NoError(t, err)
 			}
 
 			assert.Equal(t, hex.EncodeToString(mt.root[:]), testVector.ExpectedRoot[2:])
 
-			prooves, err := mt.getSiblings(ctx, testVector.Index, mt.root)
+			prooves, err := mt.getSiblings(ctx, testVector.Index, mt.root, nil)
 			require.NoError(t, err)
 
 			for i, proof := range prooves {

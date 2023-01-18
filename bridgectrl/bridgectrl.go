@@ -7,6 +7,7 @@ import (
 	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/utils/gerror"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/jackc/pgx/v4"
 )
 
 const (
@@ -51,14 +52,14 @@ func NewBridgeController(cfg Config, networks []uint, bridgeStore interface{}, m
 }
 
 // AddDeposit adds deposit information to the bridge tree.
-func (bt *BridgeController) AddDeposit(deposit *etherman.Deposit) error {
+func (bt *BridgeController) AddDeposit(deposit *etherman.Deposit, dbTx pgx.Tx) error {
 	leaf := hashDeposit(deposit)
 
 	tID, found := bt.networkIDs[deposit.NetworkID]
 	if !found {
 		return gerror.ErrNetworkNotRegister
 	}
-	return bt.exitTrees[tID].addLeaf(context.TODO(), leaf)
+	return bt.exitTrees[tID].addLeaf(context.TODO(), leaf, dbTx)
 }
 
 // GetClaim returns claim information to the user.
@@ -97,7 +98,7 @@ func (bt *BridgeController) GetClaim(networkID uint, index uint) ([][KeyLen]byte
 		return proof, nil, gerror.ErrDepositNotSynced
 	}
 
-	proof, err = bt.exitTrees[tID].getSiblings(ctx, index, globalExitRoot.ExitRoots[tID])
+	proof, err = bt.exitTrees[tID].getSiblings(ctx, index, globalExitRoot.ExitRoots[tID], nil)
 	if err != nil {
 		return proof, nil, fmt.Errorf("getting the proof failed, errror: %v, index: %d, root: %v", err, index, globalExitRoot.ExitRoots[tID])
 	}
@@ -106,12 +107,12 @@ func (bt *BridgeController) GetClaim(networkID uint, index uint) ([][KeyLen]byte
 }
 
 // ReorgMT reorg the specific merkle tree.
-func (bt *BridgeController) ReorgMT(depositCount uint, networkID uint) error {
+func (bt *BridgeController) ReorgMT(depositCount uint, networkID uint, dbTx pgx.Tx) error {
 	tID, found := bt.networkIDs[networkID]
 	if !found {
 		return gerror.ErrNetworkNotRegister
 	}
-	return bt.exitTrees[tID].resetLeaf(context.TODO(), depositCount)
+	return bt.exitTrees[tID].resetLeaf(context.TODO(), depositCount, dbTx)
 }
 
 // GetTokenWrapped returns tokenWrapped information.

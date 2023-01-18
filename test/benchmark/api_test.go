@@ -82,7 +82,7 @@ func initServer(b *testing.B, bench benchmark) *bridgectrl.BridgeController {
 		require.NoError(b, err)
 		deposit := randDeposit(r, uint(i+1), id, networkID)
 		require.NoError(b, store.AddDeposit(context.TODO(), deposit, dbTx))
-		require.NoError(b, bt.AddDeposit(deposit))
+		require.NoError(b, bt.AddDeposit(deposit, dbTx))
 		if i > bench.initSize {
 			require.NoError(b, store.Commit(context.TODO(), dbTx))
 			continue

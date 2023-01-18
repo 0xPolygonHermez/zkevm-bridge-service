@@ -77,15 +77,15 @@ func TestBridgeTree(t *testing.T) {
 			leafHash := hashDeposit(deposit)
 			assert.Equal(t, testVector.ExpectedHash, hex.EncodeToString(leafHash[:]))
 
-			err = bt.AddDeposit(deposit)
+			err = bt.AddDeposit(deposit, nil)
 			require.NoError(t, err)
 
 			// test reorg
 			orgRoot, err := bt.exitTrees[0].store.GetRoot(ctx, uint(i+1), 0, nil)
 			require.NoError(t, err)
-			err = bt.ReorgMT(uint(i), testVectors[i].OriginalNetwork)
+			err = bt.ReorgMT(uint(i), testVectors[i].OriginalNetwork, nil)
 			require.NoError(t, err)
-			err = bt.AddDeposit(deposit)
+			err = bt.AddDeposit(deposit, nil)
 			require.NoError(t, err)
 			newRoot, err := bt.exitTrees[0].store.GetRoot(ctx, uint(i+1), 0, nil)
 			require.NoError(t, err)
