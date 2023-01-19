@@ -24,7 +24,6 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/jackc/pgx/v4"
 )
 
 // NetworkSID is used to identify the network.
@@ -67,18 +66,6 @@ var (
 	}
 )
 
-type storageInterface interface {
-	GetLastBlock(ctx context.Context, networkID uint, dbTx pgx.Tx) (*etherman.Block, error)
-	GetLatestExitRoot(ctx context.Context, isRollup bool, dbTx pgx.Tx) (*etherman.GlobalExitRoot, error)
-	GetLatestL1SyncedExitRoot(ctx context.Context, dbTx pgx.Tx) (*etherman.GlobalExitRoot, error)
-	GetLatestTrustedExitRoot(ctx context.Context, dbTx pgx.Tx) (*etherman.GlobalExitRoot, error)
-	GetTokenWrapped(ctx context.Context, originalNetwork uint, originalTokenAddress common.Address, dbTx pgx.Tx) (*etherman.TokenWrapped, error)
-	GetDepositCountByRoot(ctx context.Context, root []byte, network uint8, dbTx pgx.Tx) (uint, error)
-	UpdateBlocksForTesting(ctx context.Context, networkID uint, blockNum uint64, dbTx pgx.Tx) error
-	GetLastBatchNumber(ctx context.Context, dbTx pgx.Tx) (uint64, error)
-	UpdateBatchesForTesting(ctx context.Context, batchNum uint64, dbTx pgx.Tx) error
-}
-
 // Config is the main Manager configuration.
 type Config struct {
 	Storage db.Config
@@ -91,7 +78,7 @@ type Manager struct {
 	cfg *Config
 	ctx context.Context
 
-	storage       storageInterface
+	storage       StorageInterface
 	bridgetree    *bridgectrl.BridgeController
 	bridgeService pb.BridgeServiceServer
 
@@ -133,7 +120,7 @@ func NewManager(ctx context.Context, cfg *Config) (*Manager, error) {
 		return nil, err
 	}
 	bService := bridgectrl.NewBridgeService(pgst, bt)
-	opsman.storage = st.(storageInterface)
+	opsman.storage = st.(StorageInterface)
 	opsman.bridgetree = bt
 	opsman.bridgeService = bService
 	opsman.clients = make(map[NetworkSID]*utils.Client)

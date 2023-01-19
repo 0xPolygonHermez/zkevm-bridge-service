@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/0xPolygonHermez/zkevm-bridge-service/utils/gerror"
+	"github.com/jackc/pgx/v4"
 )
 
 // zeroHashes is the pre-calculated zero hash array
@@ -38,17 +39,17 @@ func NewMerkleTree(ctx context.Context, store merkleTreeStore, height, network u
 	depositCnt, err := store.GetLastDepositCount(ctx, network, nil)
 	if err != nil {
 		if err == gerror.ErrStorageNotFound {
+			rootID, err1 := store.SetRoot(ctx, zeroHashes[height][:], 0, network, nil)
+			if err1 != nil {
+				return nil, err
+			}
 			for h := uint8(0); h < height; h++ {
 				// h+1 is the position of the parent node and h is the position of the values of the children nodes. As all the nodes of the same nodes has the same values
 				// we can only store the info ones
-				err := store.Set(ctx, zeroHashes[h+1][:], [][]byte{zeroHashes[h][:], zeroHashes[h][:]}, nil)
+				err := store.Set(ctx, zeroHashes[h+1][:], [][]byte{zeroHashes[h][:], zeroHashes[h][:]}, rootID, nil)
 				if err != nil {
 					return nil, err
 				}
-			}
-			err1 := store.SetRoot(ctx, zeroHashes[height][:], 0, network, nil)
-			if err1 != nil {
-				return nil, err
 			}
 		} else {
 			return nil, err
@@ -71,7 +72,7 @@ func NewMerkleTree(ctx context.Context, store merkleTreeStore, height, network u
 	}, nil
 }
 
-func (mt *MerkleTree) getSiblings(ctx context.Context, index uint, root [KeyLen]byte) ([][KeyLen]byte, error) {
+func (mt *MerkleTree) getSiblings(ctx context.Context, index uint, root [KeyLen]byte, dbTx pgx.Tx) ([][KeyLen]byte, error) {
 	var (
 		left, right [KeyLen]byte
 		siblings    [][KeyLen]byte
@@ -79,8 +80,8 @@ func (mt *MerkleTree) getSiblings(ctx context.Context, index uint, root [KeyLen]
 
 	cur := root
 	// It starts in height-1 because 0 is the level of the leafs
-	for h := mt.height - 1; ; h-- {
-		value, err := mt.store.Get(ctx, cur[:], nil)
+	for h := int(mt.height - 1); h >= 0; h-- {
+		value, err := mt.store.Get(ctx, cur[:], dbTx)
 		if err != nil {
 			return nil, fmt.Errorf("height: %d, cur: %v, error: %w", h, cur, err)
 		}
@@ -117,10 +118,6 @@ func (mt *MerkleTree) getSiblings(ctx context.Context, index uint, root [KeyLen]
 			siblings = append(siblings, right)
 			cur = left
 		}
-
-		if h == 0 {
-			break
-		}
 	}
 
 	// We need to invert the siblings to go from leafs to the top
@@ -131,49 +128,55 @@ func (mt *MerkleTree) getSiblings(ctx context.Context, index uint, root [KeyLen]
 	return siblings, nil
 }
 
-func (mt *MerkleTree) addLeaf(ctx context.Context, leaf [KeyLen]byte) error {
-	var parent [KeyLen]byte
-
+func (mt *MerkleTree) addLeaf(ctx context.Context, leaf [KeyLen]byte, dbTx pgx.Tx) error {
 	index := mt.count
 	cur := leaf
 
-	siblings, err := mt.getSiblings(ctx, index, mt.root)
+	siblings, err := mt.getSiblings(ctx, index, mt.root, dbTx)
 	if err != nil {
 		return err
 	}
 
+	var leaves [][][]byte
 	for h := uint8(0); h < mt.height; h++ {
 		if index&(1<<h) > 0 {
-			parent = hash(siblings[h], cur)
-			err := mt.store.Set(ctx, parent[:], [][]byte{siblings[h][:], cur[:]}, nil)
-			if err != nil {
-				return err
-			}
+			var child [KeyLen]byte
+			copy(child[:], cur[:])
+			parent := Hash(siblings[h], child)
+			cur = parent
+			leaves = append(leaves, [][]byte{parent[:], siblings[h][:], child[:]})
 		} else {
-			parent = hash(cur, siblings[h])
-			err := mt.store.Set(ctx, parent[:], [][]byte{cur[:], siblings[h][:]}, nil)
-			if err != nil {
-				return err
-			}
+			var child [KeyLen]byte
+			copy(child[:], cur[:])
+			parent := Hash(child, siblings[h])
+			cur = parent
+			leaves = append(leaves, [][]byte{parent[:], child[:], siblings[h][:]})
 		}
-		cur = parent
 	}
-
-	// Set the root value
+	// Set the root value and leaves
 	mt.root = cur
 	mt.count++
-	err = mt.store.SetRoot(ctx, cur[:], mt.count, mt.network, nil)
-	return err
+	rootID, err := mt.store.SetRoot(ctx, cur[:], mt.count, mt.network, dbTx)
+	if err != nil {
+		return err
+	}
+	for _, leaf := range leaves {
+		err := mt.store.Set(ctx, leaf[0], [][]byte{leaf[1], leaf[2]}, rootID, dbTx)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
-func (mt *MerkleTree) resetLeaf(ctx context.Context, depositCount uint) error {
-	err := mt.store.ResetMT(ctx, depositCount, mt.network, nil)
+func (mt *MerkleTree) resetLeaf(ctx context.Context, depositCount uint, dbTx pgx.Tx) error {
+	err := mt.store.ResetMT(ctx, depositCount, mt.network, dbTx)
 	if err != nil {
 		return err
 	}
 
 	mt.count = depositCount
-	root, err := mt.store.GetRoot(ctx, depositCount, mt.network, nil)
+	root, err := mt.store.GetRoot(ctx, depositCount, mt.network, dbTx)
 	if err != nil {
 		return err
 	}

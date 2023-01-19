@@ -46,6 +46,6 @@ type storageInterface interface {
 }
 
 type bridgectrlInterface interface {
-	AddDeposit(deposit *etherman.Deposit) error
-	ReorgMT(depositCount, networkID uint) error
+	AddDeposit(deposit *etherman.Deposit, dbTx pgx.Tx) error
+	ReorgMT(depositCount, networkID uint, dbTx pgx.Tx) error
 }

@@ -56,6 +56,12 @@ services:
   zkevm-bridge-db:
     container_name: zkevm-bridge-db
     image: postgres
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+        reservations:
+          memory: 1G
     expose:
       - 5435
     ports:
@@ -124,20 +130,3 @@ services:
       - "/bin/sh"
       - "-c"
       - "/app/zkevm-bridge run --cfg /app/config.toml"
-
-  zkevm-bridge-service-mock:
-    container_name: zkevm-bridge-service-mock
-    image: zkevm-bridge-service
-    ports:
-      - 8080:8080
-      - 9090:9090
-    environment:
-      - ZKEVM_BRIDGE_DATABASE_USER=test_user
-      - ZKEVM_BRIDGE_DATABASE_PASSWORD=test_password
-      - ZKEVM_BRIDGE_DATABASE_NAME=test_db
-      - ZKEVM_BRIDGE_DATABASE_HOST=zkevm-bridge-db
-      - ZKEVM_BRIDGE_DATABASE_PORT=5433
-    command:
-      - "/bin/sh"
-      - "-c"
-      - "/app/zkevm-bridge mockserver"

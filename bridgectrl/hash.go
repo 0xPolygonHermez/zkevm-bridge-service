@@ -8,7 +8,8 @@ import (
 	"golang.org/x/crypto/sha3"
 )
 
-func hash(data ...[KeyLen]byte) [KeyLen]byte {
+// Hash calculates  the keccak hash of elements.
+func Hash(data ...[KeyLen]byte) [KeyLen]byte {
 	var res [KeyLen]byte
 	hash := sha3.NewLegacyKeccak256()
 	for _, d := range data {
@@ -28,7 +29,7 @@ func generateZeroHashes(height uint8) [][KeyLen]byte {
 	// This generates a leaf = HashZero in position 0. In the rest of the positions that are equivalent to the ascending levels,
 	// we set the hashes of the nodes. So all nodes from level i=5 will have the same value and same children nodes.
 	for i := 1; i <= int(height); i++ {
-		zeroHashes = append(zeroHashes, hash(zeroHashes[i-1], zeroHashes[i-1]))
+		zeroHashes = append(zeroHashes, Hash(zeroHashes[i-1], zeroHashes[i-1]))
 	}
 	return zeroHashes
 }

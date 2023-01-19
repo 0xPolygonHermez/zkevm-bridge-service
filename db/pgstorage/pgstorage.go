@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
-	"strings"
 
 	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/utils/gerror"
@@ -70,7 +69,7 @@ func (p *PostgresStorage) BeginDBTransaction(ctx context.Context) (pgx.Tx, error
 // GetLastBlock gets the last block.
 func (p *PostgresStorage) GetLastBlock(ctx context.Context, networkID uint, dbTx pgx.Tx) (*etherman.Block, error) {
 	var block etherman.Block
-	const getLastBlockSQL = "SELECT id, block_num, block_hash, parent_hash, network_id, received_at FROM syncv2.block where network_id = $1 ORDER BY block_num DESC LIMIT 1"
+	const getLastBlockSQL = "SELECT id, block_num, block_hash, parent_hash, network_id, received_at FROM sync.block where network_id = $1 ORDER BY block_num DESC LIMIT 1"
 
 	e := p.getExecQuerier(dbTx)
 	err := e.QueryRow(ctx, getLastBlockSQL, networkID).Scan(&block.ID, &block.BlockNumber, &block.BlockHash, &block.ParentHash, &block.NetworkID, &block.ReceivedAt)
@@ -85,7 +84,7 @@ func (p *PostgresStorage) GetLastBlock(ctx context.Context, networkID uint, dbTx
 // GetLastBatchNumber gets the last batch number.
 func (p *PostgresStorage) GetLastBatchNumber(ctx context.Context, dbTx pgx.Tx) (uint64, error) {
 	var batchNumber uint64
-	const getLastBatchNumberSQL = "SELECT coalesce(max(batch_num),0) as batch FROM syncv2.batch"
+	const getLastBatchNumberSQL = "SELECT coalesce(max(batch_num),0) as batch FROM sync.batch"
 
 	e := p.getExecQuerier(dbTx)
 	err := e.QueryRow(ctx, getLastBatchNumberSQL).Scan(&batchNumber)
@@ -96,7 +95,7 @@ func (p *PostgresStorage) GetLastBatchNumber(ctx context.Context, dbTx pgx.Tx) (
 // GetBatchByNumber gets the specific batch by the batch number.
 func (p *PostgresStorage) GetBatchByNumber(ctx context.Context, batchNumber uint64, dbTx pgx.Tx) (*etherman.Batch, error) {
 	var batch etherman.Batch
-	const getBatchByNumberSQL = "SELECT batch_num, sequencer, raw_tx_data, timestamp, global_exit_root FROM syncv2.batch WHERE batch_num = $1"
+	const getBatchByNumberSQL = "SELECT batch_num, sequencer, raw_tx_data, timestamp, global_exit_root FROM sync.batch WHERE batch_num = $1"
 
 	e := p.getExecQuerier(dbTx)
 	err := e.QueryRow(ctx, getBatchByNumberSQL, batchNumber).Scan(
@@ -111,7 +110,7 @@ func (p *PostgresStorage) GetBatchByNumber(ctx context.Context, batchNumber uint
 // AddBlock adds a new block to the storage.
 func (p *PostgresStorage) AddBlock(ctx context.Context, block *etherman.Block, dbTx pgx.Tx) (uint64, error) {
 	var blockID uint64
-	const addBlockSQL = "INSERT INTO syncv2.block (block_num, block_hash, parent_hash, network_id, received_at) VALUES ($1, $2, $3, $4, $5) RETURNING id;"
+	const addBlockSQL = "INSERT INTO sync.block (block_num, block_hash, parent_hash, network_id, received_at) VALUES ($1, $2, $3, $4, $5) RETURNING id;"
 	e := p.getExecQuerier(dbTx)
 	err := e.QueryRow(ctx, addBlockSQL, block.BlockNumber, block.BlockHash, block.ParentHash, block.NetworkID, block.ReceivedAt).Scan(&blockID)
 
@@ -120,7 +119,7 @@ func (p *PostgresStorage) AddBlock(ctx context.Context, block *etherman.Block, d
 
 // AddBatch adds a new batch to the storage.
 func (p *PostgresStorage) AddBatch(ctx context.Context, batch *etherman.Batch, dbTx pgx.Tx) error {
-	const addBatchSQL = "INSERT INTO syncv2.batch (batch_num, sequencer, raw_tx_data, timestamp, global_exit_root) VALUES ($1, $2, $3, $4, $5)"
+	const addBatchSQL = "INSERT INTO sync.batch (batch_num, sequencer, raw_tx_data, timestamp, global_exit_root) VALUES ($1, $2, $3, $4, $5)"
 	e := p.getExecQuerier(dbTx)
 	_, err := e.Exec(ctx, addBatchSQL, batch.BatchNumber, batch.Coinbase, batch.BatchL2Data, batch.Timestamp, batch.GlobalExitRoot)
 	return err
@@ -128,7 +127,7 @@ func (p *PostgresStorage) AddBatch(ctx context.Context, batch *etherman.Batch, d
 
 // AddVerifiedBatch adds a new verified batch.
 func (p *PostgresStorage) AddVerifiedBatch(ctx context.Context, verifiedBatch *etherman.VerifiedBatch, dbTx pgx.Tx) error {
-	const addVerifiedBatchSQL = "INSERT INTO syncv2.verified_batch (batch_num, aggregator, tx_hash, block_id) VALUES ($1, $2, $3, $4)"
+	const addVerifiedBatchSQL = "INSERT INTO sync.verified_batch (batch_num, aggregator, tx_hash, block_id) VALUES ($1, $2, $3, $4)"
 	e := p.getExecQuerier(dbTx)
 	_, err := e.Exec(ctx, addVerifiedBatchSQL, verifiedBatch.BatchNumber, verifiedBatch.Aggregator, verifiedBatch.TxHash, verifiedBatch.BlockID)
 
@@ -137,7 +136,7 @@ func (p *PostgresStorage) AddVerifiedBatch(ctx context.Context, verifiedBatch *e
 
 // GetLastVerifiedBatch gets last verified batch
 func (p *PostgresStorage) GetLastVerifiedBatch(ctx context.Context, dbTx pgx.Tx) (*etherman.VerifiedBatch, error) {
-	const query = "SELECT block_id, batch_num, tx_hash, aggregator FROM syncv2.verified_batch ORDER BY batch_num DESC LIMIT 1"
+	const query = "SELECT block_id, batch_num, tx_hash, aggregator FROM sync.verified_batch ORDER BY batch_num DESC LIMIT 1"
 	var (
 		verifiedBatch etherman.VerifiedBatch
 	)
@@ -153,7 +152,7 @@ func (p *PostgresStorage) GetLastVerifiedBatch(ctx context.Context, dbTx pgx.Tx)
 
 // AddGlobalExitRoot adds a new ExitRoot to the db.
 func (p *PostgresStorage) AddGlobalExitRoot(ctx context.Context, exitRoot *etherman.GlobalExitRoot, dbTx pgx.Tx) error {
-	const addExitRootSQL = "INSERT INTO syncv2.exit_root (block_id, global_exit_root, exit_roots) VALUES ($1, $2, $3)"
+	const addExitRootSQL = "INSERT INTO sync.exit_root (block_id, global_exit_root, exit_roots) VALUES ($1, $2, $3)"
 	e := p.getExecQuerier(dbTx)
 	_, err := e.Exec(ctx, addExitRootSQL, exitRoot.BlockID, exitRoot.GlobalExitRoot, pq.Array([][]byte{exitRoot.ExitRoots[0][:], exitRoot.ExitRoots[1][:]}))
 	return err
@@ -161,7 +160,7 @@ func (p *PostgresStorage) AddGlobalExitRoot(ctx context.Context, exitRoot *ether
 
 // AddDeposit adds new deposit to the storage.
 func (p *PostgresStorage) AddDeposit(ctx context.Context, deposit *etherman.Deposit, dbTx pgx.Tx) error {
-	const addDepositSQL = "INSERT INTO syncv2.deposit (leaf_type, network_id, orig_net, orig_addr, amount, dest_net, dest_addr, block_id, deposit_cnt, tx_hash, metadata) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)"
+	const addDepositSQL = "INSERT INTO sync.deposit (leaf_type, network_id, orig_net, orig_addr, amount, dest_net, dest_addr, block_id, deposit_cnt, tx_hash, metadata) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)"
 	e := p.getExecQuerier(dbTx)
 	_, err := e.Exec(ctx, addDepositSQL, deposit.LeafType, deposit.NetworkID, deposit.OriginalNetwork, deposit.OriginalAddress, deposit.Amount.String(), deposit.DestinationNetwork, deposit.DestinationAddress, deposit.BlockID, deposit.DepositCount, deposit.TxHash, deposit.Metadata)
 	return err
@@ -169,7 +168,7 @@ func (p *PostgresStorage) AddDeposit(ctx context.Context, deposit *etherman.Depo
 
 // AddClaim adds new claim to the storage.
 func (p *PostgresStorage) AddClaim(ctx context.Context, claim *etherman.Claim, dbTx pgx.Tx) error {
-	const addClaimSQL = "INSERT INTO syncv2.claim (network_id, index, orig_net, orig_addr, amount, dest_addr, block_id, tx_hash) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"
+	const addClaimSQL = "INSERT INTO sync.claim (network_id, index, orig_net, orig_addr, amount, dest_addr, block_id, tx_hash) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"
 	e := p.getExecQuerier(dbTx)
 	_, err := e.Exec(ctx, addClaimSQL, claim.NetworkID, claim.Index, claim.OriginalNetwork, claim.OriginalAddress, claim.Amount.String(), claim.DestinationAddress, claim.BlockID, claim.TxHash)
 	return err
@@ -178,7 +177,7 @@ func (p *PostgresStorage) AddClaim(ctx context.Context, claim *etherman.Claim, d
 // GetTokenMetadata gets the metadata of the dedicated token.
 func (p *PostgresStorage) GetTokenMetadata(ctx context.Context, networkID, destNet uint, originalTokenAddr common.Address, dbTx pgx.Tx) ([]byte, error) {
 	var metadata []byte
-	const getMetadataSQL = "SELECT metadata from syncv2.deposit WHERE network_id = $1 AND orig_addr = $2 AND dest_net = $3 AND metadata IS NOT NULL LIMIT 1"
+	const getMetadataSQL = "SELECT metadata from sync.deposit WHERE network_id = $1 AND orig_addr = $2 AND dest_net = $3 AND metadata IS NOT NULL LIMIT 1"
 	e := p.getExecQuerier(dbTx)
 	err := e.QueryRow(ctx, getMetadataSQL, networkID, originalTokenAddr, destNet).Scan(&metadata)
 	return metadata, err
@@ -202,7 +201,7 @@ func (p *PostgresStorage) AddTokenWrapped(ctx context.Context, tokenWrapped *eth
 		}
 	}
 
-	const addTokenWrappedSQL = "INSERT INTO syncv2.token_wrapped (network_id, orig_net, orig_token_addr, wrapped_token_addr, block_id, name, symbol, decimals) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"
+	const addTokenWrappedSQL = "INSERT INTO sync.token_wrapped (network_id, orig_net, orig_token_addr, wrapped_token_addr, block_id, name, symbol, decimals) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"
 	e := p.getExecQuerier(dbTx)
 	_, err = e.Exec(ctx, addTokenWrappedSQL, tokenWrapped.NetworkID, tokenWrapped.OriginalNetwork, tokenWrapped.OriginalTokenAddress, tokenWrapped.WrappedTokenAddress, tokenWrapped.BlockID, tokenMetadata.Name, tokenMetadata.Symbol, tokenMetadata.Decimals)
 	return err
@@ -210,7 +209,7 @@ func (p *PostgresStorage) AddTokenWrapped(ctx context.Context, tokenWrapped *eth
 
 // Reset resets the state to a block for the given DB tx.
 func (p *PostgresStorage) Reset(ctx context.Context, blockNumber uint64, dbTx pgx.Tx) error {
-	const resetSQL = "DELETE FROM syncv2.block WHERE block_num > $1"
+	const resetSQL = "DELETE FROM sync.block WHERE block_num > $1"
 	e := p.getExecQuerier(dbTx)
 	_, err := e.Exec(ctx, resetSQL, blockNumber)
 	return err
@@ -219,7 +218,7 @@ func (p *PostgresStorage) Reset(ctx context.Context, blockNumber uint64, dbTx pg
 // GetPreviousBlock gets the offset previous L1 block respect to latest.
 func (p *PostgresStorage) GetPreviousBlock(ctx context.Context, networkID uint, offset uint64, dbTx pgx.Tx) (*etherman.Block, error) {
 	var block etherman.Block
-	const getPreviousBlockSQL = "SELECT block_num, block_hash, parent_hash, network_id, received_at FROM syncv2.block WHERE network_id = $1 ORDER BY block_num DESC LIMIT 1 OFFSET $2"
+	const getPreviousBlockSQL = "SELECT block_num, block_hash, parent_hash, network_id, received_at FROM sync.block WHERE network_id = $1 ORDER BY block_num DESC LIMIT 1 OFFSET $2"
 	e := p.getExecQuerier(dbTx)
 	err := e.QueryRow(ctx, getPreviousBlockSQL, networkID, offset).Scan(&block.BlockNumber, &block.BlockHash, &block.ParentHash, &block.NetworkID, &block.ReceivedAt)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -231,14 +230,14 @@ func (p *PostgresStorage) GetPreviousBlock(ctx context.Context, networkID uint, 
 // GetNumberDeposits gets the number of  deposits.
 func (p *PostgresStorage) GetNumberDeposits(ctx context.Context, networkID uint, blockNumber uint64, dbTx pgx.Tx) (uint64, error) {
 	var nDeposits int64
-	const getNumDepositsSQL = "SELECT coalesce(MAX(deposit_cnt), -1) FROM syncv2.deposit as d INNER JOIN syncv2.block as b ON d.network_id = b.network_id AND d.block_id = b.id WHERE d.network_id = $1 AND b.block_num <= $2"
+	const getNumDepositsSQL = "SELECT coalesce(MAX(deposit_cnt), -1) FROM sync.deposit as d INNER JOIN sync.block as b ON d.network_id = b.network_id AND d.block_id = b.id WHERE d.network_id = $1 AND b.block_num <= $2"
 	err := p.getExecQuerier(dbTx).QueryRow(ctx, getNumDepositsSQL, networkID, blockNumber).Scan(&nDeposits)
 	return uint64(nDeposits + 1), err
 }
 
 // GetNextForcedBatches gets the next forced batches from the queue.
 func (p *PostgresStorage) GetNextForcedBatches(ctx context.Context, nextForcedBatches int, dbTx pgx.Tx) ([]etherman.ForcedBatch, error) {
-	const getNextForcedBatchesSQL = "SELECT forced_batch_num, global_exit_root, raw_tx_data, sequencer, batch_num, block_id FROM syncv2.forced_batch WHERE batch_num IS NULL ORDER BY forced_batch_num LIMIT $1"
+	const getNextForcedBatchesSQL = "SELECT forced_batch_num, global_exit_root, raw_tx_data, sequencer, batch_num, block_id FROM sync.forced_batch WHERE batch_num IS NULL ORDER BY forced_batch_num LIMIT $1"
 	e := p.getExecQuerier(dbTx)
 	// Get the next forced batches
 	rows, err := e.Query(ctx, getNextForcedBatchesSQL, nextForcedBatches)
@@ -265,7 +264,7 @@ func (p *PostgresStorage) GetNextForcedBatches(ctx context.Context, nextForcedBa
 
 // AddBatchNumberInForcedBatch updates the forced_batch table with the batchNumber.
 func (p *PostgresStorage) AddBatchNumberInForcedBatch(ctx context.Context, forceBatchNumber, batchNumber uint64, dbTx pgx.Tx) error {
-	const addBatchNumberInForcedBatchSQL = "UPDATE syncv2.forced_batch SET batch_num = $2 WHERE forced_batch_num = $1"
+	const addBatchNumberInForcedBatchSQL = "UPDATE sync.forced_batch SET batch_num = $2 WHERE forced_batch_num = $1"
 	e := p.getExecQuerier(dbTx)
 	_, err := e.Exec(ctx, addBatchNumberInForcedBatchSQL, forceBatchNumber, batchNumber)
 	return err
@@ -273,7 +272,7 @@ func (p *PostgresStorage) AddBatchNumberInForcedBatch(ctx context.Context, force
 
 // AddForcedBatch adds a new ForcedBatch to the db.
 func (p *PostgresStorage) AddForcedBatch(ctx context.Context, forcedBatch *etherman.ForcedBatch, dbTx pgx.Tx) error {
-	const addForcedBatchSQL = "INSERT INTO syncv2.forced_batch (forced_batch_num, global_exit_root, raw_tx_data, sequencer, batch_num, block_id) VALUES ($1, $2, $3, $4, $5, $6)"
+	const addForcedBatchSQL = "INSERT INTO sync.forced_batch (forced_batch_num, global_exit_root, raw_tx_data, sequencer, batch_num, block_id) VALUES ($1, $2, $3, $4, $5, $6)"
 	_, err := p.getExecQuerier(dbTx).Exec(ctx, addForcedBatchSQL, forcedBatch.ForcedBatchNumber, forcedBatch.GlobalExitRoot, forcedBatch.RawTxsData, forcedBatch.Sequencer, forcedBatch.BatchNumber, forcedBatch.BlockID)
 	return err
 }
@@ -281,7 +280,7 @@ func (p *PostgresStorage) AddForcedBatch(ctx context.Context, forcedBatch *ether
 // AddTrustedGlobalExitRoot adds new global exit root which comes from the trusted sequencer.
 func (p *PostgresStorage) AddTrustedGlobalExitRoot(ctx context.Context, trustedExitRoot *etherman.GlobalExitRoot, dbTx pgx.Tx) error {
 	const addTrustedGerSQL = `
-		INSERT INTO syncv2.exit_root (block_id, global_exit_root, exit_roots) 
+		INSERT INTO sync.exit_root (block_id, global_exit_root, exit_roots) 
 		VALUES (0, $1, $2)
 		ON CONFLICT ON CONSTRAINT UC DO NOTHING;`
 	_, err := p.getExecQuerier(dbTx).Exec(ctx, addTrustedGerSQL, trustedExitRoot.GlobalExitRoot, pq.Array([][]byte{trustedExitRoot.ExitRoots[0][:], trustedExitRoot.ExitRoots[1][:]}))
@@ -294,7 +293,7 @@ func (p *PostgresStorage) GetClaim(ctx context.Context, depositCounterUser uint,
 		claim  etherman.Claim
 		amount string
 	)
-	const getClaimSQL = "SELECT index, orig_net, orig_addr, amount, dest_addr, block_id, network_id, tx_hash FROM syncv2.claim WHERE index = $1 AND network_id = $2"
+	const getClaimSQL = "SELECT index, orig_net, orig_addr, amount, dest_addr, block_id, network_id, tx_hash FROM sync.claim WHERE index = $1 AND network_id = $2"
 	err := p.getExecQuerier(dbTx).QueryRow(ctx, getClaimSQL, depositCounterUser, networkID).Scan(&claim.Index, &claim.OriginalNetwork, &claim.OriginalAddress, &amount, &claim.DestinationAddress, &claim.BlockID, &claim.NetworkID, &claim.TxHash)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, gerror.ErrStorageNotFound
@@ -309,7 +308,7 @@ func (p *PostgresStorage) GetDeposit(ctx context.Context, depositCounterUser uin
 		deposit etherman.Deposit
 		amount  string
 	)
-	const getDepositSQL = "SELECT leaf_type, orig_net, orig_addr, amount, dest_net, dest_addr, deposit_cnt, block_id, b.block_num, d.network_id, tx_hash, metadata FROM syncv2.deposit as d INNER JOIN syncv2.block as b ON d.network_id = b.network_id AND d.block_id = b.id WHERE d.network_id = $1 AND deposit_cnt = $2"
+	const getDepositSQL = "SELECT leaf_type, orig_net, orig_addr, amount, dest_net, dest_addr, deposit_cnt, block_id, b.block_num, d.network_id, tx_hash, metadata FROM sync.deposit as d INNER JOIN sync.block as b ON d.network_id = b.network_id AND d.block_id = b.id WHERE d.network_id = $1 AND deposit_cnt = $2"
 	err := p.getExecQuerier(dbTx).QueryRow(ctx, getDepositSQL, networkID, depositCounterUser).Scan(&deposit.LeafType, &deposit.OriginalNetwork, &deposit.OriginalAddress, &amount, &deposit.DestinationNetwork, &deposit.DestinationAddress, &deposit.DepositCount, &deposit.BlockID, &deposit.BlockNumber, &deposit.NetworkID, &deposit.TxHash, &deposit.Metadata)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, gerror.ErrStorageNotFound
@@ -334,7 +333,7 @@ func (p *PostgresStorage) GetLatestL1SyncedExitRoot(ctx context.Context, dbTx pg
 		ger       etherman.GlobalExitRoot
 		exitRoots [][]byte
 	)
-	const getLatestL1SyncedExitRootSQL = "SELECT block_id, global_exit_root, exit_roots FROM syncv2.exit_root WHERE block_id > 0 ORDER BY id DESC LIMIT 1"
+	const getLatestL1SyncedExitRootSQL = "SELECT block_id, global_exit_root, exit_roots FROM sync.exit_root WHERE block_id > 0 ORDER BY id DESC LIMIT 1"
 	err := p.getExecQuerier(dbTx).QueryRow(ctx, getLatestL1SyncedExitRootSQL).Scan(&ger.BlockID, &ger.GlobalExitRoot, pq.Array(&exitRoots))
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -352,7 +351,7 @@ func (p *PostgresStorage) GetLatestTrustedExitRoot(ctx context.Context, dbTx pgx
 		ger       etherman.GlobalExitRoot
 		exitRoots [][]byte
 	)
-	const getLatestTrustedExitRootSQL = "SELECT global_exit_root, exit_roots FROM syncv2.exit_root WHERE block_id = 0 ORDER BY id DESC LIMIT 1"
+	const getLatestTrustedExitRootSQL = "SELECT global_exit_root, exit_roots FROM sync.exit_root WHERE block_id = 0 ORDER BY id DESC LIMIT 1"
 	err := p.getExecQuerier(dbTx).QueryRow(ctx, getLatestTrustedExitRootSQL).Scan(&ger.GlobalExitRoot, pq.Array(&exitRoots))
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -366,7 +365,7 @@ func (p *PostgresStorage) GetLatestTrustedExitRoot(ctx context.Context, dbTx pgx
 
 // GetTokenWrapped gets a specific wrapped token.
 func (p *PostgresStorage) GetTokenWrapped(ctx context.Context, originalNetwork uint, originalTokenAddress common.Address, dbTx pgx.Tx) (*etherman.TokenWrapped, error) {
-	const getWrappedTokenSQL = "SELECT network_id, orig_net, orig_token_addr, wrapped_token_addr, block_id, name, symbol, decimals FROM syncv2.token_wrapped WHERE orig_net = $1 AND orig_token_addr = $2"
+	const getWrappedTokenSQL = "SELECT network_id, orig_net, orig_token_addr, wrapped_token_addr, block_id, name, symbol, decimals FROM sync.token_wrapped WHERE orig_net = $1 AND orig_token_addr = $2"
 
 	var token etherman.TokenWrapped
 	err := p.getExecQuerier(dbTx).QueryRow(ctx, getWrappedTokenSQL, originalNetwork, originalTokenAddress).Scan(&token.NetworkID, &token.OriginalNetwork, &token.OriginalTokenAddress, &token.WrappedTokenAddress, &token.BlockID, &token.Name, &token.Symbol, &token.Decimals)
@@ -388,7 +387,7 @@ func (p *PostgresStorage) GetTokenWrapped(ctx context.Context, originalNetwork u
 			if err != nil {
 				return nil, err
 			}
-			updateWrappedTokenSQL := "UPDATE syncv2.token_wrapped SET name = $3, symbol = $4, decimals = $5  WHERE orig_net = $1 AND orig_token_addr = $2" //nolint: gosec
+			updateWrappedTokenSQL := "UPDATE sync.token_wrapped SET name = $3, symbol = $4, decimals = $5  WHERE orig_net = $1 AND orig_token_addr = $2" //nolint: gosec
 			_, err = p.getExecQuerier(dbTx).Exec(ctx, updateWrappedTokenSQL, originalNetwork, originalTokenAddress, tokenMetadata.Name, tokenMetadata.Symbol, tokenMetadata.Decimals)
 			if err != nil {
 				return nil, err
@@ -402,7 +401,7 @@ func (p *PostgresStorage) GetTokenWrapped(ctx context.Context, originalNetwork u
 // GetDepositCountByRoot gets the deposit count by the root.
 func (p *PostgresStorage) GetDepositCountByRoot(ctx context.Context, root []byte, network uint8, dbTx pgx.Tx) (uint, error) {
 	var depositCount uint
-	const getDepositCountByRootSQL = "SELECT deposit_cnt FROM mtv2.root WHERE root = $1 AND network = $2"
+	const getDepositCountByRootSQL = "SELECT deposit_cnt FROM mt.root WHERE root = $1 AND network = $2"
 	err := p.getExecQuerier(dbTx).QueryRow(ctx, getDepositCountByRootSQL, root, network).Scan(&depositCount)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return 0, gerror.ErrStorageNotFound
@@ -413,7 +412,7 @@ func (p *PostgresStorage) GetDepositCountByRoot(ctx context.Context, root []byte
 // GetRoot gets root by the deposit count from the merkle tree.
 func (p *PostgresStorage) GetRoot(ctx context.Context, depositCnt uint, network uint8, dbTx pgx.Tx) ([]byte, error) {
 	var root []byte
-	const getRootByDepositCntSQL = "SELECT root FROM mtv2.root WHERE deposit_cnt = $1 AND network = $2"
+	const getRootByDepositCntSQL = "SELECT root FROM mt.root WHERE deposit_cnt = $1 AND network = $2"
 	err := p.getExecQuerier(dbTx).QueryRow(ctx, getRootByDepositCntSQL, depositCnt, network).Scan(&root)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, gerror.ErrStorageNotFound
@@ -422,15 +421,16 @@ func (p *PostgresStorage) GetRoot(ctx context.Context, depositCnt uint, network 
 }
 
 // SetRoot store the root with deposit count to the storage.
-func (p *PostgresStorage) SetRoot(ctx context.Context, root []byte, depositCnt uint, network uint8, dbTx pgx.Tx) error {
-	const setRootSQL = "INSERT INTO mtv2.root (root, deposit_cnt, network) VALUES ($1, $2, $3)"
-	_, err := p.getExecQuerier(dbTx).Exec(ctx, setRootSQL, root, depositCnt, network)
-	return err
+func (p *PostgresStorage) SetRoot(ctx context.Context, root []byte, depositCnt uint, network uint8, dbTx pgx.Tx) (uint64, error) {
+	var rootID uint64
+	const setRootSQL = "INSERT INTO mt.root (root, deposit_cnt, network) VALUES ($1, $2, $3) RETURNING id;"
+	err := p.getExecQuerier(dbTx).QueryRow(ctx, setRootSQL, root, depositCnt, network).Scan(&rootID)
+	return rootID, err
 }
 
 // Get gets value of key from the merkle tree.
 func (p *PostgresStorage) Get(ctx context.Context, key []byte, dbTx pgx.Tx) ([][]byte, error) {
-	const getValueByKeySQL = "SELECT value FROM mtv2.rht WHERE key = $1"
+	const getValueByKeySQL = "SELECT value FROM mt.rht WHERE key = $1"
 	var data [][]byte
 	err := p.getExecQuerier(dbTx).QueryRow(ctx, getValueByKeySQL, key).Scan(pq.Array(&data))
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -442,19 +442,16 @@ func (p *PostgresStorage) Get(ctx context.Context, key []byte, dbTx pgx.Tx) ([][
 // Set inserts a key-value pair into the db.
 // If record with such a key already exists its assumed that the value is correct,
 // because it's a reverse hash table, and the key is a hash of the value
-func (p *PostgresStorage) Set(ctx context.Context, key []byte, value [][]byte, dbTx pgx.Tx) error {
-	const setNodeSQL = "INSERT INTO mtv2.rht (key, value) VALUES ($1, $2)"
-	_, err := p.getExecQuerier(dbTx).Exec(ctx, setNodeSQL, key, pq.Array(value))
-	if err != nil && strings.Contains(err.Error(), "duplicate key value violates unique constraint") {
-		return nil
-	}
+func (p *PostgresStorage) Set(ctx context.Context, key []byte, value [][]byte, rootID uint64, dbTx pgx.Tx) error {
+	const setNodeSQL = "INSERT INTO mt.rht (root_id, key, value) VALUES ($1, $2, $3)"
+	_, err := p.getExecQuerier(dbTx).Exec(ctx, setNodeSQL, rootID, key, pq.Array(value))
 	return err
 }
 
 // GetLastDepositCount gets the last deposit count from the merkle tree.
 func (p *PostgresStorage) GetLastDepositCount(ctx context.Context, network uint8, dbTx pgx.Tx) (uint, error) {
 	var depositCnt int64
-	const getLastDepositCountSQL = "SELECT coalesce(MAX(deposit_cnt), -1) FROM mtv2.root WHERE network = $1"
+	const getLastDepositCountSQL = "SELECT coalesce(MAX(deposit_cnt), -1) FROM mt.root WHERE network = $1"
 	err := p.getExecQuerier(dbTx).QueryRow(ctx, getLastDepositCountSQL, network).Scan(&depositCnt)
 	if err != nil {
 		return 0, nil
@@ -467,14 +464,14 @@ func (p *PostgresStorage) GetLastDepositCount(ctx context.Context, network uint8
 
 // ResetMT resets nodes of the Merkle Tree.
 func (p *PostgresStorage) ResetMT(ctx context.Context, depositCnt uint, network uint8, dbTx pgx.Tx) error {
-	const resetRootSQL = "DELETE FROM mtv2.root WHERE network = $1 AND deposit_cnt > $2"
+	const resetRootSQL = "DELETE FROM mt.root WHERE network = $1 AND deposit_cnt > $2"
 	_, err := p.getExecQuerier(dbTx).Exec(ctx, resetRootSQL, network, depositCnt)
 	return err
 }
 
 // GetClaimCount gets the claim count for the destination address.
 func (p *PostgresStorage) GetClaimCount(ctx context.Context, destAddr string, dbTx pgx.Tx) (uint64, error) {
-	const getClaimCountSQL = "SELECT COUNT(*) FROM syncv2.claim WHERE dest_addr = $1"
+	const getClaimCountSQL = "SELECT COUNT(*) FROM sync.claim WHERE dest_addr = $1"
 	var claimCount uint64
 	err := p.getExecQuerier(dbTx).QueryRow(ctx, getClaimCountSQL, common.FromHex(destAddr)).Scan(&claimCount)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -485,7 +482,7 @@ func (p *PostgresStorage) GetClaimCount(ctx context.Context, destAddr string, db
 
 // GetClaims gets the claim list which be smaller than index.
 func (p *PostgresStorage) GetClaims(ctx context.Context, destAddr string, limit uint, offset uint, dbTx pgx.Tx) ([]*etherman.Claim, error) {
-	const getClaimsSQL = "SELECT index, orig_net, orig_addr, amount, dest_addr, block_id, network_id, tx_hash FROM syncv2.claim WHERE dest_addr = $1 ORDER BY block_id DESC LIMIT $2 OFFSET $3"
+	const getClaimsSQL = "SELECT index, orig_net, orig_addr, amount, dest_addr, block_id, network_id, tx_hash FROM sync.claim WHERE dest_addr = $1 ORDER BY block_id DESC LIMIT $2 OFFSET $3"
 	rows, err := p.getExecQuerier(dbTx).Query(ctx, getClaimsSQL, common.FromHex(destAddr), limit, offset)
 	if err != nil {
 		return nil, err
@@ -509,7 +506,7 @@ func (p *PostgresStorage) GetClaims(ctx context.Context, destAddr string, limit 
 
 // GetDeposits gets the deposit list which be smaller than depositCount.
 func (p *PostgresStorage) GetDeposits(ctx context.Context, destAddr string, limit uint, offset uint, dbTx pgx.Tx) ([]*etherman.Deposit, error) {
-	const getDepositsSQL = "SELECT leaf_type, orig_net, orig_addr, amount, dest_net, dest_addr, deposit_cnt, block_id, b.block_num, d.network_id, tx_hash, metadata FROM syncv2.deposit as d INNER JOIN syncv2.block as b ON d.network_id = b.network_id AND d.block_id = b.id WHERE dest_addr = $1 ORDER BY d.block_id DESC LIMIT $2 OFFSET $3"
+	const getDepositsSQL = "SELECT leaf_type, orig_net, orig_addr, amount, dest_net, dest_addr, deposit_cnt, block_id, b.block_num, d.network_id, tx_hash, metadata FROM sync.deposit as d INNER JOIN sync.block as b ON d.network_id = b.network_id AND d.block_id = b.id WHERE dest_addr = $1 ORDER BY d.block_id DESC LIMIT $2 OFFSET $3"
 	rows, err := p.getExecQuerier(dbTx).Query(ctx, getDepositsSQL, common.FromHex(destAddr), limit, offset)
 	if err != nil {
 		return nil, err
@@ -535,7 +532,7 @@ func (p *PostgresStorage) GetDeposits(ctx context.Context, destAddr string, limi
 
 // GetDepositCount gets the deposit count for the destination address.
 func (p *PostgresStorage) GetDepositCount(ctx context.Context, destAddr string, dbTx pgx.Tx) (uint64, error) {
-	const getDepositCountSQL = "SELECT COUNT(*) FROM syncv2.deposit WHERE dest_addr = $1"
+	const getDepositCountSQL = "SELECT COUNT(*) FROM sync.deposit WHERE dest_addr = $1"
 	var depositCount uint64
 	err := p.getExecQuerier(dbTx).QueryRow(ctx, getDepositCountSQL, common.FromHex(destAddr)).Scan(&depositCount)
 	return depositCount, err
@@ -544,8 +541,8 @@ func (p *PostgresStorage) GetDepositCount(ctx context.Context, destAddr string, 
 // ResetTrustedState resets trusted batches from the storage.
 func (p *PostgresStorage) ResetTrustedState(ctx context.Context, batchNumber uint64, dbTx pgx.Tx) error {
 	const (
-		resetTrustedStateSQL = "DELETE FROM syncv2.batch WHERE batch_num > $1"
-		updateForcedBatchSQL = "UPDATE syncv2.forced_batch SET batch_num = NULL WHERE batch_num > $1"
+		resetTrustedStateSQL = "DELETE FROM sync.batch WHERE batch_num > $1"
+		updateForcedBatchSQL = "UPDATE sync.forced_batch SET batch_num = NULL WHERE batch_num > $1"
 	)
 	_, err := p.getExecQuerier(dbTx).Exec(ctx, resetTrustedStateSQL, batchNumber)
 	if err != nil {
@@ -557,14 +554,14 @@ func (p *PostgresStorage) ResetTrustedState(ctx context.Context, batchNumber uin
 
 // UpdateBlocksForTesting updates the hash of blocks.
 func (p *PostgresStorage) UpdateBlocksForTesting(ctx context.Context, networkID uint, blockNum uint64, dbTx pgx.Tx) error {
-	const updateBlocksSQL = "UPDATE syncv2.block SET block_hash = $1 WHERE network_id = $2 AND block_num >= $3"
+	const updateBlocksSQL = "UPDATE sync.block SET block_hash = $1 WHERE network_id = $2 AND block_num >= $3"
 	_, err := p.getExecQuerier(dbTx).Exec(ctx, updateBlocksSQL, common.Hash{}, networkID, blockNum)
 	return err
 }
 
 // UpdateBatchesForTesting updates raw_tx_data of batches.
 func (p *PostgresStorage) UpdateBatchesForTesting(ctx context.Context, batchNum uint64, dbTx pgx.Tx) error {
-	const updateBatchesSQL = "UPDATE syncv2.batch SET raw_tx_data = $1 WHERE batch_num >= $2"
+	const updateBatchesSQL = "UPDATE sync.batch SET raw_tx_data = $1 WHERE batch_num >= $2"
 	_, err := p.getExecQuerier(dbTx).Exec(ctx, updateBatchesSQL, []byte{}, batchNum)
 	return err
 }

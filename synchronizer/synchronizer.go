@@ -332,7 +332,7 @@ func (s *ClientSynchronizer) resetState(blockNumber uint64) error {
 		return err
 	}
 
-	err = s.bridgeCtrl.ReorgMT(uint(depositCnt), s.networkID)
+	err = s.bridgeCtrl.ReorgMT(uint(depositCnt), s.networkID, dbTx)
 	if err != nil {
 		rollbackErr := s.storage.Rollback(s.ctx, dbTx)
 		if rollbackErr != nil {
@@ -734,8 +734,13 @@ func (s *ClientSynchronizer) processDeposit(deposit etherman.Deposit, blockID ui
 			s.networkID, deposit.BlockNumber, deposit, err.Error())
 	}
 
-	err = s.bridgeCtrl.AddDeposit(&deposit)
+	err = s.bridgeCtrl.AddDeposit(&deposit, dbTx)
 	if err != nil {
+		rollbackErr := s.storage.Rollback(s.ctx, dbTx)
+		if rollbackErr != nil {
+			log.Fatalf("networkID: %d, error rolling back state to store block. BlockNumber: %v, rollbackErr: %s, err: %s",
+				s.networkID, deposit.BlockNumber, rollbackErr.Error(), err.Error())
+		}
 		log.Fatalf("networkID: %d, failed to store new deposit in the bridge tree, BlockNumber: %d, Deposit: %+v err: %s",
 			s.networkID, deposit.BlockNumber, deposit, err.Error())
 	}

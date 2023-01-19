@@ -7,7 +7,6 @@ DOCKER_COMPOSE_ZKEVM_NODE := zkevm-node
 DOCKER_COMPOSE_L1_NETWORK := zkevm-mock-l1-network
 DOCKER_COMPOSE_ZKPROVER := zkevm-prover
 DOCKER_COMPOSE_BRIDGE := zkevm-bridge-service
-DOCKER_COMPOSE_BRIDGE_MOCK_SERVER := zkevm-bridge-service-mock
 
 RUN_STATE_DB := $(DOCKER_COMPOSE) up -d $(DOCKER_COMPOSE_STATE_DB)
 RUN_POOL_DB := $(DOCKER_COMPOSE) up -d $(DOCKER_COMPOSE_POOL_DB)
@@ -18,7 +17,6 @@ RUN_NODE := $(DOCKER_COMPOSE) up -d $(DOCKER_COMPOSE_ZKEVM_NODE)
 RUN_L1_NETWORK := $(DOCKER_COMPOSE) up -d $(DOCKER_COMPOSE_L1_NETWORK)
 RUN_ZKPROVER := $(DOCKER_COMPOSE) up -d $(DOCKER_COMPOSE_ZKPROVER)
 RUN_BRIDGE := $(DOCKER_COMPOSE) up -d $(DOCKER_COMPOSE_BRIDGE)
-RUN_BRIDGE_MOCK := $(DOCKER_COMPOSE) up -d $(DOCKER_COMPOSE_BRIDGE_MOCK_SERVER)
 
 STOP_NODE_DB := $(DOCKER_COMPOSE) stop $(DOCKER_COMPOSE_NODE_DB) && $(DOCKER_COMPOSE) rm -f $(DOCKER_COMPOSE_NODE_DB)
 STOP_BRIDGE_DB := $(DOCKER_COMPOSE) stop $(DOCKER_COMPOSE_BRIDGE_DB) && $(DOCKER_COMPOSE) rm -f $(DOCKER_COMPOSE_BRIDGE_DB)
@@ -27,7 +25,6 @@ STOP_NODE := $(DOCKER_COMPOSE) stop $(DOCKER_COMPOSE_ZKEVM_NODE) && $(DOCKER_COM
 STOP_NETWORK := $(DOCKER_COMPOSE) stop $(DOCKER_COMPOSE_L1_NETWORK) && $(DOCKER_COMPOSE) rm -f $(DOCKER_COMPOSE_L1_NETWORK)
 STOP_ZKPROVER := $(DOCKER_COMPOSE) stop $(DOCKER_COMPOSE_ZKPROVER) && $(DOCKER_COMPOSE) rm -f $(DOCKER_COMPOSE_ZKPROVER)
 STOP_BRIDGE := $(DOCKER_COMPOSE) stop $(DOCKER_COMPOSE_BRIDGE) && $(DOCKER_COMPOSE) rm -f $(DOCKER_COMPOSE_BRIDGE)
-STOP_BRIDGE_MOCK := $(DOCKER_COMPOSE) stop $(DOCKER_COMPOSE_BRIDGE_MOCK_SERVER) && $(DOCKER_COMPOSE) rm -f $(DOCKER_COMPOSE_BRIDGE_MOCK_SERVER)
 STOP := $(DOCKER_COMPOSE) down --remove-orphans
 
 VERSION := $(shell git describe --tags --always)
@@ -144,12 +141,6 @@ run: stop ## runs all services
 	sleep 7
 	$(RUN_BRIDGE)
 
-.PHONY: run-mockserver
-run-mockserver: ## runs the mocked restful server
-	$(RUN_BRIDGE_DB)
-	sleep 3
-	$(RUN_BRIDGE_MOCK)
-
 .PHONY: update-external-dependencies
 update-external-dependencies: ## Updates external dependencies like images, test vectors or proto files
 	go run ./scripts/cmd/... updatedeps
@@ -163,9 +154,19 @@ generate-code-from-proto:
 stop-mockserver: ## Stops the mock bridge service
 	$(STOP_BRIDGE_MOCK)
 
-.PHONY: performance-test
-performance-test: ## Performance test of rest api and db transaction
-	go run ./test/performance/... 1000
+.PHONY: bench
+bench: ## benchmark test
+	$(STOP_BRIDGE_DB) || true
+	$(RUN_BRIDGE_DB); sleep 3
+	trap '$(STOP_BRIDGE_DB)' EXIT; go test -run=NOTEST -bench=Small ./test/benchmark/...
+
+.PHONY: bench-full
+bench-full: export ZKEVM_BRIDGE_DATABASE_PORT = 5432
+bench-full: ## benchmark full test
+	cd test/benchmark && \
+	go test -run=NOTEST -bench=Small . && \
+	go test -run=NOTEST -bench=Medium . && \
+	go test -run=NOTEST -timeout=30m -bench=Large .
 
 .PHONY: test-full
 test-full: build-docker stop run ## Runs all tests checking race conditions
