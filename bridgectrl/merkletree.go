@@ -170,13 +170,13 @@ func (mt *MerkleTree) addLeaf(ctx context.Context, leaf [KeyLen]byte, dbTx pgx.T
 }
 
 func (mt *MerkleTree) resetLeaf(ctx context.Context, depositCount uint, dbTx pgx.Tx) error {
-	err := mt.store.ResetMT(ctx, depositCount, mt.network, nil)
+	err := mt.store.ResetMT(ctx, depositCount, mt.network, dbTx)
 	if err != nil {
 		return err
 	}
 
 	mt.count = depositCount
-	root, err := mt.store.GetRoot(ctx, depositCount, mt.network, nil)
+	root, err := mt.store.GetRoot(ctx, depositCount, mt.network, dbTx)
 	if err != nil {
 		return err
 	}
