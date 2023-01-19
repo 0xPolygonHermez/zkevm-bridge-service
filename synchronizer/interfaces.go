@@ -33,7 +33,7 @@ type storageInterface interface {
 	AddDeposit(ctx context.Context, deposit *etherman.Deposit, dbTx pgx.Tx) error
 	AddClaim(ctx context.Context, claim *etherman.Claim, dbTx pgx.Tx) error
 	AddTokenWrapped(ctx context.Context, tokenWrapped *etherman.TokenWrapped, dbTx pgx.Tx) error
-	Reset(ctx context.Context, blockNumber uint64, dbTx pgx.Tx) error
+	Reset(ctx context.Context, blockNumber uint64, networkID uint, dbTx pgx.Tx) error
 	ResetTrustedState(ctx context.Context, batchNumber uint64, dbTx pgx.Tx) error
 	GetPreviousBlock(ctx context.Context, networkID uint, offset uint64, dbTx pgx.Tx) (*etherman.Block, error)
 	GetNumberDeposits(ctx context.Context, origNetworkID uint, blockNumber uint64, dbTx pgx.Tx) (uint64, error)
