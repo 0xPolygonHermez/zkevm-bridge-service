@@ -76,6 +76,21 @@ func TestEdgeCase(t *testing.T) {
 			Store:  "postgres",
 			Height: uint8(32),
 		},
+		BS: server.Config{
+			GRPCPort:         "9090",
+			HTTPPort:         "8080",
+			DefaultPageLimit: 25,
+			MaxPageLimit:     100,
+			BridgeVersion:    "v1",
+			DB: db.Config{
+				Name:     "test_db",
+				User:     "test_user",
+				Password: "test_password",
+				Host:     "localhost",
+				Port:     "5435",
+				MaxConns: 10,
+			},
+		},
 	}
 
 	opsman, err := operations.NewManager(ctx, opsCfg)

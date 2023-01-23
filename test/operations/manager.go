@@ -12,6 +12,7 @@ import (
 	"github.com/0xPolygonHermez/zkevm-bridge-service/db"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/db/pgstorage"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/server"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/utils"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/utils/gerror"
 	"github.com/0xPolygonHermez/zkevm-node/encoding"
@@ -70,6 +71,7 @@ var (
 type Config struct {
 	Storage db.Config
 	BT      bridgectrl.Config
+	BS      server.Config
 }
 
 // Manager controls operations and has knowledge about how to set up and tear
@@ -80,7 +82,7 @@ type Manager struct {
 
 	storage       StorageInterface
 	bridgetree    *bridgectrl.BridgeController
-	bridgeService pb.BridgeServiceServer
+	bridgeService BridgeServiceInterface
 
 	clients map[NetworkSID]*utils.Client
 }
@@ -107,7 +109,7 @@ func NewManager(ctx context.Context, cfg *Config) (*Manager, error) {
 	if err != nil {
 		return nil, err
 	}
-	bt, err := bridgectrl.NewBridgeController(cfg.BT, []uint{0, 1}, pgst, pgst)
+	bt, err := bridgectrl.NewBridgeController(cfg.BT, []uint{0, 1}, pgst)
 	if err != nil {
 		return nil, err
 	}
@@ -119,7 +121,7 @@ func NewManager(ctx context.Context, cfg *Config) (*Manager, error) {
 	if err != nil {
 		return nil, err
 	}
-	bService := bridgectrl.NewBridgeService(pgst, bt)
+	bService := server.NewBridgeService(cfg.BS, cfg.BT.Height, []uint{0, 1}, pgst)
 	opsman.storage = st.(StorageInterface)
 	opsman.bridgetree = bt
 	opsman.bridgeService = bService
@@ -486,8 +488,26 @@ func (m *Manager) CheckAccountTokenBalance(ctx context.Context, network NetworkS
 }
 
 // GetClaimData gets the claim data
-func (m *Manager) GetClaimData(networkID, depositCount uint) ([][bridgectrl.KeyLen]byte, *etherman.GlobalExitRoot, error) {
-	return m.bridgetree.GetClaim(networkID, depositCount)
+func (m *Manager) GetClaimData(ctx context.Context, networkID, depositCount uint) ([][bridgectrl.KeyLen]byte, *etherman.GlobalExitRoot, error) {
+	res, err := m.bridgeService.GetProof(context.Background(), &pb.GetProofRequest{
+		NetId:      uint32(networkID),
+		DepositCnt: uint64(depositCount),
+	})
+	if err != nil {
+		return nil, nil, err
+	}
+	prooves := [][bridgectrl.KeyLen]byte{}
+	for _, p := range res.Proof.MerkleProof {
+		var proof [bridgectrl.KeyLen]byte
+		copy(proof[:], p)
+		prooves = append(prooves, proof)
+	}
+	return prooves, &etherman.GlobalExitRoot{
+		ExitRoots: []common.Hash{
+			common.HexToHash(res.Proof.MainExitRoot),
+			common.HexToHash(res.Proof.RollupExitRoot),
+		},
+	}, nil
 }
 
 // GetBridgeInfoByDestAddr gets the bridge info

@@ -30,15 +30,18 @@ func RunMockServer(dbType string, height uint8, networks []uint) (*bridgectrl.Br
 		Store:  "postgres",
 	}
 
-	bt, err := bridgectrl.NewBridgeController(btCfg, networks, store, store)
+	bt, err := bridgectrl.NewBridgeController(btCfg, networks, store)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	cfg := server.Config{
-		GRPCPort: "9090",
-		HTTPPort: "8080",
+		GRPCPort:         "9090",
+		HTTPPort:         "8080",
+		DefaultPageLimit: 25,
+		MaxPageLimit:     100,
+		BridgeVersion:    "v1",
 	}
 
-	return bt, store, server.RunServer(store, bt, cfg)
+	return bt, store, server.RunServer(cfg, height, networks, store)
 }

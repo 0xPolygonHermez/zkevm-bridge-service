@@ -3,7 +3,7 @@ package operations
 import (
 	"context"
 	"encoding/json"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"time"
 
@@ -64,7 +64,7 @@ func bridgeUpCondition() (done bool, err error) {
 			err = res.Body.Close()
 		}()
 	}
-	body, err := ioutil.ReadAll(res.Body)
+	body, err := io.ReadAll(res.Body)
 	if err != nil {
 		return false, err
 	}

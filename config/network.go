@@ -5,7 +5,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
-//NetworkConfig is the configuration struct for the different environments
+// NetworkConfig is the configuration struct for the different environments.
 type NetworkConfig struct {
 	GenBlockNumber        uint64
 	PoEAddr               common.Address

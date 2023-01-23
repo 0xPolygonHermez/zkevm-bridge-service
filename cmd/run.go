@@ -28,7 +28,7 @@ func start(ctx *cli.Context) error {
 		return err
 	}
 	setupLog(c.Log)
-	err = db.RunMigrations(c.Database)
+	err = db.RunMigrations(c.SyncDB)
 	if err != nil {
 		log.Error(err)
 		return err
@@ -59,7 +59,7 @@ func start(ctx *cli.Context) error {
 		networkIDs = append(networkIDs, networkID)
 	}
 
-	storage, err := db.NewStorage(c.Database)
+	storage, err := db.NewStorage(c.SyncDB)
 	if err != nil {
 		log.Error(err)
 		return err
@@ -68,13 +68,7 @@ func start(ctx *cli.Context) error {
 	var bridgeController *bridgectrl.BridgeController
 
 	if c.BridgeController.Store == "postgres" {
-		bridgeController, err = bridgectrl.NewBridgeController(c.BridgeController, networkIDs, storage, storage)
-		if err != nil {
-			log.Error(err)
-			return err
-		}
-
-		err = server.RunServer(storage, bridgeController, c.BridgeServer)
+		bridgeController, err = bridgectrl.NewBridgeController(c.BridgeController, networkIDs, storage)
 		if err != nil {
 			log.Error(err)
 			return err
@@ -82,6 +76,17 @@ func start(ctx *cli.Context) error {
 	} else {
 		log.Error(gerror.ErrStorageNotRegister)
 		return gerror.ErrStorageNotRegister
+	}
+
+	apiStorage, err := db.NewStorage(c.BridgeServer.DB)
+	if err != nil {
+		log.Error(err)
+		return err
+	}
+	err = server.RunServer(c.BridgeServer, c.BridgeController.Height, networkIDs, apiStorage)
+	if err != nil {
+		log.Error(err)
+		return err
 	}
 
 	opts := []grpc.DialOption{

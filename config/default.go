@@ -6,8 +6,7 @@ const DefaultValues = `
 Level = "debug"
 Outputs = ["stdout"]
 
-[Database]
-Database = "postgres"
+[SyncDB]
 User = "test_user"
 Password = "test_password"
 Name = "test_db"
@@ -33,4 +32,23 @@ Height = 32
 [BridgeServer]
 GRPCPort = "9090"
 HTTPPort = "8080"
+DefaultPageLimit = 25
+MaxPageLimit = 100
+BridgeVersion = "v1"
+    [Database]
+    User = "test_user"
+    Password = "test_password"
+    Name = "test_db"
+    Host = "zkevm-bridge-db"
+    Port = "5435"
+    MaxConns = 20
+
+[NetworkConfig]
+GenBlockNumber = 1
+PoEAddr = "0x2279B7A0a67DB372996a5FaB50D91eAA73d2eBe6"
+BridgeAddr = "0x0165878A594ca255338adfa4d48449f69242Eb8F"
+GlobalExitRootManAddr = "0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9"
+MaticAddr = "0x5FbDB2315678afecb367f032d93F642f64180aa3"
+L2BridgeAddrs = ["0x9d98deabc42dd696deb9e40b4f1cab7ddbf55988"]
+L1ChainID = 1337
 `
