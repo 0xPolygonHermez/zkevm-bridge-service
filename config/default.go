@@ -7,6 +7,7 @@ Level = "debug"
 Outputs = ["stdout"]
 
 [SyncDB]
+Database = "postgres"
 User = "test_user"
 Password = "test_password"
 Name = "test_db"
@@ -36,6 +37,7 @@ DefaultPageLimit = 25
 MaxPageLimit = 100
 BridgeVersion = "v1"
     [Database]
+	Database = "postgres"
     User = "test_user"
     Password = "test_password"
     Name = "test_db"

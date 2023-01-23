@@ -83,6 +83,7 @@ func TestEdgeCase(t *testing.T) {
 			MaxPageLimit:     100,
 			BridgeVersion:    "v1",
 			DB: db.Config{
+				Database: "postgres",
 				Name:     "test_db",
 				User:     "test_user",
 				Password: "test_password",

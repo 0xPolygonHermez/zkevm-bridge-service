@@ -1,6 +1,3 @@
-//go:build e2e
-// +build e2e
-
 package e2e
 
 import (
@@ -37,6 +34,7 @@ func TestE2E(t *testing.T) {
 	ctx := context.Background()
 	opsCfg := &operations.Config{
 		Storage: db.Config{
+			Database: "postgres",
 			Name:     "test_db",
 			User:     "test_user",
 			Password: "test_password",
@@ -55,6 +53,7 @@ func TestE2E(t *testing.T) {
 			MaxPageLimit:     100,
 			BridgeVersion:    "v1",
 			DB: db.Config{
+				Database: "postgres",
 				Name:     "test_db",
 				User:     "test_user",
 				Password: "test_password",
