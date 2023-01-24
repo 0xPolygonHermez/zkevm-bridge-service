@@ -499,7 +499,7 @@ func (m *Manager) GetClaimData(ctx context.Context, networkID, depositCount uint
 	prooves := [][bridgectrl.KeyLen]byte{}
 	for _, p := range res.Proof.MerkleProof {
 		var proof [bridgectrl.KeyLen]byte
-		copy(proof[:], p)
+		copy(proof[:], common.FromHex(p))
 		prooves = append(prooves, proof)
 	}
 	return prooves, &etherman.GlobalExitRoot{

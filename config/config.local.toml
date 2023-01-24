@@ -8,7 +8,7 @@ User = "test_user"
 Password = "test_password"
 Name = "test_db"
 Host = "zkevm-bridge-db"
-Port = "5435"
+Port = "5432"
 MaxConns = 20
 
 [Etherman]
@@ -30,13 +30,13 @@ HTTPPort = "8080"
 DefaultPageLimit = 25
 MaxPageLimit = 100
 BridgeVersion = "v1"
-    [Database]
+    [BridgeServer.DB]
     Database = "postgres"
     User = "test_user"
     Password = "test_password"
     Name = "test_db"
     Host = "zkevm-bridge-db"
-    Port = "5435"
+    Port = "5432"
     MaxConns = 20
 
 [NetworkConfig]

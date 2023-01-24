@@ -15,5 +15,5 @@ type Config struct {
 	// Version is the version of the bridge service
 	BridgeVersion string `mapstructure:"BridgeVersion"`
 	// DB is the database config
-	DB db.Config `mapstructure:"Database"`
+	DB db.Config `mapstructure:"DB"`
 }

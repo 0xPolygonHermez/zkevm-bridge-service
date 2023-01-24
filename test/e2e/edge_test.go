@@ -11,6 +11,7 @@ import (
 
 	"github.com/0xPolygonHermez/zkevm-bridge-service/bridgectrl"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/db"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/server"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/test/operations"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/stretchr/testify/require"
@@ -28,7 +29,7 @@ func depositFromL1(ctx context.Context, opsman *operations.Manager, t *testing.T
 	deposits, err := opsman.GetBridgeInfoByDestAddr(ctx, &destAddr)
 	require.NoError(t, err)
 	// Get the claim data
-	smtProof, globalExitRoot, err := opsman.GetClaimData(uint(deposits[0].OrigNet), uint(deposits[0].DepositCnt))
+	smtProof, globalExitRoot, err := opsman.GetClaimData(ctx, uint(deposits[0].OrigNet), uint(deposits[0].DepositCnt))
 	require.NoError(t, err)
 	// Claim funds in L2
 	err = opsman.SendL2Claim(ctx, deposits[0], smtProof, globalExitRoot)
@@ -49,7 +50,7 @@ func depositFromL2(ctx context.Context, opsman *operations.Manager, t *testing.T
 	require.NoError(t, err)
 	// Check globalExitRoot
 	// Get the claim data
-	smtProof, globalExitRoot, err := opsman.GetClaimData(uint(deposits[0].NetworkId), uint(deposits[0].DepositCnt))
+	smtProof, globalExitRoot, err := opsman.GetClaimData(ctx, uint(deposits[0].NetworkId), uint(deposits[0].DepositCnt))
 	require.NoError(t, err)
 	// Claim funds in L1
 	err = opsman.SendL1Claim(ctx, deposits[0], smtProof, globalExitRoot)
