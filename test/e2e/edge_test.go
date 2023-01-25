@@ -40,7 +40,7 @@ func depositFromL2(ctx context.Context, opsman *operations.Manager, t *testing.T
 	var destNetwork uint32 = 0
 	amount := new(big.Int).SetUint64(100000000000000000)
 	tokenAddr := common.Address{} // This means is eth
-	destAddr := common.HexToAddress("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266")
+	destAddr := common.HexToAddress("0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC")
 	err := opsman.SendL2Deposit(ctx, tokenAddr, amount, destNetwork, &destAddr)
 	require.NoError(t, err)
 
