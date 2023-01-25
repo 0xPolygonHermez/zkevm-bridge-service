@@ -95,7 +95,7 @@ services:
 
   zkevm-mock-l1-network:
     container_name: zkevm-local-l1-network
-    image: hermeznetwork/geth-zkevm-contracts:test
+    image: hermeznetwork/geth-zkevm-contracts:v0.6.0.0
     ports:
       - 8545:8545
 
