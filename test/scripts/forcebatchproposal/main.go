@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/0xPolygonHermez/zkevm-bridge-service/utils"
-	"github.com/0xPolygonHermez/zkevm-node/etherman/smartcontracts/proofofefficiency"
+	"github.com/0xPolygonHermez/zkevm-node/etherman/smartcontracts/polygonzkevm"
 	"github.com/0xPolygonHermez/zkevm-node/log"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -32,7 +32,7 @@ func main() {
 		log.Fatal("Error: ", err)
 	}
 	poeAddr := common.HexToAddress(poeAddress)
-	poe, err := proofofefficiency.NewProofofefficiency(poeAddr, client)
+	poe, err := polygonzkevm.NewPolygonzkevm(poeAddr, client)
 	if err != nil {
 		log.Fatal("Error: ", err)
 	}
