@@ -84,14 +84,15 @@ services:
       - ZKEVM_NODE_RPC_DB_HOST=zkevm-rpc-db
       - ZKEVM_NODE_ETHERMAN_PRIVATEKEYPATH=/pk/keystore
     volumes:
-      - ./test/test.keystore:/pk/keystore
+      - ./test/test.keystore.sequencer:/pk/keystore.sequencer
+      - ./test/test.keystore.aggregator:/pk/keystore.aggregator
       - ./test/config/node/config.zkevm.node.toml:/app/config.toml
       - ./test/config/node/genesis.local.json:/app/genesis.json
     command: 
       - "/bin/sh"
       - "-c"
-      - "/app/zkevm-node approve --am 10000000000000000 -y --cfg /app/config.toml --key-store-path /pk/keystore --password testonly &&
-         /app/zkevm-node run --genesis /app/genesis.json --cfg /app/config.toml --components \"synchronizer,rpc,sequencer,aggregator,broadcast-trusted-state\""
+      - "/app/zkevm-node approve --am 10000000000000000 -y --cfg /app/config.toml --key-store-path /pk/keystore.sequencer --password testonly &&
+         /app/zkevm-node run --genesis /app/genesis.json --cfg /app/config.toml --components \"synchronizer,rpc,sequencer,aggregator,broadcast-trusted-state,eth-tx-manager,l2gaspricer\""
 
   zkevm-mock-l1-network:
     container_name: zkevm-local-l1-network

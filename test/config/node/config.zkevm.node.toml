@@ -57,13 +57,13 @@ GenBlockNumber = 1
 [Sequencer]
 MaxSequenceSize = "2000000"
 WaitPeriodPoolIsEmpty = "1s"
-WaitPeriodSendSequence = "15s"
-LastBatchVirtualizationTimeMaxWaitPeriod = "300s"
-WaitBlocksToUpdateGER = 10
-WaitBlocksToConsiderGerFinal = 10
-ElapsedTimeToCloseBatchWithoutTxsDueToNewGER = "60s"
-MinTimeToCloseBatch = "60s"
-MaxTimeForBatchToBeOpen = "15s"
+WaitPeriodSendSequence = "3s"
+LastBatchVirtualizationTimeMaxWaitPeriod = "5s"
+WaitBlocksToUpdateGER = 2
+WaitBlocksToConsiderGerFinal = 5
+ElapsedTimeToCloseBatchWithoutTxsDueToNewGER = "5s"
+MinTimeToCloseBatch = "1s"
+MaxTimeForBatchToBeOpen = "5s"
 BlocksAmountForTxsToBeDeleted = 100
 FrequencyToCheckTxsForDelete = "12h"
 MaxTxsPerBatch = 150
@@ -78,24 +78,24 @@ MaxBinaries = 262144
 MaxSteps = 8388608
 MaxAllowedFailedCounter = 50
 SenderAddress = "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266"
-PrivateKeys = [{Path = "/pk/keystore", Password = "testonly"}]
+PrivateKeys = [{Path = "/pk/keystore.sequencer", Password = "testonly"}]
 	[Sequencer.ProfitabilityChecker]
 		SendBatchesEvenWhenNotProfitable = "true"
 
 [Aggregator]
 Host = "0.0.0.0"
 Port = 50081
-RetryTime = "5s"
-VerifyProofInterval = "30s"
+RetryTime = "3s"
+VerifyProofInterval = "5s"
 TxProfitabilityCheckerType = "acceptall"
 TxProfitabilityMinReward = "1.1"
 ProofStatePollingInterval = "5s"
-SenderAddress = "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266"
+SenderAddress = "0x70997970c51812dc3a010c7d01b50e0d17dc79c8"
 
 [EthTxManager]
 PrivateKeys = [
-	{Path = "/pk/keystore", Password = "testonly"},
-	{Path = "/pk/keystore", Password = "testonly"}
+	{Path = "/pk/keystore.sequencer", Password = "testonly"},
+	{Path = "/pk/keystore.aggregator", Password = "testonly"}
 ]
 
 [GasPriceEstimator]
