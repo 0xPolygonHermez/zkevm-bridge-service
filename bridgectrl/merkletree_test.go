@@ -82,8 +82,7 @@ func TestMTAddLeaf(t *testing.T) {
 	require.NoError(t, err)
 
 	dbCfg := pgstorage.NewConfigFromEnv()
-
-	ctx := context.WithValue(context.Background(), contextKeyNetwork, uint8(1)) //nolint
+	ctx := context.Background()
 
 	for ti, testVector := range mtTestVectors {
 		t.Run(fmt.Sprintf("Test vector %d", ti), func(t *testing.T) {
@@ -137,8 +136,7 @@ func TestMTGetProof(t *testing.T) {
 	require.NoError(t, err)
 
 	dbCfg := pgstorage.NewConfigFromEnv()
-
-	ctx := context.WithValue(context.Background(), contextKeyNetwork, uint8(1)) //nolint
+	ctx := context.Background()
 
 	for ti, testVector := range mtTestVectors {
 		t.Run(fmt.Sprintf("Test vector %d", ti), func(t *testing.T) {

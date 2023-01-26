@@ -2,7 +2,7 @@ package vectors
 
 import (
 	"encoding/json"
-	"io/ioutil"
+	"io"
 	"os"
 	"path/filepath"
 
@@ -66,7 +66,7 @@ func LoadE2ETestVectors(path string) ([]E2ETestVectors, error) {
 	}
 	defer func() { _ = jsonFile.Close() }()
 
-	bytes, err := ioutil.ReadAll(jsonFile)
+	bytes, err := io.ReadAll(jsonFile)
 	if err != nil {
 		return testCases, err
 	}

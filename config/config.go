@@ -19,7 +19,7 @@ import (
 // Config struct
 type Config struct {
 	Log              log.Config
-	Database         db.Config
+	SyncDB           db.Config
 	Etherman         etherman.Config
 	Synchronizer     synchronizer.Config
 	BridgeController bridgectrl.Config
