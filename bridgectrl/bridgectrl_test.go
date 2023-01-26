@@ -107,11 +107,5 @@ func TestBridgeTree(t *testing.T) {
 			}, nil)
 			require.NoError(t, err)
 		}
-
-		// for i, testVector := range testVectors {
-		// 	proof, _, err := bt.GetClaim(testVector.OriginalNetwork, uint(i))
-		// 	require.NoError(t, err)
-		// 	require.Equal(t, len(proof), 32)
-		// }
 	})
 }
