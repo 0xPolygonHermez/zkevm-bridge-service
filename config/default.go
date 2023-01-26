@@ -37,14 +37,13 @@ DefaultPageLimit = 25
 MaxPageLimit = 100
 BridgeVersion = "v1"
     [BridgeServer.DB]
-	Host = "zkevm-bridge-db"
+    Database = "postgres"
     User = "test_user"
     Password = "test_password"
     Name = "test_db"
-    Host = "localhost"
+    Host = "zkevm-bridge-db"
     Port = "5432"
     MaxConns = 20
-
 
 [NetworkConfig]
 GenBlockNumber = 1
