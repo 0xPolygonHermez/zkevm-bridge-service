@@ -10,7 +10,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/0xPolygonHermez/zkevm-bridge-service/bridgectrl"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/bridgectrl/pb"
 	"github.com/0xPolygonHermez/zkevm-node/log"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
@@ -21,7 +20,7 @@ import (
 )
 
 // RunServer runs gRPC server and HTTP gateway
-func RunServer(storage interface{}, bridgeCtrl *bridgectrl.BridgeController, cfg Config) error {
+func RunServer(cfg Config, height uint8, networks []uint, storage interface{}) error {
 	ctx := context.Background()
 
 	if len(cfg.GRPCPort) == 0 {
@@ -32,7 +31,7 @@ func RunServer(storage interface{}, bridgeCtrl *bridgectrl.BridgeController, cfg
 		return fmt.Errorf("invalid TCP port for HTTP gateway: '%s'", cfg.HTTPPort)
 	}
 
-	bridgeService := bridgectrl.NewBridgeService(storage.(bridgectrl.BridgeServiceStorage), bridgeCtrl)
+	bridgeService := NewBridgeService(cfg, height, networks, storage.(bridgeServiceStorage))
 
 	go func() {
 		_ = runRestServer(ctx, cfg.GRPCPort, cfg.HTTPPort)
@@ -147,8 +146,9 @@ func runRestServer(ctx context.Context, grpcPort, httpPort string) error {
 	}
 
 	srv := &http.Server{
-		Addr:    ":" + httpPort,
-		Handler: allowCORS(mux),
+		ReadTimeout: 1 * time.Second, //nolint:gomnd
+		Addr:        ":" + httpPort,
+		Handler:     allowCORS(mux),
 	}
 
 	c := make(chan os.Signal, 1)
