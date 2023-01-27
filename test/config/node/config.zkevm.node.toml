@@ -13,34 +13,26 @@ Port = "5432"
 EnableLog = false
 MaxConns = 200
 
-[PoolDB]
-User = "pool_user"
-Password = "pool_password"
-Name = "pool_db"
-Host = "zkevm-pool-db"
-Port = "5432"
-EnableLog = false
-MaxConns = 200
+[Pool]
+FreeClaimGasLimit = 1500000
+	[Pool.DB]
+	User = "pool_user"
+	Password = "pool_password"
+	Name = "pool_db"
+	Host = "zkevm-pool-db"
+	Port = "5432"
+	EnableLog = false
+	MaxConns = 200
 
 [Etherman]
 URL = "http://zkevm-mock-l1-network:8545"
-PrivateKeyPath = "/pk/keystore"
-PrivateKeyPassword = "testonly"
+L1ChainID = 1337
 PoEAddr = "0x2279B7A0a67DB372996a5FaB50D91eAA73d2eBe6"
 MaticAddr = "0x5FbDB2315678afecb367f032d93F642f64180aa3"
 GlobalExitRootManagerAddr = "0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9"
 MultiGasProvider = false
-	[Etherscan]
+	[Etherman.Etherscan]
 		ApiKey = ""
-
-[EthTxManager]
-MaxSendBatchTxRetries = 10
-MaxVerifyBatchTxRetries = 10
-FrequencyForResendingFailedSendBatches = "1s"
-FrequencyForResendingFailedVerifyBatch = "1s"
-WaitTxToBeMined = "2m"
-PercentageToIncreaseGasPrice = 10
-PercentageToIncreaseGasLimit = 10
 
 [RPC]
 Host = "0.0.0.0"
@@ -64,6 +56,7 @@ DefaultSenderAddress = "0x1111111111111111111111111111111111111111"
 SyncInterval = "1s"
 SyncChunkSize = 100
 TrustedSequencerURI = ""
+GenBlockNumber = 1
 
 [Sequencer]
 MaxSequenceSize = "2000000"
@@ -73,7 +66,7 @@ LastBatchVirtualizationTimeMaxWaitPeriod = "5s"
 WaitBlocksToUpdateGER = 2
 WaitBlocksToConsiderGerFinal = 5
 ElapsedTimeToCloseBatchWithoutTxsDueToNewGER = "5s"
-MinTimeToCloseBatch = "5s"
+MinTimeToCloseBatch = "1s"
 MaxTimeForBatchToBeOpen = "5s"
 BlocksAmountForTxsToBeDeleted = 100
 FrequencyToCheckTxsForDelete = "12h"
@@ -88,6 +81,8 @@ MaxArithmetics = 262144
 MaxBinaries = 262144
 MaxSteps = 8388608
 MaxAllowedFailedCounter = 50
+SenderAddress = "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266"
+PrivateKeys = [{Path = "/pk/keystore.sequencer", Password = "testonly"}]
 	[Sequencer.ProfitabilityChecker]
 		SendBatchesEvenWhenNotProfitable = "true"
 
@@ -99,6 +94,13 @@ VerifyProofInterval = "5s"
 TxProfitabilityCheckerType = "acceptall"
 TxProfitabilityMinReward = "1.1"
 ProofStatePollingInterval = "5s"
+SenderAddress = "0x70997970c51812dc3a010c7d01b50e0d17dc79c8"
+
+[EthTxManager]
+PrivateKeys = [
+	{Path = "/pk/keystore.sequencer", Password = "testonly"},
+	{Path = "/pk/keystore.aggregator", Password = "testonly"}
+]
 
 [GasPriceEstimator]
 Type = "default"
@@ -122,5 +124,5 @@ Port = 61090
 [Metrics]
 Host = "0.0.0.0"
 Port = 9091
-Enabled = true
+Enabled = false
 

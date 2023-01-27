@@ -16,9 +16,9 @@ import (
 	"github.com/0xPolygonHermez/zkevm-bridge-service/utils"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/utils/gerror"
 	"github.com/0xPolygonHermez/zkevm-node/encoding"
-	"github.com/0xPolygonHermez/zkevm-node/etherman/smartcontracts/bridge"
-	"github.com/0xPolygonHermez/zkevm-node/etherman/smartcontracts/globalexitrootmanager"
 	erc20 "github.com/0xPolygonHermez/zkevm-node/etherman/smartcontracts/matic"
+	"github.com/0xPolygonHermez/zkevm-node/etherman/smartcontracts/polygonzkevmbridge"
+	"github.com/0xPolygonHermez/zkevm-node/etherman/smartcontracts/polygonzkevmglobalexitroot"
 	"github.com/0xPolygonHermez/zkevm-node/log"
 	"github.com/0xPolygonHermez/zkevm-node/test/contracts/bin/ERC20"
 	"github.com/0xPolygonHermez/zkevm-node/test/operations"
@@ -47,7 +47,7 @@ const (
 	l1BridgeAddr      = "0x0165878A594ca255338adfa4d48449f69242Eb8F"
 	l2BridgeAddr      = "0x9d98deabc42dd696deb9e40b4f1cab7ddbf55988"
 
-	l1AccHexAddress = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
+	l1AccHexAddress = "0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC"
 
 	sequencerAddress = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
 
@@ -62,7 +62,7 @@ var (
 		L2: 1,
 	}
 	accHexPrivateKeys = map[NetworkSID]string{
-		L1: "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80", //0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
+		L1: "0x5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a", //0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC
 		L2: "0xdfd01798f92667dbf91df722434e8fbe96af0211d4d1b82bbbbc8f1def7a814f", //0xc949254d682d8c9ad5682521675b8f43b102aec4
 	}
 )
@@ -569,7 +569,7 @@ func (m *Manager) GetLatestGlobalExitRootFromL1(ctx context.Context) (*etherman.
 // GetCurrentGlobalExitRootFromSmc reads the globalexitroot from the smc
 func (m *Manager) GetCurrentGlobalExitRootFromSmc(ctx context.Context) (*etherman.GlobalExitRoot, error) {
 	client := m.clients[L1]
-	br, err := bridge.NewBridge(common.HexToAddress(l1BridgeAddr), client)
+	br, err := polygonzkevmbridge.NewPolygonzkevmbridge(common.HexToAddress(l1BridgeAddr), client)
 	if err != nil {
 		return nil, err
 	}
@@ -577,7 +577,7 @@ func (m *Manager) GetCurrentGlobalExitRootFromSmc(ctx context.Context) (*etherma
 	if err != nil {
 		return nil, err
 	}
-	globalManager, err := globalexitrootmanager.NewGlobalexitrootmanager(GlobalExitRootManAddr, client)
+	globalManager, err := polygonzkevmglobalexitroot.NewPolygonzkevmglobalexitroot(GlobalExitRootManAddr, client)
 	if err != nil {
 		return nil, err
 	}
