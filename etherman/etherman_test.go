@@ -25,7 +25,7 @@ func init() {
 	})
 }
 
-//This function prepare the blockchain, the wallet with funds and deploy the smc
+// This function prepare the blockchain, the wallet with funds and deploy the smc
 func newTestingEnv() (ethman *Client, ethBackend *backends.SimulatedBackend, auth *bind.TransactOpts, maticAddr common.Address, bridge *mockbridge.Polygonzkevmbridge) {
 	privateKey, err := crypto.GenerateKey()
 	if err != nil {
