@@ -4,7 +4,7 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/0xPolygonHermez/zkevm-node/etherman/smartcontracts/proofofefficiency"
+	"github.com/0xPolygonHermez/zkevm-node/etherman/smartcontracts/polygonzkevm"
 	"github.com/ethereum/go-ethereum/common"
 )
 
@@ -39,7 +39,7 @@ type SequencedBatch struct {
 	BatchNumber uint64
 	Sequencer   common.Address
 	TxHash      common.Hash
-	proofofefficiency.ProofOfEfficiencyBatchData
+	polygonzkevm.PolygonZkEVMBatchData
 }
 
 // ForcedBatch represents a ForcedBatch
@@ -60,7 +60,7 @@ type SequencedForceBatch struct {
 	Sequencer   common.Address
 	TxHash      common.Hash
 	Timestamp   time.Time
-	proofofefficiency.ProofOfEfficiencyForcedBatchData
+	polygonzkevm.PolygonZkEVMForcedBatchData
 }
 
 // Deposit struct
