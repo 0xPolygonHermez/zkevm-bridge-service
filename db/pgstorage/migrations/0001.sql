@@ -108,3 +108,10 @@ CREATE TABLE mt.rht (
     key BYTEA,
     value BYTEA []
 );
+
+-- Create indexes
+CREATE INDEX IF NOT EXISTS root_network_idx ON mt.root(root, network);
+CREATE INDEX IF NOT EXISTS deposit_idx ON mt.root(deposit_cnt);
+CREATE INDEX IF NOT EXISTS block_idx ON sync.exit_root(block_id);
+CREATE INDEX IF NOT EXISTS root_idx ON mt.root(root);
+CREATE INDEX IF NOT EXISTS exit_roots_idx ON sync.exit_root(exit_roots);
