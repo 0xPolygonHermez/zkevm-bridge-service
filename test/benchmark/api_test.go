@@ -165,6 +165,7 @@ func BenchmarkApiSmallTest(b *testing.B) {
 	for _, bench := range benchmarks {
 		prefix := fmt.Sprintf("test-sync-%s-%d", bench.store, bench.initSize)
 		b.Run(prefix, func(sub *testing.B) {
+			sub.ReportAllocs()
 			sub.StopTimer()
 			initServer(sub, bench)
 		})
