@@ -112,7 +112,7 @@ func (mt *MerkleTree) initSiblings(ctx context.Context, root []byte, dbTx pgx.Tx
 func (mt *MerkleTree) addLeaf(ctx context.Context, leaf [KeyLen]byte, dbTx pgx.Tx) error {
 	index := mt.count
 	cur := leaf
-	flag := true
+	isFilledSubTree := true // todo update the variable name
 
 	var leaves [][][]byte
 	for h := uint8(0); h < mt.height; h++ {
@@ -123,10 +123,11 @@ func (mt *MerkleTree) addLeaf(ctx context.Context, leaf [KeyLen]byte, dbTx pgx.T
 			cur = parent
 			leaves = append(leaves, [][]byte{parent[:], mt.siblings[h][:], child[:]})
 		} else {
-			if flag {
+			if isFilledSubTree {
 				// we will update the sibling when the sub tree is complete
 				copy(mt.siblings[h][:], cur[:])
-				flag = false
+				// we have a left child in this layer, it means the right child is empty so the sub tree is not completed
+				isFilledSubTree = false
 			}
 			var child [KeyLen]byte
 			copy(child[:], cur[:])
