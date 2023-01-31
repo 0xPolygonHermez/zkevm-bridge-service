@@ -112,7 +112,7 @@ func (mt *MerkleTree) initSiblings(ctx context.Context, root []byte, dbTx pgx.Tx
 func (mt *MerkleTree) addLeaf(ctx context.Context, leaf [KeyLen]byte, dbTx pgx.Tx) error {
 	index := mt.count
 	cur := leaf
-	isFilledSubTree := true // todo update the variable name
+	isFilledSubTree := true
 
 	var leaves [][][]byte
 	for h := uint8(0); h < mt.height; h++ {
