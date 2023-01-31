@@ -6,9 +6,8 @@ import (
 	"testing"
 
 	"github.com/0xPolygonHermez/zkevm-bridge-service/db/pgstorage"
-	"github.com/gobuffalo/packr/v2"
-
 	"github.com/0xPolygonHermez/zkevm-node/log"
+	"github.com/gobuffalo/packr/v2"
 	"github.com/jackc/pgx/v4"
 	"github.com/jackc/pgx/v4/stdlib"
 	migrate "github.com/rubenv/sql-migrate"
@@ -45,7 +44,7 @@ type migrationTester interface {
 
 var (
 	dBCfg = pgstorage.NewConfigFromEnv()
-	box   = packr.New("hermez-db-migrations", "./migrations")
+	box   = packr.New("hermez-db-migrations", ".")
 )
 
 func runMigrationTest(t *testing.T, migrationNumber int, miter migrationTester) {
