@@ -9,11 +9,11 @@ ALTER TABLE mt.rht DROP CONSTRAINT IF EXISTS rht_pkey;
 ALTER TABLE mt.root ADD CONSTRAINT root_pkey PRIMARY KEY (deposit_cnt, network);
 ALTER TABLE mt.rht ADD CONSTRAINT rht_pkey PRIMARY KEY (key);
 
-DROP INDEX IF EXISTS root_network_idx;
-DROP INDEX IF EXISTS deposit_idx;
-DROP INDEX IF EXISTS block_idx;
-DROP INDEX IF EXISTS root_idx;
-DROP INDEX IF EXISTS exit_roots_idx;
+DROP INDEX IF EXISTS mt.root_network_idx;
+DROP INDEX IF EXISTS mt.deposit_idx;
+DROP INDEX IF EXISTS sync.block_idx;
+DROP INDEX IF EXISTS mt.root_idx;
+DROP INDEX IF EXISTS sync.exit_roots_idx;
 
 ALTER SCHEMA mt RENAME TO mtv2;
 ALTER SCHEMA sync RENAME TO syncv2;

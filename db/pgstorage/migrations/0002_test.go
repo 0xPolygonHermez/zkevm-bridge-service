@@ -35,12 +35,15 @@ func (m migrationTest0002) InsertData(db *sql.DB) error {
 	return nil
 }
 
+var indexes = []string{"root_network_idx", "deposit_idx", "block_idx", "root_idx", "exit_roots_idx"}
+
 func (m migrationTest0002) RunAssertsAfterMigrationUp(t *testing.T, db *sql.DB) {
 	// Insert a new root
 	const addRoot = "INSERT INTO mt.root (root, deposit_cnt, network) VALUES ($1, $2, $3) RETURNING id"
 	var rootID int
 	err := db.QueryRow(addRoot, common.FromHex("0x5a2dce0a8a7f68bb74560f8f71837c2c2ebbcbf7fffb42ae1896f13f7c7479a0"), 1, 0).Scan(&rootID)
 	assert.NoError(t, err)
+
 	// Insert a new node to the rht table
 	const addNode = "INSERT INTO mt.rht (key, value, root_id) VALUES ($1, $2, $3)"
 	_, err = db.Exec(addNode, common.FromHex("0x5a2dce0a8a7f68bb74560f8f71837c2c2ebbcbf7fffb42ae1896f13f7c7479a0"), [][]byte{
@@ -48,6 +51,16 @@ func (m migrationTest0002) RunAssertsAfterMigrationUp(t *testing.T, db *sql.DB) 
 		common.FromHex("0x21ddb9a356815c3fac1026b6dec5df3124afbadb485c9ba5a3e3398a04b7ba85"),
 	}, rootID)
 	assert.NoError(t, err)
+
+	// Check indexes adding
+	for _, idx := range indexes {
+		// getIndex
+		const getIndex = `SELECT count(*) FROM pg_indexes WHERE indexname = $1;`
+		row := db.QueryRow(getIndex, idx)
+		var result int
+		assert.NoError(t, row.Scan(&result))
+		assert.Equal(t, 1, result)
+	}
 }
 
 func (m migrationTest0002) RunAssertsAfterMigrationDown(t *testing.T, db *sql.DB) {
@@ -64,6 +77,16 @@ func (m migrationTest0002) RunAssertsAfterMigrationDown(t *testing.T, db *sql.DB
 	// Insert an new root to reproduce the duplicate key error
 	_, err = db.Exec(addOldRoot, common.FromHex("0xf4418588ed35a2458cffeb39b93d26f18d2ab13bdce6aee58e7b99359ec2dfd9"), 2, 0)
 	assert.NoError(t, err)
+
+	// Check indexes removing
+	for _, idx := range indexes {
+		// getIndex
+		const getIndex = `SELECT count(*) FROM pg_indexes WHERE indexname = $1;`
+		row := db.QueryRow(getIndex, idx)
+		var result int
+		assert.NoError(t, row.Scan(&result))
+		assert.Equal(t, 0, result)
+	}
 }
 
 func TestMigration0002(t *testing.T) {
