@@ -43,13 +43,15 @@ func NewMerkleTree(ctx context.Context, store merkleTreeStore, height, network u
 			if err1 != nil {
 				return nil, err
 			}
+			var nodes [][]interface{}
 			for h := uint8(0); h < height; h++ {
 				// h+1 is the position of the parent node and h is the position of the values of the children nodes. As all the nodes of the same nodes has the same values
 				// we can only store the info ones
-				err := store.Set(ctx, zeroHashes[h+1][:], [][]byte{zeroHashes[h][:], zeroHashes[h][:]}, rootID, nil)
-				if err != nil {
-					return nil, err
-				}
+				nodes = append(nodes, []interface{}{zeroHashes[h+1][:], [][]byte{zeroHashes[h][:], zeroHashes[h][:]}, rootID})
+			}
+			err := store.BulkSet(ctx, nodes, nil)
+			if err != nil {
+				return nil, err
 			}
 		} else {
 			return nil, err
@@ -143,13 +145,12 @@ func (mt *MerkleTree) addLeaf(ctx context.Context, leaf [KeyLen]byte, dbTx pgx.T
 	if err != nil {
 		return err
 	}
+	var nodes [][]interface{}
 	for _, leaf := range leaves {
-		err := mt.store.Set(ctx, leaf[0], [][]byte{leaf[1], leaf[2]}, rootID, dbTx)
-		if err != nil {
-			return err
-		}
+		nodes = append(nodes, []interface{}{leaf[0], [][]byte{leaf[1], leaf[2]}, rootID})
 	}
-	return nil
+
+	return mt.store.BulkSet(ctx, nodes, dbTx)
 }
 
 func (mt *MerkleTree) resetLeaf(ctx context.Context, depositCount uint, dbTx pgx.Tx) error {

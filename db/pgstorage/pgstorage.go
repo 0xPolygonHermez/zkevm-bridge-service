@@ -448,6 +448,12 @@ func (p *PostgresStorage) Set(ctx context.Context, key []byte, value [][]byte, r
 	return err
 }
 
+// BulkSet is similar to Set, but it inserts multiple key-value pairs into the db.
+func (p *PostgresStorage) BulkSet(ctx context.Context, rows [][]interface{}, dbTx pgx.Tx) error {
+	_, err := p.getExecQuerier(dbTx).CopyFrom(ctx, pgx.Identifier{"mt", "rht"}, []string{"key", "value", "root_id"}, pgx.CopyFromRows(rows))
+	return err
+}
+
 // GetLastDepositCount gets the last deposit count from the merkle tree.
 func (p *PostgresStorage) GetLastDepositCount(ctx context.Context, network uint8, dbTx pgx.Tx) (uint, error) {
 	var depositCnt int64
