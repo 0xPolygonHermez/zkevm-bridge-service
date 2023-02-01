@@ -20,8 +20,8 @@ type MerkleTree struct {
 	height uint8
 	// count is the number of deposit
 	count uint
-	// root is the value of the root node, count and root are only used in the synchronizer side
-	root [KeyLen]byte
+	// siblings is the array of sibling of the last leaf added
+	siblings [][KeyLen]byte
 }
 
 func init() {
@@ -58,67 +58,48 @@ func NewMerkleTree(ctx context.Context, store merkleTreeStore, height, network u
 		}
 	}
 
-	var mtRoot [KeyLen]byte
-	root, err := store.GetRoot(ctx, depositCnt, network, nil)
-	if err != nil {
-		return nil, err
-	}
-	copy(mtRoot[:], root)
-
-	return &MerkleTree{
+	mt := &MerkleTree{
 		store:   store,
 		network: network,
 		height:  height,
 		count:   depositCnt,
-		root:    mtRoot,
-	}, nil
+	}
+	root, err := mt.getRoot(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+	mt.siblings, err = mt.initSiblings(ctx, root, nil)
+
+	return mt, err
 }
 
-func (mt *MerkleTree) getSiblings(ctx context.Context, index uint, root [KeyLen]byte, dbTx pgx.Tx) ([][KeyLen]byte, error) {
+// initSiblings returns the siblings of the node at the given index.
+// it is used to initialize the siblings array in the beginning.
+func (mt *MerkleTree) initSiblings(ctx context.Context, root []byte, dbTx pgx.Tx) ([][KeyLen]byte, error) {
 	var (
-		left, right [KeyLen]byte
-		siblings    [][KeyLen]byte
+		left     [KeyLen]byte
+		siblings [][KeyLen]byte
 	)
 
+	// the merkle tree is 0-indexed, so we need to subtract 1
+	index := mt.count - 1
 	cur := root
+
 	// It starts in height-1 because 0 is the level of the leafs
 	for h := int(mt.height - 1); h >= 0; h-- {
-		value, err := mt.store.Get(ctx, cur[:], dbTx)
+		value, err := mt.store.Get(ctx, cur, dbTx)
 		if err != nil {
 			return nil, fmt.Errorf("height: %d, cur: %v, error: %w", h, cur, err)
 		}
 
 		copy(left[:], value[0])
-		copy(right[:], value[1])
-
-		/*
-					*        Root                (level h=3 => height=4)
-					*      /     \
-					*	 O5       O6             (level h=2)
-					*	/ \      / \
-					*  O1  O2   O3  O4           (level h=1)
-			        *  /\   /\   /\ /\
-					* 0  1 2  3 4 5 6 7 Leafs    (level h=0)
-					* Example 1:
-					* Choose index = 3 => 011 binary
-					* Assuming we are in level 1 => h=1; 1<<h = 010 binary
-					* Now, let's do AND operation => 011&010=010 which is higher than 0 so we need the left sibling (O1)
-					* Example 2:
-					* Choose index = 4 => 100 binary
-					* Assuming we are in level 1 => h=1; 1<<h = 010 binary
-					* Now, let's do AND operation => 100&010=000 which is not higher than 0 so we need the right sibling (O4)
-					* Example 3:
-					* Choose index = 4 => 100 binary
-					* Assuming we are in level 2 => h=2; 1<<h = 100 binary
-					* Now, let's do AND operation => 100&100=100 which is higher than 0 so we need the left sibling (O5)
-		*/
+		// we will keep the left sibling of the last node
+		siblings = append(siblings, left)
 
 		if index&(1<<h) > 0 {
-			siblings = append(siblings, left)
-			cur = right
+			cur = value[1]
 		} else {
-			siblings = append(siblings, right)
-			cur = left
+			cur = value[0]
 		}
 	}
 
@@ -133,30 +114,32 @@ func (mt *MerkleTree) getSiblings(ctx context.Context, index uint, root [KeyLen]
 func (mt *MerkleTree) addLeaf(ctx context.Context, leaf [KeyLen]byte, dbTx pgx.Tx) error {
 	index := mt.count
 	cur := leaf
-
-	siblings, err := mt.getSiblings(ctx, index, mt.root, dbTx)
-	if err != nil {
-		return err
-	}
+	isFilledSubTree := true
 
 	var leaves [][][]byte
 	for h := uint8(0); h < mt.height; h++ {
 		if index&(1<<h) > 0 {
 			var child [KeyLen]byte
 			copy(child[:], cur[:])
-			parent := Hash(siblings[h], child)
+			parent := Hash(mt.siblings[h], child)
 			cur = parent
-			leaves = append(leaves, [][]byte{parent[:], siblings[h][:], child[:]})
+			leaves = append(leaves, [][]byte{parent[:], mt.siblings[h][:], child[:]})
 		} else {
+			if isFilledSubTree {
+				// we will update the sibling when the sub tree is complete
+				copy(mt.siblings[h][:], cur[:])
+				// we have a left child in this layer, it means the right child is empty so the sub tree is not completed
+				isFilledSubTree = false
+			}
 			var child [KeyLen]byte
 			copy(child[:], cur[:])
-			parent := Hash(child, siblings[h])
+			parent := Hash(child, zeroHashes[h])
 			cur = parent
-			leaves = append(leaves, [][]byte{parent[:], child[:], siblings[h][:]})
+			// the sibling of 0 bit should be the zero hash, since we are in the last node of the tree
+			leaves = append(leaves, [][]byte{parent[:], child[:], zeroHashes[h][:]})
 		}
 	}
-	// Set the root value and leaves
-	mt.root = cur
+
 	mt.count++
 	rootID, err := mt.store.SetRoot(ctx, cur[:], mt.count, mt.network, dbTx)
 	if err != nil {
@@ -178,11 +161,16 @@ func (mt *MerkleTree) resetLeaf(ctx context.Context, depositCount uint, dbTx pgx
 	}
 
 	mt.count = depositCount
-	root, err := mt.store.GetRoot(ctx, depositCount, mt.network, dbTx)
+	root, err := mt.getRoot(ctx, dbTx)
 	if err != nil {
 		return err
 	}
+	mt.siblings, err = mt.initSiblings(ctx, root, dbTx)
 
-	copy(mt.root[:], root)
-	return nil
+	return err
+}
+
+// this function is used to get the current root of the merkle tree
+func (mt *MerkleTree) getRoot(ctx context.Context, dbTx pgx.Tx) ([]byte, error) {
+	return mt.store.GetRoot(ctx, mt.count, mt.network, dbTx)
 }

@@ -87,16 +87,22 @@ func initServer(b *testing.B, bench benchmark) *bridgectrl.BridgeController {
 			require.NoError(b, store.Commit(context.TODO(), dbTx))
 			continue
 		}
+		var roots [2][]byte
+		roots[0], err = bt.GetExitRoot(0, dbTx)
+		require.NoError(b, err)
+		roots[1], err = bt.GetExitRoot(1, dbTx)
+		require.NoError(b, err)
+
 		if networkID == 0 {
 			err = store.AddGlobalExitRoot(context.TODO(), &etherman.GlobalExitRoot{
-				GlobalExitRoot: bridgectrl.Hash(common.BytesToHash(bt.GetExitRoot(0)), common.BytesToHash(bt.GetExitRoot(1))),
-				ExitRoots:      []common.Hash{common.BytesToHash(bt.GetExitRoot(0)), common.BytesToHash(bt.GetExitRoot(1))},
+				GlobalExitRoot: bridgectrl.Hash(common.BytesToHash(roots[0]), common.BytesToHash(roots[1])),
+				ExitRoots:      []common.Hash{common.BytesToHash(roots[0]), common.BytesToHash(roots[1])},
 				BlockID:        id,
 			}, dbTx)
 		} else {
 			err = store.AddTrustedGlobalExitRoot(context.TODO(), &etherman.GlobalExitRoot{
-				GlobalExitRoot: bridgectrl.Hash(common.BytesToHash(bt.GetExitRoot(0)), common.BytesToHash(bt.GetExitRoot(1))),
-				ExitRoots:      []common.Hash{common.BytesToHash(bt.GetExitRoot(0)), common.BytesToHash(bt.GetExitRoot(1))},
+				GlobalExitRoot: bridgectrl.Hash(common.BytesToHash(roots[0]), common.BytesToHash(roots[1])),
+				ExitRoots:      []common.Hash{common.BytesToHash(roots[0]), common.BytesToHash(roots[1])},
 			}, dbTx)
 		}
 		require.NoError(b, err)
@@ -159,6 +165,7 @@ func BenchmarkApiSmallTest(b *testing.B) {
 	for _, bench := range benchmarks {
 		prefix := fmt.Sprintf("test-sync-%s-%d", bench.store, bench.initSize)
 		b.Run(prefix, func(sub *testing.B) {
+			sub.ReportAllocs()
 			sub.StopTimer()
 			initServer(sub, bench)
 		})

@@ -71,6 +71,6 @@ func (bt *BridgeController) ReorgMT(depositCount uint, networkID uint, dbTx pgx.
 
 // GetExitRoot returns the dedicated merkle tree's root.
 // only use for the test purpose
-func (bt *BridgeController) GetExitRoot(networkID int) []byte {
-	return bt.exitTrees[networkID].root[:]
+func (bt *BridgeController) GetExitRoot(networkID int, dbTx pgx.Tx) ([]byte, error) {
+	return bt.exitTrees[networkID].getRoot(context.TODO(), dbTx)
 }
