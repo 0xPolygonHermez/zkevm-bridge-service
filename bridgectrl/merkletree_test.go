@@ -102,8 +102,9 @@ func TestMTAddLeaf(t *testing.T) {
 				err = mt.addLeaf(ctx, leafValue, nil)
 				require.NoError(t, err)
 			}
-
-			assert.Equal(t, hex.EncodeToString(mt.root[:]), testVector.CurrentRoot[2:])
+			curRoot, err := mt.getRoot(ctx, nil)
+			require.NoError(t, err)
+			assert.Equal(t, hex.EncodeToString(curRoot), testVector.CurrentRoot[2:])
 
 			amount, result := new(big.Int).SetString(testVector.NewLeaf.Amount, 0)
 			require.True(t, result)
@@ -121,8 +122,9 @@ func TestMTAddLeaf(t *testing.T) {
 			leafHash := hashDeposit(deposit)
 			err = mt.addLeaf(ctx, leafHash, nil)
 			require.NoError(t, err)
-
-			assert.Equal(t, hex.EncodeToString(mt.root[:]), testVector.NewRoot[2:])
+			newRoot, err := mt.getRoot(ctx, nil)
+			require.NoError(t, err)
+			assert.Equal(t, hex.EncodeToString(newRoot), testVector.NewRoot[2:])
 		})
 	}
 }
@@ -148,7 +150,7 @@ func TestMTGetProof(t *testing.T) {
 
 			mt, err := NewMerkleTree(ctx, store, uint8(32), uint8(0))
 			require.NoError(t, err)
-
+			var cur, sibling [KeyLen]byte
 			for li, leaf := range testVector.Deposits {
 				amount, result := new(big.Int).SetString(leaf.Amount, 0)
 				require.True(t, result)
@@ -165,18 +167,25 @@ func TestMTGetProof(t *testing.T) {
 				}
 
 				leafHash := hashDeposit(deposit)
+				if li == int(testVector.Index) {
+					cur = leafHash
+				}
 				err = mt.addLeaf(ctx, leafHash, nil)
 				require.NoError(t, err)
 			}
-
-			assert.Equal(t, hex.EncodeToString(mt.root[:]), testVector.ExpectedRoot[2:])
-
-			prooves, err := mt.getSiblings(ctx, testVector.Index, mt.root, nil)
+			root, err := mt.getRoot(ctx, nil)
 			require.NoError(t, err)
+			assert.Equal(t, hex.EncodeToString(root), testVector.ExpectedRoot[2:])
 
-			for i, proof := range prooves {
-				assert.Equal(t, hex.EncodeToString(proof[:]), testVector.MerkleProof[i][2:])
+			for h := 0; h < int(mt.height); h++ {
+				copy(sibling[:], common.FromHex(testVector.MerkleProof[h]))
+				if testVector.Index&(1<<h) != 0 {
+					cur = Hash(sibling, cur)
+				} else {
+					cur = Hash(cur, sibling)
+				}
 			}
+			assert.Equal(t, hex.EncodeToString(cur[:]), testVector.ExpectedRoot[2:])
 		})
 	}
 }
