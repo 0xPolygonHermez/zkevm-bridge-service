@@ -49,9 +49,6 @@ func NewMerkleTree(ctx context.Context, store merkleTreeStore, height, network u
 					// h+1 is the position of the parent node and h is the position of the values of the children nodes. As all the nodes of the same nodes has the same values
 					// we can only store the info ones
 					nodes = append(nodes, []interface{}{zeroHashes[h+1][:], [][]byte{zeroHashes[h][:], zeroHashes[h][:]}, rootID})
-					if err != nil {
-						return nil, err
-					}
 				}
 				err := store.BulkSet(ctx, nodes, nil)
 				if err != nil {
