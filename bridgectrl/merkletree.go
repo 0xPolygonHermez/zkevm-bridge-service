@@ -35,7 +35,7 @@ func init() {
 }
 
 // NewMerkleTree creates new MerkleTree.
-func NewMerkleTree(ctx context.Context, store merkleTreeStore, height, network uint8) (*MerkleTree, error) {
+func NewMerkleTree(ctx context.Context, store merkleTreeStore, height, network uint8, isZeroHashesAdded bool) (*MerkleTree, error) {
 	depositCnt, err := store.GetLastDepositCount(ctx, network, nil)
 	if err != nil {
 		if err == gerror.ErrStorageNotFound {
@@ -44,14 +44,19 @@ func NewMerkleTree(ctx context.Context, store merkleTreeStore, height, network u
 				return nil, err
 			}
 			var nodes [][]interface{}
-			for h := uint8(0); h < height; h++ {
-				// h+1 is the position of the parent node and h is the position of the values of the children nodes. As all the nodes of the same nodes has the same values
-				// we can only store the info ones
-				nodes = append(nodes, []interface{}{zeroHashes[h+1][:], [][]byte{zeroHashes[h][:], zeroHashes[h][:]}, rootID})
-			}
-			err := store.BulkSet(ctx, nodes, nil)
-			if err != nil {
-				return nil, err
+			if !isZeroHashesAdded {
+				for h := uint8(0); h < height; h++ {
+					// h+1 is the position of the parent node and h is the position of the values of the children nodes. As all the nodes of the same nodes has the same values
+					// we can only store the info ones
+					nodes = append(nodes, []interface{}{zeroHashes[h+1][:], [][]byte{zeroHashes[h][:], zeroHashes[h][:]}, rootID})
+					if err != nil {
+						return nil, err
+					}
+				}
+				err := store.BulkSet(ctx, nodes, nil)
+				if err != nil {
+					return nil, err
+				}
 			}
 		} else {
 			return nil, err
