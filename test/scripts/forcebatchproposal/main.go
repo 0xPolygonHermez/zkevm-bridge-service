@@ -44,7 +44,7 @@ func main() {
 	if err != nil {
 		log.Fatal("Error approving matics: ", err)
 	}
-	tx, err := poe.SequenceBatches(auth, nil)
+	tx, err := poe.SequenceBatches(auth, nil, auth.From)
 	if err != nil {
 		log.Fatal("Error sending the batch: ", err)
 	}

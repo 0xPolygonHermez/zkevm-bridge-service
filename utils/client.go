@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/0xPolygonHermez/zkevm-bridge-service/bridgectrl/pb"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/bridgectrl"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/test/mocksmartcontracts/BridgeMessageReceiver"
 	"github.com/0xPolygonHermez/zkevm-node/encoding"
@@ -152,7 +153,7 @@ func (c Client) SendBridgeMessage(ctx context.Context, destNetwork uint32, destA
 }
 
 // SendClaim sends a claim transaction.
-func (c Client) SendClaim(ctx context.Context, deposit *pb.Deposit, smtProof [][32]byte, globalExitRoot *etherman.GlobalExitRoot, bridgeSCAddr common.Address, auth *bind.TransactOpts) error {
+func (c Client) SendClaim(ctx context.Context, deposit *pb.Deposit, smtProof [bridgectrl.KeyLen][32]byte, globalExitRoot *etherman.GlobalExitRoot, bridgeSCAddr common.Address, auth *bind.TransactOpts) error {
 	br, err := polygonzkevmbridge.NewPolygonzkevmbridge(bridgeSCAddr, c.Client)
 	if err != nil {
 		return err

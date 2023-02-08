@@ -24,25 +24,26 @@ import (
 )
 
 var (
-	updateGlobalExitRootSignatureHash      = crypto.Keccak256Hash([]byte("UpdateGlobalExitRoot(bytes32,bytes32)"))
-	forcedBatchSignatureHash               = crypto.Keccak256Hash([]byte("ForceBatch(uint64,bytes32,address,bytes)"))
-	sequencedBatchesEventSignatureHash     = crypto.Keccak256Hash([]byte("SequenceBatches(uint64)"))
-	forceSequencedBatchesSignatureHash     = crypto.Keccak256Hash([]byte("SequenceForceBatches(uint64)"))
-	verifyBatchesSignatureHash             = crypto.Keccak256Hash([]byte("VerifyBatches(uint64,bytes32,address)"))
-	trustedVerifyBatchesSignatureHash      = crypto.Keccak256Hash([]byte("TrustedVerifyBatches(uint64,bytes32,address)"))
-	setTrustedSequencerURLSignatureHash    = crypto.Keccak256Hash([]byte("SetTrustedSequencerURL(string)"))
-	setForceBatchAllowedSignatureHash      = crypto.Keccak256Hash([]byte("SetForceBatchAllowed(bool)"))
-	setTrustedSequencerSignatureHash       = crypto.Keccak256Hash([]byte("SetTrustedSequencer(address)"))
-	transferOwnershipSignatureHash         = crypto.Keccak256Hash([]byte("OwnershipTransferred(address,address)"))
-	setSecurityCouncilSignatureHash        = crypto.Keccak256Hash([]byte("SetSecurityCouncil(address)"))
-	proofDifferentStateSignatureHash       = crypto.Keccak256Hash([]byte("ProofDifferentState(bytes32,bytes32)"))
-	emergencyStateActivatedSignatureHash   = crypto.Keccak256Hash([]byte("EmergencyStateActivated()"))
-	emergencyStateDeactivatedSignatureHash = crypto.Keccak256Hash([]byte("EmergencyStateDeactivated()"))
+	updateGlobalExitRootSignatureHash           = crypto.Keccak256Hash([]byte("UpdateGlobalExitRoot(bytes32,bytes32)"))
+	forcedBatchSignatureHash                    = crypto.Keccak256Hash([]byte("ForceBatch(uint64,bytes32,address,bytes)"))
+	sequencedBatchesEventSignatureHash          = crypto.Keccak256Hash([]byte("SequenceBatches(uint64)"))
+	forceSequencedBatchesSignatureHash          = crypto.Keccak256Hash([]byte("SequenceForceBatches(uint64)"))
+	verifyBatchesSignatureHash                  = crypto.Keccak256Hash([]byte("VerifyBatches(uint64,bytes32,address)"))
+	verifyBatchesTrustedAggregatorSignatureHash = crypto.Keccak256Hash([]byte("VerifyBatchesTrustedAggregator(uint64,bytes32,address)"))
+	setTrustedSequencerURLSignatureHash         = crypto.Keccak256Hash([]byte("SetTrustedSequencerURL(string)"))
+	setForceBatchAllowedSignatureHash           = crypto.Keccak256Hash([]byte("SetForceBatchAllowed(bool)"))
+	setTrustedSequencerSignatureHash            = crypto.Keccak256Hash([]byte("SetTrustedSequencer(address)"))
+	transferOwnershipSignatureHash              = crypto.Keccak256Hash([]byte("OwnershipTransferred(address,address)"))
+	setSecurityCouncilSignatureHash             = crypto.Keccak256Hash([]byte("SetSecurityCouncil(address)"))
+	proofDifferentStateSignatureHash            = crypto.Keccak256Hash([]byte("ProofDifferentState(bytes32,bytes32)"))
+	emergencyStateActivatedSignatureHash        = crypto.Keccak256Hash([]byte("EmergencyStateActivated()"))
+	emergencyStateDeactivatedSignatureHash      = crypto.Keccak256Hash([]byte("EmergencyStateDeactivated()"))
+	updateZkEVMVersionSignatureHash             = crypto.Keccak256Hash([]byte("UpdateZkEVMVersion(uint64,uint64,string)"))
 
 	// Bridge events
 	depositEventSignatureHash         = crypto.Keccak256Hash([]byte("BridgeEvent(uint8,uint32,address,uint32,address,uint256,bytes,uint32)"))
 	claimEventSignatureHash           = crypto.Keccak256Hash([]byte("ClaimEvent(uint32,uint32,address,address,uint256)"))
-	newWrappedTokenEventSignatureHash = crypto.Keccak256Hash([]byte("NewWrappedToken(uint32,address,address)"))
+	newWrappedTokenEventSignatureHash = crypto.Keccak256Hash([]byte("NewWrappedToken(uint32,address,address,bytes)"))
 
 	// Proxy events
 	initializedSignatureHash    = crypto.Keccak256Hash([]byte("Initialized(uint8)"))
@@ -185,8 +186,8 @@ func (etherMan *Client) processEvent(ctx context.Context, vLog types.Log, blocks
 		return etherMan.updateGlobalExitRootEvent(ctx, vLog, blocks, blocksOrder)
 	case forcedBatchSignatureHash:
 		return etherMan.forcedBatchEvent(ctx, vLog, blocks, blocksOrder)
-	case trustedVerifyBatchesSignatureHash:
-		return etherMan.trustedVerifyBatchesEvent(ctx, vLog, blocks, blocksOrder)
+	case verifyBatchesTrustedAggregatorSignatureHash:
+		return etherMan.verifyBatchesTrustedAggregator(ctx, vLog, blocks, blocksOrder)
 	case verifyBatchesSignatureHash:
 		log.Warn("VerifyBatches event not implemented yet")
 		return nil
@@ -202,13 +203,13 @@ func (etherMan *Client) processEvent(ctx context.Context, vLog types.Log, blocks
 		log.Debug("Initialized event detected")
 		return nil
 	case setTrustedSequencerSignatureHash:
-		log.Debug("setTrustedSequencer event detected")
+		log.Debug("SetTrustedSequencer event detected")
 		return nil
 	case setForceBatchAllowedSignatureHash:
-		log.Debug("setForceBatchAllowed event detected")
+		log.Debug("SetForceBatchAllowed event detected")
 		return nil
 	case setTrustedSequencerURLSignatureHash:
-		log.Debug("setTrustedSequencerURL event detected")
+		log.Debug("SetTrustedSequencerURL event detected")
 		return nil
 	case adminChangedSignatureHash:
 		log.Debug("AdminChanged event detected")
@@ -232,7 +233,10 @@ func (etherMan *Client) processEvent(ctx context.Context, vLog types.Log, blocks
 		log.Debug("EmergencyStateDeactivated event detected")
 		return nil
 	case transferOwnershipSignatureHash:
-		log.Debug("transferOwnership event detected")
+		log.Debug("TransferOwnership event detected")
+		return nil
+	case updateZkEVMVersionSignatureHash:
+		log.Debug("UpdateZkEVMVersion event detected")
 		return nil
 	}
 	log.Warnf("Event not registered: %+v", vLog)
@@ -474,9 +478,9 @@ func decodeSequences(txData []byte, lastBatchNumber uint64, sequencer common.Add
 	return sequencedBatches, nil
 }
 
-func (etherMan *Client) trustedVerifyBatchesEvent(ctx context.Context, vLog types.Log, blocks *[]Block, blocksOrder *map[common.Hash][]Order) error {
+func (etherMan *Client) verifyBatchesTrustedAggregator(ctx context.Context, vLog types.Log, blocks *[]Block, blocksOrder *map[common.Hash][]Order) error {
 	log.Debug("trustedVerifyBatches event detected")
-	vb, err := etherMan.PoE.ParseTrustedVerifyBatches(vLog)
+	vb, err := etherMan.PoE.ParseVerifyBatchesTrustedAggregator(vLog)
 	if err != nil {
 		return err
 	}

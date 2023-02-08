@@ -530,7 +530,7 @@ func (m *Manager) GetBridgeInfoByDestAddr(ctx context.Context, addr *common.Addr
 }
 
 // SendL1Claim send an L1 claim
-func (m *Manager) SendL1Claim(ctx context.Context, deposit *pb.Deposit, smtProof [][32]byte, globalExitRoot *etherman.GlobalExitRoot) error {
+func (m *Manager) SendL1Claim(ctx context.Context, deposit *pb.Deposit, smtProof [bridgectrl.KeyLen][32]byte, globalExitRoot *etherman.GlobalExitRoot) error {
 	client := m.clients[L1]
 	auth, err := client.GetSigner(ctx, accHexPrivateKeys[L1])
 	if err != nil {
@@ -541,7 +541,7 @@ func (m *Manager) SendL1Claim(ctx context.Context, deposit *pb.Deposit, smtProof
 }
 
 // SendL2Claim send an L2 claim
-func (m *Manager) SendL2Claim(ctx context.Context, deposit *pb.Deposit, smtProof [][32]byte, globalExitRoot *etherman.GlobalExitRoot) error {
+func (m *Manager) SendL2Claim(ctx context.Context, deposit *pb.Deposit, smtProof [bridgectrl.KeyLen][32]byte, globalExitRoot *etherman.GlobalExitRoot) error {
 	client := m.clients[L2]
 	auth, err := client.GetSigner(ctx, accHexPrivateKeys[L2])
 	if err != nil {
