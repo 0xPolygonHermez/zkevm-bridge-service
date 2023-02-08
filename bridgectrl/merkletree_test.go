@@ -92,23 +92,11 @@ func TestMTAddLeaf(t *testing.T) {
 			store, err := pgstorage.NewPostgresStorage(dbCfg)
 			require.NoError(t, err)
 
-			mt, err := NewMerkleTree(ctx, store, uint8(32), uint8(0), false)
+			mt, err := NewMerkleTree(ctx, store, uint8(32), 0, false)
 			require.NoError(t, err)
-
-			for _, leaf := range testVector.ExistingLeaves {
-				leafValue, err := formatBytes32String(leaf[2:])
-				require.NoError(t, err)
-
-				err = mt.addLeaf(ctx, leafValue, nil)
-				require.NoError(t, err)
-			}
-			curRoot, err := mt.getRoot(ctx, nil)
-			require.NoError(t, err)
-			assert.Equal(t, hex.EncodeToString(curRoot), testVector.CurrentRoot[2:])
 
 			amount, result := new(big.Int).SetString(testVector.NewLeaf.Amount, 0)
 			require.True(t, result)
-
 			deposit := &etherman.Deposit{
 				OriginalNetwork:    testVector.NewLeaf.OriginalNetwork,
 				OriginalAddress:    common.HexToAddress(testVector.NewLeaf.TokenAddress),
@@ -119,8 +107,22 @@ func TestMTAddLeaf(t *testing.T) {
 				DepositCount:       uint(ti + 1),
 				Metadata:           common.FromHex(testVector.NewLeaf.Metadata),
 			}
+			depositID, err := store.AddDeposit(ctx, deposit, nil)
+			require.NoError(t, err)
+
+			for i, leaf := range testVector.ExistingLeaves {
+				leafValue, err := formatBytes32String(leaf[2:])
+				require.NoError(t, err)
+
+				err = mt.addLeaf(ctx, depositID, leafValue, uint(i), nil)
+				require.NoError(t, err)
+			}
+			curRoot, err := mt.getRoot(ctx, nil)
+			require.NoError(t, err)
+			assert.Equal(t, hex.EncodeToString(curRoot), testVector.CurrentRoot[2:])
+
 			leafHash := hashDeposit(deposit)
-			err = mt.addLeaf(ctx, leafHash, nil)
+			err = mt.addLeaf(ctx, depositID, leafHash, uint(len(testVector.ExistingLeaves)), nil)
 			require.NoError(t, err)
 			newRoot, err := mt.getRoot(ctx, nil)
 			require.NoError(t, err)
@@ -148,29 +150,36 @@ func TestMTGetProof(t *testing.T) {
 			store, err := pgstorage.NewPostgresStorage(dbCfg)
 			require.NoError(t, err)
 
-			mt, err := NewMerkleTree(ctx, store, uint8(32), uint8(0), false)
+			mt, err := NewMerkleTree(ctx, store, uint8(32), 0, false)
 			require.NoError(t, err)
 			var cur, sibling [KeyLen]byte
 			for li, leaf := range testVector.Deposits {
 				amount, result := new(big.Int).SetString(leaf.Amount, 0)
 				require.True(t, result)
-
+				block := &etherman.Block{
+					BlockNumber: uint64(li + 1),
+					BlockHash:   common.HexToHash("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9fc"),
+					ParentHash:  common.Hash{},
+				}
+				blockID, err := store.AddBlock(context.TODO(), block, nil)
+				require.NoError(t, err)
 				deposit := &etherman.Deposit{
 					OriginalNetwork:    leaf.OriginalNetwork,
 					OriginalAddress:    common.HexToAddress(leaf.TokenAddress),
 					Amount:             amount,
 					DestinationNetwork: leaf.DestinationNetwork,
 					DestinationAddress: common.HexToAddress(leaf.DestinationAddress),
-					BlockNumber:        0,
+					BlockID:            blockID,
 					DepositCount:       uint(li + 1),
 					Metadata:           common.FromHex(leaf.Metadata),
 				}
-
+				depositID, err := store.AddDeposit(ctx, deposit, nil)
+				require.NoError(t, err)
 				leafHash := hashDeposit(deposit)
 				if li == int(testVector.Index) {
 					cur = leafHash
 				}
-				err = mt.addLeaf(ctx, leafHash, nil)
+				err = mt.addLeaf(ctx, depositID, leafHash, uint(li), nil)
 				require.NoError(t, err)
 			}
 			root, err := mt.getRoot(ctx, nil)
