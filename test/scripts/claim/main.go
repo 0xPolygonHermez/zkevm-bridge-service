@@ -4,6 +4,7 @@ import (
 	"context"
 	"math/big"
 
+	"github.com/0xPolygonHermez/zkevm-bridge-service/bridgectrl"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman"
 	clientUtils "github.com/0xPolygonHermez/zkevm-bridge-service/test/client"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/utils"
@@ -55,10 +56,10 @@ func main() {
 	log.Debug("mainnetExitRoot: ", proof.MainExitRoot)
 	log.Debug("rollupExitRoot: ", proof.RollupExitRoot)
 
-	var smt [][32]byte
+	var smt [bridgectrl.KeyLen][32]byte
 	for i := 0; i < len(proof.MerkleProof); i++ {
 		log.Debug("smt: ", proof.MerkleProof[i])
-		smt = append(smt, common.HexToHash(proof.MerkleProof[i]))
+		smt[i] = common.HexToHash(proof.MerkleProof[i])
 	}
 	globalExitRoot := &etherman.GlobalExitRoot{
 		ExitRoots: []common.Hash{common.HexToHash(proof.MainExitRoot), common.HexToHash(proof.RollupExitRoot)},

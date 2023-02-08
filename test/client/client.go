@@ -7,6 +7,7 @@ import (
 	"math/big"
 	"net/http"
 
+	"github.com/0xPolygonHermez/zkevm-bridge-service/bridgectrl"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/bridgectrl/pb"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/utils"
@@ -108,7 +109,7 @@ func (c NodeClient) SendBridgeMessage(ctx context.Context, destNetwork uint32, d
 }
 
 // SendClaim send a claim transaction.
-func (c NodeClient) SendClaim(ctx context.Context, deposit *pb.Deposit, smtProof [][32]byte, globalExitRoot *etherman.GlobalExitRoot,
+func (c NodeClient) SendClaim(ctx context.Context, deposit *pb.Deposit, smtProof [bridgectrl.KeyLen][32]byte, globalExitRoot *etherman.GlobalExitRoot,
 	bridgeSCAddr common.Address, auth *bind.TransactOpts, network NetworkSID,
 ) error {
 	return c.clients[network].SendClaim(ctx, deposit, smtProof, globalExitRoot, bridgeSCAddr, auth)
