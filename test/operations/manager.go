@@ -488,19 +488,19 @@ func (m *Manager) CheckAccountTokenBalance(ctx context.Context, network NetworkS
 }
 
 // GetClaimData gets the claim data
-func (m *Manager) GetClaimData(ctx context.Context, networkID, depositCount uint) ([][bridgectrl.KeyLen]byte, *etherman.GlobalExitRoot, error) {
+func (m *Manager) GetClaimData(ctx context.Context, networkID, depositCount uint) ([bridgectrl.KeyLen][bridgectrl.KeyLen]byte, *etherman.GlobalExitRoot, error) {
 	res, err := m.bridgeService.GetProof(context.Background(), &pb.GetProofRequest{
 		NetId:      uint32(networkID),
 		DepositCnt: uint64(depositCount),
 	})
 	if err != nil {
-		return nil, nil, err
+		return [32][32]byte{}, nil, err
 	}
-	prooves := [][bridgectrl.KeyLen]byte{}
-	for _, p := range res.Proof.MerkleProof {
+	prooves := [bridgectrl.KeyLen][bridgectrl.KeyLen]byte{}
+	for i, p := range res.Proof.MerkleProof {
 		var proof [bridgectrl.KeyLen]byte
 		copy(proof[:], common.FromHex(p))
-		prooves = append(prooves, proof)
+		prooves[i] = proof
 	}
 	return prooves, &etherman.GlobalExitRoot{
 		ExitRoots: []common.Hash{
