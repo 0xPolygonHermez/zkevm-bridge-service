@@ -92,7 +92,7 @@ func TestMTAddLeaf(t *testing.T) {
 			store, err := pgstorage.NewPostgresStorage(dbCfg)
 			require.NoError(t, err)
 
-			mt, err := NewMerkleTree(ctx, store, uint8(32), 0, false)
+			mt, err := NewMerkleTree(ctx, store, uint8(32), 0)
 			require.NoError(t, err)
 
 			amount, result := new(big.Int).SetString(testVector.NewLeaf.Amount, 0)
@@ -150,7 +150,7 @@ func TestMTGetProof(t *testing.T) {
 			store, err := pgstorage.NewPostgresStorage(dbCfg)
 			require.NoError(t, err)
 
-			mt, err := NewMerkleTree(ctx, store, uint8(32), 0, false)
+			mt, err := NewMerkleTree(ctx, store, uint8(32), 0)
 			require.NoError(t, err)
 			var cur, sibling [KeyLen]byte
 			for li, leaf := range testVector.Deposits {

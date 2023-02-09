@@ -28,8 +28,7 @@ func NewBridgeController(cfg Config, networks []uint, mtStore interface{}) (*Bri
 
 	for i, network := range networks {
 		networkIDs[network] = uint8(i)
-		// onlly add the zero hashes for the first tree to avoid duplication.
-		mt, err := NewMerkleTree(context.TODO(), mtStore.(merkleTreeStore), cfg.Height, network, i > 0)
+		mt, err := NewMerkleTree(context.TODO(), mtStore.(merkleTreeStore), cfg.Height, network)
 		if err != nil {
 			return nil, err
 		}

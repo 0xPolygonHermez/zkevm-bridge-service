@@ -35,7 +35,7 @@ func init() {
 }
 
 // NewMerkleTree creates new MerkleTree.
-func NewMerkleTree(ctx context.Context, store merkleTreeStore, height uint8, network uint, isZeroHashesAdded bool) (*MerkleTree, error) {
+func NewMerkleTree(ctx context.Context, store merkleTreeStore, height uint8, network uint) (*MerkleTree, error) {
 	depositCnt, err := store.GetLastDepositCount(ctx, network, nil)
 	if err != nil {
 		if err != gerror.ErrStorageNotFound {
@@ -142,12 +142,14 @@ func (mt *MerkleTree) addLeaf(ctx context.Context, depositID uint64, leaf [KeyLe
 	if err != nil {
 		return err
 	}
+	var nodes [][]interface{}
 	for _, leaf := range leaves {
-		err := mt.store.Set(ctx, leaf[0], [][]byte{leaf[1], leaf[2]}, depositID, dbTx)
-		if err != nil {
-			return err
-		}
+		nodes = append(nodes, []interface{}{leaf[0], [][]byte{leaf[1], leaf[2]}, depositID})
 	}
+	if err := mt.store.BulkSet(ctx, nodes, dbTx); err != nil {
+		return err
+	}
+
 	mt.count++
 	return nil
 }
