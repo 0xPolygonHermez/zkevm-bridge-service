@@ -66,6 +66,7 @@ func randDeposit(r *rand.Rand, depositCnt uint, blockID uint64, networkID int) *
 }
 
 func initServer(b *testing.B, bench benchmark) *bridgectrl.BridgeController {
+	b.StopTimer()
 	r := rand.New(rand.NewSource(bench.seed)) //nolint: gosec
 	bt, store, err := operations.RunMockServer(bench.store, bench.mtHeight, networks)
 	require.NoError(b, err)
@@ -121,6 +122,22 @@ func initServer(b *testing.B, bench benchmark) *bridgectrl.BridgeController {
 	return bt
 }
 
+func addDeposit(b *testing.B, bench benchmark) {
+	b.StopTimer()
+	r := rand.New(rand.NewSource(bench.seed)) //nolint: gosec
+	bt, store, err := operations.RunMockServer(bench.store, bench.mtHeight, networks)
+	require.NoError(b, err)
+	b.StartTimer()
+	for i := 0; i < bench.initSize; i++ {
+		networkID := rand.Intn(2) //nolint: gosec
+		dbTx, err := store.BeginDBTransaction(context.Background())
+		require.NoError(b, err)
+		deposit := randDeposit(r, uint(i+1), 0, networkID)
+		require.NoError(b, bt.AddDeposit(deposit, dbTx))
+		require.NoError(b, store.Commit(context.TODO(), dbTx))
+	}
+}
+
 func runSuite(b *testing.B, bench benchmark) {
 	url := "http://localhost:8080"
 	err := operations.WaitRestHealthy(url)
@@ -163,10 +180,14 @@ func BenchmarkApiSmallTest(b *testing.B) {
 		{480459882, "postgres", 32, 500, 100},
 	}
 	for _, bench := range benchmarks {
-		prefix := fmt.Sprintf("test-sync-%s-%d", bench.store, bench.initSize)
+		prefix := fmt.Sprintf("test-add-deposit-to-merkle-tree-%s-%d", bench.store, bench.initSize)
 		b.Run(prefix, func(sub *testing.B) {
 			sub.ReportAllocs()
-			sub.StopTimer()
+			addDeposit(sub, bench)
+		})
+		prefix = fmt.Sprintf("test-sync-%s-%d", bench.store, bench.initSize)
+		b.Run(prefix, func(sub *testing.B) {
+			sub.ReportAllocs()
 			initServer(sub, bench)
 		})
 		prefix = fmt.Sprintf("test-api-%s-%d", bench.store, bench.initSize)
@@ -183,7 +204,6 @@ func BenchmarkApiMediumTest(b *testing.B) {
 	for _, bench := range benchmarks {
 		prefix := fmt.Sprintf("test-sync-%s-%d", bench.store, bench.initSize)
 		b.Run(prefix, func(sub *testing.B) {
-			sub.StopTimer()
 			initServer(sub, bench)
 		})
 		prefix = fmt.Sprintf("test-api-%s-%d", bench.store, bench.initSize)
@@ -200,7 +220,6 @@ func BenchmarkApiLargeTest(b *testing.B) {
 	for _, bench := range benchmarks {
 		prefix := fmt.Sprintf("test-sync-%s-%d", bench.store, bench.initSize)
 		b.Run(prefix, func(sub *testing.B) {
-			sub.StopTimer()
 			initServer(sub, bench)
 		})
 		prefix = fmt.Sprintf("test-api-%s-%d", bench.store, bench.initSize)
