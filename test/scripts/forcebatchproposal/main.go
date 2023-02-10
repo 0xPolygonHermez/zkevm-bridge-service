@@ -15,7 +15,7 @@ const (
 	l1AccHexPrivateKey = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
 
 	l1NetworkURL   = "http://localhost:8545"
-	poeAddress     = "0x2279B7A0a67DB372996a5FaB50D91eAA73d2eBe6"
+	poeAddress     = "0x8A791620dd6260079BF849Dc5567aDC3F2FdC318"
 	maticTokenAddr = "0x5FbDB2315678afecb367f032d93F642f64180aa3" //nolint:gosec
 )
 
