@@ -74,7 +74,7 @@ services:
 
   zkevm-node:
     container_name: zkevm-node
-    image: hermeznetwork/zkevm-node:test
+    image: hermeznetwork/zkevm-node:v0.0.2-RC3
     ports:
       - 8123:8123
       - 61090:61090
