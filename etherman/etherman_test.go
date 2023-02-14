@@ -119,7 +119,7 @@ func TestSequencedBatchesEvent(t *testing.T) {
 		MinForcedTimestamp: 0,
 		Transactions:       common.Hex2Bytes(rawTxs),
 	})
-	_, err = etherman.PoE.SequenceBatches(auth, sequences)
+	_, err = etherman.PoE.SequenceBatches(auth, sequences, auth.From)
 	require.NoError(t, err)
 
 	// Mine the tx in a block
@@ -157,7 +157,7 @@ func TestVerifyBatchEvent(t *testing.T) {
 		MinForcedTimestamp: 0,
 		Transactions:       common.Hex2Bytes(rawTxs),
 	}
-	_, err = etherman.PoE.SequenceBatches(auth, []polygonzkevm.PolygonZkEVMBatchData{tx})
+	_, err = etherman.PoE.SequenceBatches(auth, []polygonzkevm.PolygonZkEVMBatchData{tx}, auth.From)
 	require.NoError(t, err)
 
 	// Mine the tx in a block
@@ -168,7 +168,7 @@ func TestVerifyBatchEvent(t *testing.T) {
 		proofC = [2]*big.Int{big.NewInt(1), big.NewInt(1)}
 		proofB = [2][2]*big.Int{proofC, proofC}
 	)
-	_, err = etherman.PoE.TrustedVerifyBatches(auth, 0, 0, 1, common.Hash{}, common.Hash{}, proofA, proofB, proofC)
+	_, err = etherman.PoE.VerifyBatchesTrustedAggregator(auth, 0, 0, 1, common.Hash{}, common.Hash{}, proofA, proofB, proofC)
 	require.NoError(t, err)
 
 	// Mine the tx in a block
@@ -273,7 +273,7 @@ func TestBridgeEvents(t *testing.T) {
 	//Claim funds
 	var (
 		network  uint32
-		smtProof [][32]byte
+		smtProof [32][32]byte
 		index    uint32
 	)
 	mainnetExitRoot := block[0].GlobalExitRoots[0].ExitRoots[0]

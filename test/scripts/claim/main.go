@@ -12,12 +12,14 @@ import (
 )
 
 const (
-	l2BridgeAddr = "0x9d98deabc42dd696deb9e40b4f1cab7ddbf55988"
+	l2BridgeAddr = "0xd0a3d58d135e2ee795dFB26ec150D339394254B9"
 
 	l2AccHexAddress    = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
 	l2AccHexPrivateKey = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
 	l2NetworkURL       = "http://localhost:8123"
 	bridgeURL          = "http://localhost:8080"
+
+	mtHeight = 32
 )
 
 func main() {
@@ -55,10 +57,10 @@ func main() {
 	log.Debug("mainnetExitRoot: ", proof.MainExitRoot)
 	log.Debug("rollupExitRoot: ", proof.RollupExitRoot)
 
-	var smt [][32]byte
+	var smt [mtHeight][32]byte
 	for i := 0; i < len(proof.MerkleProof); i++ {
 		log.Debug("smt: ", proof.MerkleProof[i])
-		smt = append(smt, common.HexToHash(proof.MerkleProof[i]))
+		smt[i] = common.HexToHash(proof.MerkleProof[i])
 	}
 	globalExitRoot := &etherman.GlobalExitRoot{
 		ExitRoots: []common.Hash{common.HexToHash(proof.MainExitRoot), common.HexToHash(proof.RollupExitRoot)},

@@ -26,6 +26,8 @@ const (
 	LeafTypeAsset uint32 = 0
 	// LeafTypeMessage represents a bridge message
 	LeafTypeMessage uint32 = 1
+
+	mtHeight = 32
 )
 
 // Client is the utillity client
@@ -152,7 +154,7 @@ func (c Client) SendBridgeMessage(ctx context.Context, destNetwork uint32, destA
 }
 
 // SendClaim sends a claim transaction.
-func (c Client) SendClaim(ctx context.Context, deposit *pb.Deposit, smtProof [][32]byte, globalExitRoot *etherman.GlobalExitRoot, bridgeSCAddr common.Address, auth *bind.TransactOpts) error {
+func (c Client) SendClaim(ctx context.Context, deposit *pb.Deposit, smtProof [mtHeight][32]byte, globalExitRoot *etherman.GlobalExitRoot, bridgeSCAddr common.Address, auth *bind.TransactOpts) error {
 	br, err := polygonzkevmbridge.NewPolygonzkevmbridge(bridgeSCAddr, c.Client)
 	if err != nil {
 		return err
