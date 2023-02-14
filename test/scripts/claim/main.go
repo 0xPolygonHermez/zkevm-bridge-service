@@ -4,7 +4,6 @@ import (
 	"context"
 	"math/big"
 
-	"github.com/0xPolygonHermez/zkevm-bridge-service/bridgectrl"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman"
 	clientUtils "github.com/0xPolygonHermez/zkevm-bridge-service/test/client"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/utils"
@@ -19,6 +18,8 @@ const (
 	l2AccHexPrivateKey = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
 	l2NetworkURL       = "http://localhost:8123"
 	bridgeURL          = "http://localhost:8080"
+
+	mtHeight = 32
 )
 
 func main() {
@@ -56,7 +57,7 @@ func main() {
 	log.Debug("mainnetExitRoot: ", proof.MainExitRoot)
 	log.Debug("rollupExitRoot: ", proof.RollupExitRoot)
 
-	var smt [bridgectrl.KeyLen][32]byte
+	var smt [mtHeight][32]byte
 	for i := 0; i < len(proof.MerkleProof); i++ {
 		log.Debug("smt: ", proof.MerkleProof[i])
 		smt[i] = common.HexToHash(proof.MerkleProof[i])
