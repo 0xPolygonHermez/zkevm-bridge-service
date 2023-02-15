@@ -15,7 +15,7 @@ var zeroHashes [][KeyLen]byte
 type MerkleTree struct {
 	// store is the database storage to store all node data
 	store   merkleTreeStore
-	network uint8
+	network uint
 	// height is the depth of the merkle tree
 	height uint8
 	// count is the number of deposit
@@ -35,29 +35,15 @@ func init() {
 }
 
 // NewMerkleTree creates new MerkleTree.
-func NewMerkleTree(ctx context.Context, store merkleTreeStore, height, network uint8, isZeroHashesAdded bool) (*MerkleTree, error) {
+func NewMerkleTree(ctx context.Context, store merkleTreeStore, height uint8, network uint) (*MerkleTree, error) {
 	depositCnt, err := store.GetLastDepositCount(ctx, network, nil)
 	if err != nil {
-		if err == gerror.ErrStorageNotFound {
-			rootID, err1 := store.SetRoot(ctx, zeroHashes[height][:], 0, network, nil)
-			if err1 != nil {
-				return nil, err
-			}
-			var nodes [][]interface{}
-			if !isZeroHashesAdded {
-				for h := uint8(0); h < height; h++ {
-					// h+1 is the position of the parent node and h is the position of the values of the children nodes. As all the nodes of the same nodes has the same values
-					// we can only store the info ones
-					nodes = append(nodes, []interface{}{zeroHashes[h+1][:], [][]byte{zeroHashes[h][:], zeroHashes[h][:]}, rootID})
-				}
-				err := store.BulkSet(ctx, nodes, nil)
-				if err != nil {
-					return nil, err
-				}
-			}
-		} else {
+		if err != gerror.ErrStorageNotFound {
 			return nil, err
 		}
+		depositCnt = 0
+	} else {
+		depositCnt++
 	}
 
 	mt := &MerkleTree{
@@ -66,24 +52,32 @@ func NewMerkleTree(ctx context.Context, store merkleTreeStore, height, network u
 		height:  height,
 		count:   depositCnt,
 	}
-	root, err := mt.getRoot(ctx, nil)
-	if err != nil {
-		return nil, err
-	}
-	mt.siblings, err = mt.initSiblings(ctx, root, nil)
+	mt.siblings, err = mt.initSiblings(ctx, nil)
 
 	return mt, err
 }
 
 // initSiblings returns the siblings of the node at the given index.
 // it is used to initialize the siblings array in the beginning.
-func (mt *MerkleTree) initSiblings(ctx context.Context, root []byte, dbTx pgx.Tx) ([][KeyLen]byte, error) {
+func (mt *MerkleTree) initSiblings(ctx context.Context, dbTx pgx.Tx) ([][KeyLen]byte, error) {
 	var (
 		left     [KeyLen]byte
 		siblings [][KeyLen]byte
 	)
 
-	// the merkle tree is 0-indexed, so we need to subtract 1
+	if mt.count == 0 {
+		for h := 0; h < int(mt.height); h++ {
+			copy(left[:], zeroHashes[h][:])
+			siblings = append(siblings, left)
+		}
+		return siblings, nil
+	}
+
+	root, err := mt.getRoot(ctx, dbTx)
+	if err != nil {
+		return nil, err
+	}
+	// index is the index of the last node
 	index := mt.count - 1
 	cur := root
 
@@ -113,8 +107,10 @@ func (mt *MerkleTree) initSiblings(ctx context.Context, root []byte, dbTx pgx.Tx
 	return siblings, nil
 }
 
-func (mt *MerkleTree) addLeaf(ctx context.Context, leaf [KeyLen]byte, dbTx pgx.Tx) error {
-	index := mt.count
+func (mt *MerkleTree) addLeaf(ctx context.Context, depositID uint64, leaf [KeyLen]byte, index uint, dbTx pgx.Tx) error {
+	if index != mt.count {
+		return fmt.Errorf("mismatched deposit count: %d, expected: %d", index, mt.count)
+	}
 	cur := leaf
 	isFilledSubTree := true
 
@@ -142,36 +138,33 @@ func (mt *MerkleTree) addLeaf(ctx context.Context, leaf [KeyLen]byte, dbTx pgx.T
 		}
 	}
 
-	mt.count++
-	rootID, err := mt.store.SetRoot(ctx, cur[:], mt.count, mt.network, dbTx)
+	err := mt.store.SetRoot(ctx, cur[:], depositID, mt.count, mt.network, dbTx)
 	if err != nil {
 		return err
 	}
 	var nodes [][]interface{}
 	for _, leaf := range leaves {
-		nodes = append(nodes, []interface{}{leaf[0], [][]byte{leaf[1], leaf[2]}, rootID})
+		nodes = append(nodes, []interface{}{leaf[0], [][]byte{leaf[1], leaf[2]}, depositID})
+	}
+	if err := mt.store.BulkSet(ctx, nodes, dbTx); err != nil {
+		return err
 	}
 
-	return mt.store.BulkSet(ctx, nodes, dbTx)
+	mt.count++
+	return nil
 }
 
 func (mt *MerkleTree) resetLeaf(ctx context.Context, depositCount uint, dbTx pgx.Tx) error {
-	err := mt.store.ResetMT(ctx, depositCount, mt.network, dbTx)
-	if err != nil {
-		return err
-	}
-
+	var err error
 	mt.count = depositCount
-	root, err := mt.getRoot(ctx, dbTx)
-	if err != nil {
-		return err
-	}
-	mt.siblings, err = mt.initSiblings(ctx, root, dbTx)
-
+	mt.siblings, err = mt.initSiblings(ctx, dbTx)
 	return err
 }
 
 // this function is used to get the current root of the merkle tree
 func (mt *MerkleTree) getRoot(ctx context.Context, dbTx pgx.Tx) ([]byte, error) {
-	return mt.store.GetRoot(ctx, mt.count, mt.network, dbTx)
+	if mt.count == 0 {
+		return zeroHashes[mt.height][:], nil
+	}
+	return mt.store.GetRoot(ctx, mt.count-1, mt.network, dbTx)
 }
