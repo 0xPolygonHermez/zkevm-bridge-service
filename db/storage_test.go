@@ -324,6 +324,7 @@ func TestForcedAndVerifiedBatch(t *testing.T) {
 	require.Equal(t, fbs[0].GlobalExitRoot, fb.GlobalExitRoot)
 	require.Equal(t, fbs[0].BatchNumber, fb.BatchNumber)
 	require.Equal(t, fbs[0].ForcedBatchNumber, fb.ForcedBatchNumber)
+	require.Equal(t, fbs[0].ForcedAt, fb.ForcedAt)
 
 	err = pg.AddBatchNumberInForcedBatch(ctx, 1, 2, tx)
 	require.NoError(t, err)
