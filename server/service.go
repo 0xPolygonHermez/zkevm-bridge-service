@@ -136,7 +136,7 @@ func (s *bridgeService) getClaimReadiness(ctx context.Context, depositCount uint
 		}
 		depositCnt = 0
 	}
-	return exitRoot, depositCnt > depositCount, nil
+	return exitRoot, depositCnt >= depositCount, nil
 }
 
 // getDepositStatus returns deposit with ready_for_claim status.

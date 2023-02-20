@@ -135,21 +135,21 @@ func TestTrustedReset(t *testing.T) {
 	require.NoError(t, err)
 	batch1 := etherman.Batch{
 		BatchNumber:    1,
-		Coinbase:       common.HexToAddress("0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9"),
+		Coinbase:       common.HexToAddress("0xa513E6E4b8f2a923D98304ec87F64353C4D5C853"),
 		BatchL2Data:    []byte{},
 		Timestamp:      time.Now(),
 		GlobalExitRoot: common.HexToHash("0x1d02f31780d083b996faee908120beef6366b5a6cab3f9efbe5a1f7e9ad47ba8"),
 	}
 	batch2 := etherman.Batch{
 		BatchNumber:    2,
-		Coinbase:       common.HexToAddress("0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9"),
+		Coinbase:       common.HexToAddress("0xa513E6E4b8f2a923D98304ec87F64353C4D5C853"),
 		BatchL2Data:    []byte{},
 		Timestamp:      time.Now(),
 		GlobalExitRoot: common.HexToHash("0x2d02f31780d083b996faee908120beef6366b5a6cab3f9efbe5a1f7e9ad47ba8"),
 	}
 	batch3 := etherman.Batch{
 		BatchNumber:    3,
-		Coinbase:       common.HexToAddress("0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9"),
+		Coinbase:       common.HexToAddress("0xa513E6E4b8f2a923D98304ec87F64353C4D5C853"),
 		BatchL2Data:    []byte{},
 		Timestamp:      time.Now(),
 		GlobalExitRoot: common.HexToHash("0x3d02f31780d083b996faee908120beef6366b5a6cab3f9efbe5a1f7e9ad47ba8"),
@@ -287,7 +287,7 @@ func TestForcedAndVerifiedBatch(t *testing.T) {
 
 	batch := &etherman.Batch{
 		BatchNumber:    1,
-		Coinbase:       common.HexToAddress("0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9"),
+		Coinbase:       common.HexToAddress("0xa513E6E4b8f2a923D98304ec87F64353C4D5C853"),
 		BatchL2Data:    []byte{},
 		Timestamp:      time.Now(),
 		GlobalExitRoot: common.HexToHash("0x1d02f31780d083b996faee908120beef6366b5a6cab3f9efbe5a1f7e9ad47ba8"),
@@ -299,7 +299,7 @@ func TestForcedAndVerifiedBatch(t *testing.T) {
 		BlockID:           1,
 		BlockNumber:       1,
 		ForcedBatchNumber: 1,
-		Sequencer:         common.HexToAddress("0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9"),
+		Sequencer:         common.HexToAddress("0xa513E6E4b8f2a923D98304ec87F64353C4D5C853"),
 		GlobalExitRoot:    common.HexToHash("0x3d02f31780d083b996faee908120beef6366b5a6cab3f9efbe5a1f7e9ad47ba8"),
 		RawTxsData:        []byte{},
 		ForcedAt:          time.Now(),
@@ -310,7 +310,7 @@ func TestForcedAndVerifiedBatch(t *testing.T) {
 	vb := &etherman.VerifiedBatch{
 		BatchNumber: 1,
 		BlockID:     1,
-		Aggregator:  common.HexToAddress("0x0165878A594ca255338adfa4d48449f69242Eb8F"),
+		Aggregator:  common.HexToAddress("0x60627AC8Ba44F4438186B4bCD5F1cb5E794e19fe"),
 		TxHash:      common.HexToHash("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9f2"),
 	}
 	err = pg.AddVerifiedBatch(ctx, vb, tx)
@@ -349,11 +349,15 @@ func TestMTStorage(t *testing.T) {
 	leaf1 := common.FromHex("0xa4bfa0908dc7b06d98da4309f859023d6947561bc19bc00d77f763dea1a0b9f5")
 	leaf2 := common.FromHex("0x315fee1aa202bf4a6bd0fde560c89be90b6e6e2aaf92dc5e8d118209abc3410f")
 	root := common.FromHex("0x88e652896cb1de5962a0173a222059f51e6b943a2ba6dfc9acbff051ceb1abb5")
-
-	rootID, err := pg.SetRoot(ctx, root, 1, 0, tx)
+	deposit := &etherman.Deposit{
+		Metadata: common.Hex2Bytes("0x0"),
+	}
+	depositID, err := pg.AddDeposit(ctx, deposit, tx)
+	require.NoError(t, err)
+	err = pg.SetRoot(ctx, root, depositID, 1, 0, tx)
 	require.NoError(t, err)
 
-	err = pg.Set(ctx, root, [][]byte{leaf1, leaf2}, rootID, tx)
+	err = pg.Set(ctx, root, [][]byte{leaf1, leaf2}, depositID, tx)
 	require.NoError(t, err)
 
 	vals, err := pg.Get(ctx, root, tx)
@@ -372,11 +376,6 @@ func TestMTStorage(t *testing.T) {
 	dCount, err := pg.GetDepositCountByRoot(ctx, root, 0, tx)
 	require.NoError(t, err)
 	require.Equal(t, dCount, uint(1))
-
-	err = pg.ResetMT(ctx, 0, 0, tx)
-	require.NoError(t, err)
-	_, err = pg.GetRoot(ctx, 1, 0, tx)
-	require.Error(t, err)
 
 	require.NoError(t, tx.Commit(ctx))
 }
@@ -415,7 +414,7 @@ func TestBSStorage(t *testing.T) {
 		DepositCount:       1,
 		Metadata:           common.FromHex("0x000000000000000000000000000000000000000000000000000000000000006000000000000000000000000000000000000000000000000000000000000000a0000000000000000000000000000000000000000000000000000000000000000c0000000000000000000000000000000000000000000000000000000000000005436f696e410000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000003434f410000000000000000000000000000000000000000000000000000000000"),
 	}
-	err = pg.AddDeposit(ctx, deposit, tx)
+	_, err = pg.AddDeposit(ctx, deposit, tx)
 	require.NoError(t, err)
 
 	claim := &etherman.Claim{

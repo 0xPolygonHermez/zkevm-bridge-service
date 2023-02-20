@@ -71,6 +71,7 @@ func initServer(b *testing.B, bench benchmark) *bridgectrl.BridgeController {
 	bt, store, err := operations.RunMockServer(bench.store, bench.mtHeight, networks)
 	require.NoError(b, err)
 	b.StartTimer()
+	counts := []uint{0, 0}
 	for i := 0; i < bench.initSize+bench.postSize; i++ {
 		networkID := rand.Intn(2) //nolint: gosec
 		dbTx, err := store.BeginDBTransaction(context.Background())
@@ -81,9 +82,11 @@ func initServer(b *testing.B, bench benchmark) *bridgectrl.BridgeController {
 			ParentHash:  common.Hash{},
 		}, dbTx)
 		require.NoError(b, err)
-		deposit := randDeposit(r, uint(i+1), id, networkID)
-		require.NoError(b, store.AddDeposit(context.TODO(), deposit, dbTx))
-		require.NoError(b, bt.AddDeposit(deposit, dbTx))
+		deposit := randDeposit(r, counts[networkID], id, networkID)
+		counts[networkID]++
+		depositID, err := store.AddDeposit(context.TODO(), deposit, dbTx)
+		require.NoError(b, err)
+		require.NoError(b, bt.AddDeposit(deposit, depositID, dbTx))
 		if i > bench.initSize {
 			require.NoError(b, store.Commit(context.TODO(), dbTx))
 			continue
@@ -127,13 +130,15 @@ func addDeposit(b *testing.B, bench benchmark) {
 	r := rand.New(rand.NewSource(bench.seed)) //nolint: gosec
 	bt, store, err := operations.RunMockServer(bench.store, bench.mtHeight, networks)
 	require.NoError(b, err)
+	deposit := randDeposit(r, 0, 0, 0)
+	depositID, err := store.AddDeposit(context.TODO(), deposit, nil)
+	require.NoError(b, err)
 	b.StartTimer()
 	for i := 0; i < bench.initSize; i++ {
-		networkID := rand.Intn(2) //nolint: gosec
 		dbTx, err := store.BeginDBTransaction(context.Background())
 		require.NoError(b, err)
-		deposit := randDeposit(r, uint(i+1), 0, networkID)
-		require.NoError(b, bt.AddDeposit(deposit, dbTx))
+		deposit := randDeposit(r, uint(i), 0, 0)
+		require.NoError(b, bt.AddDeposit(deposit, depositID, dbTx))
 		require.NoError(b, store.Commit(context.TODO(), dbTx))
 	}
 }
