@@ -34,6 +34,7 @@ Height = 32
 GRPCPort = "9090"
 HTTPPort = "8080"
 DefaultPageLimit = 25
+CacheSize = 100000
 MaxPageLimit = 100
 BridgeVersion = "v1"
     [BridgeServer.DB]

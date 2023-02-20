@@ -52,6 +52,7 @@ func TestE2E(t *testing.T) {
 		BS: server.Config{
 			GRPCPort:         "9090",
 			HTTPPort:         "8080",
+			CacheSize:        100000,
 			DefaultPageLimit: 25,
 			MaxPageLimit:     100,
 			BridgeVersion:    "v1",

@@ -13,7 +13,7 @@ jobs:
     - name: Install Go
       uses: actions/setup-go@v1
       with:
-        go-version: "1.17.x"
+        go-version: "1.18.x"
       env:
         GOARCH: "amd64"
     - name: Install Protoc
@@ -37,5 +37,5 @@ jobs:
         title: Update external dependencies
         body: Check for new images, test vectors and proto files and update the code to use them.
         branch: update-external-dependencies
-        base: main
+        base: develop
         author: int-bot <int-bot@users.noreply.github.com>
