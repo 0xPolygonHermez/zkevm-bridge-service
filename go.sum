@@ -393,6 +393,8 @@ github.com/0xPolygonHermez/zkevm-node v0.0.1-RC1.0.20230124153345-114c6d8fe630 h
 github.com/0xPolygonHermez/zkevm-node v0.0.1-RC1.0.20230124153345-114c6d8fe630/go.mod h1:+MlJhKB7PvAW8P8X4PTKpVPSUG/PwbSDg/cGeJJROy4=
 github.com/0xPolygonHermez/zkevm-node v0.0.1-RC1.0.20230126122354-47d1234cd796 h1:7NwhrZLp1jB7X7vBPAMwBKY3K7gVtNLgQHdM8+oete8=
 github.com/0xPolygonHermez/zkevm-node v0.0.1-RC1.0.20230126122354-47d1234cd796/go.mod h1:aJE6gi72pBM3wr50CUQeldbjQOB1gwGW34ulZN0bD+0=
+github.com/0xPolygonHermez/zkevm-node v0.0.2-RC2.0.20230207185420-6600655c71cd h1:xN+Sp8lL/xB1TgUi0hEdXek6OTLO276ISjTEzYXft+A=
+github.com/0xPolygonHermez/zkevm-node v0.0.2-RC2.0.20230207185420-6600655c71cd/go.mod h1:aJE6gi72pBM3wr50CUQeldbjQOB1gwGW34ulZN0bD+0=
 github.com/Azure/azure-sdk-for-go/sdk/azcore v0.21.1/go.mod h1:fBF9PQNqB8scdgpZ3ufzaLntG0AG7C1WjPMsiFOmfHM=
 github.com/Azure/azure-sdk-for-go/sdk/internal v0.8.3/go.mod h1:KLF4gFr6DcKFZwSuH8w8yEK6DpFl3LP5rhdvAb7Yz5I=
 github.com/Azure/azure-sdk-for-go/sdk/storage/azblob v0.3.0/go.mod h1:tPaiy8S5bQ+S5sOiDlINkp7+Ef339+Nz5L5XO+cnOHo=

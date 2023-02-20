@@ -48,16 +48,16 @@ var (
 		BridgeAddr:            common.HexToAddress("0x47c1090bc966280000Fe4356a501f1D0887Ce840"),
 		GlobalExitRootManAddr: common.HexToAddress("0xA379Dd55Eb12e8FCdb467A814A15DE2b29677066"),
 		MaticAddr:             common.HexToAddress("0x94Ca2BbE1b469f25D3B22BDf17Fc80ad09E7F662"),
-		L2BridgeAddrs:         []common.Address{common.HexToAddress("0x9d98deabc42dd696deb9e40b4f1cab7ddbf55988")},
+		L2BridgeAddrs:         []common.Address{common.HexToAddress("0xd0a3d58d135e2ee795dFB26ec150D339394254B9")},
 		L1ChainID:             5, //Goerli
 	}
 	localConfig = NetworkConfig{
 		GenBlockNumber:        1,
-		PoEAddr:               common.HexToAddress("0x2279B7A0a67DB372996a5FaB50D91eAA73d2eBe6"),
-		BridgeAddr:            common.HexToAddress("0x0165878A594ca255338adfa4d48449f69242Eb8F"),
-		GlobalExitRootManAddr: common.HexToAddress("0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9"),
+		PoEAddr:               common.HexToAddress("0x8A791620dd6260079BF849Dc5567aDC3F2FdC318"),
+		BridgeAddr:            common.HexToAddress("0x60627AC8Ba44F4438186B4bCD5F1cb5E794e19fe"),
+		GlobalExitRootManAddr: common.HexToAddress("0xa513E6E4b8f2a923D98304ec87F64353C4D5C853"),
 		MaticAddr:             common.HexToAddress("0x5FbDB2315678afecb367f032d93F642f64180aa3"),
-		L2BridgeAddrs:         []common.Address{common.HexToAddress("0x9d98deabc42dd696deb9e40b4f1cab7ddbf55988")},
+		L2BridgeAddrs:         []common.Address{common.HexToAddress("0xd0a3d58d135e2ee795dFB26ec150D339394254B9")},
 		L1ChainID:             1337,
 	}
 )

@@ -135,21 +135,21 @@ func TestTrustedReset(t *testing.T) {
 	require.NoError(t, err)
 	batch1 := etherman.Batch{
 		BatchNumber:    1,
-		Coinbase:       common.HexToAddress("0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9"),
+		Coinbase:       common.HexToAddress("0xa513E6E4b8f2a923D98304ec87F64353C4D5C853"),
 		BatchL2Data:    []byte{},
 		Timestamp:      time.Now(),
 		GlobalExitRoot: common.HexToHash("0x1d02f31780d083b996faee908120beef6366b5a6cab3f9efbe5a1f7e9ad47ba8"),
 	}
 	batch2 := etherman.Batch{
 		BatchNumber:    2,
-		Coinbase:       common.HexToAddress("0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9"),
+		Coinbase:       common.HexToAddress("0xa513E6E4b8f2a923D98304ec87F64353C4D5C853"),
 		BatchL2Data:    []byte{},
 		Timestamp:      time.Now(),
 		GlobalExitRoot: common.HexToHash("0x2d02f31780d083b996faee908120beef6366b5a6cab3f9efbe5a1f7e9ad47ba8"),
 	}
 	batch3 := etherman.Batch{
 		BatchNumber:    3,
-		Coinbase:       common.HexToAddress("0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9"),
+		Coinbase:       common.HexToAddress("0xa513E6E4b8f2a923D98304ec87F64353C4D5C853"),
 		BatchL2Data:    []byte{},
 		Timestamp:      time.Now(),
 		GlobalExitRoot: common.HexToHash("0x3d02f31780d083b996faee908120beef6366b5a6cab3f9efbe5a1f7e9ad47ba8"),
@@ -287,7 +287,7 @@ func TestForcedAndVerifiedBatch(t *testing.T) {
 
 	batch := &etherman.Batch{
 		BatchNumber:    1,
-		Coinbase:       common.HexToAddress("0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9"),
+		Coinbase:       common.HexToAddress("0xa513E6E4b8f2a923D98304ec87F64353C4D5C853"),
 		BatchL2Data:    []byte{},
 		Timestamp:      time.Now(),
 		GlobalExitRoot: common.HexToHash("0x1d02f31780d083b996faee908120beef6366b5a6cab3f9efbe5a1f7e9ad47ba8"),
@@ -299,7 +299,7 @@ func TestForcedAndVerifiedBatch(t *testing.T) {
 		BlockID:           1,
 		BlockNumber:       1,
 		ForcedBatchNumber: 1,
-		Sequencer:         common.HexToAddress("0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9"),
+		Sequencer:         common.HexToAddress("0xa513E6E4b8f2a923D98304ec87F64353C4D5C853"),
 		GlobalExitRoot:    common.HexToHash("0x3d02f31780d083b996faee908120beef6366b5a6cab3f9efbe5a1f7e9ad47ba8"),
 		RawTxsData:        []byte{},
 		ForcedAt:          time.Now(),
@@ -310,7 +310,7 @@ func TestForcedAndVerifiedBatch(t *testing.T) {
 	vb := &etherman.VerifiedBatch{
 		BatchNumber: 1,
 		BlockID:     1,
-		Aggregator:  common.HexToAddress("0x0165878A594ca255338adfa4d48449f69242Eb8F"),
+		Aggregator:  common.HexToAddress("0x60627AC8Ba44F4438186B4bCD5F1cb5E794e19fe"),
 		TxHash:      common.HexToHash("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9f2"),
 	}
 	err = pg.AddVerifiedBatch(ctx, vb, tx)

@@ -71,8 +71,8 @@ make test-edge
 
 | Address | Description |
 |---|---|
-| 0x2279B7A0a67DB372996a5FaB50D91eAA73d2eBe6 | Proof of Efficiency |
-| 0x0165878A594ca255338adfa4d48449f69242Eb8F | L1 Bridge |
-| 0x9d98deabc42dd696deb9e40b4f1cab7ddbf55988 | L2 Bridge |
+| 0x8A791620dd6260079BF849Dc5567aDC3F2FdC318 | Proof of Efficiency |
+| 0x60627AC8Ba44F4438186B4bCD5F1cb5E794e19fe | L1 Bridge |
+| 0xd0a3d58d135e2ee795dFB26ec150D339394254B9 | L2 Bridge |
 | 0x5FbDB2315678afecb367f032d93F642f64180aa3 | Matic token |
-| 0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9 | GlobalExitRootManager |
+| 0xa513E6E4b8f2a923D98304ec87F64353C4D5C853 | GlobalExitRootManager |
