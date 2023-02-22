@@ -249,7 +249,7 @@ func TestBridgeEvents(t *testing.T) {
 	amount := big.NewInt(9000000000000000000)
 	var destNetwork uint32 = 1 // 0 is reserved to mainnet. This variable is set in the smc
 	destinationAddr := common.HexToAddress("0x61A1d716a74fb45d29f148C6C20A2eccabaFD753")
-	_, err = bridge.BridgeAsset(auth, maticAddr, destNetwork, destinationAddr, amount, []byte{})
+	_, err = bridge.BridgeAsset(auth, destNetwork, destinationAddr, amount, maticAddr, true, []byte{})
 	require.NoError(t, err)
 
 	// Mine the tx in a block
