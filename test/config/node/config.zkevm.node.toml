@@ -83,13 +83,13 @@ MaxAllowedFailedCounter = 50
 	[Sequencer.Finalizer]
 		GERDeadlineTimeoutInSec = "2s"
 		ForcedBatchDeadlineTimeoutInSec = "60s"
-		SendingToL1DeadlineTimeoutInSec = "20s"
+		SendingToL1DeadlineTimeoutInSec = "18s"
 		SleepDurationInMs = "100ms"
 		ResourcePercentageToCloseBatch = 10
 		GERFinalityNumberOfBlocks = 0
-		ClosingSignalsManagerWaitForCheckingL1Timeout = "10s"
-		ClosingSignalsManagerWaitForCheckingGER = "10s"
-		ClosingSignalsManagerWaitForCheckingForcedBatches = "10s"
+		ClosingSignalsManagerWaitForCheckingL1Timeout = "1s"
+		ClosingSignalsManagerWaitForCheckingGER = "1s"
+		ClosingSignalsManagerWaitForCheckingForcedBatches = "1s"
 		ForcedBatchesFinalityNumberOfBlocks = 0
 SenderAddress = "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266"
 PrivateKeys = [{Path = "/pk/keystore.sequencer", Password = "testonly"}]
