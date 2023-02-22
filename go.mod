@@ -1,6 +1,6 @@
 module github.com/0xPolygonHermez/zkevm-bridge-service
 
-go 1.17
+go 1.18
 
 require (
 	github.com/0xPolygonHermez/zkevm-node v0.0.3-RC3
