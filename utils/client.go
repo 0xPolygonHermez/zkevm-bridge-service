@@ -92,7 +92,7 @@ func (c Client) ApproveERC20(ctx context.Context, erc20Addr, spender common.Addr
 	if err != nil {
 		return err
 	}
-	const txMinedTimeoutLimit = 120 * time.Second
+	const txMinedTimeoutLimit = 60 * time.Second
 	return WaitTxToBeMined(ctx, c.Client, tx, txMinedTimeoutLimit)
 }
 
@@ -106,7 +106,7 @@ func (c Client) MintERC20(ctx context.Context, erc20Addr common.Address, amount 
 	if err != nil {
 		return err
 	}
-	const txMinedTimeoutLimit = 120 * time.Second
+	const txMinedTimeoutLimit = 60 * time.Second
 	return WaitTxToBeMined(ctx, c.Client, tx, txMinedTimeoutLimit)
 }
 
@@ -131,7 +131,7 @@ func (c Client) SendBridgeAsset(ctx context.Context, tokenAddr common.Address, a
 		return err
 	}
 	// wait transfer to be included in a batch
-	const txTimeout = 120 * time.Second
+	const txTimeout = 60 * time.Second
 	return WaitTxToBeMined(ctx, c.Client, tx, txTimeout)
 }
 
@@ -149,7 +149,7 @@ func (c Client) SendBridgeMessage(ctx context.Context, destNetwork uint32, destA
 		return err
 	}
 	// wait transfer to be included in a batch
-	const txTimeout = 120 * time.Second
+	const txTimeout = 60 * time.Second
 	return WaitTxToBeMined(ctx, c.Client, tx, txTimeout)
 }
 
@@ -176,7 +176,7 @@ func (c Client) SendClaim(ctx context.Context, deposit *pb.Deposit, smtProof [mt
 	}
 
 	// wait transfer to be mined
-	const txTimeout = 120 * time.Second
+	const txTimeout = 60 * time.Second
 	return WaitTxToBeMined(ctx, c.Client, tx, txTimeout)
 }
 

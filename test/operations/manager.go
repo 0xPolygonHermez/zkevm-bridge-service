@@ -35,7 +35,7 @@ const (
 	L1 NetworkSID = "l1"
 	L2 NetworkSID = "l2"
 
-	waitRootSyncDeadline = 180 * time.Second
+	waitRootSyncDeadline = 120 * time.Second
 )
 
 const (
@@ -58,11 +58,7 @@ const (
 )
 
 var (
-	dbConfig = pgstorage.NewConfigFromEnv()
-	networks = map[NetworkSID]uint{
-		L1: 0,
-		L2: 1,
-	}
+	dbConfig          = pgstorage.NewConfigFromEnv()
 	accHexPrivateKeys = map[NetworkSID]string{
 		L1: "0x5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a", //0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC
 		L2: "0xdfd01798f92667dbf91df722434e8fbe96af0211d4d1b82bbbbc8f1def7a814f", //0xc949254d682d8c9ad5682521675b8f43b102aec4
@@ -92,12 +88,6 @@ type Manager struct {
 // NewManager returns a manager ready to be used and a potential error caused
 // during its creation (which can come from the setup of the db connection).
 func NewManager(ctx context.Context, cfg *Config) (*Manager, error) {
-	// Init database instance
-	err := pgstorage.InitOrReset(dbConfig)
-	if err != nil {
-		return nil, err
-	}
-
 	opsman := &Manager{
 		cfg: cfg,
 		ctx: ctx,
@@ -656,19 +646,13 @@ func (m *Manager) ApproveERC20(ctx context.Context, erc20Addr, bridgeAddr common
 // GetTokenWrapped get token wrapped info
 func (m *Manager) GetTokenWrapped(ctx context.Context, originNetwork uint, originalTokenAddr common.Address, isCreated bool) (*etherman.TokenWrapped, error) {
 	if isCreated {
-		blockID, err := m.getLastBlockID(ctx)
-		if err != nil {
-			return nil, err
-		}
-
-		err = operations.Poll(defaultInterval, defaultDeadline, func() (bool, error) {
+		if err := operations.Poll(defaultInterval, defaultDeadline, func() (bool, error) {
 			wrappedToken, err := m.storage.GetTokenWrapped(ctx, originNetwork, originalTokenAddr, nil)
 			if err != nil {
 				return false, err
 			}
-			return wrappedToken.BlockID >= blockID, nil
-		})
-		if err != nil {
+			return wrappedToken != nil, nil
+		}); err != nil {
 			return nil, err
 		}
 	}
@@ -712,28 +696,4 @@ func (m *Manager) WaitExitRootToBeSynced(ctx context.Context, orgExitRoot *ether
 		}
 		return exitRoot.ExitRoots[tID] != orgExitRoot.ExitRoots[tID], nil
 	})
-}
-
-func (m *Manager) getLastBlockID(ctx context.Context) (uint64, error) {
-	var lastBlockID uint64 = 0
-
-	lastBlock, err := m.storage.GetLastBlock(ctx, networks[L1], nil)
-	if err != nil {
-		if err != gerror.ErrStorageNotFound {
-			return 0, err
-		}
-	} else if lastBlock.ID > lastBlockID {
-		lastBlockID = lastBlock.ID
-	}
-
-	lastBlock, err = m.storage.GetLastBlock(ctx, networks[L2], nil)
-	if err != nil {
-		if err != gerror.ErrStorageNotFound {
-			return 0, err
-		}
-	} else if lastBlock.ID > lastBlockID {
-		lastBlockID = lastBlock.ID
-	}
-
-	return lastBlockID, nil
 }
