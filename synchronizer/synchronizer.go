@@ -491,8 +491,7 @@ func (s *ClientSynchronizer) processSequenceBatches(sequencedBatches []etherman.
 			}
 			if uint64(forcedBatches[0].ForcedAt.Unix()) != sbatch.MinForcedTimestamp ||
 				forcedBatches[0].GlobalExitRoot != sbatch.GlobalExitRoot ||
-				common.Bytes2Hex(forcedBatches[0].RawTxsData) != common.Bytes2Hex(sbatch.Transactions) ||
-				forcedBatches[0].Sequencer != sbatch.Sequencer {
+				common.Bytes2Hex(forcedBatches[0].RawTxsData) != common.Bytes2Hex(sbatch.Transactions) {
 				log.Errorf("networkID: %d, error: forcedBatch received doesn't match with the next expected forcedBatch stored in db. Expected: %+v, Synced: %+v", s.networkID, forcedBatches, sbatch)
 				rollbackErr := dbTx.Rollback(s.ctx)
 				if rollbackErr != nil {
@@ -620,8 +619,7 @@ func (s *ClientSynchronizer) processSequenceForceBatches(sequenceForceBatches []
 	for i, fbatch := range sequenceForceBatches {
 		if uint64(forcedBatches[i].ForcedAt.Unix()) != fbatch.MinForcedTimestamp ||
 			forcedBatches[i].GlobalExitRoot != fbatch.GlobalExitRoot ||
-			common.Bytes2Hex(forcedBatches[i].RawTxsData) != common.Bytes2Hex(fbatch.Transactions) ||
-			forcedBatches[i].Sequencer != fbatch.Sequencer {
+			common.Bytes2Hex(forcedBatches[i].RawTxsData) != common.Bytes2Hex(fbatch.Transactions) {
 			log.Errorf("networkID: %d, error: forcedBatch received doesn't match with the next expected forcedBatch stored in db. Expected: %+v, Synced: %+v", s.networkID, forcedBatches[i], fbatch)
 			rollbackErr := dbTx.Rollback(s.ctx)
 			if rollbackErr != nil {

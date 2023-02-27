@@ -238,7 +238,7 @@ func (p *PostgresStorage) GetNumberDeposits(ctx context.Context, networkID uint,
 
 // GetNextForcedBatches gets the next forced batches from the queue.
 func (p *PostgresStorage) GetNextForcedBatches(ctx context.Context, nextForcedBatches int, dbTx pgx.Tx) ([]etherman.ForcedBatch, error) {
-	const getNextForcedBatchesSQL = "SELECT forced_batch_num, global_exit_root, raw_tx_data, sequencer, batch_num, block_id FROM sync.forced_batch WHERE batch_num IS NULL ORDER BY forced_batch_num LIMIT $1"
+	const getNextForcedBatchesSQL = "SELECT forced_batch_num, global_exit_root, raw_tx_data, sequencer, batch_num, block_id, received_at FROM sync.forced_batch INNER JOIN sync.block ON sync.block.id = sync.forced_batch.block_id WHERE batch_num IS NULL ORDER BY forced_batch_num LIMIT $1"
 	e := p.getExecQuerier(dbTx)
 	// Get the next forced batches
 	rows, err := e.Query(ctx, getNextForcedBatchesSQL, nextForcedBatches)
@@ -253,7 +253,7 @@ func (p *PostgresStorage) GetNextForcedBatches(ctx context.Context, nextForcedBa
 	batches := make([]etherman.ForcedBatch, 0, len(rows.RawValues()))
 	var forcedBatch etherman.ForcedBatch
 	for rows.Next() {
-		err := rows.Scan(&forcedBatch.ForcedBatchNumber, &forcedBatch.GlobalExitRoot, &forcedBatch.RawTxsData, &forcedBatch.Sequencer, &forcedBatch.BatchNumber, &forcedBatch.BlockID)
+		err := rows.Scan(&forcedBatch.ForcedBatchNumber, &forcedBatch.GlobalExitRoot, &forcedBatch.RawTxsData, &forcedBatch.Sequencer, &forcedBatch.BatchNumber, &forcedBatch.BlockID, &forcedBatch.ForcedAt)
 		if err != nil {
 			return nil, err
 		}
