@@ -125,7 +125,7 @@ func (c Client) SendBridgeAsset(ctx context.Context, tokenAddr common.Address, a
 	if err != nil {
 		return nil
 	}
-	tx, err := br.BridgeAsset(auth, tokenAddr, destNetwork, *destAddr, amount, metadata)
+	tx, err := br.BridgeAsset(auth, destNetwork, *destAddr, amount, tokenAddr, true, metadata)
 	if err != nil {
 		log.Error("Error: ", err)
 		return err
@@ -143,7 +143,7 @@ func (c Client) SendBridgeMessage(ctx context.Context, destNetwork uint32, destA
 	if err != nil {
 		return nil
 	}
-	tx, err := br.BridgeMessage(auth, destNetwork, destAddr, metadata)
+	tx, err := br.BridgeMessage(auth, destNetwork, destAddr, true, metadata)
 	if err != nil {
 		log.Error("Error: ", err)
 		return err

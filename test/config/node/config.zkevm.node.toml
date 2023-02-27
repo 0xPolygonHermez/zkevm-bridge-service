@@ -1,6 +1,7 @@
 IsTrustedSequencer = true
 
 [Log]
+Environment = "development" # "production" or "development"
 Level = "debug"
 Outputs = ["stdout"]
 
@@ -27,9 +28,9 @@ FreeClaimGasLimit = 1500000
 [Etherman]
 URL = "http://zkevm-mock-l1-network:8545"
 L1ChainID = 1337
-PoEAddr = "0x8A791620dd6260079BF849Dc5567aDC3F2FdC318"
+PoEAddr = "0x610178dA211FEF7D417bC0e6FeD39F05609AD788"
 MaticAddr = "0x5FbDB2315678afecb367f032d93F642f64180aa3"
-GlobalExitRootManagerAddr = "0xa513E6E4b8f2a923D98304ec87F64353C4D5C853"
+GlobalExitRootManagerAddr = "0x2279B7A0a67DB372996a5FaB50D91eAA73d2eBe6"
 MultiGasProvider = false
 	[Etherman.Etherscan]
 		ApiKey = ""
@@ -43,30 +44,20 @@ MaxRequestsPerIPAndSecond = 5000
 SequencerNodeURI = ""
 BroadcastURI = "127.0.0.1:61090"
 DefaultSenderAddress = "0x1111111111111111111111111111111111111111"
-	[RPC.DB]
-		User = "rpc_user"
-		Password = "rpc_password"
-		Name = "rpc_db"
-		Host = "zkevm-rpc-db"
-		Port = "5432"
-		EnableLog = false
-		MaxConns = 10
+	[RPC.WebSockets]
+		Enabled = true
+		Port = 8133
 
 [Synchronizer]
 SyncInterval = "1s"
 SyncChunkSize = 100
-GenBlockNumber = 63
+GenBlockNumber = 66
 
 [Sequencer]
 MaxSequenceSize = "2000000"
 WaitPeriodPoolIsEmpty = "1s"
 WaitPeriodSendSequence = "3s"
 LastBatchVirtualizationTimeMaxWaitPeriod = "5s"
-WaitBlocksToUpdateGER = 2
-WaitBlocksToConsiderGerFinal = 5
-ElapsedTimeToCloseBatchWithoutTxsDueToNewGER = "5s"
-MinTimeToCloseBatch = "1s"
-MaxTimeForBatchToBeOpen = "5s"
 BlocksAmountForTxsToBeDeleted = 100
 FrequencyToCheckTxsForDelete = "12h"
 MaxTxsPerBatch = 150
@@ -79,11 +70,29 @@ MaxMemAligns = 262144
 MaxArithmetics = 262144
 MaxBinaries = 262144
 MaxSteps = 8388608
+WeightBatchBytesSize = 1
+WeightCumulativeGasUsed = 1
+WeightKeccakHashes = 1
+WeightPoseidonHashes = 1
+WeightPoseidonPaddings = 1
+WeightMemAligns = 1
+WeightArithmetics = 1
+WeightBinaries = 1
+WeightSteps = 1
 MaxAllowedFailedCounter = 50
-SenderAddress = "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266"
+	[Sequencer.Finalizer]
+		GERDeadlineTimeoutInSec = "2s"
+		ForcedBatchDeadlineTimeoutInSec = "60s"
+		SendingToL1DeadlineTimeoutInSec = "18s"
+		SleepDurationInMs = "100ms"
+		ResourcePercentageToCloseBatch = 10
+		GERFinalityNumberOfBlocks = 0
+		ClosingSignalsManagerWaitForCheckingL1Timeout = "1s"
+		ClosingSignalsManagerWaitForCheckingGER = "1s"
+		ClosingSignalsManagerWaitForCheckingForcedBatches = "1s"
+		ForcedBatchesFinalityNumberOfBlocks = 0
+		SenderAddress = "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266"
 PrivateKeys = [{Path = "/pk/keystore.sequencer", Password = "testonly"}]
-	[Sequencer.ProfitabilityChecker]
-		SendBatchesEvenWhenNotProfitable = "true"
 
 [Aggregator]
 Host = "0.0.0.0"
@@ -94,6 +103,8 @@ TxProfitabilityCheckerType = "acceptall"
 TxProfitabilityMinReward = "1.1"
 ProofStatePollingInterval = "5s"
 SenderAddress = "0x70997970c51812dc3a010c7d01b50e0d17dc79c8"
+CleanupLockedProofsInterval = "2m"
+GeneratingProofCleanupThreshold = "10m"
 
 [EthTxManager]
 PrivateKeys = [
@@ -101,14 +112,11 @@ PrivateKeys = [
 	{Path = "/pk/keystore.aggregator", Password = "testonly"}
 ]
 
-[GasPriceEstimator]
-Type = "default"
+[L2GasPriceSuggester]
+Type = "follower"
+UpdatePeriod = "10s"
+Factor = 0.5
 DefaultGasPriceWei = 1000000000
-
-[MTServer]
-Host = "0.0.0.0"
-Port = 50060
-StoreBackend = "PostgreSQL"
 
 [MTClient]
 URI = "zkevm-prover:50061"
