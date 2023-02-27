@@ -736,7 +736,7 @@ func (s *ClientSynchronizer) processTrustedVerifyBatch(verifiedBatch etherman.Ve
 func (s *ClientSynchronizer) processDeposit(deposit etherman.Deposit, blockID uint64, dbTx pgx.Tx) {
 	deposit.BlockID = blockID
 	deposit.NetworkID = s.networkID
-	err := s.storage.AddDeposit(s.ctx, &deposit, dbTx)
+	depositID, err := s.storage.AddDeposit(s.ctx, &deposit, dbTx)
 	if err != nil {
 		rollbackErr := s.storage.Rollback(s.ctx, dbTx)
 		if rollbackErr != nil {
@@ -747,7 +747,7 @@ func (s *ClientSynchronizer) processDeposit(deposit etherman.Deposit, blockID ui
 			s.networkID, deposit.BlockNumber, deposit, err.Error())
 	}
 
-	err = s.bridgeCtrl.AddDeposit(&deposit, dbTx)
+	err = s.bridgeCtrl.AddDeposit(&deposit, depositID, dbTx)
 	if err != nil {
 		rollbackErr := s.storage.Rollback(s.ctx, dbTx)
 		if rollbackErr != nil {

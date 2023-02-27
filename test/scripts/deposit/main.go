@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	l1BridgeAddr = "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9"
+	l1BridgeAddr = "0x0165878A594ca255338adfa4d48449f69242Eb8F"
 
 	l1AccHexAddress    = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
 	l1AccHexPrivateKey = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"

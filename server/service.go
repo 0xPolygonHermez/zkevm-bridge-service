@@ -10,6 +10,7 @@ import (
 	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/utils/gerror"
 	"github.com/ethereum/go-ethereum/common"
+	lru "github.com/hashicorp/golang-lru/v2"
 )
 
 type bridgeService struct {
@@ -19,6 +20,7 @@ type bridgeService struct {
 	defaultPageLimit uint32
 	maxPageLimit     uint32
 	version          string
+	cache            *lru.Cache[string, [][]byte]
 	pb.UnimplementedBridgeServiceServer
 }
 
@@ -28,6 +30,10 @@ func NewBridgeService(cfg Config, height uint8, networks []uint, storage bridgeS
 	for i, network := range networks {
 		networkIDs[network] = uint8(i)
 	}
+	cache, err := lru.New[string, [][]byte](int(cfg.CacheSize))
+	if err != nil {
+		panic(err)
+	}
 	return &bridgeService{
 		storage:          storage,
 		height:           height,
@@ -35,6 +41,7 @@ func NewBridgeService(cfg Config, height uint8, networks []uint, storage bridgeS
 		defaultPageLimit: cfg.DefaultPageLimit,
 		maxPageLimit:     cfg.MaxPageLimit,
 		version:          cfg.BridgeVersion,
+		cache:            cache,
 	}
 }
 
@@ -46,25 +53,34 @@ func (s *bridgeService) getNetworkID(networkID uint) (uint8, error) {
 	return tID, nil
 }
 
+// getNode returns the children hash pairs for a given parent hash.
+func (s *bridgeService) getNode(ctx context.Context, parentHash [bridgectrl.KeyLen]byte) (left, right [bridgectrl.KeyLen]byte, err error) {
+	value, ok := s.cache.Get(string(parentHash[:]))
+	if !ok {
+		var err error
+		value, err = s.storage.Get(ctx, parentHash[:], nil)
+		if err != nil {
+			return left, right, fmt.Errorf("parentHash: %v, error: %w", parentHash, err)
+		}
+		s.cache.Add(string(parentHash[:]), value)
+	}
+	copy(left[:], value[0])
+	copy(right[:], value[1])
+	return left, right, nil
+}
+
 // getProof returns the merkle proof for a given index and root.
 func (s *bridgeService) getProof(index uint, root [bridgectrl.KeyLen]byte) ([][bridgectrl.KeyLen]byte, error) {
-	var (
-		left, right [bridgectrl.KeyLen]byte
-		siblings    [][bridgectrl.KeyLen]byte
-	)
+	var siblings [][bridgectrl.KeyLen]byte
 
 	cur := root
 	ctx := context.Background()
 	// It starts in height-1 because 0 is the level of the leafs
 	for h := int(s.height - 1); h >= 0; h-- {
-		value, err := s.storage.Get(ctx, cur[:], nil)
+		left, right, err := s.getNode(ctx, cur)
 		if err != nil {
 			return nil, fmt.Errorf("height: %d, cur: %v, error: %w", h, cur, err)
 		}
-
-		copy(left[:], value[0])
-		copy(right[:], value[1])
-
 		/*
 					*        Root                (level h=3 => height=4)
 					*      /     \
@@ -120,7 +136,7 @@ func (s *bridgeService) getClaimReadiness(ctx context.Context, depositCount uint
 		}
 		depositCnt = 0
 	}
-	return exitRoot, depositCnt > depositCount, nil
+	return exitRoot, depositCnt >= depositCount, nil
 }
 
 // getDepositStatus returns deposit with ready_for_claim status.

@@ -91,7 +91,7 @@ MaxAllowedFailedCounter = 50
 		ClosingSignalsManagerWaitForCheckingGER = "1s"
 		ClosingSignalsManagerWaitForCheckingForcedBatches = "1s"
 		ForcedBatchesFinalityNumberOfBlocks = 0
-SenderAddress = "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266"
+		SenderAddress = "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266"
 PrivateKeys = [{Path = "/pk/keystore.sequencer", Password = "testonly"}]
 
 [Aggregator]

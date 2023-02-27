@@ -66,10 +66,12 @@ func randDeposit(r *rand.Rand, depositCnt uint, blockID uint64, networkID int) *
 }
 
 func initServer(b *testing.B, bench benchmark) *bridgectrl.BridgeController {
+	b.StopTimer()
 	r := rand.New(rand.NewSource(bench.seed)) //nolint: gosec
 	bt, store, err := operations.RunMockServer(bench.store, bench.mtHeight, networks)
 	require.NoError(b, err)
 	b.StartTimer()
+	counts := []uint{0, 0}
 	for i := 0; i < bench.initSize+bench.postSize; i++ {
 		networkID := rand.Intn(2) //nolint: gosec
 		dbTx, err := store.BeginDBTransaction(context.Background())
@@ -80,9 +82,11 @@ func initServer(b *testing.B, bench benchmark) *bridgectrl.BridgeController {
 			ParentHash:  common.Hash{},
 		}, dbTx)
 		require.NoError(b, err)
-		deposit := randDeposit(r, uint(i+1), id, networkID)
-		require.NoError(b, store.AddDeposit(context.TODO(), deposit, dbTx))
-		require.NoError(b, bt.AddDeposit(deposit, dbTx))
+		deposit := randDeposit(r, counts[networkID], id, networkID)
+		counts[networkID]++
+		depositID, err := store.AddDeposit(context.TODO(), deposit, dbTx)
+		require.NoError(b, err)
+		require.NoError(b, bt.AddDeposit(deposit, depositID, dbTx))
 		if i > bench.initSize {
 			require.NoError(b, store.Commit(context.TODO(), dbTx))
 			continue
@@ -119,6 +123,24 @@ func initServer(b *testing.B, bench benchmark) *bridgectrl.BridgeController {
 	}
 
 	return bt
+}
+
+func addDeposit(b *testing.B, bench benchmark) {
+	b.StopTimer()
+	r := rand.New(rand.NewSource(bench.seed)) //nolint: gosec
+	bt, store, err := operations.RunMockServer(bench.store, bench.mtHeight, networks)
+	require.NoError(b, err)
+	deposit := randDeposit(r, 0, 0, 0)
+	depositID, err := store.AddDeposit(context.TODO(), deposit, nil)
+	require.NoError(b, err)
+	b.StartTimer()
+	for i := 0; i < bench.initSize; i++ {
+		dbTx, err := store.BeginDBTransaction(context.Background())
+		require.NoError(b, err)
+		deposit := randDeposit(r, uint(i), 0, 0)
+		require.NoError(b, bt.AddDeposit(deposit, depositID, dbTx))
+		require.NoError(b, store.Commit(context.TODO(), dbTx))
+	}
 }
 
 func runSuite(b *testing.B, bench benchmark) {
@@ -163,10 +185,14 @@ func BenchmarkApiSmallTest(b *testing.B) {
 		{480459882, "postgres", 32, 500, 100},
 	}
 	for _, bench := range benchmarks {
-		prefix := fmt.Sprintf("test-sync-%s-%d", bench.store, bench.initSize)
+		prefix := fmt.Sprintf("test-add-deposit-to-merkle-tree-%s-%d", bench.store, bench.initSize)
 		b.Run(prefix, func(sub *testing.B) {
 			sub.ReportAllocs()
-			sub.StopTimer()
+			addDeposit(sub, bench)
+		})
+		prefix = fmt.Sprintf("test-sync-%s-%d", bench.store, bench.initSize)
+		b.Run(prefix, func(sub *testing.B) {
+			sub.ReportAllocs()
 			initServer(sub, bench)
 		})
 		prefix = fmt.Sprintf("test-api-%s-%d", bench.store, bench.initSize)
@@ -183,7 +209,6 @@ func BenchmarkApiMediumTest(b *testing.B) {
 	for _, bench := range benchmarks {
 		prefix := fmt.Sprintf("test-sync-%s-%d", bench.store, bench.initSize)
 		b.Run(prefix, func(sub *testing.B) {
-			sub.StopTimer()
 			initServer(sub, bench)
 		})
 		prefix = fmt.Sprintf("test-api-%s-%d", bench.store, bench.initSize)
@@ -200,7 +225,6 @@ func BenchmarkApiLargeTest(b *testing.B) {
 	for _, bench := range benchmarks {
 		prefix := fmt.Sprintf("test-sync-%s-%d", bench.store, bench.initSize)
 		b.Run(prefix, func(sub *testing.B) {
-			sub.StopTimer()
 			initServer(sub, bench)
 		})
 		prefix = fmt.Sprintf("test-api-%s-%d", bench.store, bench.initSize)

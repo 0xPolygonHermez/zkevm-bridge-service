@@ -30,7 +30,7 @@ type storageInterface interface {
 	AddBatch(ctx context.Context, batch *etherman.Batch, dbTx pgx.Tx) error
 	AddVerifiedBatch(ctx context.Context, verifiedBatch *etherman.VerifiedBatch, dbTx pgx.Tx) error
 	AddGlobalExitRoot(ctx context.Context, exitRoot *etherman.GlobalExitRoot, dbTx pgx.Tx) error
-	AddDeposit(ctx context.Context, deposit *etherman.Deposit, dbTx pgx.Tx) error
+	AddDeposit(ctx context.Context, deposit *etherman.Deposit, dbTx pgx.Tx) (uint64, error)
 	AddClaim(ctx context.Context, claim *etherman.Claim, dbTx pgx.Tx) error
 	AddTokenWrapped(ctx context.Context, tokenWrapped *etherman.TokenWrapped, dbTx pgx.Tx) error
 	Reset(ctx context.Context, blockNumber uint64, networkID uint, dbTx pgx.Tx) error
@@ -46,6 +46,6 @@ type storageInterface interface {
 }
 
 type bridgectrlInterface interface {
-	AddDeposit(deposit *etherman.Deposit, dbTx pgx.Tx) error
+	AddDeposit(deposit *etherman.Deposit, depositID uint64, dbTx pgx.Tx) error
 	ReorgMT(depositCount, networkID uint, dbTx pgx.Tx) error
 }
