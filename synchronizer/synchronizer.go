@@ -33,6 +33,7 @@ type ClientSynchronizer struct {
 	genBlockNumber  uint64
 	cfg             Config
 	networkID       uint
+	chExitRootEvent chan bool
 	broadcastClient pb.BroadcastServiceClient
 	synced          bool
 }
@@ -44,6 +45,7 @@ func NewSynchronizer(
 	ethMan ethermanInterface,
 	broadcastClient pb.BroadcastServiceClient,
 	genBlockNumber uint64,
+	chExitRootEvent chan bool,
 	cfg Config) (Synchronizer, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	networkID, err := ethMan.GetNetworkID(ctx)
@@ -61,6 +63,7 @@ func NewSynchronizer(
 			genBlockNumber:  genBlockNumber,
 			cfg:             cfg,
 			networkID:       networkID,
+			chExitRootEvent: chExitRootEvent,
 			broadcastClient: broadcastClient,
 		}, nil
 	}
@@ -172,10 +175,13 @@ func (s *ClientSynchronizer) syncTrustedState() error {
 			common.HexToHash(lastBatch.RollupExitRoot),
 		},
 	}
-	err = s.storage.AddTrustedGlobalExitRoot(s.ctx, ger, nil)
+	isUpdated, err := s.storage.AddTrustedGlobalExitRoot(s.ctx, ger, nil)
 	if err != nil {
 		log.Error("networkID: %d, error storing latest trusted globalExitRoot. Error: %w", s.networkID, err)
 		return err
+	}
+	if isUpdated {
+		s.chExitRootEvent <- true
 	}
 	return nil
 }
@@ -694,6 +700,14 @@ func (s *ClientSynchronizer) processGlobalExitRoot(globalExitRoot etherman.Globa
 		}
 		log.Fatalf("networkID: %d, error storing the GlobalExitRoot in processGlobalExitRoot. BlockNumber: %d, error: %s",
 			s.networkID, globalExitRoot.BlockNumber, err.Error())
+	}
+	latestExitRoot, err := s.storage.GetLatestL1SyncedExitRoot(s.ctx, dbTx)
+	if err != nil && errors.Is(err, gerror.ErrStorageNotFound) {
+		log.Errorf("networkID: %d, error getting the Latest L1 Synced GlobalExitRoot. BlockNumber: %d",
+			s.networkID, globalExitRoot.BlockNumber)
+	}
+	if latestExitRoot.ExitRoots[1] != globalExitRoot.ExitRoots[1] {
+		s.chExitRootEvent <- false
 	}
 }
 

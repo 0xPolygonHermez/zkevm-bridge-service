@@ -48,7 +48,6 @@ func start(ctx *cli.Context) error {
 	}
 
 	var networkIDs = []uint{networkID}
-
 	for _, client := range l2Ethermans {
 		networkID, err := client.GetNetworkID(context.Background())
 		if err != nil {
@@ -83,7 +82,8 @@ func start(ctx *cli.Context) error {
 		log.Error(err)
 		return err
 	}
-	err = server.RunServer(c.BridgeServer, c.BridgeController.Height, networkIDs, apiStorage)
+	bridgeService := server.NewBridgeService(c.BridgeServer, c.BridgeController.Height, networkIDs, apiStorage)
+	err = server.RunServer(c.BridgeServer, bridgeService)
 	if err != nil {
 		log.Error(err)
 		return err
@@ -97,9 +97,10 @@ func start(ctx *cli.Context) error {
 		log.Fatal("error creating grpc connection. Error: ", err)
 	}
 	broadcastClient := pb.NewBroadcastServiceClient(conn)
-	go runSynchronizer(c.NetworkConfig.GenBlockNumber, bridgeController, etherman, c.Synchronizer, storage, broadcastClient)
+	chExitRootEvent := make(chan bool)
+	go runSynchronizer(c.NetworkConfig.GenBlockNumber, bridgeController, etherman, c.Synchronizer, storage, broadcastClient, chExitRootEvent)
 	for _, client := range l2Ethermans {
-		go runSynchronizer(0, bridgeController, client, c.Synchronizer, storage, broadcastClient)
+		go runSynchronizer(0, bridgeController, client, c.Synchronizer, storage, broadcastClient, chExitRootEvent)
 	}
 
 	// Wait for an in interrupt.
@@ -133,8 +134,8 @@ func newEthermans(c config.Config) (*etherman.Client, []*etherman.Client, error)
 	return l1Etherman, l2Ethermans, nil
 }
 
-func runSynchronizer(genBlockNumber uint64, brdigeCtrl *bridgectrl.BridgeController, etherman *etherman.Client, cfg synchronizer.Config, storage db.Storage, broadcastClient pb.BroadcastServiceClient) {
-	sy, err := synchronizer.NewSynchronizer(storage, brdigeCtrl, etherman, broadcastClient, genBlockNumber, cfg)
+func runSynchronizer(genBlockNumber uint64, brdigeCtrl *bridgectrl.BridgeController, etherman *etherman.Client, cfg synchronizer.Config, storage db.Storage, broadcastClient pb.BroadcastServiceClient, chExitRootEvent chan bool) {
+	sy, err := synchronizer.NewSynchronizer(storage, brdigeCtrl, etherman, broadcastClient, genBlockNumber, chExitRootEvent, cfg)
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -104,10 +104,12 @@ func initServer(b *testing.B, bench benchmark) *bridgectrl.BridgeController {
 				BlockID:        id,
 			}, dbTx)
 		} else {
-			err = store.AddTrustedGlobalExitRoot(context.TODO(), &etherman.GlobalExitRoot{
+			var isUpdated bool
+			isUpdated, err = store.AddTrustedGlobalExitRoot(context.TODO(), &etherman.GlobalExitRoot{
 				GlobalExitRoot: bridgectrl.Hash(common.BytesToHash(roots[0]), common.BytesToHash(roots[1])),
 				ExitRoots:      []common.Hash{common.BytesToHash(roots[0]), common.BytesToHash(roots[1])},
 			}, dbTx)
+			require.True(b, isUpdated)
 		}
 		require.NoError(b, err)
 		err = store.AddClaim(context.TODO(), &etherman.Claim{

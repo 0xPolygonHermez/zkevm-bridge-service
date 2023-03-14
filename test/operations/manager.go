@@ -105,11 +105,11 @@ func NewManager(ctx context.Context, cfg *Config) (*Manager, error) {
 	if err != nil {
 		return nil, err
 	}
-	l1Client, err := utils.NewClient(ctx, l1NetworkURL)
+	l1Client, err := utils.NewClient(ctx, l1NetworkURL, l1BridgeAddr)
 	if err != nil {
 		return nil, err
 	}
-	l2Client, err := utils.NewClient(ctx, l2NetworkURL)
+	l2Client, err := utils.NewClient(ctx, l2NetworkURL, l2BridgeAddr)
 	if err != nil {
 		return nil, err
 	}
@@ -138,7 +138,7 @@ func (m *Manager) SendL1Deposit(ctx context.Context, tokenAddr common.Address, a
 		return err
 	}
 
-	err = client.SendBridgeAsset(ctx, tokenAddr, amount, destNetwork, destAddr, []byte{}, common.HexToAddress(l1BridgeAddr), auth)
+	err = client.SendBridgeAsset(ctx, tokenAddr, amount, destNetwork, destAddr, []byte{}, auth)
 	if err != nil {
 		return err
 	}
@@ -162,7 +162,7 @@ func (m *Manager) SendL2Deposit(ctx context.Context, tokenAddr common.Address, a
 		return err
 	}
 
-	err = client.SendBridgeAsset(ctx, tokenAddr, amount, destNetwork, destAddr, []byte{}, common.HexToAddress(l2BridgeAddr), auth)
+	err = client.SendBridgeAsset(ctx, tokenAddr, amount, destNetwork, destAddr, []byte{}, auth)
 	if err != nil {
 		return err
 	}
@@ -185,7 +185,7 @@ func (m *Manager) SendL1BridgeMessage(ctx context.Context, destAddr common.Addre
 	}
 
 	auth.Value = amount
-	err = client.SendBridgeMessage(ctx, destNetwork, destAddr, metadata, common.HexToAddress(l1BridgeAddr), auth)
+	err = client.SendBridgeMessage(ctx, destNetwork, destAddr, metadata, auth)
 	if err != nil {
 		return err
 	}
@@ -208,7 +208,7 @@ func (m *Manager) SendL2BridgeMessage(ctx context.Context, destAddr common.Addre
 	}
 
 	auth.Value = amount
-	err = client.SendBridgeMessage(ctx, destNetwork, destAddr, metadata, common.HexToAddress(l2BridgeAddr), auth)
+	err = client.SendBridgeMessage(ctx, destNetwork, destAddr, metadata, auth)
 	if err != nil {
 		return err
 	}
@@ -529,7 +529,7 @@ func (m *Manager) SendL1Claim(ctx context.Context, deposit *pb.Deposit, smtProof
 		return err
 	}
 
-	return client.SendClaim(ctx, deposit, smtProof, globalExitRoot, common.HexToAddress(l1BridgeAddr), auth)
+	return client.SendClaim(ctx, deposit, smtProof, globalExitRoot, auth)
 }
 
 // SendL2Claim send an L2 claim
@@ -544,7 +544,7 @@ func (m *Manager) SendL2Claim(ctx context.Context, deposit *pb.Deposit, smtProof
 		auth.GasPrice = big.NewInt(0)
 	}
 
-	err = client.SendClaim(ctx, deposit, smtProof, globalExitRoot, common.HexToAddress(l2BridgeAddr), auth)
+	err = client.SendClaim(ctx, deposit, smtProof, globalExitRoot, auth)
 	return err
 }
 

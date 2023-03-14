@@ -279,13 +279,13 @@ func (p *PostgresStorage) AddForcedBatch(ctx context.Context, forcedBatch *ether
 }
 
 // AddTrustedGlobalExitRoot adds new global exit root which comes from the trusted sequencer.
-func (p *PostgresStorage) AddTrustedGlobalExitRoot(ctx context.Context, trustedExitRoot *etherman.GlobalExitRoot, dbTx pgx.Tx) error {
+func (p *PostgresStorage) AddTrustedGlobalExitRoot(ctx context.Context, trustedExitRoot *etherman.GlobalExitRoot, dbTx pgx.Tx) (bool, error) {
 	const addTrustedGerSQL = `
 		INSERT INTO sync.exit_root (block_id, global_exit_root, exit_roots) 
 		VALUES (0, $1, $2)
 		ON CONFLICT ON CONSTRAINT UC DO NOTHING;`
-	_, err := p.getExecQuerier(dbTx).Exec(ctx, addTrustedGerSQL, trustedExitRoot.GlobalExitRoot, pq.Array([][]byte{trustedExitRoot.ExitRoots[0][:], trustedExitRoot.ExitRoots[1][:]}))
-	return err
+	res, err := p.getExecQuerier(dbTx).Exec(ctx, addTrustedGerSQL, trustedExitRoot.GlobalExitRoot, pq.Array([][]byte{trustedExitRoot.ExitRoots[0][:], trustedExitRoot.ExitRoots[1][:]}))
+	return res.RowsAffected() > 0, err
 }
 
 // GetClaim gets a specific claim from the storage.
@@ -338,7 +338,7 @@ func (p *PostgresStorage) GetLatestL1SyncedExitRoot(ctx context.Context, dbTx pg
 	err := p.getExecQuerier(dbTx).QueryRow(ctx, getLatestL1SyncedExitRootSQL).Scan(&ger.BlockID, &ger.GlobalExitRoot, pq.Array(&exitRoots))
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, gerror.ErrStorageNotFound
+			return &ger, gerror.ErrStorageNotFound
 		}
 		return nil, err
 	}

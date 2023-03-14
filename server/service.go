@@ -25,7 +25,7 @@ type bridgeService struct {
 }
 
 // NewBridgeService creates new bridge service.
-func NewBridgeService(cfg Config, height uint8, networks []uint, storage bridgeServiceStorage) pb.BridgeServiceServer {
+func NewBridgeService(cfg Config, height uint8, networks []uint, storage interface{}) pb.BridgeServiceServer {
 	var networkIDs = make(map[uint]uint8)
 	for i, network := range networks {
 		networkIDs[network] = uint8(i)
@@ -35,7 +35,7 @@ func NewBridgeService(cfg Config, height uint8, networks []uint, storage bridgeS
 		panic(err)
 	}
 	return &bridgeService{
-		storage:          storage,
+		storage:          storage.(bridgeServiceStorage),
 		height:           height,
 		networkIDs:       networkIDs,
 		defaultPageLimit: cfg.DefaultPageLimit,

@@ -40,7 +40,8 @@ func TestTrustedStateReorg(t *testing.T) {
 		}
 		ctxMatchBy := mock.MatchedBy(func(ctx context.Context) bool { return ctx != nil })
 		m.Etherman.On("GetNetworkID", ctxMatchBy).Return(uint(0), nil)
-		sync, err := NewSynchronizer(m.Storage, m.BridgeCtrl, m.Etherman, m.BroadcastClient, genBlockNumber, cfg)
+		chEvent := make(chan bool)
+		sync, err := NewSynchronizer(m.Storage, m.BridgeCtrl, m.Etherman, m.BroadcastClient, genBlockNumber, chEvent, cfg)
 		require.NoError(t, err)
 		// state preparation
 		m.Storage.

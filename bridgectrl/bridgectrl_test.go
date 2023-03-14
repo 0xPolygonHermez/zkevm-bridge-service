@@ -112,12 +112,13 @@ func TestBridgeTree(t *testing.T) {
 			}, nil)
 			require.NoError(t, err)
 
-			err = store.AddTrustedGlobalExitRoot(context.TODO(), &etherman.GlobalExitRoot{
+			isUpdated, err := store.AddTrustedGlobalExitRoot(context.TODO(), &etherman.GlobalExitRoot{
 				BlockNumber:    0,
 				GlobalExitRoot: Hash(common.BytesToHash(roots[0]), common.BytesToHash(roots[1])),
 				ExitRoots:      []common.Hash{common.BytesToHash(roots[0]), common.BytesToHash(roots[1])},
 				BlockID:        blockID,
 			}, nil)
+			require.True(t, isUpdated)
 			require.NoError(t, err)
 		}
 	})

@@ -143,17 +143,24 @@ func (_m *storageMock) AddTokenWrapped(ctx context.Context, tokenWrapped *etherm
 }
 
 // AddTrustedGlobalExitRoot provides a mock function with given fields: ctx, trustedExitRoot, dbTx
-func (_m *storageMock) AddTrustedGlobalExitRoot(ctx context.Context, trustedExitRoot *etherman.GlobalExitRoot, dbTx pgx.Tx) error {
+func (_m *storageMock) AddTrustedGlobalExitRoot(ctx context.Context, trustedExitRoot *etherman.GlobalExitRoot, dbTx pgx.Tx) (bool, error) {
 	ret := _m.Called(ctx, trustedExitRoot, dbTx)
 
-	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, *etherman.GlobalExitRoot, pgx.Tx) error); ok {
+	var r0 bool
+	if rf, ok := ret.Get(0).(func(context.Context, *etherman.GlobalExitRoot, pgx.Tx) bool); ok {
 		r0 = rf(ctx, trustedExitRoot, dbTx)
 	} else {
-		r0 = ret.Error(0)
+		r0 = ret.Get(0).(bool)
 	}
 
-	return r0
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *etherman.GlobalExitRoot, pgx.Tx) error); ok {
+		r1 = rf(ctx, trustedExitRoot, dbTx)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
 }
 
 // AddVerifiedBatch provides a mock function with given fields: ctx, verifiedBatch, dbTx
