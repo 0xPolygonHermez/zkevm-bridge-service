@@ -6,6 +6,7 @@ import (
 	"os/signal"
 
 	"github.com/0xPolygonHermez/zkevm-bridge-service/bridgectrl"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/claimtxman"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/config"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/db"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman"
@@ -34,13 +35,13 @@ func start(ctx *cli.Context) error {
 		return err
 	}
 
-	etherman, l2Ethermans, err := newEthermans(*c)
+	l1Etherman, l2Ethermans, err := newEthermans(*c)
 	if err != nil {
 		log.Error(err)
 		return err
 	}
 
-	networkID, err := etherman.GetNetworkID(context.Background())
+	networkID, err := l1Etherman.GetNetworkID(context.Background())
 	log.Infof("main network id: %d", networkID)
 	if err != nil {
 		log.Error(err)
@@ -97,12 +98,19 @@ func start(ctx *cli.Context) error {
 		log.Fatal("error creating grpc connection. Error: ", err)
 	}
 	broadcastClient := pb.NewBroadcastServiceClient(conn)
-	chExitRootEvent := make(chan bool)
-	go runSynchronizer(c.NetworkConfig.GenBlockNumber, bridgeController, etherman, c.Synchronizer, storage, broadcastClient, chExitRootEvent)
+	chExitRootEvent := make(chan *etherman.GlobalExitRoot)
+	go runSynchronizer(c.NetworkConfig.GenBlockNumber, bridgeController, l1Etherman, c.Synchronizer, storage, broadcastClient, chExitRootEvent)
 	for _, client := range l2Ethermans {
 		go runSynchronizer(0, bridgeController, client, c.Synchronizer, storage, broadcastClient, chExitRootEvent)
 	}
 
+	for i := 0; i < len(c.Etherman.L2URLs); i++ {
+		claimTxManager, err := claimtxman.NewClaimTxManager(c.ClaimTxManager, chExitRootEvent, c.Etherman.L2URLs[i], c.NetworkConfig.L2BridgeAddrs[i], bridgeService, storage)
+		if err != nil {
+			log.Fatalf("error creating claim tx manager for L2 %s. Error: %v", c.Etherman.L2URLs[i], err)
+		}
+		go claimTxManager.Start()
+	}
 	// Wait for an in interrupt.
 	ch := make(chan os.Signal, 1)
 	signal.Notify(ch, os.Interrupt)
@@ -134,7 +142,7 @@ func newEthermans(c config.Config) (*etherman.Client, []*etherman.Client, error)
 	return l1Etherman, l2Ethermans, nil
 }
 
-func runSynchronizer(genBlockNumber uint64, brdigeCtrl *bridgectrl.BridgeController, etherman *etherman.Client, cfg synchronizer.Config, storage db.Storage, broadcastClient pb.BroadcastServiceClient, chExitRootEvent chan bool) {
+func runSynchronizer(genBlockNumber uint64, brdigeCtrl *bridgectrl.BridgeController, etherman *etherman.Client, cfg synchronizer.Config, storage db.Storage, broadcastClient pb.BroadcastServiceClient, chExitRootEvent chan *etherman.GlobalExitRoot) {
 	sy, err := synchronizer.NewSynchronizer(storage, brdigeCtrl, etherman, broadcastClient, genBlockNumber, chExitRootEvent, cfg)
 	if err != nil {
 		log.Fatal(err)

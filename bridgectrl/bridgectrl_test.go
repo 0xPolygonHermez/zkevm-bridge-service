@@ -13,6 +13,7 @@ import (
 	"github.com/0xPolygonHermez/zkevm-bridge-service/db/pgstorage"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/test/vectors"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/utils"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -57,7 +58,7 @@ func TestBridgeTree(t *testing.T) {
 		for i, testVector := range testVectors {
 			block := &etherman.Block{
 				BlockNumber: uint64(i + 1),
-				BlockHash:   common.HexToHash("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9fc"),
+				BlockHash:   utils.GenerateRandomHash(),
 				ParentHash:  common.Hash{},
 			}
 			blockID, err := store.AddBlock(context.TODO(), block, nil)

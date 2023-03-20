@@ -85,7 +85,7 @@ func TestAddTrustedGERDuplicated(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, 1, result)
 	isInserted, err = pg.AddTrustedGlobalExitRoot(ctx, ger, tx)
-	require.True(t, isInserted)
+	require.False(t, isInserted)
 	require.NoError(t, err)
 	err = tx.QueryRow(ctx, getCount, ger.GlobalExitRoot).Scan(&result)
 	require.NoError(t, err)
@@ -100,7 +100,7 @@ func TestAddTrustedGERDuplicated(t *testing.T) {
 		GlobalExitRoot: common.HexToHash("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9f2"),
 	}
 	isInserted, err = pg.AddTrustedGlobalExitRoot(ctx, ger, tx)
-	require.True(t, isInserted)
+	require.False(t, isInserted)
 	require.NoError(t, err)
 	err = tx.QueryRow(ctx, getCount, ger.GlobalExitRoot).Scan(&result)
 	require.NoError(t, err)

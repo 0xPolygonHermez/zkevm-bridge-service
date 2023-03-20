@@ -93,6 +93,11 @@ func NewManager(ctx context.Context, cfg *Config) (*Manager, error) {
 		ctx: ctx,
 	}
 	//Init storage and mt
+	// err := pgstorage.InitOrReset(dbConfig)
+	// if err != nil {
+	// 	return nil, err
+	// }
+
 	pgst, err := pgstorage.NewPostgresStorage(dbConfig)
 	if err != nil {
 		return nil, err
@@ -105,11 +110,11 @@ func NewManager(ctx context.Context, cfg *Config) (*Manager, error) {
 	if err != nil {
 		return nil, err
 	}
-	l1Client, err := utils.NewClient(ctx, l1NetworkURL, l1BridgeAddr)
+	l1Client, err := utils.NewClient(ctx, l1NetworkURL, common.HexToAddress(l1BridgeAddr))
 	if err != nil {
 		return nil, err
 	}
-	l2Client, err := utils.NewClient(ctx, l2NetworkURL, l2BridgeAddr)
+	l2Client, err := utils.NewClient(ctx, l2NetworkURL, common.HexToAddress(l2BridgeAddr))
 	if err != nil {
 		return nil, err
 	}
@@ -121,6 +126,20 @@ func NewManager(ctx context.Context, cfg *Config) (*Manager, error) {
 	opsman.clients[L1] = l1Client
 	opsman.clients[L2] = l2Client
 	return opsman, err
+}
+
+// CheckL2Claim checks if the claim is already in the L2 network.
+func (m *Manager) CheckL2Claim(ctx context.Context, networkID, depositCnt uint) error {
+	return operations.Poll(defaultInterval, defaultDeadline, func() (bool, error) {
+		_, err := m.storage.GetClaim(ctx, depositCnt, networkID, nil)
+		if err != nil {
+			if err == gerror.ErrStorageNotFound {
+				return false, nil
+			}
+			return false, err
+		}
+		return true, nil
+	})
 }
 
 // SendL1Deposit sends a deposit from l1 to l2.

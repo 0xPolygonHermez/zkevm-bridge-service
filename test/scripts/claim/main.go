@@ -24,7 +24,7 @@ const (
 
 func main() {
 	ctx := context.Background()
-	c, err := utils.NewClient(ctx, l2NetworkURL, l2BridgeAddr)
+	c, err := utils.NewClient(ctx, l2NetworkURL, common.HexToAddress(l2BridgeAddr))
 	if err != nil {
 		log.Fatal("Error: ", err)
 	}
@@ -39,7 +39,7 @@ func main() {
 		L1NodeURL:    l2NetworkURL,
 		L2NodeURL:    l2NetworkURL,
 		BridgeURL:    bridgeURL,
-		L2BridgeAddr: l2BridgeAddr,
+		L2BridgeAddr: common.HexToAddress(l2BridgeAddr),
 	}
 	client, err := clientUtils.NewClient(ctx, cfg)
 	if err != nil {

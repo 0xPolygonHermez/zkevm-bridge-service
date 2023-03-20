@@ -24,7 +24,7 @@ var tokenAddr = common.Address{}
 
 func main() {
 	ctx := context.Background()
-	client, err := utils.NewClient(ctx, l1NetworkURL, l1BridgeAddr)
+	client, err := utils.NewClient(ctx, l1NetworkURL, common.HexToAddress(l1BridgeAddr))
 	if err != nil {
 		log.Fatal("Error: ", err)
 	}

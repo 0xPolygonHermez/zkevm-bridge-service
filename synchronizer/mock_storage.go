@@ -304,6 +304,29 @@ func (_m *storageMock) GetLastVerifiedBatch(ctx context.Context, dbTx pgx.Tx) (*
 	return r0, r1
 }
 
+// GetLatestL1SyncedExitRoot provides a mock function with given fields: ctx, dbTx
+func (_m *storageMock) GetLatestL1SyncedExitRoot(ctx context.Context, dbTx pgx.Tx) (*etherman.GlobalExitRoot, error) {
+	ret := _m.Called(ctx, dbTx)
+
+	var r0 *etherman.GlobalExitRoot
+	if rf, ok := ret.Get(0).(func(context.Context, pgx.Tx) *etherman.GlobalExitRoot); ok {
+		r0 = rf(ctx, dbTx)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*etherman.GlobalExitRoot)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, pgx.Tx) error); ok {
+		r1 = rf(ctx, dbTx)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // GetNextForcedBatches provides a mock function with given fields: ctx, nextForcedBatches, dbTx
 func (_m *storageMock) GetNextForcedBatches(ctx context.Context, nextForcedBatches int, dbTx pgx.Tx) ([]etherman.ForcedBatch, error) {
 	ret := _m.Called(ctx, nextForcedBatches, dbTx)

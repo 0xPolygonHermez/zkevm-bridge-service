@@ -9,7 +9,7 @@ type Config struct {
 	// HTTPPort is TCP port to listen by HTTP/REST gateway
 	HTTPPort string `mapstructure:"HTTPPort"`
 	// CacheSize is the buffer size of the lru-cache
-	CacheSize uint32 `mapstructure:"CacheSize"`
+	CacheSize int `mapstructure:"CacheSize"`
 	// DefaultPageLimit is the default page limit for pagination
 	DefaultPageLimit uint32 `mapstructure:"DefaultPageLimit"`
 	// MaxPageLimit is the maximum page limit for pagination

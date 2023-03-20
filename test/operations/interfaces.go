@@ -20,6 +20,8 @@ type StorageInterface interface {
 	UpdateBlocksForTesting(ctx context.Context, networkID uint, blockNum uint64, dbTx pgx.Tx) error
 	GetLastBatchNumber(ctx context.Context, dbTx pgx.Tx) (uint64, error)
 	UpdateBatchesForTesting(ctx context.Context, batchNum uint64, dbTx pgx.Tx) error
+	GetClaim(ctx context.Context, depositCount, networkID uint, dbTx pgx.Tx) (*etherman.Claim, error)
+	UpdateDepositsStatusForTesting(ctx context.Context, dbTx pgx.Tx) error
 	// synchronizer
 	AddBlock(ctx context.Context, block *etherman.Block, dbTx pgx.Tx) (uint64, error)
 	AddBatch(ctx context.Context, batch *etherman.Batch, dbTx pgx.Tx) error

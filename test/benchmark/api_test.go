@@ -11,6 +11,7 @@ import (
 	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/test/client"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/test/operations"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/utils"
 	"github.com/0xPolygonHermez/zkevm-node/log"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/stretchr/testify/require"
@@ -78,8 +79,8 @@ func initServer(b *testing.B, bench benchmark) *bridgectrl.BridgeController {
 		require.NoError(b, err)
 		id, err := store.AddBlock(context.TODO(), &etherman.Block{
 			BlockNumber: uint64(i),
-			BlockHash:   common.Hash{},
-			ParentHash:  common.Hash{},
+			BlockHash:   utils.GenerateRandomHash(),
+			ParentHash:  utils.GenerateRandomHash(),
 		}, dbTx)
 		require.NoError(b, err)
 		deposit := randDeposit(r, counts[networkID], id, networkID)
@@ -123,6 +124,8 @@ func initServer(b *testing.B, bench benchmark) *bridgectrl.BridgeController {
 		require.NoError(b, err)
 		require.NoError(b, store.Commit(context.TODO(), dbTx))
 	}
+
+	require.NoError(b, store.UpdateDepositsStatusForTesting(context.TODO(), nil))
 
 	return bt
 }

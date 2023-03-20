@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/0xPolygonHermez/zkevm-bridge-service/bridgectrl"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/claimtxman"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/db"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/server"
@@ -20,6 +21,7 @@ import (
 type Config struct {
 	Log              log.Config
 	SyncDB           db.Config
+	ClaimTxManager   claimtxman.Config
 	Etherman         etherman.Config
 	Synchronizer     synchronizer.Config
 	BridgeController bridgectrl.Config

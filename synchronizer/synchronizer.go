@@ -25,17 +25,18 @@ type Synchronizer interface {
 
 // ClientSynchronizer connects L1 and L2
 type ClientSynchronizer struct {
-	etherMan        ethermanInterface
-	bridgeCtrl      bridgectrlInterface
-	storage         storageInterface
-	ctx             context.Context
-	cancelCtx       context.CancelFunc
-	genBlockNumber  uint64
-	cfg             Config
-	networkID       uint
-	chExitRootEvent chan bool
-	broadcastClient pb.BroadcastServiceClient
-	synced          bool
+	etherMan         ethermanInterface
+	bridgeCtrl       bridgectrlInterface
+	storage          storageInterface
+	ctx              context.Context
+	cancelCtx        context.CancelFunc
+	genBlockNumber   uint64
+	cfg              Config
+	networkID        uint
+	chExitRootEvent  chan *etherman.GlobalExitRoot
+	broadcastClient  pb.BroadcastServiceClient
+	synced           bool
+	l1RollupExitRoot common.Hash
 }
 
 // NewSynchronizer creates and initializes an instance of Synchronizer
@@ -45,26 +46,35 @@ func NewSynchronizer(
 	ethMan ethermanInterface,
 	broadcastClient pb.BroadcastServiceClient,
 	genBlockNumber uint64,
-	chExitRootEvent chan bool,
+	chExitRootEvent chan *etherman.GlobalExitRoot,
 	cfg Config) (Synchronizer, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	networkID, err := ethMan.GetNetworkID(ctx)
 	if err != nil {
 		log.Fatal("error getting networkID. Error: ", err)
 	}
+	ger, err := storage.(storageInterface).GetLatestL1SyncedExitRoot(context.Background(), nil)
+	if err != nil {
+		if err == gerror.ErrStorageNotFound {
+			ger.ExitRoots = []common.Hash{{}, {}}
+		} else {
+			log.Fatal("error getting last L1 synced exitroot. Error: ", err)
+		}
+	}
 
 	if networkID == 0 {
 		return &ClientSynchronizer{
-			bridgeCtrl:      bridge,
-			storage:         storage.(storageInterface),
-			etherMan:        ethMan,
-			ctx:             ctx,
-			cancelCtx:       cancel,
-			genBlockNumber:  genBlockNumber,
-			cfg:             cfg,
-			networkID:       networkID,
-			chExitRootEvent: chExitRootEvent,
-			broadcastClient: broadcastClient,
+			bridgeCtrl:       bridge,
+			storage:          storage.(storageInterface),
+			etherMan:         ethMan,
+			ctx:              ctx,
+			cancelCtx:        cancel,
+			genBlockNumber:   genBlockNumber,
+			cfg:              cfg,
+			networkID:        networkID,
+			chExitRootEvent:  chExitRootEvent,
+			broadcastClient:  broadcastClient,
+			l1RollupExitRoot: ger.ExitRoots[1],
 		}, nil
 	}
 	return &ClientSynchronizer{
@@ -181,7 +191,7 @@ func (s *ClientSynchronizer) syncTrustedState() error {
 		return err
 	}
 	if isUpdated {
-		s.chExitRootEvent <- true
+		s.chExitRootEvent <- ger
 	}
 	return nil
 }
@@ -701,13 +711,9 @@ func (s *ClientSynchronizer) processGlobalExitRoot(globalExitRoot etherman.Globa
 		log.Fatalf("networkID: %d, error storing the GlobalExitRoot in processGlobalExitRoot. BlockNumber: %d, error: %s",
 			s.networkID, globalExitRoot.BlockNumber, err.Error())
 	}
-	latestExitRoot, err := s.storage.GetLatestL1SyncedExitRoot(s.ctx, dbTx)
-	if err != nil && errors.Is(err, gerror.ErrStorageNotFound) {
-		log.Errorf("networkID: %d, error getting the Latest L1 Synced GlobalExitRoot. BlockNumber: %d",
-			s.networkID, globalExitRoot.BlockNumber)
-	}
-	if latestExitRoot.ExitRoots[1] != globalExitRoot.ExitRoots[1] {
-		s.chExitRootEvent <- false
+	if s.l1RollupExitRoot != globalExitRoot.ExitRoots[1] {
+		s.l1RollupExitRoot = globalExitRoot.ExitRoots[1]
+		s.chExitRootEvent <- &globalExitRoot
 	}
 }
 

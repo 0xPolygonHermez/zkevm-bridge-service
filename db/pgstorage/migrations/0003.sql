@@ -4,25 +4,33 @@ DROP TABLE IF EXISTS sync.monitored_txs;
 ALTER TABLE
     sync.deposit DROP COLUMN ready_for_claim;
 
+ALTER TABLE
+    sync.block DROP CONSTRAINT block_hash_unique;
+
 -- +migrate Up
 ALTER TABLE
     sync.deposit
 ADD
     COLUMN ready_for_claim BOOLEAN NOT NULL DEFAULT FALSE;
 
+ALTER TABLE
+    sync.block
+ADD
+    CONSTRAINT block_hash_unique UNIQUE (block_hash);
+
 CREATE TABLE sync.monitored_txs (
-    id VARCHAR PRIMARY KEY,
-    block_id BIGINT NOT NULL REFERENCES sync.block (id) ON DELETE CASCADE,
-    from_addr VARCHAR NOT NULL,
-    to_addr VARCHAR,
-    nonce DECIMAL(78, 0) NOT NULL,
-    value DECIMAL(78, 0),
-    data VARCHAR,
-    gas DECIMAL(78, 0) NOT NULL,
+    id BIGINT PRIMARY KEY,
+    block_id BIGINT REFERENCES sync.block (id) ON DELETE CASCADE,
+    from_addr BYTEA NOT NULL,
+    to_addr BYTEA,
+    nonce BIGINT NOT NULL,
+    value VARCHAR,
+    data BYTEA,
+    gas BIGINT NOT NULL,
     status VARCHAR NOT NULL,
-    history VARCHAR [],
+    history BYTEA [],
     created_at TIMESTAMP WITH TIME ZONE NOT NULL,
-    updated_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL
 );
 
 -- +migrate StatementBegin
@@ -79,3 +87,5 @@ WHERE
             AND network = 1
     )
     AND network_id != 0;
+
+-- +migrate StatementEnd

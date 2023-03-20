@@ -23,7 +23,7 @@ func main() {
 	ctx := context.Background()
 	// Eth client
 	log.Infof("Connecting to l1")
-	client, err := utils.NewClient(ctx, l1NetworkURL, "")
+	client, err := utils.NewClient(ctx, l1NetworkURL, common.Address{})
 	if err != nil {
 		log.Fatal("Error: ", err)
 	}
