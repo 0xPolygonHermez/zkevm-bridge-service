@@ -145,13 +145,22 @@ func (s *ClientSynchronizer) Sync() error {
 					log.Warnf("networkID: %d, error getting latest block from. Error: %s", s.networkID, err.Error())
 					continue
 				}
-				lastKnownBlock := header.Number
-				if lastBlockSynced.BlockNumber == lastKnownBlock.Uint64() {
+				lastKnownBlock := header.Number.Uint64()
+				if lastBlockSynced.BlockNumber == lastKnownBlock {
 					waitDuration = s.cfg.SyncInterval.Duration
 					s.synced = true
 				}
-				if lastBlockSynced.BlockNumber > lastKnownBlock.Uint64() {
-					log.Fatalf("networkID: %d, error: latest Synced BlockNumber is higher than the latest Proposed in the network", s.networkID)
+				if lastBlockSynced.BlockNumber > lastKnownBlock {
+					if s.networkID == 0 {
+						log.Fatalf("networkID: %d, error: latest Synced BlockNumber (%d) is higher than the latest Proposed block (%d) in the network", s.networkID, lastBlockSynced.BlockNumber, lastKnownBlock)
+					} else {
+						log.Errorf("networkID: %d, error: latest Synced BlockNumber (%d) is higher than the latest Proposed block (%d) in the network", s.networkID, lastBlockSynced.BlockNumber, lastKnownBlock)
+						err = s.resetState(lastKnownBlock)
+						if err != nil {
+							log.Errorf("networkID: %d, error resetting the state to a previous block. Error: %v", s.networkID, err)
+							continue
+						}
+					}
 				}
 			} else { // Sync Trusted GlobalExitRoots if L1 is synced
 				if s.networkID != 0 {
@@ -444,6 +453,7 @@ func (s *ClientSynchronizer) checkReorg(latestBlock *etherman.Block) (*etherman.
 				log.Warnf("networkID: %d, error checking reorg: previous block not found in db: %s", s.networkID, err.Error())
 				return &etherman.Block{}, nil
 			} else if err != nil {
+				log.Error("error detected getting previous block: ", err)
 				return nil, err
 			}
 		} else {
