@@ -112,7 +112,12 @@ func (p *PostgresStorage) GetBatchByNumber(ctx context.Context, batchNumber uint
 // AddBlock adds a new block to the storage.
 func (p *PostgresStorage) AddBlock(ctx context.Context, block *etherman.Block, dbTx pgx.Tx) (uint64, error) {
 	var blockID uint64
-	const addBlockSQL = "INSERT INTO sync.block (block_num, block_hash, parent_hash, network_id, received_at) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (block_hash) DO NOTHING RETURNING id;"
+	const addBlockSQL = `WITH block_id AS 
+		(INSERT INTO sync.block (block_num, block_hash, parent_hash, network_id, received_at) 
+		VALUES ($1, $2, $3, $4, $5) ON CONFLICT (block_hash) DO NOTHING RETURNING id)
+		SELECT * from block_id
+		UNION ALL
+		SELECT id FROM sync.block WHERE block_hash = $2;`
 	e := p.getExecQuerier(dbTx)
 	err := e.QueryRow(ctx, addBlockSQL, block.BlockNumber, block.BlockHash, block.ParentHash, block.NetworkID, block.ReceivedAt).Scan(&blockID)
 
