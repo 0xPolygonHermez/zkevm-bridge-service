@@ -13,6 +13,3 @@ to interact with the [bridge smart contract](https://github.com/0xPolygonHermez/
 
 - [Running localy](docs/running_local.md)
 
-## Disclaimer
-
-This code has not yet been audited, and should not be used in any production systems.
