@@ -48,8 +48,6 @@ func (m migrationTest0002) InsertData(db *sql.DB) error {
 	return nil
 }
 
-var indexes = []string{"root_network_idx", "deposit_idx", "block_idx", "root_idx", "exit_roots_idx"}
-
 func (m migrationTest0002) RunAssertsAfterMigrationUp(t *testing.T, db *sql.DB) {
 	// Insert a new Deposit
 	var depositID uint64
@@ -70,6 +68,8 @@ func (m migrationTest0002) RunAssertsAfterMigrationUp(t *testing.T, db *sql.DB) 
 		common.FromHex("0x21ddb9a356815c3fac1026b6dec5df3124afbadb485c9ba5a3e3398a04b7ba85"),
 	}, depositID)
 	assert.NoError(t, err)
+
+	indexes := []string{"root_network_idx", "deposit_idx", "block_idx", "root_idx", "exit_roots_idx"}
 
 	// Check indexes adding
 	for _, idx := range indexes {
@@ -96,6 +96,8 @@ func (m migrationTest0002) RunAssertsAfterMigrationDown(t *testing.T, db *sql.DB
 	// Insert an new root to reproduce the duplicate key error
 	_, err = db.Exec(addOldRoot, common.FromHex("0xf4418588ed35a2458cffeb39b93d26f18d2ab13bdce6aee58e7b99359ec2dfd9"), 2, 0)
 	assert.NoError(t, err)
+
+	indexes := []string{"root_network_idx", "deposit_idx", "block_idx", "root_idx", "exit_roots_idx"}
 
 	// Check indexes removing
 	for _, idx := range indexes {

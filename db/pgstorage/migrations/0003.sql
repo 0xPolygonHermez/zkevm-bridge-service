@@ -1,4 +1,6 @@
 -- +migrate Down
+DROP INDEX IF EXISTS mt.rht_key_idx;
+
 DROP TABLE IF EXISTS sync.monitored_txs;
 
 ALTER TABLE
@@ -7,7 +9,15 @@ ALTER TABLE
 ALTER TABLE
     sync.block DROP CONSTRAINT block_hash_unique;
 
+ALTER TABLE
+    mt.rht
+ADD
+    PRIMARY KEY (key);
+
 -- +migrate Up
+ALTER TABLE
+    mt.rht DROP CONSTRAINT rht_pkey;
+
 ALTER TABLE
     sync.deposit
 ADD
@@ -89,3 +99,6 @@ WHERE
     AND network_id != 0;
 
 -- +migrate StatementEnd
+
+-- Create indexes
+CREATE INDEX IF NOT EXISTS rht_key_idx ON mt.rht(key);

@@ -63,6 +63,18 @@ func (m migrationTest0003) RunAssertsAfterMigrationUp(t *testing.T, db *sql.DB) 
 		common.FromHex("0xad3228b676f7d3cd4284a5443f17f1962b36e491b30a40b2405849e597ba5fb5"), 0, time.Now()).Scan(&blockID)
 	assert.NoError(t, err)
 	assert.Equal(t, blockID, uint64(1))
+
+	indexes := []string{"rht_key_idx"}
+
+	// Check indexes adding
+	for _, idx := range indexes {
+		// getIndex
+		const getIndex = `SELECT count(*) FROM pg_indexes WHERE indexname = $1;`
+		row := db.QueryRow(getIndex, idx)
+		var result int
+		assert.NoError(t, row.Scan(&result))
+		assert.Equal(t, 1, result)
+	}
 }
 
 func (m migrationTest0003) RunAssertsAfterMigrationDown(t *testing.T, db *sql.DB) {
@@ -74,6 +86,18 @@ func (m migrationTest0003) RunAssertsAfterMigrationDown(t *testing.T, db *sql.DB
 		common.FromHex("0xad3228b676f7d3cd4284a5443f17f1962b36e491b30a40b2405849e597ba5fb5"), 0, time.Now()).Scan(&blockID)
 	assert.NoError(t, err)
 	assert.Equal(t, blockID, uint64(3))
+
+	indexes := []string{"rht_key_idx"}
+
+	// Check indexes removing
+	for _, idx := range indexes {
+		// getIndex
+		const getIndex = `SELECT count(*) FROM pg_indexes WHERE indexname = $1;`
+		row := db.QueryRow(getIndex, idx)
+		var result int
+		assert.NoError(t, row.Scan(&result))
+		assert.Equal(t, 0, result)
+	}
 }
 
 func TestMigration0003(t *testing.T) {
