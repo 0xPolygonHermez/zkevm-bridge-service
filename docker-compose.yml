@@ -109,7 +109,7 @@ services:
       - ZKEVM_BRIDGE_DATABASE_HOST=zkevm-bridge-db
       - ZKEVM_BRIDGE_DATABASE_PORT=5432
     volumes:
-      - ./test/test.keystore.sequencer:/pk/keystore.claimtxmanager
+      - ./test/test.keystore.claimtx:/pk/keystore.claimtxmanager
       - ./config/config.local.toml:/app/config.toml
     command:
       - "/bin/sh"

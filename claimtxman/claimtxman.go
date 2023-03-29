@@ -20,11 +20,10 @@ import (
 )
 
 const (
-	failureIntervalInSeconds = 5
-	maxHistorySize           = 10
-	keyLen                   = 32
-	mtHeight                 = 32
-	cacheSize                = 10000
+	maxHistorySize = 10
+	keyLen         = 32
+	mtHeight       = 32
+	cacheSize      = 1000
 )
 
 // ClaimTxManager is the claim transaction manager for L2.
