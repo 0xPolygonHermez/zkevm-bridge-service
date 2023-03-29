@@ -16,7 +16,7 @@ ADD
 
 -- +migrate Up
 ALTER TABLE
-    mt.rht DROP CONSTRAINT rht_pkey;
+    mt.rht DROP CONSTRAINT IF EXISTS rht_pkey;
 
 ALTER TABLE
     sync.deposit
@@ -99,6 +99,5 @@ WHERE
     AND network_id != 0;
 
 -- +migrate StatementEnd
-
 -- Create indexes
 CREATE INDEX IF NOT EXISTS rht_key_idx ON mt.rht(key);
