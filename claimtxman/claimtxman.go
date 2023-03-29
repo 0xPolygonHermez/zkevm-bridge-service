@@ -81,10 +81,12 @@ func (tm *ClaimTxManager) Start() {
 		case <-tm.ctx.Done():
 			return
 		case ger := <-tm.chExitRootEvent:
-			err := tm.updateDepositsStatus(ger)
-			if err != nil {
-				log.Errorf("failed to update deposits status: %v", err)
-			}
+			go func() {
+				err := tm.updateDepositsStatus(ger)
+				if err != nil {
+					log.Errorf("failed to update deposits status: %v", err)
+				}
+			}()
 		case <-time.After(tm.cfg.FrequencyToMonitorTxs.Duration):
 			err := tm.monitorTxs(context.Background())
 			if err != nil {
