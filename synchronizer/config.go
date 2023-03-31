@@ -12,5 +12,5 @@ type Config struct {
 	// SyncChunkSize is the number of blocks to sync on each chunk
 	SyncChunkSize uint64 `mapstructure:"SyncChunkSize"`
 
-	GrpcURL string `mapstructure:"GrpcURL"`
+	RPCURL string `mapstructure:"RPCURL"`
 }

@@ -12,11 +12,9 @@ import (
 	"github.com/0xPolygonHermez/zkevm-bridge-service/server"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/synchronizer"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/utils/gerror"
+	"github.com/0xPolygonHermez/zkevm-node/jsonrpc/client"
 	"github.com/0xPolygonHermez/zkevm-node/log"
-	"github.com/0xPolygonHermez/zkevm-node/sequencer/broadcast/pb"
 	"github.com/urfave/cli/v2"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 )
 
 func start(ctx *cli.Context) error {
@@ -89,17 +87,21 @@ func start(ctx *cli.Context) error {
 		return err
 	}
 
-	opts := []grpc.DialOption{
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	var RPCURL string
+	if c.Synchronizer.RPCURL != "" {
+		RPCURL = c.Synchronizer.RPCURL
+	} else {
+		log.Debug("getting trusted sequencer URL from smc")
+		RPCURL, err = etherman.GetTrustedSequencerURL()
+		if err != nil {
+			log.Fatal("error getting trusted sequencer URI. Error: %v", err)
+		}
 	}
-	conn, err := grpc.DialContext(ctx.Context, c.Synchronizer.GrpcURL, opts...)
-	if err != nil {
-		log.Fatal("error creating grpc connection. Error: ", err)
-	}
-	broadcastClient := pb.NewBroadcastServiceClient(conn)
-	go runSynchronizer(c.NetworkConfig.GenBlockNumber, bridgeController, etherman, c.Synchronizer, storage, broadcastClient)
+	log.Debug("RPCURL ", RPCURL)
+	zkEVMClient := client.NewClient(RPCURL)
+	go runSynchronizer(c.NetworkConfig.GenBlockNumber, bridgeController, etherman, c.Synchronizer, storage, zkEVMClient)
 	for _, client := range l2Ethermans {
-		go runSynchronizer(0, bridgeController, client, c.Synchronizer, storage, broadcastClient)
+		go runSynchronizer(0, bridgeController, client, c.Synchronizer, storage, nil)
 	}
 
 	// Wait for an in interrupt.
@@ -133,8 +135,8 @@ func newEthermans(c config.Config) (*etherman.Client, []*etherman.Client, error)
 	return l1Etherman, l2Ethermans, nil
 }
 
-func runSynchronizer(genBlockNumber uint64, brdigeCtrl *bridgectrl.BridgeController, etherman *etherman.Client, cfg synchronizer.Config, storage db.Storage, broadcastClient pb.BroadcastServiceClient) {
-	sy, err := synchronizer.NewSynchronizer(storage, brdigeCtrl, etherman, broadcastClient, genBlockNumber, cfg)
+func runSynchronizer(genBlockNumber uint64, brdigeCtrl *bridgectrl.BridgeController, etherman *etherman.Client, cfg synchronizer.Config, storage db.Storage, zkEVMClient *client.Client) {
+	sy, err := synchronizer.NewSynchronizer(storage, brdigeCtrl, etherman, zkEVMClient, genBlockNumber, cfg)
 	if err != nil {
 		log.Fatal(err)
 	}

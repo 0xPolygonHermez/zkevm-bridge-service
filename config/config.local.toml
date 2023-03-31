@@ -18,7 +18,7 @@ L2URLs = ["http://zkevm-node:8123"]
 [Synchronizer]
 SyncInterval = "1s"
 SyncChunkSize = 100
-GrpcURL = "zkevm-node:61090"
+RPCURL = ""
 
 [BridgeController]
 Store = "postgres"
