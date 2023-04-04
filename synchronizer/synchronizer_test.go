@@ -35,7 +35,6 @@ func TestTrustedStateReorg(t *testing.T) {
 		cfg := Config{
 			SyncInterval:  cfgTypes.Duration{Duration: 1 * time.Second},
 			SyncChunkSize: 10,
-			RPCURL:        "localhost:8123",
 		}
 		ctxMatchBy := mock.MatchedBy(func(ctx context.Context) bool { return ctx != nil })
 		m.Etherman.On("GetNetworkID", ctxMatchBy).Return(uint(0), nil)
