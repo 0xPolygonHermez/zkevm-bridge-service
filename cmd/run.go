@@ -12,11 +12,9 @@ import (
 	"github.com/0xPolygonHermez/zkevm-bridge-service/server"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/synchronizer"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/utils/gerror"
+	"github.com/0xPolygonHermez/zkevm-node/jsonrpc/client"
 	"github.com/0xPolygonHermez/zkevm-node/log"
-	"github.com/0xPolygonHermez/zkevm-node/sequencer/broadcast/pb"
 	"github.com/urfave/cli/v2"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 )
 
 func start(ctx *cli.Context) error {
@@ -34,7 +32,7 @@ func start(ctx *cli.Context) error {
 		return err
 	}
 
-	etherman, l2Ethermans, err := newEthermans(*c)
+	etherman, l2Ethermans, err := newEthermans(c)
 	if err != nil {
 		log.Error(err)
 		return err
@@ -89,17 +87,11 @@ func start(ctx *cli.Context) error {
 		return err
 	}
 
-	opts := []grpc.DialOption{
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	}
-	conn, err := grpc.DialContext(ctx.Context, c.Synchronizer.GrpcURL, opts...)
-	if err != nil {
-		log.Fatal("error creating grpc connection. Error: ", err)
-	}
-	broadcastClient := pb.NewBroadcastServiceClient(conn)
-	go runSynchronizer(c.NetworkConfig.GenBlockNumber, bridgeController, etherman, c.Synchronizer, storage, broadcastClient)
+	log.Debug("trusted sequencer URL ", c.Etherman.L2URLs[0])
+	zkEVMClient := client.NewClient(c.Etherman.L2URLs[0])
+	go runSynchronizer(c.NetworkConfig.GenBlockNumber, bridgeController, etherman, c.Synchronizer, storage, zkEVMClient)
 	for _, client := range l2Ethermans {
-		go runSynchronizer(0, bridgeController, client, c.Synchronizer, storage, broadcastClient)
+		go runSynchronizer(0, bridgeController, client, c.Synchronizer, storage, nil)
 	}
 
 	// Wait for an in interrupt.
@@ -114,10 +106,17 @@ func setupLog(c log.Config) {
 	log.Init(c)
 }
 
-func newEthermans(c config.Config) (*etherman.Client, []*etherman.Client, error) {
+func newEthermans(c *config.Config) (*etherman.Client, []*etherman.Client, error) {
 	l1Etherman, err := etherman.NewClient(c.Etherman, c.NetworkConfig.PoEAddr, c.NetworkConfig.BridgeAddr, c.NetworkConfig.GlobalExitRootManAddr)
 	if err != nil {
 		return nil, nil, err
+	}
+	if c.Etherman.L2URLs[0] == "" {
+		log.Debug("getting trusted sequencer URL from smc")
+		c.Etherman.L2URLs[0], err = l1Etherman.GetTrustedSequencerURL()
+		if err != nil {
+			log.Fatal("error getting trusted sequencer URI. Error: %v", err)
+		}
 	}
 	if len(c.L2BridgeAddrs) != len(c.Etherman.L2URLs) {
 		log.Fatal("environment configuration error. zkevm bridge addresses and zkevm node urls mismatch")
@@ -133,8 +132,8 @@ func newEthermans(c config.Config) (*etherman.Client, []*etherman.Client, error)
 	return l1Etherman, l2Ethermans, nil
 }
 
-func runSynchronizer(genBlockNumber uint64, brdigeCtrl *bridgectrl.BridgeController, etherman *etherman.Client, cfg synchronizer.Config, storage db.Storage, broadcastClient pb.BroadcastServiceClient) {
-	sy, err := synchronizer.NewSynchronizer(storage, brdigeCtrl, etherman, broadcastClient, genBlockNumber, cfg)
+func runSynchronizer(genBlockNumber uint64, brdigeCtrl *bridgectrl.BridgeController, etherman *etherman.Client, cfg synchronizer.Config, storage db.Storage, zkEVMClient *client.Client) {
+	sy, err := synchronizer.NewSynchronizer(storage, brdigeCtrl, etherman, zkEVMClient, genBlockNumber, cfg)
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -11,10 +11,8 @@ import (
 	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/utils/gerror"
 	"github.com/0xPolygonHermez/zkevm-node/log"
-	"github.com/0xPolygonHermez/zkevm-node/sequencer/broadcast/pb"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/jackc/pgx/v4"
-	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 // Synchronizer connects L1 and L2
@@ -25,16 +23,16 @@ type Synchronizer interface {
 
 // ClientSynchronizer connects L1 and L2
 type ClientSynchronizer struct {
-	etherMan        ethermanInterface
-	bridgeCtrl      bridgectrlInterface
-	storage         storageInterface
-	ctx             context.Context
-	cancelCtx       context.CancelFunc
-	genBlockNumber  uint64
-	cfg             Config
-	networkID       uint
-	broadcastClient pb.BroadcastServiceClient
-	synced          bool
+	etherMan       ethermanInterface
+	bridgeCtrl     bridgectrlInterface
+	storage        storageInterface
+	ctx            context.Context
+	cancelCtx      context.CancelFunc
+	genBlockNumber uint64
+	cfg            Config
+	networkID      uint
+	zkEVMClient    zkEVMClientInterface
+	synced         bool
 }
 
 // NewSynchronizer creates and initializes an instance of Synchronizer
@@ -42,7 +40,7 @@ func NewSynchronizer(
 	storage interface{},
 	bridge bridgectrlInterface,
 	ethMan ethermanInterface,
-	broadcastClient pb.BroadcastServiceClient,
+	zkEVMClient zkEVMClientInterface,
 	genBlockNumber uint64,
 	cfg Config) (Synchronizer, error) {
 	ctx, cancel := context.WithCancel(context.Background())
@@ -53,15 +51,15 @@ func NewSynchronizer(
 
 	if networkID == 0 {
 		return &ClientSynchronizer{
-			bridgeCtrl:      bridge,
-			storage:         storage.(storageInterface),
-			etherMan:        ethMan,
-			ctx:             ctx,
-			cancelCtx:       cancel,
-			genBlockNumber:  genBlockNumber,
-			cfg:             cfg,
-			networkID:       networkID,
-			broadcastClient: broadcastClient,
+			bridgeCtrl:     bridge,
+			storage:        storage.(storageInterface),
+			etherMan:       ethMan,
+			ctx:            ctx,
+			cancelCtx:      cancel,
+			genBlockNumber: genBlockNumber,
+			cfg:            cfg,
+			networkID:      networkID,
+			zkEVMClient:    zkEVMClient,
 		}, nil
 	}
 	return &ClientSynchronizer{
@@ -169,16 +167,21 @@ func (s *ClientSynchronizer) Stop() {
 }
 
 func (s *ClientSynchronizer) syncTrustedState() error {
-	lastBatch, err := s.broadcastClient.GetLastBatch(s.ctx, &emptypb.Empty{})
+	lastBatchNumber, err := s.zkEVMClient.BatchNumber(s.ctx)
 	if err != nil {
-		log.Errorf("networkID: %d, error getting latest batch from grpc. Error: %w", s.networkID, err)
+		log.Errorf("networkID: %d, error getting latest batch number from rpc. Error: %w", s.networkID, err)
+		return err
+	}
+	lastBatch, err := s.zkEVMClient.BatchByNumber(s.ctx, big.NewInt(0).SetUint64(lastBatchNumber))
+	if err != nil {
+		log.Warnf("networkID: %d, failed to get batch %v from trusted state. Error: %v", s.networkID, lastBatchNumber, err)
 		return err
 	}
 	ger := &etherman.GlobalExitRoot{
-		GlobalExitRoot: common.HexToHash(lastBatch.GlobalExitRoot),
+		GlobalExitRoot: lastBatch.GlobalExitRoot,
 		ExitRoots: []common.Hash{
-			common.HexToHash(lastBatch.MainnetExitRoot),
-			common.HexToHash(lastBatch.RollupExitRoot),
+			lastBatch.MainnetExitRoot,
+			lastBatch.RollupExitRoot,
 		},
 	}
 	err = s.storage.AddTrustedGlobalExitRoot(s.ctx, ger, nil)

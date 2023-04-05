@@ -9,20 +9,19 @@ import (
 	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman"
 	cfgTypes "github.com/0xPolygonHermez/zkevm-node/config/types"
 	"github.com/0xPolygonHermez/zkevm-node/etherman/smartcontracts/polygonzkevm"
-	"github.com/0xPolygonHermez/zkevm-node/sequencer/broadcast/pb"
+	rpcTypes "github.com/0xPolygonHermez/zkevm-node/jsonrpc/types"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 type mocks struct {
-	Etherman        *ethermanMock
-	BridgeCtrl      *bridgectrlMock
-	Storage         *storageMock
-	DbTx            *dbTxMock
-	BroadcastClient *broadcastMock
+	Etherman    *ethermanMock
+	BridgeCtrl  *bridgectrlMock
+	Storage     *storageMock
+	DbTx        *dbTxMock
+	ZkEVMClient *zkEVMClientMock
 }
 
 func TestTrustedStateReorg(t *testing.T) {
@@ -36,11 +35,10 @@ func TestTrustedStateReorg(t *testing.T) {
 		cfg := Config{
 			SyncInterval:  cfgTypes.Duration{Duration: 1 * time.Second},
 			SyncChunkSize: 10,
-			GrpcURL:       "localhost:61090",
 		}
 		ctxMatchBy := mock.MatchedBy(func(ctx context.Context) bool { return ctx != nil })
 		m.Etherman.On("GetNetworkID", ctxMatchBy).Return(uint(0), nil)
-		sync, err := NewSynchronizer(m.Storage, m.BridgeCtrl, m.Etherman, m.BroadcastClient, genBlockNumber, cfg)
+		sync, err := NewSynchronizer(m.Storage, m.BridgeCtrl, m.Etherman, m.ZkEVMClient, genBlockNumber, cfg)
 		require.NoError(t, err)
 		// state preparation
 		m.Storage.
@@ -164,21 +162,26 @@ func TestTrustedStateReorg(t *testing.T) {
 					Return(nil).
 					Once()
 
-				broadcast := &pb.GetBatchResponse{
-					GlobalExitRoot:  "0xb14c74e4dddf25627a745f46cae6ac98782e2783c3ccc28107c8210e60d58861",
-					MainnetExitRoot: "0xc14c74e4dddf25627a745f46cae6ac98782e2783c3ccc28107c8210e60d58862",
-					RollupExitRoot:  "0xd14c74e4dddf25627a745f46cae6ac98782e2783c3ccc28107c8210e60d58863",
+				rpcResponse := &rpcTypes.Batch{
+					GlobalExitRoot:  common.HexToHash("0xb14c74e4dddf25627a745f46cae6ac98782e2783c3ccc28107c8210e60d58861"),
+					MainnetExitRoot: common.HexToHash("0xc14c74e4dddf25627a745f46cae6ac98782e2783c3ccc28107c8210e60d58862"),
+					RollupExitRoot:  common.HexToHash("0xd14c74e4dddf25627a745f46cae6ac98782e2783c3ccc28107c8210e60d58863"),
 				}
-				m.BroadcastClient.
-					On("GetLastBatch", ctx, &emptypb.Empty{}).
-					Return(broadcast, nil).
+				m.ZkEVMClient.
+					On("BatchNumber", ctx).
+					Return(uint64(1), nil).
+					Once()
+
+				m.ZkEVMClient.
+					On("BatchByNumber", ctx, big.NewInt(1)).
+					Return(rpcResponse, nil).
 					Once()
 
 				ger := &etherman.GlobalExitRoot{
-					GlobalExitRoot: common.HexToHash(broadcast.GlobalExitRoot),
+					GlobalExitRoot: rpcResponse.GlobalExitRoot,
 					ExitRoots: []common.Hash{
-						common.HexToHash(broadcast.MainnetExitRoot),
-						common.HexToHash(broadcast.RollupExitRoot),
+						rpcResponse.MainnetExitRoot,
+						rpcResponse.RollupExitRoot,
 					},
 				}
 
@@ -241,11 +244,11 @@ func TestTrustedStateReorg(t *testing.T) {
 	}
 
 	m := mocks{
-		Etherman:        newEthermanMock(t),
-		BridgeCtrl:      newBridgectrlMock(t),
-		Storage:         newStorageMock(t),
-		DbTx:            newDbTxMock(t),
-		BroadcastClient: newBroadcastMock(t),
+		Etherman:    newEthermanMock(t),
+		BridgeCtrl:  newBridgectrlMock(t),
+		Storage:     newStorageMock(t),
+		DbTx:        newDbTxMock(t),
+		ZkEVMClient: newZkEVMClientMock(t),
 	}
 
 	// start synchronizing

@@ -5,6 +5,7 @@ import (
 	"math/big"
 
 	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman"
+	rpcTypes "github.com/0xPolygonHermez/zkevm-node/jsonrpc/types"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/jackc/pgx/v4"
@@ -48,4 +49,9 @@ type storageInterface interface {
 type bridgectrlInterface interface {
 	AddDeposit(deposit *etherman.Deposit, depositID uint64, dbTx pgx.Tx) error
 	ReorgMT(depositCount, networkID uint, dbTx pgx.Tx) error
+}
+
+type zkEVMClientInterface interface {
+	BatchNumber(ctx context.Context) (uint64, error)
+	BatchByNumber(ctx context.Context, number *big.Int) (*rpcTypes.Batch, error)
 }
