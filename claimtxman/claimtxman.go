@@ -20,10 +20,11 @@ import (
 )
 
 const (
-	maxHistorySize = 10
-	keyLen         = 32
-	mtHeight       = 32
-	cacheSize      = 1000
+	maxHistorySize  = 10
+	keyLen          = 32
+	mtHeight        = 32
+	cacheSize       = 1000
+	LeafTypeMessage = uint8(1)
 )
 
 // ClaimTxManager is the claim transaction manager for L2.
@@ -117,7 +118,7 @@ func (tm *ClaimTxManager) updateDepositsStatus(ger *etherman.GlobalExitRoot) err
 			if err != nil {
 				return err
 			}
-			if len(claimHash) > 0 {
+			if len(claimHash) > 0 || deposit.LeafType == LeafTypeMessage {
 				continue
 			}
 			log.Infof("create the claim tx for the deposit %d", deposit.DepositCount)
