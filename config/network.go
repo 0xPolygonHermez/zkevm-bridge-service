@@ -54,10 +54,10 @@ var (
 	localConfig = NetworkConfig{
 		GenBlockNumber:        1,
 		PoEAddr:               common.HexToAddress("0x610178dA211FEF7D417bC0e6FeD39F05609AD788"),
-		BridgeAddr:            common.HexToAddress("0xAD1eA25D1133095d20D5C3f269ed887aC0a2496C"),
+		BridgeAddr:            common.HexToAddress("0xff0EE8ea08cEf5cb4322777F5CC3E8A584B8A4A0"),
 		GlobalExitRootManAddr: common.HexToAddress("0x2279B7A0a67DB372996a5FaB50D91eAA73d2eBe6"),
 		MaticAddr:             common.HexToAddress("0x5FbDB2315678afecb367f032d93F642f64180aa3"),
-		L2BridgeAddrs:         []common.Address{common.HexToAddress("0xfC5b0c5F677a3f3E29DB2e98c9eD455c7ACfCf03")},
+		L2BridgeAddrs:         []common.Address{common.HexToAddress("0xff0EE8ea08cEf5cb4322777F5CC3E8A584B8A4A0")},
 		L1ChainID:             1337,
 	}
 )

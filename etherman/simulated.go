@@ -103,6 +103,10 @@ func NewSimulatedEtherman(cfg Config, auth *bind.TransactOpts) (etherman *Client
 	if err != nil {
 		return nil, nil, common.Address{}, nil, err
 	}
+	_, err = poe.ActivateForceBatches(auth)
+	if err != nil {
+		return nil, nil, common.Address{}, nil, err
+	}
 
 	client.Commit()
 	return &Client{EtherClient: client, PoE: poe, Bridge: br, GlobalExitRootManager: globalExitRoot, SCAddresses: []common.Address{poeAddr, exitManagerAddr, bridgeAddr}}, client, maticAddr, mockbr, nil

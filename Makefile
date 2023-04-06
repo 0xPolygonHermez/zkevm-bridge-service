@@ -197,4 +197,4 @@ generate-mocks: ## Generates mocks for the tests, using mockery tool
 	mockery --name=storageInterface --dir=synchronizer --output=synchronizer --outpkg=synchronizer --structname=storageMock --filename=mock_storage.go
 	mockery --name=bridgectrlInterface --dir=synchronizer --output=synchronizer --outpkg=synchronizer --structname=bridgectrlMock --filename=mock_bridgectrl.go
 	mockery --name=Tx --srcpkg=github.com/jackc/pgx/v4 --output=synchronizer --outpkg=synchronizer --structname=dbTxMock --filename=mock_dbtx.go
-	mockery --name=BroadcastServiceClient --srcpkg=github.com/0xPolygonHermez/zkevm-node/sequencer/broadcast/pb --output=synchronizer --outpkg=synchronizer --structname=broadcastMock --filename=mock_broadcast.go
+	mockery --name=zkEVMClientInterface --dir=synchronizer --output=synchronizer --outpkg=synchronizer --structname=zkEVMClientMock --filename=mock_zkevmclient.go

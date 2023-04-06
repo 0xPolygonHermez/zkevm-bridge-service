@@ -11,10 +11,8 @@ import (
 	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/utils/gerror"
 	"github.com/0xPolygonHermez/zkevm-node/log"
-	"github.com/0xPolygonHermez/zkevm-node/sequencer/broadcast/pb"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/jackc/pgx/v4"
-	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 // Synchronizer connects L1 and L2
@@ -34,7 +32,7 @@ type ClientSynchronizer struct {
 	cfg              Config
 	networkID        uint
 	chExitRootEvent  chan *etherman.GlobalExitRoot
-	broadcastClient  pb.BroadcastServiceClient
+	zkEVMClient      zkEVMClientInterface
 	synced           bool
 	l1RollupExitRoot common.Hash
 }
@@ -44,7 +42,7 @@ func NewSynchronizer(
 	storage interface{},
 	bridge bridgectrlInterface,
 	ethMan ethermanInterface,
-	broadcastClient pb.BroadcastServiceClient,
+	zkEVMClient zkEVMClientInterface,
 	genBlockNumber uint64,
 	chExitRootEvent chan *etherman.GlobalExitRoot,
 	cfg Config) (Synchronizer, error) {
@@ -73,7 +71,7 @@ func NewSynchronizer(
 			cfg:              cfg,
 			networkID:        networkID,
 			chExitRootEvent:  chExitRootEvent,
-			broadcastClient:  broadcastClient,
+			zkEVMClient:      zkEVMClient,
 			l1RollupExitRoot: ger.ExitRoots[1],
 		}, nil
 	}
@@ -182,16 +180,21 @@ func (s *ClientSynchronizer) Stop() {
 }
 
 func (s *ClientSynchronizer) syncTrustedState() error {
-	lastBatch, err := s.broadcastClient.GetLastBatch(s.ctx, &emptypb.Empty{})
+	lastBatchNumber, err := s.zkEVMClient.BatchNumber(s.ctx)
 	if err != nil {
-		log.Errorf("networkID: %d, error getting latest batch from grpc. Error: %w", s.networkID, err)
+		log.Errorf("networkID: %d, error getting latest batch number from rpc. Error: %w", s.networkID, err)
+		return err
+	}
+	lastBatch, err := s.zkEVMClient.BatchByNumber(s.ctx, big.NewInt(0).SetUint64(lastBatchNumber))
+	if err != nil {
+		log.Warnf("networkID: %d, failed to get batch %v from trusted state. Error: %v", s.networkID, lastBatchNumber, err)
 		return err
 	}
 	ger := &etherman.GlobalExitRoot{
-		GlobalExitRoot: common.HexToHash(lastBatch.GlobalExitRoot),
+		GlobalExitRoot: lastBatch.GlobalExitRoot,
 		ExitRoots: []common.Hash{
-			common.HexToHash(lastBatch.MainnetExitRoot),
-			common.HexToHash(lastBatch.RollupExitRoot),
+			lastBatch.MainnetExitRoot,
+			lastBatch.RollupExitRoot,
 		},
 	}
 	isUpdated, err := s.storage.AddTrustedGlobalExitRoot(s.ctx, ger, nil)

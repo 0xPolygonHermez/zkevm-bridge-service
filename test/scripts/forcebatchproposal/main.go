@@ -36,7 +36,7 @@ func main() {
 	if err != nil {
 		log.Fatal("Error: ", err)
 	}
-	maticAmount, err := poe.GetCurrentBatchFee(&bind.CallOpts{Pending: false})
+	maticAmount, err := poe.GetForcedBatchFee(&bind.CallOpts{Pending: false})
 	if err != nil {
 		log.Fatal("Error getting collateral amount from smc: ", err)
 	}
