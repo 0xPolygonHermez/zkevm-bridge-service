@@ -40,8 +40,6 @@ cloud.google.com/go/storage v1.8.0/go.mod h1:Wv1Oy7z6Yz3DshWRJFhqM/UCfaWIRTdp0RX
 cloud.google.com/go/storage v1.10.0/go.mod h1:FLPqc6j+Ki4BU591ie1oL6qBQGu2Bl/tZ9ullr3+Kg0=
 cloud.google.com/go/storage v1.14.0/go.mod h1:GrKmX003DSIwi9o29oFT7YDnHYwZoctc3fOKtUw0Xmo=
 dmitri.shuralyov.com/gpu/mtl v0.0.0-20190408044501-666a987793e9/go.mod h1:H6x//7gZCb22OMCxBHrMx7a5I7Hp++hsVxbQ4BYO7hU=
-github.com/0xPolygonHermez/zkevm-node v0.0.3-RC9.0.20230331100006-b95ecc063823 h1:NeCj7ILhJR1KP33AjLbpRGRuUCaxXb0tEzwVO1EmrFY=
-github.com/0xPolygonHermez/zkevm-node v0.0.3-RC9.0.20230331100006-b95ecc063823/go.mod h1:bbCeIk/DkHRf0oiv5GYqHbbToS/WJBNFokH4yWwqr5A=
 github.com/0xPolygonHermez/zkevm-node v0.0.4-RC1.0.20230404061103-6e47b4a92c57 h1:6SJxMNFFdONWJ/YixScs2FUeNfHV+06lYoBjKwca9z4=
 github.com/0xPolygonHermez/zkevm-node v0.0.4-RC1.0.20230404061103-6e47b4a92c57/go.mod h1:bbCeIk/DkHRf0oiv5GYqHbbToS/WJBNFokH4yWwqr5A=
 github.com/AndreasBriese/bbloom v0.0.0-20190306092124-e2d15f34fcf9/go.mod h1:bOvUY6CB00SOBii9/FifXqc0awNKxLFCL/+pkDPuyl8=
