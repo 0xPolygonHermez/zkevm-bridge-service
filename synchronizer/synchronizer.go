@@ -288,6 +288,7 @@ func (s *ClientSynchronizer) processBlockRange(blocks []etherman.Block, order ma
 		}
 		// Add block information
 		blocks[i].NetworkID = s.networkID
+		log.Infof("NetworkID: %d. Syncing block: %d", s.networkID, &blocks[i].BlockNumber)
 		blockID, err := s.storage.AddBlock(s.ctx, &blocks[i], dbTx)
 		if err != nil {
 			log.Errorf("networkID: %d, error storing block. BlockNumber: %d, error: %v", s.networkID, blocks[i].BlockNumber, err)
@@ -361,7 +362,7 @@ func (s *ClientSynchronizer) processBlockRange(blocks []etherman.Block, order ma
 
 // This function allows reset the state until an specific ethereum block
 func (s *ClientSynchronizer) resetState(blockNumber uint64) error {
-	log.Debugf("NetworkID: %d. Reverting synchronization to block: %d", s.networkID, blockNumber)
+	log.Infof("NetworkID: %d. Reverting synchronization to block: %d", s.networkID, blockNumber)
 	dbTx, err := s.storage.BeginDBTransaction(s.ctx)
 	if err != nil {
 		log.Errorf("networkID: %d, Error starting a db transaction to reset the state. Error: %v", s.networkID, err)
@@ -443,14 +444,14 @@ func (s *ClientSynchronizer) checkReorg(latestBlock *etherman.Block) (*etherman.
 		}
 		// Compare hashes
 		if (block.Hash() != latestBlock.BlockHash || block.ParentHash() != latestBlock.ParentHash) && latestBlock.BlockNumber > s.genBlockNumber {
-			log.Debug("NetworkID: ", s.networkID, ", [checkReorg function] => latestBlockNumber: ", latestBlock.BlockNumber)
-			log.Debug("NetworkID: ", s.networkID, ", [checkReorg function] => latestBlockHash: ", latestBlock.BlockHash)
-			log.Debug("NetworkID: ", s.networkID, ", [checkReorg function] => latestBlockHashParent: ", latestBlock.ParentHash)
-			log.Debug("NetworkID: ", s.networkID, ", [checkReorg function] => BlockNumber: ", latestBlock.BlockNumber, block.NumberU64())
-			log.Debug("NetworkID: ", s.networkID, ", [checkReorg function] => BlockHash: ", block.Hash())
-			log.Debug("NetworkID: ", s.networkID, ", [checkReorg function] => BlockHashParent: ", block.ParentHash())
+			log.Info("NetworkID: ", s.networkID, ", [checkReorg function] => latestBlockNumber: ", latestBlock.BlockNumber)
+			log.Info("NetworkID: ", s.networkID, ", [checkReorg function] => latestBlockHash: ", latestBlock.BlockHash)
+			log.Info("NetworkID: ", s.networkID, ", [checkReorg function] => latestBlockHashParent: ", latestBlock.ParentHash)
+			log.Info("NetworkID: ", s.networkID, ", [checkReorg function] => BlockNumber: ", latestBlock.BlockNumber, block.NumberU64())
+			log.Info("NetworkID: ", s.networkID, ", [checkReorg function] => BlockHash: ", block.Hash())
+			log.Info("NetworkID: ", s.networkID, ", [checkReorg function] => BlockHashParent: ", block.ParentHash())
 			depth++
-			log.Debug("NetworkID: ", s.networkID, ", REORG: Looking for the latest correct block. Depth: ", depth)
+			log.Info("NetworkID: ", s.networkID, ", REORG: Looking for the latest correct block. Depth: ", depth)
 			// Reorg detected. Getting previous block
 			dbTx, err := s.storage.BeginDBTransaction(s.ctx)
 			if err != nil {
@@ -481,7 +482,7 @@ func (s *ClientSynchronizer) checkReorg(latestBlock *etherman.Block) (*etherman.
 		}
 	}
 	if latestBlockSynced.BlockHash != latestBlock.BlockHash {
-		log.Debugf("NetworkID: %d, reorg detected in block: %d", s.networkID, latestBlockSynced.BlockNumber)
+		log.Infof("NetworkID: %d, reorg detected in block: %d", s.networkID, latestBlockSynced.BlockNumber)
 		return latestBlock, nil
 	}
 	log.Debugf("NetworkID: %d, no reorg detected", s.networkID)
@@ -499,18 +500,19 @@ func (s *ClientSynchronizer) checkTrustedState(batch etherman.Batch, dbTx pgx.Tx
 		batch.GlobalExitRoot == tBatch.GlobalExitRoot &&
 		batch.Timestamp == tBatch.Timestamp &&
 		batch.Coinbase == tBatch.Coinbase {
-		return true, nil
+		return false, nil
 	}
-	log.Error("TRUSTED REORG DETECTED! Batch: ", batch.BatchNumber)
-	log.Warnf("BatchL2Data. Virtual: %s, Trusted: %s", hex.EncodeToString(batch.BatchL2Data), hex.EncodeToString(tBatch.BatchL2Data))
-	log.Warnf("GlobalExitRoot. Virtual: %s, Trusted: %s", batch.GlobalExitRoot.String(), tBatch.GlobalExitRoot.String())
-	log.Warnf("Timestamp. Virtual: %d, Trusted: %d", batch.Timestamp.Unix(), tBatch.Timestamp.Unix())
-	log.Warnf("Coinbase. Virtual: %s, Trusted: %s", batch.Coinbase.String(), tBatch.Coinbase.String())
-	return false, nil
+	log.Errorf("networkID: %d, TRUSTED REORG DETECTED! Batch: ", s.networkID, batch.BatchNumber)
+	log.Warnf("networkID: %d, BatchL2Data. Virtual: %s, Trusted: %s", s.networkID, hex.EncodeToString(batch.BatchL2Data), hex.EncodeToString(tBatch.BatchL2Data))
+	log.Warnf("networkID: %d, GlobalExitRoot. Virtual: %s, Trusted: %s", s.networkID, batch.GlobalExitRoot.String(), tBatch.GlobalExitRoot.String())
+	log.Warnf("networkID: %d, Timestamp. Virtual: %d, Trusted: %d", s.networkID, batch.Timestamp.Unix(), tBatch.Timestamp.Unix())
+	log.Warnf("networkID: %d, Coinbase. Virtual: %s, Trusted: %s", s.networkID, batch.Coinbase.String(), tBatch.Coinbase.String())
+	return true, nil
 }
 
 func (s *ClientSynchronizer) processSequenceBatches(sequencedBatches []etherman.SequencedBatch, blockID, blockNumber uint64, dbTx pgx.Tx) error {
 	for _, sbatch := range sequencedBatches {
+		log.Infof("NetworkID: %d, Processing batch: %d", s.networkID, sbatch.BatchNumber)
 		batch := etherman.Batch{
 			BatchNumber:    sbatch.BatchNumber,
 			GlobalExitRoot: sbatch.GlobalExitRoot,
@@ -583,7 +585,6 @@ func (s *ClientSynchronizer) processSequenceBatches(sequencedBatches []etherman.
 					}
 					return err
 				}
-				status = true
 			} else {
 				log.Errorf("networkID: %d, error checking trusted state. Error: %v", s.networkID, err)
 				rollbackErr := s.storage.Rollback(s.ctx, dbTx)
@@ -595,9 +596,9 @@ func (s *ClientSynchronizer) processSequenceBatches(sequencedBatches []etherman.
 				return err
 			}
 		}
-		if !status {
+		if status {
 			// Reset trusted state
-			log.Debugf("NetworkID: %d, BatchNumber: %d, trusted state reorg detected. Reseting it...", s.networkID, batch.BatchNumber)
+			log.Warnf("NetworkID: %d, BatchNumber: %d, trusted state reorg detected. Reseting it...", s.networkID, batch.BatchNumber)
 			previousBatchNumber := batch.BatchNumber - 1
 			err := s.storage.ResetTrustedState(s.ctx, previousBatchNumber, dbTx) // This method has to reset the forced batches deleting the batchNumber for higher batchNumbers
 			if err != nil {
@@ -670,6 +671,7 @@ func (s *ClientSynchronizer) processSequenceForceBatches(sequenceForceBatches []
 	}
 
 	for i, fbatch := range sequenceForceBatches {
+		log.Infof("NetworkID: %d, Processing forced batch: %d", s.networkID, fbatch.BatchNumber)
 		if uint64(forcedBatches[i].ForcedAt.Unix()) != fbatch.MinForcedTimestamp ||
 			forcedBatches[i].GlobalExitRoot != fbatch.GlobalExitRoot ||
 			common.Bytes2Hex(forcedBatches[i].RawTxsData) != common.Bytes2Hex(fbatch.Transactions) {
