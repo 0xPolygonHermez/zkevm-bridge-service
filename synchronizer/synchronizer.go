@@ -239,7 +239,10 @@ func (s *ClientSynchronizer) syncBlocks(lastBlockSynced *etherman.Block) (*ether
 		if err != nil {
 			return lastBlockSynced, err
 		}
-		s.processBlockRange(blocks, order)
+		err = s.processBlockRange(blocks, order)
+		if err != nil {
+			return lastBlockSynced, err
+		}
 		if len(blocks) > 0 {
 			lastBlockSynced = &blocks[len(blocks)-1]
 			for i := range blocks {
@@ -265,7 +268,10 @@ func (s *ClientSynchronizer) syncBlocks(lastBlockSynced *etherman.Block) (*ether
 				ParentHash:  fb.ParentHash(),
 				ReceivedAt:  time.Unix(int64(fb.Time()), 0),
 			}
-			s.processBlockRange([]etherman.Block{b}, order)
+			err = s.processBlockRange([]etherman.Block{b}, order)
+			if err != nil {
+				return lastBlockSynced, err
+			}
 
 			lastBlockSynced = &b
 			log.Debugf("NetworkID: %d, Storing empty block. BlockNumber: %d. BlockHash: %s",
