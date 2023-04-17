@@ -6,8 +6,6 @@ ALTER TABLE sync.deposit DROP COLUMN IF EXISTS id;
 
 ALTER TABLE sync.deposit ADD CONSTRAINT deposit_pkey PRIMARY KEY (network_id, deposit_cnt);
 
-DROP INDEX IF EXISTS mt.rht_key_idx;
-
 ALTER TABLE mt.root ADD COLUMN id SERIAL PRIMARY KEY;
 ALTER TABLE mt.rht ADD COLUMN root_id BIGINT NOT NULL DEFAULT 1 CONSTRAINT rht_root_id_fkey REFERENCES mt.root (id) ON DELETE CASCADE;
 ALTER TABLE mt.rht ALTER COLUMN root_id DROP DEFAULT;
