@@ -5,7 +5,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
-//NetworkConfig is the configuration struct for the different environments
+// NetworkConfig is the configuration struct for the different environments.
 type NetworkConfig struct {
 	GenBlockNumber        uint64
 	PoEAddr               common.Address
@@ -48,16 +48,16 @@ var (
 		BridgeAddr:            common.HexToAddress("0x47c1090bc966280000Fe4356a501f1D0887Ce840"),
 		GlobalExitRootManAddr: common.HexToAddress("0xA379Dd55Eb12e8FCdb467A814A15DE2b29677066"),
 		MaticAddr:             common.HexToAddress("0x94Ca2BbE1b469f25D3B22BDf17Fc80ad09E7F662"),
-		L2BridgeAddrs:         []common.Address{common.HexToAddress("0x9d98deabc42dd696deb9e40b4f1cab7ddbf55988")},
+		L2BridgeAddrs:         []common.Address{common.HexToAddress("0xfC5b0c5F677a3f3E29DB2e98c9eD455c7ACfCf03")},
 		L1ChainID:             5, //Goerli
 	}
 	localConfig = NetworkConfig{
 		GenBlockNumber:        1,
-		PoEAddr:               common.HexToAddress("0x2279B7A0a67DB372996a5FaB50D91eAA73d2eBe6"),
-		BridgeAddr:            common.HexToAddress("0x0165878A594ca255338adfa4d48449f69242Eb8F"),
-		GlobalExitRootManAddr: common.HexToAddress("0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9"),
+		PoEAddr:               common.HexToAddress("0x610178dA211FEF7D417bC0e6FeD39F05609AD788"),
+		BridgeAddr:            common.HexToAddress("0xAD1eA25D1133095d20D5C3f269ed887aC0a2496C"),
+		GlobalExitRootManAddr: common.HexToAddress("0x2279B7A0a67DB372996a5FaB50D91eAA73d2eBe6"),
 		MaticAddr:             common.HexToAddress("0x5FbDB2315678afecb367f032d93F642f64180aa3"),
-		L2BridgeAddrs:         []common.Address{common.HexToAddress("0x9d98deabc42dd696deb9e40b4f1cab7ddbf55988")},
+		L2BridgeAddrs:         []common.Address{common.HexToAddress("0xfC5b0c5F677a3f3E29DB2e98c9eD455c7ACfCf03")},
 		L1ChainID:             1337,
 	}
 )

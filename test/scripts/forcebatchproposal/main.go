@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/0xPolygonHermez/zkevm-bridge-service/utils"
-	"github.com/0xPolygonHermez/zkevm-node/etherman/smartcontracts/proofofefficiency"
+	"github.com/0xPolygonHermez/zkevm-node/etherman/smartcontracts/polygonzkevm"
 	"github.com/0xPolygonHermez/zkevm-node/log"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -15,7 +15,7 @@ const (
 	l1AccHexPrivateKey = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
 
 	l1NetworkURL   = "http://localhost:8545"
-	poeAddress     = "0x2279B7A0a67DB372996a5FaB50D91eAA73d2eBe6"
+	poeAddress     = "0x610178dA211FEF7D417bC0e6FeD39F05609AD788"
 	maticTokenAddr = "0x5FbDB2315678afecb367f032d93F642f64180aa3" //nolint:gosec
 )
 
@@ -32,7 +32,7 @@ func main() {
 		log.Fatal("Error: ", err)
 	}
 	poeAddr := common.HexToAddress(poeAddress)
-	poe, err := proofofefficiency.NewProofofefficiency(poeAddr, client)
+	poe, err := polygonzkevm.NewPolygonzkevm(poeAddr, client)
 	if err != nil {
 		log.Fatal("Error: ", err)
 	}
@@ -44,7 +44,7 @@ func main() {
 	if err != nil {
 		log.Fatal("Error approving matics: ", err)
 	}
-	tx, err := poe.SequenceBatches(auth, nil)
+	tx, err := poe.SequenceBatches(auth, nil, auth.From)
 	if err != nil {
 		log.Fatal("Error sending the batch: ", err)
 	}

@@ -9,9 +9,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/0xPolygonHermez/zkevm-node/etherman/smartcontracts/bridge"
-	"github.com/0xPolygonHermez/zkevm-node/etherman/smartcontracts/globalexitrootmanager"
-	"github.com/0xPolygonHermez/zkevm-node/etherman/smartcontracts/proofofefficiency"
+	"github.com/0xPolygonHermez/zkevm-node/etherman/smartcontracts/polygonzkevm"
+	"github.com/0xPolygonHermez/zkevm-node/etherman/smartcontracts/polygonzkevmbridge"
+	"github.com/0xPolygonHermez/zkevm-node/etherman/smartcontracts/polygonzkevmglobalexitroot"
 	"github.com/0xPolygonHermez/zkevm-node/log"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
@@ -24,25 +24,26 @@ import (
 )
 
 var (
-	updateGlobalExitRootSignatureHash      = crypto.Keccak256Hash([]byte("UpdateGlobalExitRoot(bytes32,bytes32)"))
-	forcedBatchSignatureHash               = crypto.Keccak256Hash([]byte("ForceBatch(uint64,bytes32,address,bytes)"))
-	sequencedBatchesEventSignatureHash     = crypto.Keccak256Hash([]byte("SequenceBatches(uint64)"))
-	forceSequencedBatchesSignatureHash     = crypto.Keccak256Hash([]byte("SequenceForceBatches(uint64)"))
-	verifyBatchesSignatureHash             = crypto.Keccak256Hash([]byte("VerifyBatches(uint64,bytes32,address)"))
-	trustedVerifyBatchesSignatureHash      = crypto.Keccak256Hash([]byte("TrustedVerifyBatches(uint64,bytes32,address)"))
-	setTrustedSequencerURLSignatureHash    = crypto.Keccak256Hash([]byte("SetTrustedSequencerURL(string)"))
-	setForceBatchAllowedSignatureHash      = crypto.Keccak256Hash([]byte("SetForceBatchAllowed(bool)"))
-	setTrustedSequencerSignatureHash       = crypto.Keccak256Hash([]byte("SetTrustedSequencer(address)"))
-	transferOwnershipSignatureHash         = crypto.Keccak256Hash([]byte("OwnershipTransferred(address,address)"))
-	setSecurityCouncilSignatureHash        = crypto.Keccak256Hash([]byte("SetSecurityCouncil(address)"))
-	proofDifferentStateSignatureHash       = crypto.Keccak256Hash([]byte("ProofDifferentState(bytes32,bytes32)"))
-	emergencyStateActivatedSignatureHash   = crypto.Keccak256Hash([]byte("EmergencyStateActivated()"))
-	emergencyStateDeactivatedSignatureHash = crypto.Keccak256Hash([]byte("EmergencyStateDeactivated()"))
+	updateGlobalExitRootSignatureHash           = crypto.Keccak256Hash([]byte("UpdateGlobalExitRoot(bytes32,bytes32)"))
+	forcedBatchSignatureHash                    = crypto.Keccak256Hash([]byte("ForceBatch(uint64,bytes32,address,bytes)"))
+	sequencedBatchesEventSignatureHash          = crypto.Keccak256Hash([]byte("SequenceBatches(uint64)"))
+	forceSequencedBatchesSignatureHash          = crypto.Keccak256Hash([]byte("SequenceForceBatches(uint64)"))
+	verifyBatchesSignatureHash                  = crypto.Keccak256Hash([]byte("VerifyBatches(uint64,bytes32,address)"))
+	verifyBatchesTrustedAggregatorSignatureHash = crypto.Keccak256Hash([]byte("VerifyBatchesTrustedAggregator(uint64,bytes32,address)"))
+	setTrustedSequencerURLSignatureHash         = crypto.Keccak256Hash([]byte("SetTrustedSequencerURL(string)"))
+	setForceBatchAllowedSignatureHash           = crypto.Keccak256Hash([]byte("SetForceBatchAllowed(bool)"))
+	setTrustedSequencerSignatureHash            = crypto.Keccak256Hash([]byte("SetTrustedSequencer(address)"))
+	transferOwnershipSignatureHash              = crypto.Keccak256Hash([]byte("OwnershipTransferred(address,address)"))
+	setSecurityCouncilSignatureHash             = crypto.Keccak256Hash([]byte("SetSecurityCouncil(address)"))
+	proofDifferentStateSignatureHash            = crypto.Keccak256Hash([]byte("ProofDifferentState(bytes32,bytes32)"))
+	emergencyStateActivatedSignatureHash        = crypto.Keccak256Hash([]byte("EmergencyStateActivated()"))
+	emergencyStateDeactivatedSignatureHash      = crypto.Keccak256Hash([]byte("EmergencyStateDeactivated()"))
+	updateZkEVMVersionSignatureHash             = crypto.Keccak256Hash([]byte("UpdateZkEVMVersion(uint64,uint64,string)"))
 
 	// Bridge events
 	depositEventSignatureHash         = crypto.Keccak256Hash([]byte("BridgeEvent(uint8,uint32,address,uint32,address,uint256,bytes,uint32)"))
 	claimEventSignatureHash           = crypto.Keccak256Hash([]byte("ClaimEvent(uint32,uint32,address,address,uint256)"))
-	newWrappedTokenEventSignatureHash = crypto.Keccak256Hash([]byte("NewWrappedToken(uint32,address,address)"))
+	newWrappedTokenEventSignatureHash = crypto.Keccak256Hash([]byte("NewWrappedToken(uint32,address,address,bytes)"))
 
 	// Proxy events
 	initializedSignatureHash    = crypto.Keccak256Hash([]byte("Initialized(uint8)"))
@@ -85,9 +86,9 @@ type ethClienter interface {
 // Client is a simple implementation of EtherMan.
 type Client struct {
 	EtherClient           ethClienter
-	PoE                   *proofofefficiency.Proofofefficiency
-	Bridge                *bridge.Bridge
-	GlobalExitRootManager *globalexitrootmanager.Globalexitrootmanager
+	PoE                   *polygonzkevm.Polygonzkevm
+	Bridge                *polygonzkevmbridge.Polygonzkevmbridge
+	GlobalExitRootManager *polygonzkevmglobalexitroot.Polygonzkevmglobalexitroot
 	SCAddresses           []common.Address
 }
 
@@ -100,15 +101,15 @@ func NewClient(cfg Config, PoEAddr, bridgeAddr, globalExitRootManAddr common.Add
 		return nil, err
 	}
 	// Create smc clients
-	poe, err := proofofefficiency.NewProofofefficiency(PoEAddr, ethClient)
+	poe, err := polygonzkevm.NewPolygonzkevm(PoEAddr, ethClient)
 	if err != nil {
 		return nil, err
 	}
-	bridge, err := bridge.NewBridge(bridgeAddr, ethClient)
+	bridge, err := polygonzkevmbridge.NewPolygonzkevmbridge(bridgeAddr, ethClient)
 	if err != nil {
 		return nil, err
 	}
-	globalExitRoot, err := globalexitrootmanager.NewGlobalexitrootmanager(globalExitRootManAddr, ethClient)
+	globalExitRoot, err := polygonzkevmglobalexitroot.NewPolygonzkevmglobalexitroot(globalExitRootManAddr, ethClient)
 	if err != nil {
 		return nil, err
 	}
@@ -127,7 +128,7 @@ func NewL2Client(url string, bridgeAddr common.Address) (*Client, error) {
 		return nil, err
 	}
 	// Create smc clients
-	bridge, err := bridge.NewBridge(bridgeAddr, ethClient)
+	bridge, err := polygonzkevmbridge.NewPolygonzkevmbridge(bridgeAddr, ethClient)
 	if err != nil {
 		return nil, err
 	}
@@ -185,8 +186,8 @@ func (etherMan *Client) processEvent(ctx context.Context, vLog types.Log, blocks
 		return etherMan.updateGlobalExitRootEvent(ctx, vLog, blocks, blocksOrder)
 	case forcedBatchSignatureHash:
 		return etherMan.forcedBatchEvent(ctx, vLog, blocks, blocksOrder)
-	case trustedVerifyBatchesSignatureHash:
-		return etherMan.trustedVerifyBatchesEvent(ctx, vLog, blocks, blocksOrder)
+	case verifyBatchesTrustedAggregatorSignatureHash:
+		return etherMan.verifyBatchesTrustedAggregator(ctx, vLog, blocks, blocksOrder)
 	case verifyBatchesSignatureHash:
 		log.Warn("VerifyBatches event not implemented yet")
 		return nil
@@ -202,13 +203,13 @@ func (etherMan *Client) processEvent(ctx context.Context, vLog types.Log, blocks
 		log.Debug("Initialized event detected")
 		return nil
 	case setTrustedSequencerSignatureHash:
-		log.Debug("setTrustedSequencer event detected")
+		log.Debug("SetTrustedSequencer event detected")
 		return nil
 	case setForceBatchAllowedSignatureHash:
-		log.Debug("setForceBatchAllowed event detected")
+		log.Debug("SetForceBatchAllowed event detected")
 		return nil
 	case setTrustedSequencerURLSignatureHash:
-		log.Debug("setTrustedSequencerURL event detected")
+		log.Debug("SetTrustedSequencerURL event detected")
 		return nil
 	case adminChangedSignatureHash:
 		log.Debug("AdminChanged event detected")
@@ -232,7 +233,10 @@ func (etherMan *Client) processEvent(ctx context.Context, vLog types.Log, blocks
 		log.Debug("EmergencyStateDeactivated event detected")
 		return nil
 	case transferOwnershipSignatureHash:
-		log.Debug("transferOwnership event detected")
+		log.Debug("TransferOwnership event detected")
+		return nil
+	case updateZkEVMVersionSignatureHash:
+		log.Debug("UpdateZkEVMVersion event detected")
 		return nil
 	}
 	log.Warnf("Event not registered: %+v", vLog)
@@ -434,7 +438,7 @@ func (etherMan *Client) sequencedBatchesEvent(ctx context.Context, vLog types.Lo
 func decodeSequences(txData []byte, lastBatchNumber uint64, sequencer common.Address, txHash common.Hash) ([]SequencedBatch, error) {
 	// Extract coded txs.
 	// Load contract ABI
-	abi, err := abi.JSON(strings.NewReader(proofofefficiency.ProofofefficiencyABI))
+	abi, err := abi.JSON(strings.NewReader(polygonzkevm.PolygonzkevmABI))
 	if err != nil {
 		return nil, err
 	}
@@ -450,7 +454,7 @@ func decodeSequences(txData []byte, lastBatchNumber uint64, sequencer common.Add
 	if err != nil {
 		return nil, err
 	}
-	var sequences []proofofefficiency.ProofOfEfficiencyBatchData
+	var sequences []polygonzkevm.PolygonZkEVMBatchData
 	bytedata, err := json.Marshal(data[0])
 	if err != nil {
 		return nil, err
@@ -464,19 +468,19 @@ func decodeSequences(txData []byte, lastBatchNumber uint64, sequencer common.Add
 	for i, seq := range sequences {
 		bn := lastBatchNumber - uint64(len(sequences)-(i+1))
 		sequencedBatches[i] = SequencedBatch{
-			BatchNumber:                bn,
-			Sequencer:                  sequencer,
-			TxHash:                     txHash,
-			ProofOfEfficiencyBatchData: seq,
+			BatchNumber:           bn,
+			Sequencer:             sequencer,
+			TxHash:                txHash,
+			PolygonZkEVMBatchData: seq,
 		}
 	}
 
 	return sequencedBatches, nil
 }
 
-func (etherMan *Client) trustedVerifyBatchesEvent(ctx context.Context, vLog types.Log, blocks *[]Block, blocksOrder *map[common.Hash][]Order) error {
+func (etherMan *Client) verifyBatchesTrustedAggregator(ctx context.Context, vLog types.Log, blocks *[]Block, blocksOrder *map[common.Hash][]Order) error {
 	log.Debug("trustedVerifyBatches event detected")
-	vb, err := etherMan.PoE.ParseTrustedVerifyBatches(vLog)
+	vb, err := etherMan.PoE.ParseVerifyBatchesTrustedAggregator(vLog)
 	if err != nil {
 		return err
 	}
@@ -581,7 +585,7 @@ func (etherMan *Client) forcedBatchEvent(ctx context.Context, vLog types.Log, bl
 		txData := tx.Data()
 		// Extract coded txs.
 		// Load contract ABI
-		abi, err := abi.JSON(strings.NewReader(proofofefficiency.ProofofefficiencyABI))
+		abi, err := abi.JSON(strings.NewReader(polygonzkevm.PolygonzkevmABI))
 		if err != nil {
 			return err
 		}
@@ -631,7 +635,7 @@ func (etherMan *Client) forcedBatchEvent(ctx context.Context, vLog types.Log, bl
 func decodeSequencedForceBatches(txData []byte, lastBatchNumber uint64, sequencer common.Address, txHash common.Hash, block *types.Block) ([]SequencedForceBatch, error) {
 	// Extract coded txs.
 	// Load contract ABI
-	abi, err := abi.JSON(strings.NewReader(proofofefficiency.ProofofefficiencyABI))
+	abi, err := abi.JSON(strings.NewReader(polygonzkevm.PolygonzkevmABI))
 	if err != nil {
 		return nil, err
 	}
@@ -648,7 +652,7 @@ func decodeSequencedForceBatches(txData []byte, lastBatchNumber uint64, sequence
 		return nil, err
 	}
 
-	var forceBatches []proofofefficiency.ProofOfEfficiencyForcedBatchData
+	var forceBatches []polygonzkevm.PolygonZkEVMForcedBatchData
 	bytedata, err := json.Marshal(data[0])
 	if err != nil {
 		return nil, err
@@ -662,11 +666,11 @@ func decodeSequencedForceBatches(txData []byte, lastBatchNumber uint64, sequence
 	for i, force := range forceBatches {
 		bn := lastBatchNumber - uint64(len(forceBatches)-(i+1))
 		sequencedForcedBatches[i] = SequencedForceBatch{
-			BatchNumber:                      bn,
-			Sequencer:                        sequencer,
-			TxHash:                           txHash,
-			Timestamp:                        time.Unix(int64(block.Time()), 0),
-			ProofOfEfficiencyForcedBatchData: force,
+			BatchNumber:                 bn,
+			Sequencer:                   sequencer,
+			TxHash:                      txHash,
+			Timestamp:                   time.Unix(int64(block.Time()), 0),
+			PolygonZkEVMForcedBatchData: force,
 		}
 	}
 	return sequencedForcedBatches, nil

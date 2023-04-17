@@ -1,9 +1,19 @@
 package server
 
+import "github.com/0xPolygonHermez/zkevm-bridge-service/db"
+
 // Config struct
 type Config struct {
 	// GRPCPort is TCP port to listen by gRPC server
-	GRPCPort string
+	GRPCPort string `mapstructure:"GRPCPort"`
 	// HTTPPort is TCP port to listen by HTTP/REST gateway
-	HTTPPort string
+	HTTPPort string `mapstructure:"HTTPPort"`
+	// DefaultPageLimit is the default page limit for pagination
+	DefaultPageLimit uint32 `mapstructure:"DefaultPageLimit"`
+	// MaxPageLimit is the maximum page limit for pagination
+	MaxPageLimit uint32 `mapstructure:"MaxPageLimit"`
+	// Version is the version of the bridge service
+	BridgeVersion string `mapstructure:"BridgeVersion"`
+	// DB is the database config
+	DB db.Config `mapstructure:"DB"`
 }

@@ -1,5 +1,85 @@
 [
 	{
+		"inputs": [],
+		"name": "AlreadyClaimed",
+		"type": "error"
+	},
+	{
+		"inputs": [],
+		"name": "AmountDoesNotMatchMsgValue",
+		"type": "error"
+	},
+	{
+		"inputs": [],
+		"name": "DestinationNetworkInvalid",
+		"type": "error"
+	},
+	{
+		"inputs": [],
+		"name": "EtherTransferFailed",
+		"type": "error"
+	},
+	{
+		"inputs": [],
+		"name": "GlobalExitRootInvalid",
+		"type": "error"
+	},
+	{
+		"inputs": [],
+		"name": "InvalidSmtProof",
+		"type": "error"
+	},
+	{
+		"inputs": [],
+		"name": "MerkleTreeFull",
+		"type": "error"
+	},
+	{
+		"inputs": [],
+		"name": "MessageFailed",
+		"type": "error"
+	},
+	{
+		"inputs": [],
+		"name": "MsgValueNotZero",
+		"type": "error"
+	},
+	{
+		"inputs": [],
+		"name": "NotValidAmount",
+		"type": "error"
+	},
+	{
+		"inputs": [],
+		"name": "NotValidOwner",
+		"type": "error"
+	},
+	{
+		"inputs": [],
+		"name": "NotValidSignature",
+		"type": "error"
+	},
+	{
+		"inputs": [],
+		"name": "NotValidSpender",
+		"type": "error"
+	},
+	{
+		"inputs": [],
+		"name": "OnlyEmergencyState",
+		"type": "error"
+	},
+	{
+		"inputs": [],
+		"name": "OnlyNotEmergencyState",
+		"type": "error"
+	},
+	{
+		"inputs": [],
+		"name": "OnlyPolygonZkEVM",
+		"type": "error"
+	},
+	{
 		"anonymous": false,
 		"inputs": [
 			{
@@ -136,81 +216,16 @@
 				"internalType": "address",
 				"name": "wrappedTokenAddress",
 				"type": "address"
+			},
+			{
+				"indexed": false,
+				"internalType": "bytes",
+				"name": "metadata",
+				"type": "bytes"
 			}
 		],
 		"name": "NewWrappedToken",
 		"type": "event"
-	},
-	{
-		"anonymous": false,
-		"inputs": [
-			{
-				"indexed": true,
-				"internalType": "address",
-				"name": "previousOwner",
-				"type": "address"
-			},
-			{
-				"indexed": true,
-				"internalType": "address",
-				"name": "newOwner",
-				"type": "address"
-			}
-		],
-		"name": "OwnershipTransferred",
-		"type": "event"
-	},
-	{
-		"anonymous": false,
-		"inputs": [
-			{
-				"indexed": false,
-				"internalType": "uint256",
-				"name": "newClaimTimeout",
-				"type": "uint256"
-			}
-		],
-		"name": "SetClaimTimeout",
-		"type": "event"
-	},
-	{
-		"inputs": [],
-		"name": "LEAF_TYPE_ASSET",
-		"outputs": [
-			{
-				"internalType": "uint8",
-				"name": "",
-				"type": "uint8"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "LEAF_TYPE_MESSAGE",
-		"outputs": [
-			{
-				"internalType": "uint8",
-				"name": "",
-				"type": "uint8"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "MAINNET_NETWORK_ID",
-		"outputs": [
-			{
-				"internalType": "uint32",
-				"name": "",
-				"type": "uint32"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
 	},
 	{
 		"inputs": [],
@@ -221,11 +236,6 @@
 	},
 	{
 		"inputs": [
-			{
-				"internalType": "address",
-				"name": "token",
-				"type": "address"
-			},
 			{
 				"internalType": "uint32",
 				"name": "destinationNetwork",
@@ -240,6 +250,16 @@
 				"internalType": "uint256",
 				"name": "amount",
 				"type": "uint256"
+			},
+			{
+				"internalType": "address",
+				"name": "token",
+				"type": "address"
+			},
+			{
+				"internalType": "bool",
+				"name": "forceUpdateGlobalExitRoot",
+				"type": "bool"
 			},
 			{
 				"internalType": "bytes",
@@ -265,6 +285,11 @@
 				"type": "address"
 			},
 			{
+				"internalType": "bool",
+				"name": "forceUpdateGlobalExitRoot",
+				"type": "bool"
+			},
+			{
 				"internalType": "bytes",
 				"name": "metadata",
 				"type": "bytes"
@@ -278,9 +303,9 @@
 	{
 		"inputs": [
 			{
-				"internalType": "bytes32[]",
+				"internalType": "bytes32[32]",
 				"name": "smtProof",
-				"type": "bytes32[]"
+				"type": "bytes32[32]"
 			},
 			{
 				"internalType": "uint32",
@@ -336,9 +361,9 @@
 	{
 		"inputs": [
 			{
-				"internalType": "bytes32[]",
+				"internalType": "bytes32[32]",
 				"name": "smtProof",
-				"type": "bytes32[]"
+				"type": "bytes32[32]"
 			},
 			{
 				"internalType": "uint32",
@@ -399,20 +424,7 @@
 				"type": "uint256"
 			}
 		],
-		"name": "claimNullifier",
-		"outputs": [
-			{
-				"internalType": "bool",
-				"name": "",
-				"type": "bool"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "claimTimeout",
+		"name": "claimedBitMap",
 		"outputs": [
 			{
 				"internalType": "uint256",
@@ -534,7 +546,7 @@
 		"name": "globalExitRootManager",
 		"outputs": [
 			{
-				"internalType": "contract IGlobalExitRootManager",
+				"internalType": "contract IBasePolygonZkEVMGlobalExitRoot",
 				"name": "",
 				"type": "address"
 			}
@@ -550,24 +562,38 @@
 				"type": "uint32"
 			},
 			{
-				"internalType": "contract IGlobalExitRootManager",
+				"internalType": "contract IBasePolygonZkEVMGlobalExitRoot",
 				"name": "_globalExitRootManager",
 				"type": "address"
 			},
 			{
 				"internalType": "address",
-				"name": "_poeAddress",
+				"name": "_polygonZkEVMaddress",
 				"type": "address"
-			},
-			{
-				"internalType": "uint256",
-				"name": "_claimTimeout",
-				"type": "uint256"
 			}
 		],
 		"name": "initialize",
 		"outputs": [],
 		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "index",
+				"type": "uint256"
+			}
+		],
+		"name": "isClaimed",
+		"outputs": [
+			{
+				"internalType": "bool",
+				"name": "",
+				"type": "bool"
+			}
+		],
+		"stateMutability": "view",
 		"type": "function"
 	},
 	{
@@ -578,6 +604,19 @@
 				"internalType": "bool",
 				"name": "",
 				"type": "bool"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "lastUpdatedDepositCount",
+		"outputs": [
+			{
+				"internalType": "uint32",
+				"name": "",
+				"type": "uint32"
 			}
 		],
 		"stateMutability": "view",
@@ -598,20 +637,7 @@
 	},
 	{
 		"inputs": [],
-		"name": "owner",
-		"outputs": [
-			{
-				"internalType": "address",
-				"name": "",
-				"type": "address"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "poeAddress",
+		"name": "polygonZkEVMaddress",
 		"outputs": [
 			{
 				"internalType": "address",
@@ -662,26 +688,6 @@
 		"type": "function"
 	},
 	{
-		"inputs": [],
-		"name": "renounceOwnership",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "uint256",
-				"name": "newClaimTimeout",
-				"type": "uint256"
-			}
-		],
-		"name": "setClaimTimeout",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
 		"inputs": [
 			{
 				"internalType": "bytes32",
@@ -701,14 +707,8 @@
 		"type": "function"
 	},
 	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "newOwner",
-				"type": "address"
-			}
-		],
-		"name": "transferOwnership",
+		"inputs": [],
+		"name": "updateGlobalExitRoot",
 		"outputs": [],
 		"stateMutability": "nonpayable",
 		"type": "function"
@@ -721,14 +721,14 @@
 				"type": "bytes32"
 			},
 			{
-				"internalType": "bytes32[]",
+				"internalType": "bytes32[32]",
 				"name": "smtProof",
-				"type": "bytes32[]"
+				"type": "bytes32[32]"
 			},
 			{
-				"internalType": "uint64",
+				"internalType": "uint32",
 				"name": "index",
-				"type": "uint64"
+				"type": "uint32"
 			},
 			{
 				"internalType": "bytes32",

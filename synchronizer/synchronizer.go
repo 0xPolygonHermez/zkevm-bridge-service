@@ -132,13 +132,22 @@ func (s *ClientSynchronizer) Sync() error {
 					log.Warnf("networkID: %d, error getting latest block from. Error: %s", s.networkID, err.Error())
 					continue
 				}
-				lastKnownBlock := header.Number
-				if lastBlockSynced.BlockNumber == lastKnownBlock.Uint64() {
+				lastKnownBlock := header.Number.Uint64()
+				if lastBlockSynced.BlockNumber == lastKnownBlock {
 					waitDuration = s.cfg.SyncInterval.Duration
 					s.synced = true
 				}
-				if lastBlockSynced.BlockNumber > lastKnownBlock.Uint64() {
-					log.Fatalf("networkID: %d, error: latest Synced BlockNumber is higher than the latest Proposed in the network", s.networkID)
+				if lastBlockSynced.BlockNumber > lastKnownBlock {
+					if s.networkID == 0 {
+						log.Fatalf("networkID: %d, error: latest Synced BlockNumber (%d) is higher than the latest Proposed block (%d) in the network", s.networkID, lastBlockSynced.BlockNumber, lastKnownBlock)
+					} else {
+						log.Errorf("networkID: %d, error: latest Synced BlockNumber (%d) is higher than the latest Proposed block (%d) in the network", s.networkID, lastBlockSynced.BlockNumber, lastKnownBlock)
+						err = s.resetState(lastKnownBlock)
+						if err != nil {
+							log.Errorf("networkID: %d, error resetting the state to a previous block. Error: %v", s.networkID, err)
+							continue
+						}
+					}
 				}
 			} else { // Sync Trusted GlobalExitRoots if L1 is synced
 				if s.networkID != 0 {
@@ -347,7 +356,7 @@ func (s *ClientSynchronizer) resetState(blockNumber uint64) error {
 		return err
 	}
 
-	err = s.bridgeCtrl.ReorgMT(uint(depositCnt), s.networkID)
+	err = s.bridgeCtrl.ReorgMT(uint(depositCnt), s.networkID, dbTx)
 	if err != nil {
 		rollbackErr := s.storage.Rollback(s.ctx, dbTx)
 		if rollbackErr != nil {
@@ -428,6 +437,7 @@ func (s *ClientSynchronizer) checkReorg(latestBlock *etherman.Block) (*etherman.
 				log.Warnf("networkID: %d, error checking reorg: previous block not found in db: %s", s.networkID, err.Error())
 				return &etherman.Block{}, nil
 			} else if err != nil {
+				log.Error("error detected getting previous block: ", err)
 				return nil, err
 			}
 		} else {
@@ -491,8 +501,7 @@ func (s *ClientSynchronizer) processSequenceBatches(sequencedBatches []etherman.
 			}
 			if uint64(forcedBatches[0].ForcedAt.Unix()) != sbatch.MinForcedTimestamp ||
 				forcedBatches[0].GlobalExitRoot != sbatch.GlobalExitRoot ||
-				common.Bytes2Hex(forcedBatches[0].RawTxsData) != common.Bytes2Hex(sbatch.Transactions) ||
-				forcedBatches[0].Sequencer != sbatch.Sequencer {
+				common.Bytes2Hex(forcedBatches[0].RawTxsData) != common.Bytes2Hex(sbatch.Transactions) {
 				log.Errorf("networkID: %d, error: forcedBatch received doesn't match with the next expected forcedBatch stored in db. Expected: %+v, Synced: %+v", s.networkID, forcedBatches, sbatch)
 				rollbackErr := dbTx.Rollback(s.ctx)
 				if rollbackErr != nil {
@@ -620,8 +629,7 @@ func (s *ClientSynchronizer) processSequenceForceBatches(sequenceForceBatches []
 	for i, fbatch := range sequenceForceBatches {
 		if uint64(forcedBatches[i].ForcedAt.Unix()) != fbatch.MinForcedTimestamp ||
 			forcedBatches[i].GlobalExitRoot != fbatch.GlobalExitRoot ||
-			common.Bytes2Hex(forcedBatches[i].RawTxsData) != common.Bytes2Hex(fbatch.Transactions) ||
-			forcedBatches[i].Sequencer != fbatch.Sequencer {
+			common.Bytes2Hex(forcedBatches[i].RawTxsData) != common.Bytes2Hex(fbatch.Transactions) {
 			log.Errorf("networkID: %d, error: forcedBatch received doesn't match with the next expected forcedBatch stored in db. Expected: %+v, Synced: %+v", s.networkID, forcedBatches[i], fbatch)
 			rollbackErr := dbTx.Rollback(s.ctx)
 			if rollbackErr != nil {
@@ -749,8 +757,13 @@ func (s *ClientSynchronizer) processDeposit(deposit etherman.Deposit, blockID ui
 			s.networkID, deposit.BlockNumber, deposit, err.Error())
 	}
 
-	err = s.bridgeCtrl.AddDeposit(&deposit)
+	err = s.bridgeCtrl.AddDeposit(&deposit, dbTx)
 	if err != nil {
+		rollbackErr := s.storage.Rollback(s.ctx, dbTx)
+		if rollbackErr != nil {
+			log.Fatalf("networkID: %d, error rolling back state to store block. BlockNumber: %v, rollbackErr: %s, err: %s",
+				s.networkID, deposit.BlockNumber, rollbackErr.Error(), err.Error())
+		}
 		log.Fatalf("networkID: %d, failed to store new deposit in the bridge tree, BlockNumber: %d, Deposit: %+v err: %s",
 			s.networkID, deposit.BlockNumber, deposit, err.Error())
 	}

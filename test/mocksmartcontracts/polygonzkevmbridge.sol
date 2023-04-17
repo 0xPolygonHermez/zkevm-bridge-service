@@ -1,26 +1,25 @@
 // SPDX-License-Identifier: AGPL-3.0
 
-pragma solidity 0.8.15;
+pragma solidity 0.8.17;
 
 import "./lib/DepositContract.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import "./lib/TokenWrapped.sol";
-import "./interfaces/IGlobalExitRootManager.sol";
+import "./interfaces/IBasePolygonZkEVMGlobalExitRoot.sol";
 import "./interfaces/IBridgeMessageReceiver.sol";
-import "./interfaces/IBridge.sol";
+import "./interfaces/IPolygonZkEVMBridge.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/IERC20MetadataUpgradeable.sol";
 import "./lib/EmergencyManager.sol";
-import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "./lib/GlobalExitRootLib.sol";
 
 /**
- * Bridge that will be deployed on both networks Ethereum and Polygon zkEVM
+ * PolygonZkEVMBridge that will be deployed on both networks Ethereum and Polygon zkEVM
  * Contract responsible to manage the token interactions with other networks
  */
-contract Bridge is
+contract PolygonZkEVMBridge is
     DepositContract,
     EmergencyManager,
-    IBridge,
-    OwnableUpgradeable
+    IPolygonZkEVMBridge
 {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
@@ -36,20 +35,29 @@ contract Bridge is
     // bytes4(keccak256(bytes("permit(address,address,uint256,uint256,bool,uint8,bytes32,bytes32)")));
     bytes4 private constant _PERMIT_SIGNATURE_DAI = 0x8fcbaf0c;
 
-    // Mainnet indentifier
-    uint32 public constant MAINNET_NETWORK_ID = 0;
+    // Mainnet identifier
+    uint32 private constant _MAINNET_NETWORK_ID = 0;
+
+    // Number of networks supported by the bridge
+    uint32 private constant _CURRENT_SUPPORTED_NETWORKS = 2;
 
     // Leaf type asset
-    uint8 public constant LEAF_TYPE_ASSET = 0;
+    uint8 private constant _LEAF_TYPE_ASSET = 0;
 
     // Leaf type message
-    uint8 public constant LEAF_TYPE_MESSAGE = 1;
+    uint8 private constant _LEAF_TYPE_MESSAGE = 1;
 
     // Network identifier
     uint32 public networkID;
 
-    // Leaf index --> claimed
-    mapping(uint256 => bool) public claimNullifier;
+    // Global Exit Root address
+    IBasePolygonZkEVMGlobalExitRoot public globalExitRootManager;
+
+    // Last updated deposit count to the global exit root manager
+    uint32 public lastUpdatedDepositCount;
+
+    // Leaf index --> claimed bit map
+    mapping(uint256 => uint256) public claimedBitMap;
 
     // keccak256(OriginNetwork || tokenAddress) --> Wrapped token address
     mapping(bytes32 => address) public tokenInfoToWrappedToken;
@@ -57,44 +65,38 @@ contract Bridge is
     // Wrapped token Address --> Origin token information
     mapping(address => TokenInformation) public wrappedTokenToTokenInfo;
 
-    // Global Exit Root address
-    IGlobalExitRootManager public globalExitRootManager;
-
-    // Proof of Efficiency address
-    address public poeAddress;
-
-    // Claim timeout period
-    uint256 public claimTimeout;
+    // PolygonZkEVM address
+    address public polygonZkEVMaddress;
 
     /**
      * @param _networkID networkID
      * @param _globalExitRootManager global exit root manager address
+     * @param _polygonZkEVMaddress polygonZkEVM address
+     * @notice The value of `_polygonZkEVMaddress` on the L2 deployment of the contract will be address(0), so
+     * emergency state is not possible for the L2 deployment of the bridge, intentionally
      */
     function initialize(
         uint32 _networkID,
-        IGlobalExitRootManager _globalExitRootManager,
-        address _poeAddress,
-        uint256 _claimTimeout
-    ) public virtual initializer {
+        IBasePolygonZkEVMGlobalExitRoot _globalExitRootManager,
+        address _polygonZkEVMaddress
+    ) external virtual initializer {
         networkID = _networkID;
         globalExitRootManager = _globalExitRootManager;
-        poeAddress = _poeAddress;
-        claimTimeout = _claimTimeout;
+        polygonZkEVMaddress = _polygonZkEVMaddress;
 
         // Initialize OZ contracts
-        __Ownable_init_unchained();
+        __ReentrancyGuard_init();
     }
 
-    modifier onlyProofOfEfficiency() {
-        require(
-            poeAddress == msg.sender,
-            "ProofOfEfficiency::onlyProofOfEfficiency: only Proof of Efficiency contract"
-        );
+    modifier onlyPolygonZkEVM() {
+        if (polygonZkEVMaddress != msg.sender) {
+            revert OnlyPolygonZkEVM();
+        }
         _;
     }
 
     /**
-     * @dev Emitted when a bridge some tokens to another network
+     * @dev Emitted when bridge assets or messages to another network
      */
     event BridgeEvent(
         uint8 leafType,
@@ -124,93 +126,102 @@ contract Bridge is
     event NewWrappedToken(
         uint32 originNetwork,
         address originTokenAddress,
-        address wrappedTokenAddress
+        address wrappedTokenAddress,
+        bytes metadata
     );
 
     /**
-     * @dev Emitted when newClaimTimeout is updated
-     */
-    event SetClaimTimeout(uint256 newClaimTimeout);
-
-    /**
      * @notice Deposit add a new leaf to the merkle tree
-     * @param token Token address, 0 address is reserved for ether
      * @param destinationNetwork Network destination
      * @param destinationAddress Address destination
      * @param amount Amount of tokens
+     * @param token Token address, 0 address is reserved for ether
+     * @param forceUpdateGlobalExitRoot Indicates if the new root is updated or not
      * @param permitData Raw data of the call `permit` of the token
      */
     function bridgeAsset(
-        address token,
         uint32 destinationNetwork,
         address destinationAddress,
         uint256 amount,
+        address token,
+        bool forceUpdateGlobalExitRoot,
         bytes calldata permitData
-    ) public payable virtual ifNotEmergencyState {
-        require(
-            destinationNetwork != networkID,
-            "Bridge::bridge: DESTINATION_CANT_BE_ITSELF"
-        );
+    ) public payable virtual ifNotEmergencyState nonReentrant {
+        if (
+            destinationNetwork == networkID ||
+            destinationNetwork >= _CURRENT_SUPPORTED_NETWORKS
+        ) {
+            revert DestinationNetworkInvalid();
+        }
 
         address originTokenAddress;
         uint32 originNetwork;
         bytes memory metadata;
+        uint256 leafAmount = amount;
 
         if (token == address(0)) {
             // Ether transfer
-            require(
-                msg.value == amount,
-                "Bridge::bridge: AMOUNT_DOES_NOT_MATCH_MSG_VALUE"
-            );
+            if (msg.value != amount) {
+                revert AmountDoesNotMatchMsgValue();
+            }
 
             // Ether is treated as ether from mainnet
-            originNetwork = MAINNET_NETWORK_ID;
+            originNetwork = _MAINNET_NETWORK_ID;
         } else {
-            TokenInformation memory tokenInfo = wrappedTokenToTokenInfo[token];
+            // Check msg.value is 0 if tokens are bridged
+            if (msg.value != 0) {
+                revert MsgValueNotZero();
+            }
             originTokenAddress = token;
             originNetwork = networkID;
 
             // Encode metadata
             metadata = abi.encode(
-                IERC20MetadataUpgradeable(token).name(),
-                IERC20MetadataUpgradeable(token).symbol(),
-                IERC20MetadataUpgradeable(token).decimals()
+                _safeName(token),
+                _safeSymbol(token),
+                _safeDecimals(token)
             );
         }
 
         emit BridgeEvent(
-            LEAF_TYPE_ASSET,
+            _LEAF_TYPE_ASSET,
             originNetwork,
             originTokenAddress,
             destinationNetwork,
             destinationAddress,
-            amount,
+            leafAmount,
             metadata,
             uint32(depositCount)
         );
 
-        // Update the new exit root to the exit root manager
-        globalExitRootManager.updateExitRoot(getDepositRoot());
+        // Update the new root to the global exit root manager if set by the user
+        if (forceUpdateGlobalExitRoot) {
+            _updateGlobalExitRoot();
+        }
     }
 
     /**
-     * @notice Bridge message
+     * @notice Bridge message and send ETH value
      * @param destinationNetwork Network destination
      * @param destinationAddress Address destination
+     * @param forceUpdateGlobalExitRoot Indicates if the new root is updated or not
      * @param metadata Message metadata
      */
     function bridgeMessage(
         uint32 destinationNetwork,
         address destinationAddress,
-        bytes memory metadata
-    ) public payable ifNotEmergencyState {
-        require(
-            destinationNetwork != networkID,
-            "Bridge::bridge: DESTINATION_CANT_BE_ITSELF"
-        );
+        bool forceUpdateGlobalExitRoot,
+        bytes calldata metadata
+    ) external payable ifNotEmergencyState {
+        if (
+            destinationNetwork == networkID ||
+            destinationNetwork >= _CURRENT_SUPPORTED_NETWORKS
+        ) {
+            revert DestinationNetworkInvalid();
+        }
 
         emit BridgeEvent(
-            LEAF_TYPE_MESSAGE,
+            _LEAF_TYPE_MESSAGE,
             networkID,
             msg.sender,
             destinationNetwork,
@@ -220,8 +231,10 @@ contract Bridge is
             uint32(depositCount)
         );
 
-        // Update the new exit root to the exit root manager
-        globalExitRootManager.updateExitRoot(getDepositRoot());
+        // Update the new root to the global exit root manager if set by the user
+        if (forceUpdateGlobalExitRoot) {
+            _updateGlobalExitRoot();
+        }
     }
 
     /**
@@ -238,7 +251,7 @@ contract Bridge is
      * @param metadata Abi encoded metadata if any, empty otherwise
      */
     function claimAsset(
-        bytes32[] memory smtProof,
+        bytes32[_DEPOSIT_CONTRACT_TREE_DEPTH] calldata smtProof,
         uint32 index,
         bytes32 mainnetExitRoot,
         bytes32 rollupExitRoot,
@@ -247,8 +260,8 @@ contract Bridge is
         uint32 destinationNetwork,
         address destinationAddress,
         uint256 amount,
-        bytes memory metadata
-    ) public ifNotEmergencyState {
+        bytes calldata metadata
+    ) external ifNotEmergencyState {
         // Verify leaf exist and it does not have been claimed
         _verifyLeaf(
             smtProof,
@@ -261,20 +274,18 @@ contract Bridge is
             destinationAddress,
             amount,
             metadata,
-            LEAF_TYPE_ASSET
+            _LEAF_TYPE_ASSET
         );
-
-        // Update nullifier
-        claimNullifier[index] = true;
 
         // Transfer funds
         if (originTokenAddress == address(0)) {
-
+ 
         } else {
             emit NewWrappedToken(
                 originNetwork,
                 originTokenAddress,
-                address(0)
+                address(0),
+                metadata
             );
         }
 
@@ -289,6 +300,9 @@ contract Bridge is
 
     /**
      * @notice Verify merkle proof and execute message
+     * If the receiving address is an EOA, the call will result as a success
+     * Which means that the amount of ether will be transferred correctly, but the message
+     * will not trigger any execution
      * @param smtProof Smt proof
      * @param index Index of the leaf
      * @param mainnetExitRoot Mainnet exit root
@@ -297,11 +311,11 @@ contract Bridge is
      * @param originAddress Origin address
      * @param destinationNetwork Network destination
      * @param destinationAddress Address destination
-     * @param amount Amount of tokens
+     * @param amount message value
      * @param metadata Abi encoded metadata if any, empty otherwise
      */
     function claimMessage(
-        bytes32[] memory smtProof,
+        bytes32[_DEPOSIT_CONTRACT_TREE_DEPTH] calldata smtProof,
         uint32 index,
         bytes32 mainnetExitRoot,
         bytes32 rollupExitRoot,
@@ -310,8 +324,8 @@ contract Bridge is
         uint32 destinationNetwork,
         address destinationAddress,
         uint256 amount,
-        bytes memory metadata
-    ) public ifNotEmergencyState {
+        bytes calldata metadata
+    ) external ifNotEmergencyState {
         // Verify leaf exist and it does not have been claimed
         _verifyLeaf(
             smtProof,
@@ -324,11 +338,8 @@ contract Bridge is
             destinationAddress,
             amount,
             metadata,
-            LEAF_TYPE_MESSAGE
+            _LEAF_TYPE_MESSAGE
         );
-
-        // Update nullifier
-        claimNullifier[index] = true;
 
         emit ClaimEvent(
             index,
@@ -341,8 +352,14 @@ contract Bridge is
 
     /**
      * @notice Returns the precalculated address of a wrapper using the token information
+     * Note Updating the metadata of a token is not supported.
+     * Since the metadata has relevance in the address deployed, this function will not return a valid
+     * wrapped address if the metadata provided is not the original one.
      * @param originNetwork Origin network
      * @param originTokenAddress Origin token address, 0 address is reserved for ether
+     * @param name Name of the token
+     * @param symbol Symbol of the token
+     * @param decimals Decimals of the token
      */
     function precalculatedWrapperAddress(
         uint32 originNetwork,
@@ -350,7 +367,7 @@ contract Bridge is
         string calldata name,
         string calldata symbol,
         uint8 decimals
-    ) public view returns (address) {
+    ) external view returns (address) {
         bytes32 salt = keccak256(
             abi.encodePacked(originNetwork, originTokenAddress)
         );
@@ -381,7 +398,7 @@ contract Bridge is
     function getTokenWrappedAddress(
         uint32 originNetwork,
         address originTokenAddress
-    ) public view returns (address) {
+    ) external view returns (address) {
         return
             tokenInfoToWrappedToken[
                 keccak256(abi.encodePacked(originNetwork, originTokenAddress))
@@ -390,28 +407,18 @@ contract Bridge is
 
     /**
      * @notice Function to activate the emergency state
-     " Only can be called by the proof of efficiency in extreme situations
+     " Only can be called by the Polygon ZK-EVM in extreme situations
      */
-    function activateEmergencyState() external onlyProofOfEfficiency {
+    function activateEmergencyState() external onlyPolygonZkEVM {
         _activateEmergencyState();
     }
 
     /**
      * @notice Function to deactivate the emergency state
-     " Only can be called by the proof of efficiency
+     " Only can be called by the Polygon ZK-EVM
      */
-    function deactivateEmergencyState() external onlyProofOfEfficiency {
+    function deactivateEmergencyState() external onlyPolygonZkEVM {
         _deactivateEmergencyState();
-    }
-
-    /**
-     * @notice Function to update the claim timeout
-     * @param newClaimTimeout new claim timeout value
-     * Only can be called by the owner
-     */
-    function setClaimTimeout(uint256 newClaimTimeout) external onlyOwner {
-        claimTimeout = newClaimTimeout;
-        emit SetClaimTimeout(newClaimTimeout);
     }
 
     /**
@@ -429,7 +436,7 @@ contract Bridge is
      * @param leafType Leaf type -->  [0] transfer Ether / ERC20 tokens, [1] message
      */
     function _verifyLeaf(
-        bytes32[] memory smtProof,
+        bytes32[_DEPOSIT_CONTRACT_TREE_DEPTH] calldata smtProof,
         uint32 index,
         bytes32 mainnetExitRoot,
         bytes32 rollupExitRoot,
@@ -438,26 +445,62 @@ contract Bridge is
         uint32 destinationNetwork,
         address destinationAddress,
         uint256 amount,
-        bytes memory metadata,
+        bytes calldata metadata,
         uint8 leafType
     ) internal {
-        // Check nullifier
-        require(
-            claimNullifier[index] == false,
-            "Bridge::_verifyLeaf: ALREADY_CLAIMED"
-        );
+        // Set and check nullifier
+        _setAndCheckClaimed(index);
     }
 
     /**
-     * @notice Function to extract the selector of a bytes calldata
-     * @param _data The calldata bytes
+     * @notice Function to check if an index is claimed or not
+     * @param index Index
      */
-    function _getSelector(
-        bytes memory _data
-    ) private pure returns (bytes4 sig) {
-        assembly {
-            sig := mload(add(_data, 32))
+    function isClaimed(uint256 index) external view returns (bool) {
+        (uint256 wordPos, uint256 bitPos) = _bitmapPositions(index);
+        uint256 mask = (1 << bitPos);
+        return (claimedBitMap[wordPos] & mask) == mask;
+    }
+
+    /**
+     * @notice Function to check that an index is not claimed and set it as claimed
+     * @param index Index
+     */
+    function _setAndCheckClaimed(uint256 index) private {
+        (uint256 wordPos, uint256 bitPos) = _bitmapPositions(index);
+        uint256 mask = 1 << bitPos;
+        uint256 flipped = claimedBitMap[wordPos] ^= mask;
+        if (flipped & mask == 0) {
+            revert AlreadyClaimed();
         }
+    }
+
+    /**
+     * @notice Function to update the globalExitRoot if the last deposit is not submitted
+     */
+    function updateGlobalExitRoot() external {
+        if (lastUpdatedDepositCount < depositCount) {
+            _updateGlobalExitRoot();
+        }
+    }
+
+    /**
+     * @notice Function to update the globalExitRoot
+     */
+    function _updateGlobalExitRoot() internal {
+        lastUpdatedDepositCount = uint32(depositCount);
+        globalExitRootManager.updateExitRoot(getDepositRoot());
+    }
+
+    /**
+     * @notice Function decode an index into a wordPos and bitPos
+     * @param index Index
+     */
+    function _bitmapPositions(
+        uint256 index
+    ) private pure returns (uint256 wordPos, uint256 bitPos) {
+        wordPos = uint248(index >> 8);
+        bitPos = uint8(index);
     }
 
     /**
@@ -471,7 +514,7 @@ contract Bridge is
         uint256 amount,
         bytes calldata permitData
     ) internal {
-        bytes4 sig = _getSelector(permitData);
+        bytes4 sig = bytes4(permitData[:4]);
         if (sig == _PERMIT_SIGNATURE) {
             (
                 address owner,
@@ -493,18 +536,16 @@ contract Bridge is
                         bytes32
                     )
                 );
-            require(
-                owner == msg.sender,
-                "Bridge::_permit: PERMIT_OWNER_MUST_BE_THE_SENDER"
-            );
-            require(
-                spender == address(this),
-                "Bridge::_permit: SPENDER_MUST_BE_THIS"
-            );
-            require(
-                value == amount,
-                "Bridge::_permit: PERMIT_AMOUNT_DOES_NOT_MATCH"
-            );
+            if (owner != msg.sender) {
+                revert NotValidOwner();
+            }
+            if (spender != address(this)) {
+                revert NotValidSpender();
+            }
+
+            if (value != amount) {
+                revert NotValidAmount();
+            }
 
             // we call without checking the result, in case it fails and he doesn't have enough balance
             // the following transferFrom should be fail. This prevents DoS attacks from using a signature
@@ -523,10 +564,9 @@ contract Bridge is
                 )
             );
         } else {
-            require(
-                sig == _PERMIT_SIGNATURE_DAI,
-                "Bridge::_permit: NOT_VALID_CALL"
-            );
+            if (sig != _PERMIT_SIGNATURE_DAI) {
+                revert NotValidSignature();
+            }
 
             (
                 address holder,
@@ -550,14 +590,14 @@ contract Bridge is
                         bytes32
                     )
                 );
-            require(
-                holder == msg.sender,
-                "Bridge::_permit: PERMIT_OWNER_MUST_BE_THE_SENDER"
-            );
-            require(
-                spender == address(this),
-                "Bridge::_permit: SPENDER_MUST_BE_THIS"
-            );
+
+            if (holder != msg.sender) {
+                revert NotValidOwner();
+            }
+
+            if (spender != address(this)) {
+                revert NotValidSpender();
+            }
 
             // we call without checking the result, in case it fails and he doesn't have enough balance
             // the following transferFrom should be fail. This prevents DoS attacks from using a signature
@@ -576,6 +616,74 @@ contract Bridge is
                     s
                 )
             );
+        }
+    }
+
+    // Helpers to safely get the metadata from a token, inspired by https://github.com/traderjoe-xyz/joe-core/blob/main/contracts/MasterChefJoeV3.sol#L55-L95
+
+    /**
+     * @notice Provides a safe ERC20.symbol version which returns 'NO_SYMBOL' as fallback string
+     * @param token The address of the ERC-20 token contract
+     */
+    function _safeSymbol(address token) internal view returns (string memory) {
+        (bool success, bytes memory data) = address(token).staticcall(
+            abi.encodeCall(IERC20MetadataUpgradeable.symbol, ())
+        );
+        return success ? _returnDataToString(data) : "NO_SYMBOL";
+    }
+
+    /**
+     * @notice  Provides a safe ERC20.name version which returns 'NO_NAME' as fallback string.
+     * @param token The address of the ERC-20 token contract.
+     */
+    function _safeName(address token) internal view returns (string memory) {
+        (bool success, bytes memory data) = address(token).staticcall(
+            abi.encodeCall(IERC20MetadataUpgradeable.name, ())
+        );
+        return success ? _returnDataToString(data) : "NO_NAME";
+    }
+
+    /**
+     * @notice Provides a safe ERC20.decimals version which returns '18' as fallback value.
+     * Note Tokens with (decimals > 255) are not supported
+     * @param token The address of the ERC-20 token contract
+     */
+    function _safeDecimals(address token) internal view returns (uint8) {
+        (bool success, bytes memory data) = address(token).staticcall(
+            abi.encodeCall(IERC20MetadataUpgradeable.decimals, ())
+        );
+        return success && data.length == 32 ? abi.decode(data, (uint8)) : 18;
+    }
+
+    /**
+     * @notice Function to convert returned data to string
+     * returns 'NOT_VALID_ENCODING' as fallback value.
+     * @param data returned data
+     */
+    function _returnDataToString(
+        bytes memory data
+    ) internal pure returns (string memory) {
+        if (data.length >= 64) {
+            return abi.decode(data, (string));
+        } else if (data.length == 32) {
+            // Since the strings on bytes32 are encoded left-right, check the first zero in the data
+            uint256 nonZeroBytes;
+            while (nonZeroBytes < 32 && data[nonZeroBytes] != 0) {
+                nonZeroBytes++;
+            }
+
+            // If the first one is 0, we do not handle the encoding
+            if (nonZeroBytes == 0) {
+                return "NOT_VALID_ENCODING";
+            }
+            // Create a byte array with nonZeroBytes length
+            bytes memory bytesArray = new bytes(nonZeroBytes);
+            for (uint256 i = 0; i < nonZeroBytes; i++) {
+                bytesArray[i] = data[i];
+            }
+            return string(bytesArray);
+        } else {
+            return "NOT_VALID_ENCODING";
         }
     }
 }

@@ -12,19 +12,19 @@ import (
 	"github.com/0xPolygonHermez/zkevm-bridge-service/db"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/db/pgstorage"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/server"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/utils"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/utils/gerror"
 	"github.com/0xPolygonHermez/zkevm-node/encoding"
-	"github.com/0xPolygonHermez/zkevm-node/etherman/smartcontracts/bridge"
-	"github.com/0xPolygonHermez/zkevm-node/etherman/smartcontracts/globalexitrootmanager"
 	erc20 "github.com/0xPolygonHermez/zkevm-node/etherman/smartcontracts/matic"
+	"github.com/0xPolygonHermez/zkevm-node/etherman/smartcontracts/polygonzkevmbridge"
+	"github.com/0xPolygonHermez/zkevm-node/etherman/smartcontracts/polygonzkevmglobalexitroot"
 	"github.com/0xPolygonHermez/zkevm-node/log"
 	"github.com/0xPolygonHermez/zkevm-node/test/contracts/bin/ERC20"
 	"github.com/0xPolygonHermez/zkevm-node/test/operations"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/jackc/pgx/v4"
 )
 
 // NetworkSID is used to identify the network.
@@ -44,45 +44,32 @@ const (
 
 	// MaticTokenAddress token address
 	MaticTokenAddress = "0x5FbDB2315678afecb367f032d93F642f64180aa3" //nolint:gosec
-	l1BridgeAddr      = "0x0165878A594ca255338adfa4d48449f69242Eb8F"
-	l2BridgeAddr      = "0x9d98deabc42dd696deb9e40b4f1cab7ddbf55988"
+	l1BridgeAddr      = "0xAD1eA25D1133095d20D5C3f269ed887aC0a2496C"
+	l2BridgeAddr      = "0xfC5b0c5F677a3f3E29DB2e98c9eD455c7ACfCf03"
 
-	l1AccHexAddress = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
+	l1AccHexAddress = "0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC"
 
 	sequencerAddress = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
 
 	makeCmd = "make"
 	cmdDir  = "../.."
+
+	mtHeight = 32
 )
 
 var (
-	dbConfig = pgstorage.NewConfigFromEnv()
-	networks = map[NetworkSID]uint{
-		L1: 0,
-		L2: 1,
-	}
+	dbConfig          = pgstorage.NewConfigFromEnv()
 	accHexPrivateKeys = map[NetworkSID]string{
-		L1: "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80", //0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
+		L1: "0x5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a", //0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC
 		L2: "0xdfd01798f92667dbf91df722434e8fbe96af0211d4d1b82bbbbc8f1def7a814f", //0xc949254d682d8c9ad5682521675b8f43b102aec4
 	}
 )
-
-type storageInterface interface {
-	GetLastBlock(ctx context.Context, networkID uint, dbTx pgx.Tx) (*etherman.Block, error)
-	GetLatestExitRoot(ctx context.Context, isRollup bool, dbTx pgx.Tx) (*etherman.GlobalExitRoot, error)
-	GetLatestL1SyncedExitRoot(ctx context.Context, dbTx pgx.Tx) (*etherman.GlobalExitRoot, error)
-	GetLatestTrustedExitRoot(ctx context.Context, dbTx pgx.Tx) (*etherman.GlobalExitRoot, error)
-	GetTokenWrapped(ctx context.Context, originalNetwork uint, originalTokenAddress common.Address, dbTx pgx.Tx) (*etherman.TokenWrapped, error)
-	GetDepositCountByRoot(ctx context.Context, root []byte, network uint8, dbTx pgx.Tx) (uint, error)
-	UpdateBlocksForTesting(ctx context.Context, networkID uint, blockNum uint64, dbTx pgx.Tx) error
-	GetLastBatchNumber(ctx context.Context, dbTx pgx.Tx) (uint64, error)
-	UpdateBatchesForTesting(ctx context.Context, batchNum uint64, dbTx pgx.Tx) error
-}
 
 // Config is the main Manager configuration.
 type Config struct {
 	Storage db.Config
 	BT      bridgectrl.Config
+	BS      server.Config
 }
 
 // Manager controls operations and has knowledge about how to set up and tear
@@ -91,9 +78,9 @@ type Manager struct {
 	cfg *Config
 	ctx context.Context
 
-	storage       storageInterface
+	storage       StorageInterface
 	bridgetree    *bridgectrl.BridgeController
-	bridgeService pb.BridgeServiceServer
+	bridgeService BridgeServiceInterface
 
 	clients map[NetworkSID]*utils.Client
 }
@@ -101,12 +88,6 @@ type Manager struct {
 // NewManager returns a manager ready to be used and a potential error caused
 // during its creation (which can come from the setup of the db connection).
 func NewManager(ctx context.Context, cfg *Config) (*Manager, error) {
-	// Init database instance
-	err := pgstorage.InitOrReset(dbConfig)
-	if err != nil {
-		return nil, err
-	}
-
 	opsman := &Manager{
 		cfg: cfg,
 		ctx: ctx,
@@ -120,7 +101,7 @@ func NewManager(ctx context.Context, cfg *Config) (*Manager, error) {
 	if err != nil {
 		return nil, err
 	}
-	bt, err := bridgectrl.NewBridgeController(cfg.BT, []uint{0, 1}, pgst, pgst)
+	bt, err := bridgectrl.NewBridgeController(cfg.BT, []uint{0, 1}, pgst)
 	if err != nil {
 		return nil, err
 	}
@@ -132,8 +113,8 @@ func NewManager(ctx context.Context, cfg *Config) (*Manager, error) {
 	if err != nil {
 		return nil, err
 	}
-	bService := bridgectrl.NewBridgeService(pgst, bt)
-	opsman.storage = st.(storageInterface)
+	bService := server.NewBridgeService(cfg.BS, cfg.BT.Height, []uint{0, 1}, pgst)
+	opsman.storage = st.(StorageInterface)
 	opsman.bridgetree = bt
 	opsman.bridgeService = bService
 	opsman.clients = make(map[NetworkSID]*utils.Client)
@@ -499,8 +480,26 @@ func (m *Manager) CheckAccountTokenBalance(ctx context.Context, network NetworkS
 }
 
 // GetClaimData gets the claim data
-func (m *Manager) GetClaimData(networkID, depositCount uint) ([][bridgectrl.KeyLen]byte, *etherman.GlobalExitRoot, error) {
-	return m.bridgetree.GetClaim(networkID, depositCount)
+func (m *Manager) GetClaimData(ctx context.Context, networkID, depositCount uint) ([mtHeight][bridgectrl.KeyLen]byte, *etherman.GlobalExitRoot, error) {
+	res, err := m.bridgeService.GetProof(context.Background(), &pb.GetProofRequest{
+		NetId:      uint32(networkID),
+		DepositCnt: uint64(depositCount),
+	})
+	if err != nil {
+		return [mtHeight][32]byte{}, nil, err
+	}
+	proves := [mtHeight][bridgectrl.KeyLen]byte{}
+	for i, p := range res.Proof.MerkleProof {
+		var proof [bridgectrl.KeyLen]byte
+		copy(proof[:], common.FromHex(p))
+		proves[i] = proof
+	}
+	return proves, &etherman.GlobalExitRoot{
+		ExitRoots: []common.Hash{
+			common.HexToHash(res.Proof.MainExitRoot),
+			common.HexToHash(res.Proof.RollupExitRoot),
+		},
+	}, nil
 }
 
 // GetBridgeInfoByDestAddr gets the bridge info
@@ -523,7 +522,7 @@ func (m *Manager) GetBridgeInfoByDestAddr(ctx context.Context, addr *common.Addr
 }
 
 // SendL1Claim send an L1 claim
-func (m *Manager) SendL1Claim(ctx context.Context, deposit *pb.Deposit, smtProof [][32]byte, globalExitRoot *etherman.GlobalExitRoot) error {
+func (m *Manager) SendL1Claim(ctx context.Context, deposit *pb.Deposit, smtProof [mtHeight][32]byte, globalExitRoot *etherman.GlobalExitRoot) error {
 	client := m.clients[L1]
 	auth, err := client.GetSigner(ctx, accHexPrivateKeys[L1])
 	if err != nil {
@@ -534,7 +533,7 @@ func (m *Manager) SendL1Claim(ctx context.Context, deposit *pb.Deposit, smtProof
 }
 
 // SendL2Claim send an L2 claim
-func (m *Manager) SendL2Claim(ctx context.Context, deposit *pb.Deposit, smtProof [][32]byte, globalExitRoot *etherman.GlobalExitRoot) error {
+func (m *Manager) SendL2Claim(ctx context.Context, deposit *pb.Deposit, smtProof [mtHeight][32]byte, globalExitRoot *etherman.GlobalExitRoot) error {
 	client := m.clients[L2]
 	auth, err := client.GetSigner(ctx, accHexPrivateKeys[L2])
 	if err != nil {
@@ -562,7 +561,7 @@ func (m *Manager) GetLatestGlobalExitRootFromL1(ctx context.Context) (*etherman.
 // GetCurrentGlobalExitRootFromSmc reads the globalexitroot from the smc
 func (m *Manager) GetCurrentGlobalExitRootFromSmc(ctx context.Context) (*etherman.GlobalExitRoot, error) {
 	client := m.clients[L1]
-	br, err := bridge.NewBridge(common.HexToAddress(l1BridgeAddr), client)
+	br, err := polygonzkevmbridge.NewPolygonzkevmbridge(common.HexToAddress(l1BridgeAddr), client)
 	if err != nil {
 		return nil, err
 	}
@@ -570,7 +569,7 @@ func (m *Manager) GetCurrentGlobalExitRootFromSmc(ctx context.Context) (*etherma
 	if err != nil {
 		return nil, err
 	}
-	globalManager, err := globalexitrootmanager.NewGlobalexitrootmanager(GlobalExitRootManAddr, client)
+	globalManager, err := polygonzkevmglobalexitroot.NewPolygonzkevmglobalexitroot(GlobalExitRootManAddr, client)
 	if err != nil {
 		return nil, err
 	}
@@ -647,19 +646,13 @@ func (m *Manager) ApproveERC20(ctx context.Context, erc20Addr, bridgeAddr common
 // GetTokenWrapped get token wrapped info
 func (m *Manager) GetTokenWrapped(ctx context.Context, originNetwork uint, originalTokenAddr common.Address, isCreated bool) (*etherman.TokenWrapped, error) {
 	if isCreated {
-		blockID, err := m.getLastBlockID(ctx)
-		if err != nil {
-			return nil, err
-		}
-
-		err = operations.Poll(defaultInterval, defaultDeadline, func() (bool, error) {
+		if err := operations.Poll(defaultInterval, defaultDeadline, func() (bool, error) {
 			wrappedToken, err := m.storage.GetTokenWrapped(ctx, originNetwork, originalTokenAddr, nil)
 			if err != nil {
 				return false, err
 			}
-			return wrappedToken.BlockID >= blockID, nil
-		})
-		if err != nil {
+			return wrappedToken != nil, nil
+		}); err != nil {
 			return nil, err
 		}
 	}
@@ -703,28 +696,4 @@ func (m *Manager) WaitExitRootToBeSynced(ctx context.Context, orgExitRoot *ether
 		}
 		return exitRoot.ExitRoots[tID] != orgExitRoot.ExitRoots[tID], nil
 	})
-}
-
-func (m *Manager) getLastBlockID(ctx context.Context) (uint64, error) {
-	var lastBlockID uint64 = 0
-
-	lastBlock, err := m.storage.GetLastBlock(ctx, networks[L1], nil)
-	if err != nil {
-		if err != gerror.ErrStorageNotFound {
-			return 0, err
-		}
-	} else if lastBlock.ID > lastBlockID {
-		lastBlockID = lastBlock.ID
-	}
-
-	lastBlock, err = m.storage.GetLastBlock(ctx, networks[L2], nil)
-	if err != nil {
-		if err != gerror.ErrStorageNotFound {
-			return 0, err
-		}
-	} else if lastBlock.ID > lastBlockID {
-		lastBlockID = lastBlock.ID
-	}
-
-	return lastBlockID, nil
 }

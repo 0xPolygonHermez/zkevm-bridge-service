@@ -3,7 +3,7 @@ package client
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"math/big"
 	"net/http"
 
@@ -21,6 +21,8 @@ type NetworkSID string
 const (
 	l1 NetworkSID = "l1"
 	l2 NetworkSID = "l2"
+
+	mtHeight = 32
 )
 
 // RestClient is a client for the rest api.
@@ -108,7 +110,7 @@ func (c NodeClient) SendBridgeMessage(ctx context.Context, destNetwork uint32, d
 }
 
 // SendClaim send a claim transaction.
-func (c NodeClient) SendClaim(ctx context.Context, deposit *pb.Deposit, smtProof [][32]byte, globalExitRoot *etherman.GlobalExitRoot,
+func (c NodeClient) SendClaim(ctx context.Context, deposit *pb.Deposit, smtProof [mtHeight][32]byte, globalExitRoot *etherman.GlobalExitRoot,
 	bridgeSCAddr common.Address, auth *bind.TransactOpts, network NetworkSID,
 ) error {
 	return c.clients[network].SendClaim(ctx, deposit, smtProof, globalExitRoot, bridgeSCAddr, auth)
@@ -120,7 +122,7 @@ func (c RestClient) GetBridges(destAddr string, offset, limit uint) ([]*pb.Depos
 	if err != nil {
 		return nil, 0, err
 	}
-	bodyBytes, err := ioutil.ReadAll(resp.Body)
+	bodyBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -138,7 +140,7 @@ func (c RestClient) GetClaims(destAddr string, offset, limit uint) ([]*pb.Claim,
 	if err != nil {
 		return nil, 0, err
 	}
-	bodyBytes, err := ioutil.ReadAll(resp.Body)
+	bodyBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -156,7 +158,7 @@ func (c RestClient) GetMerkleProof(networkID uint32, depositCnt uint64) (*pb.Pro
 	if err != nil {
 		return nil, err
 	}
-	bodyBytes, err := ioutil.ReadAll(resp.Body)
+	bodyBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
 	}
@@ -174,7 +176,7 @@ func (c RestClient) GetBridge(networkID uint32, depositCnt uint64) (*pb.Deposit,
 	if err != nil {
 		return nil, err
 	}
-	bodyBytes, err := ioutil.ReadAll(resp.Body)
+	bodyBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
 	}
@@ -192,7 +194,7 @@ func (c RestClient) GetWrappedToken(origNet uint32, origTokenAddr string) (*pb.T
 	if err != nil {
 		return nil, err
 	}
-	bodyBytes, err := ioutil.ReadAll(resp.Body)
+	bodyBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
 	}
@@ -210,7 +212,7 @@ func (c RestClient) GetVersion() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	bodyBytes, err := ioutil.ReadAll(resp.Body)
+	bodyBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return "", err
 	}

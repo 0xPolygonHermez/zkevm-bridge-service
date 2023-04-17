@@ -56,7 +56,7 @@ func TestBridgeTree(t *testing.T) {
 	}, nil)
 	require.NoError(t, err)
 
-	bt, err := NewBridgeController(cfg, []uint{0, 1000}, store, store)
+	bt, err := NewBridgeController(cfg, []uint{0, 1000}, store)
 	require.NoError(t, err)
 
 	ctx := context.TODO()
@@ -77,41 +77,41 @@ func TestBridgeTree(t *testing.T) {
 			leafHash := hashDeposit(deposit)
 			assert.Equal(t, testVector.ExpectedHash, hex.EncodeToString(leafHash[:]))
 
-			err = bt.AddDeposit(deposit)
+			err = bt.AddDeposit(deposit, nil)
 			require.NoError(t, err)
 
 			// test reorg
 			orgRoot, err := bt.exitTrees[0].store.GetRoot(ctx, uint(i+1), 0, nil)
 			require.NoError(t, err)
-			err = bt.ReorgMT(uint(i), testVectors[i].OriginalNetwork)
+			err = bt.ReorgMT(uint(i), testVectors[i].OriginalNetwork, nil)
 			require.NoError(t, err)
-			err = bt.AddDeposit(deposit)
+			err = bt.AddDeposit(deposit, nil)
 			require.NoError(t, err)
 			newRoot, err := bt.exitTrees[0].store.GetRoot(ctx, uint(i+1), 0, nil)
 			require.NoError(t, err)
 			assert.Equal(t, orgRoot, newRoot)
 
+			var roots [2][]byte
+			roots[0], err = bt.exitTrees[0].getRoot(ctx, nil)
+			require.NoError(t, err)
+			roots[1], err = bt.exitTrees[1].getRoot(ctx, nil)
+			require.NoError(t, err)
+
 			err = store.AddGlobalExitRoot(context.TODO(), &etherman.GlobalExitRoot{
 				BlockNumber:    uint64(i + 1),
-				GlobalExitRoot: hash(common.BytesToHash(bt.exitTrees[0].root[:]), common.BytesToHash(bt.exitTrees[1].root[:])),
-				ExitRoots:      []common.Hash{common.BytesToHash(bt.exitTrees[0].root[:]), common.BytesToHash(bt.exitTrees[1].root[:])},
+				GlobalExitRoot: Hash(common.BytesToHash(roots[0]), common.BytesToHash(roots[1])),
+				ExitRoots:      []common.Hash{common.BytesToHash(roots[0]), common.BytesToHash(roots[1])},
 				BlockID:        id,
 			}, nil)
 			require.NoError(t, err)
 
 			err = store.AddTrustedGlobalExitRoot(context.TODO(), &etherman.GlobalExitRoot{
 				BlockNumber:    0,
-				GlobalExitRoot: hash(common.BytesToHash(bt.exitTrees[0].root[:]), common.BytesToHash(bt.exitTrees[1].root[:])),
-				ExitRoots:      []common.Hash{common.BytesToHash(bt.exitTrees[0].root[:]), common.BytesToHash(bt.exitTrees[1].root[:])},
+				GlobalExitRoot: Hash(common.BytesToHash(roots[0]), common.BytesToHash(roots[1])),
+				ExitRoots:      []common.Hash{common.BytesToHash(roots[0]), common.BytesToHash(roots[1])},
 				BlockID:        id,
 			}, nil)
 			require.NoError(t, err)
-		}
-
-		for i, testVector := range testVectors {
-			proof, _, err := bt.GetClaim(testVector.OriginalNetwork, uint(i))
-			require.NoError(t, err)
-			require.Equal(t, len(proof), 32)
 		}
 	})
 }

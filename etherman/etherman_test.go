@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	mockbridge "github.com/0xPolygonHermez/zkevm-bridge-service/test/mocksmartcontracts/bridge"
-	"github.com/0xPolygonHermez/zkevm-node/etherman/smartcontracts/proofofefficiency"
+	mockbridge "github.com/0xPolygonHermez/zkevm-bridge-service/test/mocksmartcontracts/polygonzkevmbridge"
+	"github.com/0xPolygonHermez/zkevm-node/etherman/smartcontracts/polygonzkevm"
 	"github.com/0xPolygonHermez/zkevm-node/log"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
@@ -25,8 +25,8 @@ func init() {
 	})
 }
 
-//This function prepare the blockchain, the wallet with funds and deploy the smc
-func newTestingEnv() (ethman *Client, ethBackend *backends.SimulatedBackend, auth *bind.TransactOpts, maticAddr common.Address, bridge *mockbridge.Bridge) {
+// This function prepare the blockchain, the wallet with funds and deploy the smc
+func newTestingEnv() (ethman *Client, ethBackend *backends.SimulatedBackend, auth *bind.TransactOpts, maticAddr common.Address, bridge *mockbridge.Polygonzkevmbridge) {
 	privateKey, err := crypto.GenerateKey()
 	if err != nil {
 		log.Fatal(err)
@@ -53,7 +53,7 @@ func TestGEREvent(t *testing.T) {
 
 	amount := big.NewInt(1000000000000000)
 	auth.Value = amount
-	_, err = etherman.Bridge.BridgeAsset(auth, common.Address{}, 1, auth.From, amount, []byte{})
+	_, err = etherman.Bridge.BridgeAsset(auth, 1, auth.From, amount, common.Address{}, true, []byte{})
 	require.NoError(t, err)
 
 	// Mine the tx in a block
@@ -82,7 +82,7 @@ func TestSequencedBatchesEvent(t *testing.T) {
 	// Make a bridge tx
 	a := auth
 	a.Value = big.NewInt(1000000000000000)
-	_, err = etherman.Bridge.BridgeAsset(a, common.Address{}, 1, a.From, a.Value, []byte{})
+	_, err = etherman.Bridge.BridgeAsset(a, 1, a.From, a.Value, common.Address{}, true, []byte{})
 	require.NoError(t, err)
 	ethBackend.Commit()
 	a.Value = big.NewInt(0)
@@ -106,20 +106,20 @@ func TestSequencedBatchesEvent(t *testing.T) {
 	currentBlockNumber := currentBlock.NumberU64()
 	blocks, _, err := etherman.GetRollupInfoByBlockRange(ctx, initBlock.NumberU64(), &currentBlockNumber)
 	require.NoError(t, err)
-	var sequences []proofofefficiency.ProofOfEfficiencyBatchData
-	sequences = append(sequences, proofofefficiency.ProofOfEfficiencyBatchData{
+	var sequences []polygonzkevm.PolygonZkEVMBatchData
+	sequences = append(sequences, polygonzkevm.PolygonZkEVMBatchData{
 		GlobalExitRoot:     ger,
 		Timestamp:          currentBlock.Time(),
 		MinForcedTimestamp: uint64(blocks[1].ForcedBatches[0].ForcedAt.Unix()),
 		Transactions:       common.Hex2Bytes(rawTxs),
 	})
-	sequences = append(sequences, proofofefficiency.ProofOfEfficiencyBatchData{
+	sequences = append(sequences, polygonzkevm.PolygonZkEVMBatchData{
 		GlobalExitRoot:     ger,
 		Timestamp:          currentBlock.Time() + 1,
 		MinForcedTimestamp: 0,
 		Transactions:       common.Hex2Bytes(rawTxs),
 	})
-	_, err = etherman.PoE.SequenceBatches(auth, sequences)
+	_, err = etherman.PoE.SequenceBatches(auth, sequences, auth.From)
 	require.NoError(t, err)
 
 	// Mine the tx in a block
@@ -151,24 +151,19 @@ func TestVerifyBatchEvent(t *testing.T) {
 	require.NoError(t, err)
 
 	rawTxs := "f84901843b9aca00827b0c945fbdb2315678afecb367f032d93f642f64180aa380a46057361d00000000000000000000000000000000000000000000000000000000000000048203e9808073efe1fa2d3e27f26f32208550ea9b0274d49050b816cadab05a771f4275d0242fd5d92b3fb89575c070e6c930587c520ee65a3aa8cfe382fcad20421bf51d621c"
-	tx := proofofefficiency.ProofOfEfficiencyBatchData{
+	tx := polygonzkevm.PolygonZkEVMBatchData{
 		GlobalExitRoot:     common.Hash{},
 		Timestamp:          initBlock.Time(),
 		MinForcedTimestamp: 0,
 		Transactions:       common.Hex2Bytes(rawTxs),
 	}
-	_, err = etherman.PoE.SequenceBatches(auth, []proofofefficiency.ProofOfEfficiencyBatchData{tx})
+	_, err = etherman.PoE.SequenceBatches(auth, []polygonzkevm.PolygonZkEVMBatchData{tx}, auth.From)
 	require.NoError(t, err)
 
 	// Mine the tx in a block
 	ethBackend.Commit()
 
-	var (
-		proofA = [2]*big.Int{big.NewInt(1), big.NewInt(1)}
-		proofC = [2]*big.Int{big.NewInt(1), big.NewInt(1)}
-		proofB = [2][2]*big.Int{proofC, proofC}
-	)
-	_, err = etherman.PoE.TrustedVerifyBatches(auth, 0, 0, 1, common.Hash{}, common.Hash{}, proofA, proofB, proofC)
+	_, err = etherman.PoE.VerifyBatchesTrustedAggregator(auth, 0, 0, 1, common.Hash{}, common.Hash{}, []byte{})
 	require.NoError(t, err)
 
 	// Mine the tx in a block
@@ -220,12 +215,12 @@ func TestSequenceForceBatchesEvent(t *testing.T) {
 	blocks, _, err := etherman.GetRollupInfoByBlockRange(ctx, initBlock.NumberU64(), &finalBlockNumber)
 	require.NoError(t, err)
 
-	forceBatchData := proofofefficiency.ProofOfEfficiencyForcedBatchData{
+	forceBatchData := polygonzkevm.PolygonZkEVMForcedBatchData{
 		Transactions:       blocks[0].ForcedBatches[0].RawTxsData,
 		GlobalExitRoot:     blocks[0].ForcedBatches[0].GlobalExitRoot,
 		MinForcedTimestamp: uint64(blocks[0].ForcedBatches[0].ForcedAt.Unix()),
 	}
-	_, err = etherman.PoE.SequenceForceBatches(auth, []proofofefficiency.ProofOfEfficiencyForcedBatchData{forceBatchData})
+	_, err = etherman.PoE.SequenceForceBatches(auth, []polygonzkevm.PolygonZkEVMForcedBatchData{forceBatchData})
 	require.NoError(t, err)
 	ethBackend.Commit()
 
@@ -237,7 +232,7 @@ func TestSequenceForceBatchesEvent(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, uint64(4), blocks[1].BlockNumber)
 	assert.Equal(t, uint64(1), blocks[1].SequencedForceBatches[0][0].BatchNumber)
-	assert.Equal(t, uint64(20), blocks[1].SequencedForceBatches[0][0].ProofOfEfficiencyForcedBatchData.MinForcedTimestamp)
+	assert.Equal(t, uint64(20), blocks[1].SequencedForceBatches[0][0].PolygonZkEVMForcedBatchData.MinForcedTimestamp)
 	assert.Equal(t, 0, order[blocks[1].BlockHash][0].Pos)
 }
 
@@ -254,7 +249,7 @@ func TestBridgeEvents(t *testing.T) {
 	amount := big.NewInt(9000000000000000000)
 	var destNetwork uint32 = 1 // 0 is reserved to mainnet. This variable is set in the smc
 	destinationAddr := common.HexToAddress("0x61A1d716a74fb45d29f148C6C20A2eccabaFD753")
-	_, err = bridge.BridgeAsset(auth, maticAddr, destNetwork, destinationAddr, amount, []byte{})
+	_, err = bridge.BridgeAsset(auth, destNetwork, destinationAddr, amount, maticAddr, true, []byte{})
 	require.NoError(t, err)
 
 	// Mine the tx in a block
@@ -273,7 +268,7 @@ func TestBridgeEvents(t *testing.T) {
 	//Claim funds
 	var (
 		network  uint32
-		smtProof [][32]byte
+		smtProof [32][32]byte
 		index    uint32
 	)
 	mainnetExitRoot := block[0].GlobalExitRoots[0].ExitRoots[0]

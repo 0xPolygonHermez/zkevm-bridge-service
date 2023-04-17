@@ -10,7 +10,7 @@ import (
 	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/test/mocksmartcontracts/BridgeMessageReceiver"
 	"github.com/0xPolygonHermez/zkevm-node/encoding"
-	"github.com/0xPolygonHermez/zkevm-node/etherman/smartcontracts/bridge"
+	"github.com/0xPolygonHermez/zkevm-node/etherman/smartcontracts/polygonzkevmbridge"
 	"github.com/0xPolygonHermez/zkevm-node/log"
 	"github.com/0xPolygonHermez/zkevm-node/test/contracts/bin/ERC20"
 	ops "github.com/0xPolygonHermez/zkevm-node/test/operations"
@@ -26,6 +26,8 @@ const (
 	LeafTypeAsset uint32 = 0
 	// LeafTypeMessage represents a bridge message
 	LeafTypeMessage uint32 = 1
+
+	mtHeight = 32
 )
 
 // Client is the utillity client
@@ -119,11 +121,11 @@ func (c Client) SendBridgeAsset(ctx context.Context, tokenAddr common.Address, a
 	if destAddr == nil {
 		destAddr = &auth.From
 	}
-	br, err := bridge.NewBridge(bridgeSCAddr, c.Client)
+	br, err := polygonzkevmbridge.NewPolygonzkevmbridge(bridgeSCAddr, c.Client)
 	if err != nil {
 		return nil
 	}
-	tx, err := br.BridgeAsset(auth, tokenAddr, destNetwork, *destAddr, amount, metadata)
+	tx, err := br.BridgeAsset(auth, destNetwork, *destAddr, amount, tokenAddr, true, metadata)
 	if err != nil {
 		log.Error("Error: ", err)
 		return err
@@ -137,11 +139,11 @@ func (c Client) SendBridgeAsset(ctx context.Context, tokenAddr common.Address, a
 func (c Client) SendBridgeMessage(ctx context.Context, destNetwork uint32, destAddr common.Address, metadata []byte,
 	bridgeSCAddr common.Address, auth *bind.TransactOpts,
 ) error {
-	br, err := bridge.NewBridge(bridgeSCAddr, c.Client)
+	br, err := polygonzkevmbridge.NewPolygonzkevmbridge(bridgeSCAddr, c.Client)
 	if err != nil {
 		return nil
 	}
-	tx, err := br.BridgeMessage(auth, destNetwork, destAddr, metadata)
+	tx, err := br.BridgeMessage(auth, destNetwork, destAddr, true, metadata)
 	if err != nil {
 		log.Error("Error: ", err)
 		return err
@@ -152,8 +154,8 @@ func (c Client) SendBridgeMessage(ctx context.Context, destNetwork uint32, destA
 }
 
 // SendClaim sends a claim transaction.
-func (c Client) SendClaim(ctx context.Context, deposit *pb.Deposit, smtProof [][32]byte, globalExitRoot *etherman.GlobalExitRoot, bridgeSCAddr common.Address, auth *bind.TransactOpts) error {
-	br, err := bridge.NewBridge(bridgeSCAddr, c.Client)
+func (c Client) SendClaim(ctx context.Context, deposit *pb.Deposit, smtProof [mtHeight][32]byte, globalExitRoot *etherman.GlobalExitRoot, bridgeSCAddr common.Address, auth *bind.TransactOpts) error {
+	br, err := polygonzkevmbridge.NewPolygonzkevmbridge(bridgeSCAddr, c.Client)
 	if err != nil {
 		return err
 	}
