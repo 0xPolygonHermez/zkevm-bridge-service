@@ -35,8 +35,6 @@ CREATE TABLE sync.monitored_txs (
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL
 );
 
-UPDATE mt.root SET deposit_cnt = deposit_cnt - 1;
-
 UPDATE
     sync.deposit
 SET
