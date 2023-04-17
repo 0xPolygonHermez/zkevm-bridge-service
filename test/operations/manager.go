@@ -93,6 +93,11 @@ func NewManager(ctx context.Context, cfg *Config) (*Manager, error) {
 		ctx: ctx,
 	}
 	//Init storage and mt
+	// err := pgstorage.InitOrReset(dbConfig)
+	// if err != nil {
+	// 	return nil, err
+	// }
+
 	pgst, err := pgstorage.NewPostgresStorage(dbConfig)
 	if err != nil {
 		return nil, err
@@ -105,11 +110,11 @@ func NewManager(ctx context.Context, cfg *Config) (*Manager, error) {
 	if err != nil {
 		return nil, err
 	}
-	l1Client, err := utils.NewClient(ctx, l1NetworkURL)
+	l1Client, err := utils.NewClient(ctx, l1NetworkURL, common.HexToAddress(l1BridgeAddr))
 	if err != nil {
 		return nil, err
 	}
-	l2Client, err := utils.NewClient(ctx, l2NetworkURL)
+	l2Client, err := utils.NewClient(ctx, l2NetworkURL, common.HexToAddress(l2BridgeAddr))
 	if err != nil {
 		return nil, err
 	}
@@ -121,6 +126,20 @@ func NewManager(ctx context.Context, cfg *Config) (*Manager, error) {
 	opsman.clients[L1] = l1Client
 	opsman.clients[L2] = l2Client
 	return opsman, err
+}
+
+// CheckL2Claim checks if the claim is already in the L2 network.
+func (m *Manager) CheckL2Claim(ctx context.Context, networkID, depositCnt uint) error {
+	return operations.Poll(defaultInterval, defaultDeadline, func() (bool, error) {
+		_, err := m.storage.GetClaim(ctx, depositCnt, networkID, nil)
+		if err != nil {
+			if err == gerror.ErrStorageNotFound {
+				return false, nil
+			}
+			return false, err
+		}
+		return true, nil
+	})
 }
 
 // SendL1Deposit sends a deposit from l1 to l2.
@@ -138,7 +157,7 @@ func (m *Manager) SendL1Deposit(ctx context.Context, tokenAddr common.Address, a
 		return err
 	}
 
-	err = client.SendBridgeAsset(ctx, tokenAddr, amount, destNetwork, destAddr, []byte{}, common.HexToAddress(l1BridgeAddr), auth)
+	err = client.SendBridgeAsset(ctx, tokenAddr, amount, destNetwork, destAddr, []byte{}, auth)
 	if err != nil {
 		return err
 	}
@@ -162,7 +181,7 @@ func (m *Manager) SendL2Deposit(ctx context.Context, tokenAddr common.Address, a
 		return err
 	}
 
-	err = client.SendBridgeAsset(ctx, tokenAddr, amount, destNetwork, destAddr, []byte{}, common.HexToAddress(l2BridgeAddr), auth)
+	err = client.SendBridgeAsset(ctx, tokenAddr, amount, destNetwork, destAddr, []byte{}, auth)
 	if err != nil {
 		return err
 	}
@@ -185,7 +204,7 @@ func (m *Manager) SendL1BridgeMessage(ctx context.Context, destAddr common.Addre
 	}
 
 	auth.Value = amount
-	err = client.SendBridgeMessage(ctx, destNetwork, destAddr, metadata, common.HexToAddress(l1BridgeAddr), auth)
+	err = client.SendBridgeMessage(ctx, destNetwork, destAddr, metadata, auth)
 	if err != nil {
 		return err
 	}
@@ -208,7 +227,7 @@ func (m *Manager) SendL2BridgeMessage(ctx context.Context, destAddr common.Addre
 	}
 
 	auth.Value = amount
-	err = client.SendBridgeMessage(ctx, destNetwork, destAddr, metadata, common.HexToAddress(l2BridgeAddr), auth)
+	err = client.SendBridgeMessage(ctx, destNetwork, destAddr, metadata, auth)
 	if err != nil {
 		return err
 	}
@@ -529,7 +548,7 @@ func (m *Manager) SendL1Claim(ctx context.Context, deposit *pb.Deposit, smtProof
 		return err
 	}
 
-	return client.SendClaim(ctx, deposit, smtProof, globalExitRoot, common.HexToAddress(l1BridgeAddr), auth)
+	return client.SendClaim(ctx, deposit, smtProof, globalExitRoot, auth)
 }
 
 // SendL2Claim send an L2 claim
@@ -544,7 +563,7 @@ func (m *Manager) SendL2Claim(ctx context.Context, deposit *pb.Deposit, smtProof
 		auth.GasPrice = big.NewInt(0)
 	}
 
-	err = client.SendClaim(ctx, deposit, smtProof, globalExitRoot, common.HexToAddress(l2BridgeAddr), auth)
+	err = client.SendClaim(ctx, deposit, smtProof, globalExitRoot, auth)
 	return err
 }
 

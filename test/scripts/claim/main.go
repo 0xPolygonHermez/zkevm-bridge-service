@@ -24,7 +24,7 @@ const (
 
 func main() {
 	ctx := context.Background()
-	c, err := utils.NewClient(ctx, l2NetworkURL)
+	c, err := utils.NewClient(ctx, l2NetworkURL, common.HexToAddress(l2BridgeAddr))
 	if err != nil {
 		log.Fatal("Error: ", err)
 	}
@@ -36,9 +36,10 @@ func main() {
 
 	// Get Claim data
 	cfg := clientUtils.Config{
-		L1NodeURL: l2NetworkURL,
-		L2NodeURL: l2NetworkURL,
-		BridgeURL: bridgeURL,
+		L1NodeURL:    l2NetworkURL,
+		L2NodeURL:    l2NetworkURL,
+		BridgeURL:    bridgeURL,
+		L2BridgeAddr: common.HexToAddress(l2BridgeAddr),
 	}
 	client, err := clientUtils.NewClient(ctx, cfg)
 	if err != nil {
@@ -66,7 +67,7 @@ func main() {
 		ExitRoots: []common.Hash{common.HexToHash(proof.MainExitRoot), common.HexToHash(proof.RollupExitRoot)},
 	}
 	log.Info("Sending claim tx...")
-	err = c.SendClaim(ctx, bridgeData, smt, globalExitRoot, common.HexToAddress(l2BridgeAddr), auth)
+	err = c.SendClaim(ctx, bridgeData, smt, globalExitRoot, auth)
 	if err != nil {
 		log.Fatal("error: ", err)
 	}

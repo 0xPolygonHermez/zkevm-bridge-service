@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/utils/gerror"
 	cfgTypes "github.com/0xPolygonHermez/zkevm-node/config/types"
 	"github.com/0xPolygonHermez/zkevm-node/etherman/smartcontracts/polygonzkevm"
 	rpcTypes "github.com/0xPolygonHermez/zkevm-node/jsonrpc/types"
@@ -38,7 +39,9 @@ func TestTrustedStateReorg(t *testing.T) {
 		}
 		ctxMatchBy := mock.MatchedBy(func(ctx context.Context) bool { return ctx != nil })
 		m.Etherman.On("GetNetworkID", ctxMatchBy).Return(uint(0), nil)
-		sync, err := NewSynchronizer(m.Storage, m.BridgeCtrl, m.Etherman, m.ZkEVMClient, genBlockNumber, cfg)
+		m.Storage.On("GetLatestL1SyncedExitRoot", context.Background(), nil).Return(&etherman.GlobalExitRoot{}, gerror.ErrStorageNotFound)
+		chEvent := make(chan *etherman.GlobalExitRoot)
+		sync, err := NewSynchronizer(m.Storage, m.BridgeCtrl, m.Etherman, m.ZkEVMClient, genBlockNumber, chEvent, cfg)
 		require.NoError(t, err)
 		// state preparation
 		m.Storage.
@@ -187,7 +190,7 @@ func TestTrustedStateReorg(t *testing.T) {
 
 				m.Storage.
 					On("AddTrustedGlobalExitRoot", ctx, ger, nil).
-					Return(nil).
+					Return(false, nil).
 					Once()
 			}).
 			Return(m.DbTx, nil).

@@ -79,7 +79,7 @@ func getEnv(key string, defaultValue string) string {
 	return defaultValue
 }
 
-//nolint
+// nolint
 var (
 	String, _ = abi.NewType("string", "", nil)
 	Uint8, _  = abi.NewType("uint8", "", nil)

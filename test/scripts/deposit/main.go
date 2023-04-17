@@ -16,15 +16,15 @@ const (
 	l1AccHexPrivateKey = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
 	l1NetworkURL       = "http://localhost:8545"
 
-	funds = 90000000000000000 // nolint
- 	destNetwork uint32 = 1
+	funds              = 90000000000000000 // nolint
+	destNetwork uint32 = 1
 )
 
 var tokenAddr = common.Address{}
 
 func main() {
 	ctx := context.Background()
-	client, err := utils.NewClient(ctx, l1NetworkURL)
+	client, err := utils.NewClient(ctx, l1NetworkURL, common.HexToAddress(l1BridgeAddr))
 	if err != nil {
 		log.Fatal("Error: ", err)
 	}
@@ -39,7 +39,7 @@ func main() {
 	}
 	destAddr := common.HexToAddress(l1AccHexAddress)
 	log.Info("Sending bridge tx...")
-	err = client.SendBridgeAsset(ctx, tokenAddr, amount, destNetwork, &destAddr, []byte{}, common.HexToAddress(l1BridgeAddr), auth)
+	err = client.SendBridgeAsset(ctx, tokenAddr, amount, destNetwork, &destAddr, []byte{}, auth)
 	if err != nil {
 		log.Fatal("Error: ", err)
 	}

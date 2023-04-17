@@ -15,11 +15,13 @@ Host = "zkevm-bridge-db"
 Port = "5432"
 MaxConns = 20
 
+[ClaimTxManager]
+FrequencyToMonitorTxs = "1s"
+PrivateKey = {Path = "./test/test.keystore", Password = "testonly"}
+
 [Etherman]
 L1URL = "http://localhost:8545"
 L2URLs = [""]
-PrivateKeyPath = "./test/test.keystore"
-PrivateKeyPassword = "testonly"
 
 [Synchronizer]
 SyncInterval = "2s"

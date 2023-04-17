@@ -37,7 +37,7 @@ GO_ENV_VARS := GO_BIN=$(GO_BIN)
 GO_BINARY := zkevm-bridge
 GO_CMD := $(GO_BASE)/cmd
 
-LINT := $$(go env GOPATH)/bin/golangci-lint run --timeout=5m -E whitespace -E gosec -E gci -E misspell -E gomnd -E gofmt -E goimports -E golint --exclude-use-default=false --max-same-issues 0
+LINT := $$(go env GOPATH)/bin/golangci-lint run --timeout=5m -E whitespace -E gosec -E gci -E misspell -E gomnd -E gofmt -E goimports --exclude-use-default=false --max-same-issues 0
 BUILD := $(GO_ENV_VARS) go build $(LDFLAGS) -o $(GO_BIN)/$(GO_BINARY) $(GO_CMD)
 
 .PHONY: build
@@ -60,7 +60,7 @@ test: ## Runs only short tests without checking race conditions
 
 .PHONY: install-linter
 install-linter: ## Installs the linter
-	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $$(go env GOPATH)/bin v1.50.1
+	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $$(go env GOPATH)/bin v1.51.2
 
 .PHONY: build-docker
 build-docker: ## Builds a docker image with the zkevm bridge binary

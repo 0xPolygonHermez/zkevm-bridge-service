@@ -11,6 +11,10 @@ Host = "zkevm-bridge-db"
 Port = "5432"
 MaxConns = 20
 
+[ClaimTxManager]
+FrequencyToMonitorTxs = "1s"
+PrivateKey = {Path = "/pk/keystore.claimtxmanager", Password = "testonly"}
+
 [Etherman]
 L1URL = "http://zkevm-mock-l1-network:8545"
 L2URLs = ["http://zkevm-node:8123"]

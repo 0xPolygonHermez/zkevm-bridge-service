@@ -20,7 +20,7 @@ import (
 )
 
 // RunServer runs gRPC server and HTTP gateway
-func RunServer(cfg Config, height uint8, networks []uint, storage interface{}) error {
+func RunServer(cfg Config, bridgeService pb.BridgeServiceServer) error {
 	ctx := context.Background()
 
 	if len(cfg.GRPCPort) == 0 {
@@ -30,8 +30,6 @@ func RunServer(cfg Config, height uint8, networks []uint, storage interface{}) e
 	if len(cfg.HTTPPort) == 0 {
 		return fmt.Errorf("invalid TCP port for HTTP gateway: '%s'", cfg.HTTPPort)
 	}
-
-	bridgeService := NewBridgeService(cfg, height, networks, storage.(bridgeServiceStorage))
 
 	go func() {
 		_ = runRestServer(ctx, cfg.GRPCPort, cfg.HTTPPort)
