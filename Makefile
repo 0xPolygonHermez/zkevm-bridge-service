@@ -157,7 +157,7 @@ stop-mockserver: ## Stops the mock bridge service
 bench: ## benchmark test
 	$(STOP_BRIDGE_DB) || true
 	$(RUN_BRIDGE_DB); sleep 3
-	trap '$(STOP_BRIDGE_DB)' EXIT; go test -run=NOTEST -bench=Small ./test/benchmark/...
+	trap '$(STOP_BRIDGE_DB)' EXIT; go test -run=NOTEST -timeout=30m -bench=Small ./test/benchmark/...
 
 .PHONY: bench-full
 bench-full: export ZKEVM_BRIDGE_DATABASE_PORT = 5432
