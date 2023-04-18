@@ -10,7 +10,6 @@ import (
 	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/utils/gerror"
 	"github.com/ethereum/go-ethereum/common"
-	lru "github.com/hashicorp/golang-lru/v2"
 	"github.com/jackc/pgx/v4"
 )
 
@@ -21,7 +20,6 @@ type bridgeService struct {
 	defaultPageLimit uint32
 	maxPageLimit     uint32
 	version          string
-	cache            *lru.Cache[string, [][]byte]
 	pb.UnimplementedBridgeServiceServer
 }
 
@@ -31,10 +29,7 @@ func NewBridgeService(cfg Config, height uint8, networks []uint, storage interfa
 	for i, network := range networks {
 		networkIDs[network] = uint8(i)
 	}
-	cache, err := lru.New[string, [][]byte](cfg.CacheSize)
-	if err != nil {
-		panic(err)
-	}
+
 	return &bridgeService{
 		storage:          storage.(bridgeServiceStorage),
 		height:           height,
@@ -42,7 +37,6 @@ func NewBridgeService(cfg Config, height uint8, networks []uint, storage interfa
 		defaultPageLimit: cfg.DefaultPageLimit,
 		maxPageLimit:     cfg.MaxPageLimit,
 		version:          cfg.BridgeVersion,
-		cache:            cache,
 	}
 }
 
@@ -54,34 +48,21 @@ func (s *bridgeService) getNetworkID(networkID uint) (uint8, error) {
 	return tID, nil
 }
 
-// getNode returns the children hash pairs for a given parent hash.
-func (s *bridgeService) getNode(ctx context.Context, parentHash [bridgectrl.KeyLen]byte, dbTx pgx.Tx) (left, right [bridgectrl.KeyLen]byte, err error) {
-	value, ok := s.cache.Get(string(parentHash[:]))
-	if !ok {
-		var err error
-		value, err = s.storage.Get(ctx, parentHash[:], dbTx)
-		if err != nil {
-			return left, right, fmt.Errorf("parentHash: %v, error: %w", parentHash, err)
-		}
-		s.cache.Add(string(parentHash[:]), value)
-	}
-	copy(left[:], value[0])
-	copy(right[:], value[1])
-	return left, right, nil
-}
-
 // getProof returns the merkle proof for a given index and root.
 func (s *bridgeService) getProof(index uint, root [bridgectrl.KeyLen]byte, dbTx pgx.Tx) ([][bridgectrl.KeyLen]byte, error) {
-	var siblings [][bridgectrl.KeyLen]byte
+	var (
+		siblings    [][bridgectrl.KeyLen]byte
+		left, right [bridgectrl.KeyLen]byte
+	)
 
-	cur := root
 	ctx := context.Background()
-	// It starts in height-1 because 0 is the level of the leafs
-	for h := int(s.height - 1); h >= 0; h-- {
-		left, right, err := s.getNode(ctx, cur, dbTx)
-		if err != nil {
-			return nil, fmt.Errorf("height: %d, cur: %v, error: %w", h, cur, err)
-		}
+	nodes, err := s.storage.GetNodes(ctx, uint(index), root[:], dbTx)
+	if err != nil {
+		return nil, fmt.Errorf("error getting nodes: %w", err)
+	}
+	for h := 0; h < int(s.height); h++ {
+		copy(left[:], nodes[h][0])
+		copy(right[:], nodes[h][1])
 		/*
 					*        Root                (level h=3 => height=4)
 					*      /     \
@@ -104,12 +85,11 @@ func (s *bridgeService) getProof(index uint, root [bridgectrl.KeyLen]byte, dbTx 
 					* Now, let's do AND operation => 100&100=100 which is higher than 0 so we need the left sibling (O5)
 		*/
 
-		if index&(1<<h) > 0 {
+		// It starts in height-1 because 0 is the level of the leafs
+		if index&(1<<(s.height-uint8(h)-1)) > 0 {
 			siblings = append(siblings, left)
-			cur = right
 		} else {
 			siblings = append(siblings, right)
-			cur = left
 		}
 	}
 

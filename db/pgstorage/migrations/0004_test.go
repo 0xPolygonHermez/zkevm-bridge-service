@@ -46,7 +46,7 @@ func (m migrationTest0004) RunAssertsAfterMigrationUp(t *testing.T, db *sql.DB) 
 	assert.NoError(t, err)
 	// Insert a new root
 	const addRoot = "INSERT INTO mt.root (root, deposit_cnt, network, deposit_id) VALUES ($1, $2, $3, $4)"
-	_, err = db.Exec(addRoot, common.FromHex("0x5a2dce0a8a7f68bb74560f8f71837c2c2ebbcbf7fffb42ae1896f13f7c7479a0"), 1, 0, depositID)
+	_, err = db.Exec(addRoot, common.FromHex("0x5a2dce0a8a7f68bb74560f8f71837c2c2ebbcbf7fffb42ae1896f13f7c7479a0"), 2, 0, depositID)
 	assert.NoError(t, err)
 	// Insert a new node to the rht table
 	const addNode = "INSERT INTO mt.rht (key, value, deposit_id) VALUES ($1, $2, $3)"

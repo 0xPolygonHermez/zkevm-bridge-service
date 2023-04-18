@@ -79,24 +79,15 @@ func (mt *MerkleTree) initSiblings(ctx context.Context, dbTx pgx.Tx) ([][KeyLen]
 	}
 	// index is the index of the last node
 	index := mt.count - 1
-	cur := root
+	nodes, err := mt.store.GetNodes(ctx, index, root[:], dbTx)
+	if err != nil {
+		return nil, fmt.Errorf("getNodes failed index: %d, root: %v, error: %w", index, root, err)
+	}
 
-	// It starts in height-1 because 0 is the level of the leafs
-	for h := int(mt.height - 1); h >= 0; h-- {
-		value, err := mt.store.Get(ctx, cur, dbTx)
-		if err != nil {
-			return nil, fmt.Errorf("height: %d, cur: %v, error: %w", h, cur, err)
-		}
-
-		copy(left[:], value[0])
+	for h := 0; h < int(mt.height); h++ {
+		copy(left[:], nodes[h][0])
 		// we will keep the left sibling of the last node
 		siblings = append(siblings, left)
-
-		if index&(1<<h) > 0 {
-			cur = value[1]
-		} else {
-			cur = value[0]
-		}
 	}
 
 	// We need to invert the siblings to go from leafs to the top

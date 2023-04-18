@@ -11,6 +11,9 @@ import (
 
 // StorageInterface is a storage interface.
 type StorageInterface interface {
+	Get(ctx context.Context, key []byte, dbTx pgx.Tx) ([][]byte, error)
+	GetNodes(ctx context.Context, path uint, root []byte, dbTx pgx.Tx) ([][][]byte, error)
+	GetRoot(ctx context.Context, depositCnt uint, network uint, dbTx pgx.Tx) ([]byte, error)
 	GetLastBlock(ctx context.Context, networkID uint, dbTx pgx.Tx) (*etherman.Block, error)
 	GetLatestExitRoot(ctx context.Context, isRollup bool, dbTx pgx.Tx) (*etherman.GlobalExitRoot, error)
 	GetLatestL1SyncedExitRoot(ctx context.Context, dbTx pgx.Tx) (*etherman.GlobalExitRoot, error)

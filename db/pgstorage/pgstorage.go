@@ -450,6 +450,29 @@ func (p *PostgresStorage) Get(ctx context.Context, key []byte, dbTx pgx.Tx) ([][
 	return data, err
 }
 
+// GetNodes gets multiple nodes from the merkle tree following the path.
+func (p *PostgresStorage) GetNodes(ctx context.Context, path uint, root []byte, dbTx pgx.Tx) ([][][]byte, error) {
+	const getNodesSQL = "SELECT left_hash, right_hash FROM mt.get_nodes($1, $2);"
+	var data [][][]byte
+	rows, err := p.getExecQuerier(dbTx).Query(ctx, getNodesSQL, path, root)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, gerror.ErrStorageNotFound
+		}
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var left, right []byte
+		err = rows.Scan(&left, &right)
+		if err != nil {
+			return nil, err
+		}
+		data = append(data, [][]byte{left, right})
+	}
+	return data, nil
+}
+
 // Set inserts a key-value pair into the db.
 // If record with such a key already exists its assumed that the value is correct,
 // because it's a reverse hash table, and the key is a hash of the value
