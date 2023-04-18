@@ -75,7 +75,6 @@ func (m migrationTest0005) RunAssertsAfterMigrationUp(t *testing.T, db *sql.DB) 
 	root := common.FromHex("0xad3228b676f7d3cd4284a5443f17f1962b36e491b30a40b2405849e597ba5fb5")
 	rows, err := db.Query(getNodes, 0, root)
 	assert.NoError(t, err)
-	defer rows.Close()
 	count := 0
 	for rows.Next() {
 		var left, right []byte
@@ -88,7 +87,6 @@ func (m migrationTest0005) RunAssertsAfterMigrationUp(t *testing.T, db *sql.DB) 
 
 	rows, err = db.Query(getNodes, 1<<31, root)
 	assert.NoError(t, err)
-	defer rows.Close()
 	count = 0
 	for rows.Next() {
 		var left, right []byte
