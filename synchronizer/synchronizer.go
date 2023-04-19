@@ -95,11 +95,7 @@ func (s *ClientSynchronizer) Sync() error {
 	// If there is no lastEthereumBlock means that sync from the beginning is necessary. If not, it continues from the retrieved ethereum block
 	// Get the latest synced block. If there is no block on db, use genesis block
 	log.Infof("NetworkID: %d, Synchronization started", s.networkID)
-	dbTx, err := s.storage.BeginDBTransaction(s.ctx)
-	if err != nil {
-		log.Fatalf("networkID: %d, error creating db transaction to get latest block", s.networkID)
-	}
-	lastBlockSynced, err := s.storage.GetLastBlock(s.ctx, s.networkID, dbTx)
+	lastBlockSynced, err := s.storage.GetLastBlock(s.ctx, s.networkID, nil)
 	if err != nil {
 		if err == gerror.ErrStorageNotFound {
 			log.Warnf("networkID: %d, error getting the latest ethereum block. No data stored. Setting genesis block. Error: %w", s.networkID, err)
@@ -113,16 +109,7 @@ func (s *ClientSynchronizer) Sync() error {
 			log.Fatalf("networkID: %d, unexpected error getting the latest block. Error: %s", s.networkID, err.Error())
 		}
 	}
-	err = s.storage.Commit(s.ctx, dbTx)
-	if err != nil {
-		log.Errorf("networkID: %d, error committing dbTx, err: %s", s.networkID, err.Error())
-		rollbackErr := s.storage.Rollback(s.ctx, dbTx)
-		if rollbackErr != nil {
-			log.Fatalf("networkID: %d, error rolling back state. RollbackErr: %s, err: %s",
-				s.networkID, rollbackErr.Error(), err.Error())
-		}
-		log.Fatalf("networkID: %d, error committing dbTx, err: %s", s.networkID, err.Error())
-	}
+	log.Debugf("NetworkID: %d, initial lastBlockSynced: %+v", s.networkID, lastBlockSynced)
 	for {
 		select {
 		case <-s.ctx.Done():
@@ -132,7 +119,7 @@ func (s *ClientSynchronizer) Sync() error {
 			//Sync L1Blocks
 			if lastBlockSynced, err = s.syncBlocks(lastBlockSynced); err != nil {
 				log.Warn("error syncing blocks: ", err)
-				lastBlockSynced, err = s.storage.GetLastBlock(s.ctx, s.networkID, dbTx)
+				lastBlockSynced, err = s.storage.GetLastBlock(s.ctx, s.networkID, nil)
 				if err != nil {
 					log.Fatal("error getting lastBlockSynced to resume the synchronization... Error: ", err)
 				}
@@ -310,7 +297,7 @@ func (s *ClientSynchronizer) processBlockRange(blocks []etherman.Block, order ma
 		}
 		// Add block information
 		blocks[i].NetworkID = s.networkID
-		log.Infof("NetworkID: %d. Syncing block: %d", s.networkID, &blocks[i].BlockNumber)
+		log.Infof("NetworkID: %d. Syncing block: %d", s.networkID, blocks[i].BlockNumber)
 		blockID, err := s.storage.AddBlock(s.ctx, &blocks[i], dbTx)
 		if err != nil {
 			log.Errorf("networkID: %d, error storing block. BlockNumber: %d, error: %v", s.networkID, blocks[i].BlockNumber, err)
