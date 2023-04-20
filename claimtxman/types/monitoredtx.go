@@ -102,6 +102,11 @@ func (mTx MonitoredTx) AddHistory(tx *types.Transaction) error {
 	return nil
 }
 
+// RemoveHistory removes a transaction from the monitoring history
+func (mTx MonitoredTx) RemoveHistory(tx *types.Transaction) {
+	delete(mTx.History, tx.Hash())
+}
+
 // HistoryHashSlice returns the current history field as a string slice
 func (mTx *MonitoredTx) HistoryHashSlice() [][]byte {
 	history := make([][]byte, 0, len(mTx.History))
