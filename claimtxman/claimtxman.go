@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"strings"
 	"time"
 
 	ctmtypes "github.com/0xPolygonHermez/zkevm-bridge-service/claimtxman/types"
@@ -243,6 +244,17 @@ func (tm *ClaimTxManager) monitorTxs(ctx context.Context) error {
 
 			// if the tx is not mined yet, check that not all the tx were mined and go to the next
 			if !mined {
+				// check if the tx is in the pending pool
+				_, _, err = tm.l2Node.TransactionByHash(ctx, txHash)
+				if errors.Is(err, ethereum.NotFound) {
+					mTxLog.Errorf("tx %v was not found in the pending pool", txHash.String())
+					hasFailedReceipts = true
+					continue
+				} else if err != nil {
+					mTxLog.Errorf("failed to get tx %v: %v", txHash.String(), err)
+					continue
+				}
+
 				allHistoryTxMined = false
 				continue
 			}
@@ -337,27 +349,31 @@ func (tm *ClaimTxManager) monitorTxs(ctx context.Context) error {
 			} else if err != nil {
 				mTxLog.Errorf("failed to add signed tx to monitored tx history: %v", err)
 				continue
-			} else {
-				// update monitored tx changes into storage
-				err = tm.storage.UpdateClaimTx(ctx, mTx, dbTx)
-				if err != nil {
-					mTxLog.Errorf("failed to update monitored tx: %v", err)
-					continue
-				}
-				mTxLog.Debugf("signed tx added to the monitored tx history")
 			}
 
 			// check if the tx is already in the network, if not, send it
 			_, _, err = tm.l2Node.TransactionByHash(ctx, signedTx.Hash())
-			// if not found, send it tx to the network
 			if errors.Is(err, ethereum.NotFound) {
 				err := tm.l2Node.SendTransaction(ctx, signedTx)
 				if err != nil {
+					if strings.Contains(err.Error(), "nonce") {
+						mTxLog.Infof("nonce error detected, resetting nonce cache")
+						tm.nonceCache.Remove(mTx.From.Hex())
+					}
+					mTx.RemoveHistory(signedTx)
 					mTxLog.Errorf("failed to send tx %v to network: %v", signedTx.Hash().String(), err)
 				}
 			} else {
 				mTxLog.Infof("signed tx %v already found in the network for the monitored tx: %v", signedTx.Hash().String(), err)
 			}
+
+			// update monitored tx changes into storage
+			err = tm.storage.UpdateClaimTx(ctx, mTx, dbTx)
+			if err != nil {
+				mTxLog.Errorf("failed to update monitored tx: %v", err)
+				continue
+			}
+			mTxLog.Debugf("signed tx added to the monitored tx history")
 		}
 	}
 
