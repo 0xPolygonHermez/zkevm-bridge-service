@@ -153,13 +153,16 @@ func (_m *storageMock) AddTrustedGlobalExitRoot(ctx context.Context, trustedExit
 	ret := _m.Called(ctx, trustedExitRoot, dbTx)
 
 	var r0 bool
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, *etherman.GlobalExitRoot, pgx.Tx) (bool, error)); ok {
+		return rf(ctx, trustedExitRoot, dbTx)
+	}
 	if rf, ok := ret.Get(0).(func(context.Context, *etherman.GlobalExitRoot, pgx.Tx) bool); ok {
 		r0 = rf(ctx, trustedExitRoot, dbTx)
 	} else {
 		r0 = ret.Get(0).(bool)
 	}
 
-	var r1 error
 	if rf, ok := ret.Get(1).(func(context.Context, *etherman.GlobalExitRoot, pgx.Tx) error); ok {
 		r1 = rf(ctx, trustedExitRoot, dbTx)
 	} else {
@@ -330,6 +333,10 @@ func (_m *storageMock) GetLatestL1SyncedExitRoot(ctx context.Context, dbTx pgx.T
 	ret := _m.Called(ctx, dbTx)
 
 	var r0 *etherman.GlobalExitRoot
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, pgx.Tx) (*etherman.GlobalExitRoot, error)); ok {
+		return rf(ctx, dbTx)
+	}
 	if rf, ok := ret.Get(0).(func(context.Context, pgx.Tx) *etherman.GlobalExitRoot); ok {
 		r0 = rf(ctx, dbTx)
 	} else {
@@ -338,7 +345,6 @@ func (_m *storageMock) GetLatestL1SyncedExitRoot(ctx context.Context, dbTx pgx.T
 		}
 	}
 
-	var r1 error
 	if rf, ok := ret.Get(1).(func(context.Context, pgx.Tx) error); ok {
 		r1 = rf(ctx, dbTx)
 	} else {
