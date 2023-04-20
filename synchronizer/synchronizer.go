@@ -511,7 +511,7 @@ func (s *ClientSynchronizer) checkTrustedState(batch etherman.Batch, dbTx pgx.Tx
 		batch.Coinbase == tBatch.Coinbase {
 		return false, nil
 	}
-	log.Errorf("networkID: %d, TRUSTED REORG DETECTED! Batch: ", s.networkID, batch.BatchNumber)
+	log.Errorf("networkID: %d, TRUSTED REORG DETECTED! Batch: %d", s.networkID, batch.BatchNumber)
 	log.Warnf("networkID: %d, BatchL2Data. Virtual: %s, Trusted: %s", s.networkID, hex.EncodeToString(batch.BatchL2Data), hex.EncodeToString(tBatch.BatchL2Data))
 	log.Warnf("networkID: %d, GlobalExitRoot. Virtual: %s, Trusted: %s", s.networkID, batch.GlobalExitRoot.String(), tBatch.GlobalExitRoot.String())
 	log.Warnf("networkID: %d, Timestamp. Virtual: %d, Trusted: %d", s.networkID, batch.Timestamp.Unix(), tBatch.Timestamp.Unix())
