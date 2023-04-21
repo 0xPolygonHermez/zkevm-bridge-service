@@ -4,7 +4,7 @@ go 1.18
 
 require (
 	github.com/0xPolygonHermez/zkevm-node v0.0.3-RC3
-	github.com/ethereum/go-ethereum v1.11.0
+	github.com/ethereum/go-ethereum v1.11.6
 	github.com/gobuffalo/packr/v2 v2.8.3
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.14.0
 	github.com/iden3/go-iden3-crypto v0.0.14-0.20220413123345-edc36bfa5247
@@ -53,24 +53,23 @@ require (
 	github.com/go-git/gcfg v1.5.0 // indirect
 	github.com/go-git/go-billy/v5 v5.4.1 // indirect
 	github.com/go-git/go-git/v5 v5.4.2 // indirect
-	github.com/go-kit/kit v0.10.0 // indirect
 	github.com/go-ole/go-ole v1.2.6 // indirect
 	github.com/go-pkgz/expirable-cache v0.0.3 // indirect
 	github.com/go-sourcemap/sourcemap v2.1.3+incompatible // indirect
 	github.com/go-stack/stack v1.8.1 // indirect
 	github.com/gobuffalo/logger v1.0.6 // indirect
 	github.com/gobuffalo/packd v1.0.1 // indirect
+	github.com/gofrs/flock v0.8.1 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
-	github.com/golang/snappy v0.0.4 // indirect
+	github.com/golang/snappy v0.0.5-0.20220116011046-fa5810519dcb // indirect
 	github.com/google/gofuzz v1.2.0 // indirect
 	github.com/google/uuid v1.3.0 // indirect
 	github.com/gorilla/websocket v1.5.0 // indirect
 	github.com/hashicorp/hcl v1.0.1-0.20180906183839-65a6292f0157 // indirect
 	github.com/hermeznetwork/tracerr v0.3.2 // indirect
-	github.com/holiman/big v0.0.0-20221017200358-a027dc42d04e // indirect
 	github.com/holiman/bloomfilter/v2 v2.0.3 // indirect
-	github.com/holiman/uint256 v1.2.1 // indirect
+	github.com/holiman/uint256 v1.2.2-0.20230321075855-87b91420868c // indirect
 	github.com/huin/goupnp v1.0.3 // indirect
 	github.com/imdario/mergo v0.3.13 // indirect
 	github.com/jackc/chunkreader/v2 v2.0.1 // indirect
@@ -103,7 +102,6 @@ require (
 	github.com/prometheus/client_model v0.3.0 // indirect
 	github.com/prometheus/common v0.39.0 // indirect
 	github.com/prometheus/procfs v0.9.0 // indirect
-	github.com/prometheus/tsdb v0.10.0 // indirect
 	github.com/rogpeppe/go-internal v1.9.0 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/sergi/go-diff v1.2.0 // indirect
@@ -129,11 +127,11 @@ require (
 	go.uber.org/multierr v1.8.0 // indirect
 	go.uber.org/zap v1.24.0 // indirect
 	golang.org/x/exp v0.0.0-20230206171751-46f607a40771 // indirect
-	golang.org/x/net v0.6.0 // indirect
+	golang.org/x/net v0.8.0 // indirect
 	golang.org/x/sync v0.1.0 // indirect
-	golang.org/x/sys v0.5.0 // indirect
-	golang.org/x/term v0.5.0 // indirect
-	golang.org/x/text v0.7.0 // indirect
+	golang.org/x/sys v0.6.0 // indirect
+	golang.org/x/term v0.6.0 // indirect
+	golang.org/x/text v0.8.0 // indirect
 	golang.org/x/time v0.1.0 // indirect
 	gopkg.in/gorp.v1 v1.7.2 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
