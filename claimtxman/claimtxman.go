@@ -45,12 +45,8 @@ type ClaimTxManager struct {
 }
 
 // NewClaimTxManager creates a new claim transaction manager.
-func NewClaimTxManager(cfg Config, chExitRootEvent chan *etherman.GlobalExitRoot, l2NodeURL string, l2BridgeAddr common.Address, bridgeService bridgeServiceInterface, storage interface{}) (*ClaimTxManager, error) {
+func NewClaimTxManager(cfg Config, chExitRootEvent chan *etherman.GlobalExitRoot, l2NodeURL string, l2NetworkID uint, l2BridgeAddr common.Address, bridgeService bridgeServiceInterface, storage interface{}) (*ClaimTxManager, error) {
 	client, err := utils.NewClient(context.Background(), l2NodeURL, l2BridgeAddr)
-	if err != nil {
-		return nil, err
-	}
-	netID, err := client.NetworkID(context.Background())
 	if err != nil {
 		return nil, err
 	}
@@ -64,7 +60,7 @@ func NewClaimTxManager(cfg Config, chExitRootEvent chan *etherman.GlobalExitRoot
 		ctx:             ctx,
 		cancel:          cancel,
 		l2Node:          client,
-		l2NetworkID:     uint(netID.Uint64()),
+		l2NetworkID:     l2NetworkID,
 		bridgeService:   bridgeService,
 		cfg:             cfg,
 		chExitRootEvent: chExitRootEvent,

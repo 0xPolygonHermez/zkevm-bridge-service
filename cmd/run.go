@@ -97,7 +97,9 @@ func start(ctx *cli.Context) error {
 	}
 
 	for i := 0; i < len(c.Etherman.L2URLs); i++ {
-		claimTxManager, err := claimtxman.NewClaimTxManager(c.ClaimTxManager, chExitRootEvent, c.Etherman.L2URLs[i], c.NetworkConfig.L2BridgeAddrs[i], bridgeService, storage)
+		// we should match the orders of L2URLs between etherman and claimtxman
+		// since we are using the networkIDs in the same order
+		claimTxManager, err := claimtxman.NewClaimTxManager(c.ClaimTxManager, chExitRootEvent, c.Etherman.L2URLs[i], networkIDs[i+1], c.NetworkConfig.L2BridgeAddrs[i], bridgeService, storage)
 		if err != nil {
 			log.Fatalf("error creating claim tx manager for L2 %s. Error: %v", c.Etherman.L2URLs[i], err)
 		}
