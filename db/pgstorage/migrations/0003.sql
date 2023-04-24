@@ -37,6 +37,8 @@ $$ LANGUAGE plpgsql;
 
 UPDATE mt.root SET deposit_cnt = deposit_cnt + 1;
 
+DROP INDEX IF EXISTS mt.rht_key_idx;
+
 -- +migrate Up
 
 ALTER TABLE mt.rht DROP COLUMN IF EXISTS root_id;
@@ -54,10 +56,13 @@ ALTER TABLE mt.rht ALTER COLUMN deposit_id DROP DEFAULT;
 
 UPDATE mt.root SET deposit_cnt = deposit_cnt - 1;
 
-DELETE FROM mt.rht a
-WHERE a.ctid <> (SELECT min(b.ctid)
-                 FROM   mt.rht b
-                 WHERE  a.key = b.key);
+-- Create indexes
+CREATE INDEX IF NOT EXISTS rht_key_idx ON mt.rht(key);
+
+-- Delete duplicates
+CREATE TABLE mt.rht_temp AS (SELECT key, min(value), max(deposit_id) FROM mt.rht GROUP BY key HAVING count(key) > 1);
+DELETE FROM mt.rht where key in (select key FROM mt.rht_temp);
+INSERT INTO mt.rht(key, value, deposit_id)  (SELECT b.key, b.min, b.max FROM mt.rht_temp b);
 
 -- +migrate StatementBegin
 DO $$
