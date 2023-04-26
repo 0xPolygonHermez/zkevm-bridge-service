@@ -60,6 +60,9 @@ type MonitoredTx struct {
 	// Gas is a tx gas
 	Gas uint64
 
+	// GasPrice is the tx gas price
+	GasPrice *big.Int
+
 	// Status of this monitoring
 	Status MonitoredTxStatus
 
@@ -83,11 +86,12 @@ type MonitoredTx struct {
 // Tx uses the current information to build a tx
 func (mTx MonitoredTx) Tx() *types.Transaction {
 	tx := types.NewTx(&types.LegacyTx{
-		To:    mTx.To,
-		Nonce: mTx.Nonce,
-		Value: mTx.Value,
-		Data:  mTx.Data,
-		Gas:   mTx.Gas,
+		To:       mTx.To,
+		Nonce:    mTx.Nonce,
+		Value:    mTx.Value,
+		Data:     mTx.Data,
+		Gas:      mTx.Gas,
+		GasPrice: mTx.GasPrice,
 	})
 
 	return tx
