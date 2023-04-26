@@ -326,7 +326,7 @@ func (tm *ClaimTxManager) monitorTxs(ctx context.Context) error {
 				}
 			}
 
-			// Get gasPrice
+			// GasPrice is set here to use always the proper and most accurate value right before sending it to L2
 			gasPrice, err := tm.l2Node.SuggestGasPrice(ctx)
 			if err != nil {
 				mTxLog.Errorf("failed to get suggested gasPrice. Error: %v", err)
