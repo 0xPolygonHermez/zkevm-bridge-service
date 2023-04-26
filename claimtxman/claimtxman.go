@@ -101,6 +101,7 @@ func (tm *ClaimTxManager) updateDepositsStatus(ger *etherman.GlobalExitRoot) err
 	}
 	if ger.BlockID != 0 { // L2 exit root is updated
 		log.Infof("Rollup exitroot %v is updated", ger.ExitRoots[1])
+		// TODO Include networkID as input in UpdateL2DepositsStatus to handle multiple networkIDs in the query
 		if err := tm.storage.UpdateL2DepositsStatus(tm.ctx, ger.ExitRoots[1][:], dbTx); err != nil {
 			return err
 		}
@@ -300,7 +301,7 @@ func (tm *ClaimTxManager) monitorTxs(ctx context.Context) error {
 		// tx infinitely
 		if allHistoryTxMined && len(mTx.History) >= maxHistorySize {
 			mTx.Status = ctmtypes.MonitoredTxStatusFailed
-			mTxLog.Infof("marked as failed because reached the history size limit")
+			mTxLog.Infof("marked as failed because reached the history size limit (%d)", maxHistorySize)
 			// update monitored tx changes into storage
 			err = tm.storage.UpdateClaimTx(ctx, mTx, dbTx)
 			if err != nil {
@@ -324,6 +325,14 @@ func (tm *ClaimTxManager) monitorTxs(ctx context.Context) error {
 					continue
 				}
 			}
+
+			// Get gasPrice
+			gasPrice, err := tm.l2Node.SuggestGasPrice(ctx)
+			if err != nil {
+				mTxLog.Errorf("failed to get suggested gasPrice. Error: %v", err)
+				continue
+			}
+			mTx.GasPrice = gasPrice
 
 			var signedTx *types.Transaction
 			// rebuild transaction
@@ -353,7 +362,7 @@ func (tm *ClaimTxManager) monitorTxs(ctx context.Context) error {
 				err := tm.l2Node.SendTransaction(ctx, signedTx)
 				if err != nil {
 					if strings.Contains(err.Error(), "nonce") {
-						mTxLog.Infof("nonce error detected, resetting nonce cache")
+						mTxLog.Infof("nonce error detected, resetting nonce cache. Nonce used: %d", signedTx.Nonce())
 						tm.nonceCache.Remove(mTx.From.Hex())
 					}
 					mTx.RemoveHistory(signedTx)
