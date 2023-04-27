@@ -357,6 +357,11 @@ func (tm *ClaimTxManager) monitorTxs(ctx context.Context) error {
 						tm.nonceCache.Remove(mTx.From.Hex())
 					}
 					mTx.RemoveHistory(signedTx)
+					// we should rebuild the monitored tx to fix the nonce
+					err := tm.ReviewMonitoredTx(ctx, &mTx)
+					if err != nil {
+						mTxLog.Errorf("failed to review monitored tx: %v", err)
+					}
 					mTxLog.Errorf("failed to send tx %v to network: %v", signedTx.Hash().String(), err)
 				}
 			} else {
