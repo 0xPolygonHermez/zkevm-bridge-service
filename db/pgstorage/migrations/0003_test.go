@@ -84,6 +84,18 @@ func (m migrationTest0003) RunAssertsAfterMigrationUp(t *testing.T, db *sql.DB) 
 	assert.NoError(t, err)
 	assert.Equal(t, maxDepositCnt, 1)
 	assert.Equal(t, rootCount, 2)
+
+	indexes := []string{"rht_key_idx"}
+
+	// Check indexes adding
+	for _, idx := range indexes {
+		// getIndex
+		const getIndex = `SELECT count(*) FROM pg_indexes WHERE indexname = $1;`
+		row := db.QueryRow(getIndex, idx)
+		var result int
+		assert.NoError(t, row.Scan(&result))
+		assert.Equal(t, 1, result)
+	}
 }
 
 func (m migrationTest0003) RunAssertsAfterMigrationDown(t *testing.T, db *sql.DB) {
@@ -94,6 +106,17 @@ func (m migrationTest0003) RunAssertsAfterMigrationDown(t *testing.T, db *sql.DB
 	assert.NoError(t, err)
 	assert.Equal(t, maxDepositCnt, 2)
 	assert.Equal(t, rootCount, 2)
+
+	indexes := []string{"rht_key_idx"}
+	// Check indexes removing
+	for _, idx := range indexes {
+		// getIndex
+		const getIndex = `SELECT count(*) FROM pg_indexes WHERE indexname = $1;`
+		row := db.QueryRow(getIndex, idx)
+		var result int
+		assert.NoError(t, row.Scan(&result))
+		assert.Equal(t, 0, result)
+	}
 }
 
 func TestMigration0003(t *testing.T) {

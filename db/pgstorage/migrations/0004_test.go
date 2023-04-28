@@ -44,10 +44,6 @@ func (m migrationTest0004) RunAssertsAfterMigrationUp(t *testing.T, db *sql.DB) 
 		common.FromHex("0xa4bfa0908dc7b06d98da4309f859023d6947561bc19bc00d77f763dea1a0b9f5"),
 		[]byte{}).Scan(&depositID)
 	assert.NoError(t, err)
-	// Insert a new root
-	const addRoot = "INSERT INTO mt.root (root, deposit_cnt, network, deposit_id) VALUES ($1, $2, $3, $4)"
-	_, err = db.Exec(addRoot, common.FromHex("0x5a2dce0a8a7f68bb74560f8f71837c2c2ebbcbf7fffb42ae1896f13f7c7479a0"), 1, 0, depositID)
-	assert.NoError(t, err)
 	// Insert a new node to the rht table
 	const addNode = "INSERT INTO mt.rht (key, value, deposit_id) VALUES ($1, $2, $3)"
 	_, err = db.Exec(addNode, common.FromHex("0x5a2dce0a8a7f68bb74560f8f71837c2c2ebbcbf7fffb42ae1896f13f7c7479a0"), [][]byte{
@@ -85,31 +81,14 @@ func (m migrationTest0004) RunAssertsAfterMigrationUp(t *testing.T, db *sql.DB) 
 		common.FromHex("0xad3228b676f7d3cd4284a5443f17f1962b36e491b30a40b2405849e597ba5fb5"), 0, time.Now()).Scan(&blockID)
 	assert.NoError(t, err)
 	assert.Equal(t, blockID, uint64(1))
-
-	indexes := []string{"rht_key_idx"}
-
-	// Check indexes adding
-	for _, idx := range indexes {
-		// getIndex
-		const getIndex = `SELECT count(*) FROM pg_indexes WHERE indexname = $1;`
-		row := db.QueryRow(getIndex, idx)
-		var result int
-		assert.NoError(t, row.Scan(&result))
-		assert.Equal(t, 1, result)
-	}
 }
 
 func (m migrationTest0004) RunAssertsAfterMigrationDown(t *testing.T, db *sql.DB) {
-	indexes := []string{"rht_key_idx"}
-	// Check indexes removing
-	for _, idx := range indexes {
-		// getIndex
-		const getIndex = `SELECT count(*) FROM pg_indexes WHERE indexname = $1;`
-		row := db.QueryRow(getIndex, idx)
-		var result int
-		assert.NoError(t, row.Scan(&result))
-		assert.Equal(t, 0, result)
-	}
+	// Insert a monitored tx
+	_, err := db.Exec(`INSERT INTO sync.monitored_txs 
+		(id, block_id, from_addr, to_addr, nonce, value, data, gas, status, history, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`, 0, 1, common.FromHex("0x6B175474E89094C44Da98b954EedeAC495271d0F"), common.FromHex("0x6B175474E89094C44Da98b954EedeAC495271d0F"), 1, "10000", []byte{}, 5000000, "crerated", nil, time.Now(), time.Now())
+	assert.Error(t, err)
 }
 
 func TestMigration0004(t *testing.T) {

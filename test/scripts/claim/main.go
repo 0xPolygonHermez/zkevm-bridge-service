@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"math/big"
 
 	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman"
 	clientUtils "github.com/0xPolygonHermez/zkevm-bridge-service/test/client"
@@ -32,7 +31,6 @@ func main() {
 	if err != nil {
 		log.Fatal("Error: ", err)
 	}
-	auth.GasPrice = big.NewInt(0)
 
 	// Get Claim data
 	cfg := clientUtils.Config{
