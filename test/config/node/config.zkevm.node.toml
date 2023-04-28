@@ -15,7 +15,12 @@ EnableLog = false
 MaxConns = 200
 
 [Pool]
-FreeClaimGasLimit = 1500000
+IntervalToRefreshBlockedAddresses = "5m"
+MaxTxBytesSize=30132
+MaxTxDataBytesSize=30000
+DefaultMinGasPriceAllowed = 1000000000
+MinAllowedGasPriceInterval = "5m"
+PollMinAllowedGasPriceInterval = "15s"
 	[Pool.DB]
 	User = "pool_user"
 	Password = "pool_password"
@@ -27,12 +32,8 @@ FreeClaimGasLimit = 1500000
 
 [Etherman]
 URL = "http://zkevm-mock-l1-network:8545"
-PoEAddr = "0x610178dA211FEF7D417bC0e6FeD39F05609AD788"
-MaticAddr = "0x5FbDB2315678afecb367f032d93F642f64180aa3"
-GlobalExitRootManagerAddr = "0x2279B7A0a67DB372996a5FaB50D91eAA73d2eBe6"
-L1ChainID = 1337
 MultiGasProvider = false
-	[Etherman.Etherscan]
+	[Etherscan]
 		ApiKey = ""
 
 [RPC]
@@ -43,6 +44,7 @@ WriteTimeoutInSec = 60
 MaxRequestsPerIPAndSecond = 5000
 SequencerNodeURI = ""
 DefaultSenderAddress = "0x1111111111111111111111111111111111111111"
+EnableL2SuggestedGasPricePolling = true
 	[RPC.WebSockets]
 		Enabled = true
 		Port = 8133
@@ -50,18 +52,16 @@ DefaultSenderAddress = "0x1111111111111111111111111111111111111111"
 [Synchronizer]
 SyncInterval = "1s"
 SyncChunkSize = 100
-GenBlockNumber = 74
 TrustedSequencerURL = ""
 
 [Sequencer]
-MaxSequenceSize = "2000000"
 WaitPeriodPoolIsEmpty = "1s"
 WaitPeriodSendSequence = "3s"
 LastBatchVirtualizationTimeMaxWaitPeriod = "5s"
 BlocksAmountForTxsToBeDeleted = 100
 FrequencyToCheckTxsForDelete = "12h"
 MaxTxsPerBatch = 150
-MaxBatchBytesSize = 30000
+MaxBatchBytesSize = 129848
 MaxCumulativeGasUsed = 30000000
 MaxKeccakHashes = 468
 MaxPoseidonHashes = 279620
@@ -79,11 +79,12 @@ WeightMemAligns = 1
 WeightArithmetics = 1
 WeightBinaries = 1
 WeightSteps = 1
-MaxAllowedFailedCounter = 50
+TxLifetimeCheckTimeout = "10m"
+MaxTxLifetime = "3h"
+MaxTxSizeForL1 = 131072
 	[Sequencer.Finalizer]
 		GERDeadlineTimeoutInSec = "2s"
 		ForcedBatchDeadlineTimeoutInSec = "60s"
-		SendingToL1DeadlineTimeoutInSec = "18s"
 		SleepDurationInMs = "100ms"
 		ResourcePercentageToCloseBatch = 10
 		GERFinalityNumberOfBlocks = 0
@@ -91,12 +92,19 @@ MaxAllowedFailedCounter = 50
 		ClosingSignalsManagerWaitForCheckingGER = "1s"
 		ClosingSignalsManagerWaitForCheckingForcedBatches = "1s"
 		ForcedBatchesFinalityNumberOfBlocks = 0
+		TimestampResolution = "15s"
 		SenderAddress = "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266"
-PrivateKeys = [{Path = "/pk/keystore.sequencer", Password = "testonly"}]
+		PrivateKeys = [{Path = "/pk/keystore.sequencer", Password = "testonly"}]
+	[Sequencer.DBManager]
+		PoolRetrievalInterval = "500ms"
+		L2ReorgRetrievalInterval = "5s"
+	[Sequencer.Worker]
+		ResourceCostMultiplier = 1000
 
 [Aggregator]
 Host = "0.0.0.0"
 Port = 50081
+ForkId = 4
 RetryTime = "3s"
 VerifyProofInterval = "5s"
 TxProfitabilityCheckerType = "acceptall"
@@ -107,6 +115,7 @@ CleanupLockedProofsInterval = "2m"
 GeneratingProofCleanupThreshold = "10m"
 
 [EthTxManager]
+ForcedGas = 0
 PrivateKeys = [
 	{Path = "/pk/keystore.sequencer", Password = "testonly"},
 	{Path = "/pk/keystore.aggregator", Password = "testonly"}
@@ -128,4 +137,3 @@ URI = "zkevm-prover:50071"
 Host = "0.0.0.0"
 Port = 9091
 Enabled = false
-
