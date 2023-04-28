@@ -6,8 +6,6 @@ ALTER TABLE sync.deposit DROP COLUMN ready_for_claim;
 
 ALTER TABLE sync.block DROP CONSTRAINT block_hash_unique;
 
-DROP INDEX IF EXISTS mt.rht_key_idx;
-
 -- +migrate Up
 
 ALTER TABLE
@@ -88,6 +86,3 @@ WHERE
             AND network = 1
     )
     AND network_id != 0;
-
--- Create indexes
-CREATE INDEX IF NOT EXISTS rht_key_idx ON mt.rht(key);
