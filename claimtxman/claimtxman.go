@@ -361,6 +361,7 @@ func (tm *ClaimTxManager) monitorTxs(ctx context.Context) error {
 			if errors.Is(err, ethereum.NotFound) {
 				err := tm.l2Node.SendTransaction(ctx, signedTx)
 				if err != nil {
+					mTxLog.Errorf("failed to send tx %v to network: %v", signedTx.Hash().String(), err)
 					if strings.Contains(err.Error(), "nonce") {
 						mTxLog.Infof("nonce error detected, resetting nonce cache. Nonce used: %d", signedTx.Nonce())
 						tm.nonceCache.Remove(mTx.From.Hex())
@@ -371,7 +372,6 @@ func (tm *ClaimTxManager) monitorTxs(ctx context.Context) error {
 					if err != nil {
 						mTxLog.Errorf("failed to review monitored tx: %v", err)
 					}
-					mTxLog.Errorf("failed to send tx %v to network: %v", signedTx.Hash().String(), err)
 				}
 			} else {
 				mTxLog.Infof("signed tx %v already found in the network for the monitored tx: %v", signedTx.Hash().String(), err)
