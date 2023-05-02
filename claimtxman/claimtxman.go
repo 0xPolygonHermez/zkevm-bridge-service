@@ -219,6 +219,7 @@ func (tm *ClaimTxManager) monitorTxs(ctx context.Context) error {
 		return fmt.Errorf("failed to get created monitored txs: %v", err)
 	}
 
+	isResetNonce := false // it will reset the nonce in one cycle
 	log.Infof("found %v monitored tx to process", len(mTxs))
 	for _, mTx := range mTxs {
 		mTx := mTx // force variable shadowing to avoid pointer conflicts
@@ -363,8 +364,12 @@ func (tm *ClaimTxManager) monitorTxs(ctx context.Context) error {
 				if err != nil {
 					mTxLog.Errorf("failed to send tx %v to network: %v", signedTx.Hash().String(), err)
 					if strings.Contains(err.Error(), "nonce") {
-						mTxLog.Infof("nonce error detected, resetting nonce cache. Nonce used: %d", signedTx.Nonce())
-						tm.nonceCache.Remove(mTx.From.Hex())
+						mTxLog.Infof("nonce error detected, Nonce used: %d", signedTx.Nonce())
+						if !isResetNonce {
+							isResetNonce = true
+							tm.nonceCache.Remove(mTx.From.Hex())
+							mTxLog.Infof("nonce cache cleared for address %v", mTx.From.Hex())
+						}
 					}
 					mTx.RemoveHistory(signedTx)
 					// we should rebuild the monitored tx to fix the nonce
