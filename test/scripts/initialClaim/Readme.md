@@ -1,6 +1,6 @@
 # InitialClaim script
 This script allows to create the claim tx and include it in a forcedBatch. This is require when the L2 network is empty and there are no funds in L2.
-Tipically this action is used to include the claim tx to fill the bridge autoclaim wallet with ethers in L2 in order to allow the service send the claim txs for the users.
+Typically this action is used to include the claim tx to fill the bridge autoclaim wallet with ethers in L2 in order to allow the service send the claim txs for the users.
 
 ## Parameters
 At the beginning of the script there are the next constant variables that need to be reviewed.
