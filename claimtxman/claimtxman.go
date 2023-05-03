@@ -117,6 +117,7 @@ func (tm *ClaimTxManager) updateDepositsStatus(ger *etherman.GlobalExitRoot) err
 				return err
 			}
 			if len(claimHash) > 0 || deposit.LeafType == LeafTypeMessage {
+				log.Info("Ignoring deposit: %d, leafType: %d, claimHash: %s", deposit.DepositCount, deposit.LeafType, claimHash)
 				continue
 			}
 			log.Infof("create the claim tx for the deposit %d", deposit.DepositCount)
@@ -128,7 +129,7 @@ func (tm *ClaimTxManager) updateDepositsStatus(ger *etherman.GlobalExitRoot) err
 			for i := 0; i < mtHeight; i++ {
 				mtProves[i] = proves[i]
 			}
-			to, data, err := tm.l2Node.BuildSendClaim(tm.ctx, deposit, mtProves,
+			tx, err := tm.l2Node.BuildSendClaim(tm.ctx, deposit, mtProves,
 				&etherman.GlobalExitRoot{
 					ExitRoots: []common.Hash{
 						ger.ExitRoots[0],
@@ -138,7 +139,7 @@ func (tm *ClaimTxManager) updateDepositsStatus(ger *etherman.GlobalExitRoot) err
 			if err != nil {
 				return err
 			}
-			if err = tm.addClaimTx(deposit.DepositCount, deposit.BlockID, tm.auth.From, to, nil, data, dbTx); err != nil {
+			if err = tm.addClaimTx(deposit.DepositCount, deposit.BlockID, tm.auth.From, tx.To(), nil, tx.Data(), dbTx); err != nil {
 				return err
 			}
 		}
