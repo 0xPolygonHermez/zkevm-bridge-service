@@ -21,13 +21,13 @@ import (
 
 const (
 	l2BridgeAddr = "0xff0EE8ea08cEf5cb4322777F5CC3E8A584B8A4A0"
-	poeAddr      = "0x610178dA211FEF7D417bC0e6FeD39F05609AD788"
+	zkevmAddr    = "0x610178dA211FEF7D417bC0e6FeD39F05609AD788"
 
-	l2AccHexAddress    = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
-	l2AccHexPrivateKey = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
-	l1NetworkURL       = "http://localhost:8545"
-	l2NetworkURL       = "http://localhost:8123"
-	bridgeURL          = "http://localhost:8080"
+	accHexAddress    = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
+	accHexPrivateKey = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
+	l1NetworkURL     = "http://localhost:8545"
+	l2NetworkURL     = "http://localhost:8123"
+	bridgeURL        = "http://localhost:8080"
 
 	mtHeight      = 32
 	miningTimeout = 180
@@ -39,7 +39,7 @@ func main() {
 	if err != nil {
 		log.Fatal("Error: ", err)
 	}
-	auth, err := c.GetSigner(ctx, l2AccHexPrivateKey)
+	auth, err := c.GetSigner(ctx, accHexPrivateKey)
 	if err != nil {
 		log.Fatal("Error: ", err)
 	}
@@ -55,7 +55,7 @@ func main() {
 	if err != nil {
 		log.Fatal("Error: ", err)
 	}
-	deposits, _, err := client.GetBridges(l2AccHexAddress, 0, 10) //nolint
+	deposits, _, err := client.GetBridges(accHexAddress, 0, 10) //nolint
 	if err != nil {
 		log.Fatal("Error: ", err)
 	}
@@ -115,13 +115,21 @@ func main() {
 	if err != nil {
 		log.Fatalf("error connecting to %s: %+v", l1NetworkURL, err)
 	}
-	// Create smc client
-	poeAddress := common.HexToAddress(poeAddr)
-	poe, err := polygonzkevm.NewPolygonzkevm(poeAddress, ethClient)
+	chainID, err := ethClient.ChainID(ctx)
+	if err != nil {
+		log.Fatal("error getting l1 chainID: ", err)
+	}
+	auth, err = operations.GetAuth(accHexPrivateKey, chainID.Uint64())
 	if err != nil {
 		log.Fatal("error: ", err)
 	}
-	num, err := poe.LastForceBatch(&bind.CallOpts{Pending: false})
+	// Create smc client
+	zkevmAddress := common.HexToAddress(zkevmAddr)
+	zkevm, err := polygonzkevm.NewPolygonzkevm(zkevmAddress, ethClient)
+	if err != nil {
+		log.Fatal("error: ", err)
+	}
+	num, err := zkevm.LastForceBatch(&bind.CallOpts{Pending: false})
 	if err != nil {
 		log.Fatal("error getting lastForBatch number. Error : ", err)
 	}
@@ -134,12 +142,12 @@ func main() {
 	log.Debug("currentBlock.Time(): ", currentBlock.Time())
 
 	// Get tip
-	tip, err := poe.GetForcedBatchFee(&bind.CallOpts{Pending: false})
+	tip, err := zkevm.GetForcedBatchFee(&bind.CallOpts{Pending: false})
 	if err != nil {
 		log.Fatal("error getting tip. Error: ", err)
 	}
 	// Send forceBatch
-	txForcedBatch, err := poe.ForceBatch(auth, byt, tip)
+	txForcedBatch, err := zkevm.ForceBatch(auth, byt, tip)
 	if err != nil {
 		log.Fatal("error sending forceBatch. Error: ", err)
 	}
@@ -155,14 +163,14 @@ func main() {
 
 	query := ethereum.FilterQuery{
 		FromBlock: currentBlock.Number(),
-		Addresses: []common.Address{poeAddress},
+		Addresses: []common.Address{zkevmAddress},
 	}
 	logs, err := ethClient.FilterLogs(ctx, query)
 	if err != nil {
 		log.Fatal("error: ", err)
 	}
 	for _, vLog := range logs {
-		fb, err := poe.ParseForceBatch(vLog)
+		fb, err := zkevm.ParseForceBatch(vLog)
 		if err == nil {
 			log.Debugf("log decoded: %+v", fb)
 			var ger common.Hash = fb.LastGlobalExitRoot
