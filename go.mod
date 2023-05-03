@@ -11,7 +11,7 @@ require (
 	github.com/iden3/go-iden3-crypto v0.0.15
 	github.com/jackc/pgconn v1.14.0
 	github.com/jackc/pgx/v4 v4.18.1
-	github.com/lib/pq v1.10.7
+	github.com/lib/pq v1.10.9
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/rubenv/sql-migrate v1.4.0
 	github.com/spf13/viper v1.15.0
