@@ -117,6 +117,7 @@ func (tm *ClaimTxManager) updateDepositsStatus(ger *etherman.GlobalExitRoot) err
 				return err
 			}
 			if len(claimHash) > 0 || deposit.LeafType == LeafTypeMessage {
+				log.Info("Ignoring deposit: %d, leafType: %d, claimHash: %s", deposit.DepositCount, deposit.LeafType, claimHash)
 				continue
 			}
 			log.Infof("create the claim tx for the deposit %d", deposit.DepositCount)
@@ -128,7 +129,7 @@ func (tm *ClaimTxManager) updateDepositsStatus(ger *etherman.GlobalExitRoot) err
 			for i := 0; i < mtHeight; i++ {
 				mtProves[i] = proves[i]
 			}
-			to, data, err := tm.l2Node.BuildSendClaim(tm.ctx, deposit, mtProves,
+			tx, err := tm.l2Node.BuildSendClaim(tm.ctx, deposit, mtProves,
 				&etherman.GlobalExitRoot{
 					ExitRoots: []common.Hash{
 						ger.ExitRoots[0],
@@ -138,7 +139,7 @@ func (tm *ClaimTxManager) updateDepositsStatus(ger *etherman.GlobalExitRoot) err
 			if err != nil {
 				return err
 			}
-			if err = tm.addClaimTx(deposit.DepositCount, deposit.BlockID, tm.auth.From, to, nil, data, dbTx); err != nil {
+			if err = tm.addClaimTx(deposit.DepositCount, deposit.BlockID, tm.auth.From, tx.To(), nil, tx.Data(), dbTx); err != nil {
 				return err
 			}
 		}
@@ -219,6 +220,7 @@ func (tm *ClaimTxManager) monitorTxs(ctx context.Context) error {
 		return fmt.Errorf("failed to get created monitored txs: %v", err)
 	}
 
+	isResetNonce := false // it will reset the nonce in one cycle
 	log.Infof("found %v monitored tx to process", len(mTxs))
 	for _, mTx := range mTxs {
 		mTx := mTx // force variable shadowing to avoid pointer conflicts
@@ -363,8 +365,12 @@ func (tm *ClaimTxManager) monitorTxs(ctx context.Context) error {
 				if err != nil {
 					mTxLog.Errorf("failed to send tx %v to network: %v", signedTx.Hash().String(), err)
 					if strings.Contains(err.Error(), "nonce") {
-						mTxLog.Infof("nonce error detected, resetting nonce cache. Nonce used: %d", signedTx.Nonce())
-						tm.nonceCache.Remove(mTx.From.Hex())
+						mTxLog.Infof("nonce error detected, Nonce used: %d", signedTx.Nonce())
+						if !isResetNonce {
+							isResetNonce = true
+							tm.nonceCache.Remove(mTx.From.Hex())
+							mTxLog.Infof("nonce cache cleared for address %v", mTx.From.Hex())
+						}
 					}
 					mTx.RemoveHistory(signedTx)
 					// we should rebuild the monitored tx to fix the nonce

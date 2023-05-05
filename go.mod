@@ -7,16 +7,16 @@ require (
 	github.com/ethereum/go-ethereum v1.11.6
 	github.com/gobuffalo/packr/v2 v2.8.3
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.15.1
-	github.com/hashicorp/golang-lru/v2 v2.0.1
-	github.com/iden3/go-iden3-crypto v0.0.14
+	github.com/hashicorp/golang-lru/v2 v2.0.2
+	github.com/iden3/go-iden3-crypto v0.0.15
 	github.com/jackc/pgconn v1.14.0
 	github.com/jackc/pgx/v4 v4.18.1
-	github.com/lib/pq v1.10.7
+	github.com/lib/pq v1.10.9
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/rubenv/sql-migrate v1.4.0
 	github.com/spf13/viper v1.15.0
 	github.com/stretchr/testify v1.8.2
-	github.com/urfave/cli/v2 v2.25.1
+	github.com/urfave/cli/v2 v2.25.3
 	golang.org/x/crypto v0.8.0
 	google.golang.org/genproto v0.0.0-20230221151758-ace64dc21148
 	google.golang.org/grpc v1.54.0
