@@ -235,7 +235,7 @@ func (tm *ClaimTxManager) monitorTxs(ctx context.Context) error {
 		receiptSuccessful := false
 
 		for txHash := range mTx.History {
-			mTxLog.Debug("Checking if tx %s is mined", txHash)
+			mTxLog.Debugf("Checking if tx %s is mined", txHash)
 			mined, receipt, err = tm.l2Node.CheckTxWasMined(ctx, txHash)
 			if err != nil {
 				mTxLog.Errorf("failed to check if tx %s was mined: %v", txHash.String(), err)
