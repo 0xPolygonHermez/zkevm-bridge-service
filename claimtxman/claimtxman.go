@@ -225,7 +225,7 @@ func (tm *ClaimTxManager) monitorTxs(ctx context.Context) error {
 	for _, mTx := range mTxs {
 		mTx := mTx // force variable shadowing to avoid pointer conflicts
 		mTxLog := log.WithFields("monitoredTx", mTx.ID)
-		mTxLog.Info("processing")
+		mTxLog.Infof("processing tx with nonce %d", mTx.Nonce)
 
 		// check if any of the txs in the history was mined
 		mined := false
@@ -235,9 +235,10 @@ func (tm *ClaimTxManager) monitorTxs(ctx context.Context) error {
 		receiptSuccessful := false
 
 		for txHash := range mTx.History {
+			mTxLog.Debug("Checking if tx %s is mined", txHash)
 			mined, receipt, err = tm.l2Node.CheckTxWasMined(ctx, txHash)
 			if err != nil {
-				mTxLog.Errorf("failed to check if tx %v was mined: %v", txHash.String(), err)
+				mTxLog.Errorf("failed to check if tx %s was mined: %v", txHash.String(), err)
 				continue
 			}
 
@@ -250,7 +251,7 @@ func (tm *ClaimTxManager) monitorTxs(ctx context.Context) error {
 					hasFailedReceipts = true
 					continue
 				} else if err != nil {
-					mTxLog.Errorf("failed to get tx %v: %v", txHash.String(), err)
+					mTxLog.Errorf("failed to get tx %s: %v", txHash.String(), err)
 					continue
 				}
 
@@ -363,7 +364,7 @@ func (tm *ClaimTxManager) monitorTxs(ctx context.Context) error {
 			if errors.Is(err, ethereum.NotFound) {
 				err := tm.l2Node.SendTransaction(ctx, signedTx)
 				if err != nil {
-					mTxLog.Errorf("failed to send tx %v to network: %v", signedTx.Hash().String(), err)
+					mTxLog.Errorf("failed to send tx %s to network: %v", signedTx.Hash().String(), err)
 					if strings.Contains(err.Error(), "nonce") {
 						mTxLog.Infof("nonce error detected, Nonce used: %d", signedTx.Nonce())
 						if !isResetNonce {
@@ -418,7 +419,7 @@ func (tm *ClaimTxManager) ReviewMonitoredTx(ctx context.Context, mTx *ctmtypes.M
 		Data:  mTx.Data,
 	})
 	if err != nil {
-		err := fmt.Errorf("failed to estimate gas: %w", err)
+		err := fmt.Errorf("failed to estimate gas: %v", err)
 		mTxLog.Errorf(err.Error())
 		return err
 	}
