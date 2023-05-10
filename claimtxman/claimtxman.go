@@ -225,7 +225,7 @@ func (tm *ClaimTxManager) monitorTxs(ctx context.Context) error {
 	for _, mTx := range mTxs {
 		mTx := mTx // force variable shadowing to avoid pointer conflicts
 		mTxLog := log.WithFields("monitoredTx", mTx.ID)
-		mTxLog.Info("processing")
+		mTxLog.Infof("processing tx with nonce %d", mTx.Nonce)
 
 		// check if any of the txs in the history was mined
 		mined := false
@@ -235,9 +235,10 @@ func (tm *ClaimTxManager) monitorTxs(ctx context.Context) error {
 		receiptSuccessful := false
 
 		for txHash := range mTx.History {
+			mTxLog.Debugf("Checking if tx %s is mined", txHash)
 			mined, receipt, err = tm.l2Node.CheckTxWasMined(ctx, txHash)
 			if err != nil {
-				mTxLog.Errorf("failed to check if tx %v was mined: %v", txHash.String(), err)
+				mTxLog.Errorf("failed to check if tx %s was mined: %v", txHash.String(), err)
 				continue
 			}
 
@@ -250,7 +251,7 @@ func (tm *ClaimTxManager) monitorTxs(ctx context.Context) error {
 					hasFailedReceipts = true
 					continue
 				} else if err != nil {
-					mTxLog.Errorf("failed to get tx %v: %v", txHash.String(), err)
+					mTxLog.Errorf("failed to get tx %s: %v", txHash.String(), err)
 					continue
 				}
 
@@ -321,7 +322,7 @@ func (tm *ClaimTxManager) monitorTxs(ctx context.Context) error {
 			// review the tx information
 			if hasFailedReceipts {
 				mTxLog.Infof("monitored tx needs to be updated")
-				err := tm.ReviewMonitoredTx(ctx, &mTx)
+				err := tm.ReviewMonitoredTx(ctx, &mTx, true)
 				if err != nil {
 					mTxLog.Errorf("failed to review monitored tx: %v", err)
 					continue
@@ -336,18 +337,18 @@ func (tm *ClaimTxManager) monitorTxs(ctx context.Context) error {
 			}
 			mTx.GasPrice = gasPrice
 
-			var signedTx *types.Transaction
 			// rebuild transaction
 			tx := mTx.Tx()
-			mTxLog.Debugf("unsigned tx %v created for monitored tx", tx.Hash().String())
+			mTxLog.Debugf("unsigned tx created for monitored tx")
 
+			var signedTx *types.Transaction
 			// sign tx
 			signedTx, err = tm.auth.Signer(mTx.From, tx)
 			if err != nil {
 				mTxLog.Errorf("failed to sign tx %v created from monitored tx: %v", tx.Hash().String(), err)
 				continue
 			}
-			mTxLog.Debugf("signed tx %v created", signedTx.Hash().String())
+			mTxLog.Debugf("signed tx %v created using gasPrice: %s", signedTx.Hash().String(), signedTx.GasPrice().String())
 
 			// add tx to monitored tx history
 			err = mTx.AddHistory(signedTx)
@@ -363,7 +364,8 @@ func (tm *ClaimTxManager) monitorTxs(ctx context.Context) error {
 			if errors.Is(err, ethereum.NotFound) {
 				err := tm.l2Node.SendTransaction(ctx, signedTx)
 				if err != nil {
-					mTxLog.Errorf("failed to send tx %v to network: %v", signedTx.Hash().String(), err)
+					mTxLog.Errorf("failed to send tx %s to network: %v", signedTx.Hash().String(), err)
+					var reviewNonce bool
 					if strings.Contains(err.Error(), "nonce") {
 						mTxLog.Infof("nonce error detected, Nonce used: %d", signedTx.Nonce())
 						if !isResetNonce {
@@ -371,10 +373,11 @@ func (tm *ClaimTxManager) monitorTxs(ctx context.Context) error {
 							tm.nonceCache.Remove(mTx.From.Hex())
 							mTxLog.Infof("nonce cache cleared for address %v", mTx.From.Hex())
 						}
+						reviewNonce = true
 					}
 					mTx.RemoveHistory(signedTx)
 					// we should rebuild the monitored tx to fix the nonce
-					err := tm.ReviewMonitoredTx(ctx, &mTx)
+					err := tm.ReviewMonitoredTx(ctx, &mTx, reviewNonce)
 					if err != nil {
 						mTxLog.Errorf("failed to review monitored tx: %v", err)
 					}
@@ -407,7 +410,7 @@ func (tm *ClaimTxManager) monitorTxs(ctx context.Context) error {
 // ReviewMonitoredTx checks if tx needs to be updated
 // accordingly to the current information stored and the current
 // state of the blockchain
-func (tm *ClaimTxManager) ReviewMonitoredTx(ctx context.Context, mTx *ctmtypes.MonitoredTx) error {
+func (tm *ClaimTxManager) ReviewMonitoredTx(ctx context.Context, mTx *ctmtypes.MonitoredTx, reviewNonce bool) error {
 	mTxLog := log.WithFields("monitoredTx", mTx.ID)
 	mTxLog.Debug("reviewing")
 	// get gas
@@ -418,7 +421,7 @@ func (tm *ClaimTxManager) ReviewMonitoredTx(ctx context.Context, mTx *ctmtypes.M
 		Data:  mTx.Data,
 	})
 	if err != nil {
-		err := fmt.Errorf("failed to estimate gas: %w", err)
+		err := fmt.Errorf("failed to estimate gas: %v", err)
 		mTxLog.Errorf(err.Error())
 		return err
 	}
@@ -429,16 +432,18 @@ func (tm *ClaimTxManager) ReviewMonitoredTx(ctx context.Context, mTx *ctmtypes.M
 		mTx.Gas = gas
 	}
 
-	// check nonce
-	nonce, err := tm.getNextNonce(mTx.From)
-	if err != nil {
-		err := fmt.Errorf("failed to get nonce: %w", err)
-		mTxLog.Errorf(err.Error())
-		return err
-	}
-	if nonce > mTx.Nonce {
-		mTxLog.Infof("monitored tx nonce updated from %v to %v", mTx.Nonce, nonce)
-		mTx.Nonce = nonce
+	if reviewNonce {
+		// check nonce
+		nonce, err := tm.getNextNonce(mTx.From)
+		if err != nil {
+			err := fmt.Errorf("failed to get nonce: %w", err)
+			mTxLog.Errorf(err.Error())
+			return err
+		}
+		if nonce > mTx.Nonce {
+			mTxLog.Infof("monitored tx nonce updated from %v to %v", mTx.Nonce, nonce)
+			mTx.Nonce = nonce
+		}
 	}
 
 	return nil
