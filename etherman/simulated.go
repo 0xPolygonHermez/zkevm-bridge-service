@@ -49,10 +49,10 @@ func NewSimulatedEtherman(cfg Config, auth *bind.TransactOpts) (etherman *Client
 	}
 	const posBridge = 1
 	calculatedBridgeAddr := crypto.CreateAddress(auth.From, nonce+posBridge)
-	const posPoE = 2
-	calculatedPoEAddr := crypto.CreateAddress(auth.From, nonce+posPoE)
+	const posPolygonZkEVM = 2
+	calculatedPolygonZkEVMAddress := crypto.CreateAddress(auth.From, nonce+posPolygonZkEVM)
 	genesis := common.HexToHash("0xfd3434cd8f67e59d73488a2b8da242dd1f02849ea5dd99f0ca22c836c3d5b4a9") // Random value. Needs to be different to 0x0
-	exitManagerAddr, _, globalExitRoot, err := polygonzkevmglobalexitroot.DeployPolygonzkevmglobalexitroot(auth, client, calculatedPoEAddr, calculatedBridgeAddr)
+	exitManagerAddr, _, globalExitRoot, err := polygonzkevmglobalexitroot.DeployPolygonzkevmglobalexitroot(auth, client, calculatedPolygonZkEVMAddress, calculatedBridgeAddr)
 	if err != nil {
 		return nil, nil, common.Address{}, nil, err
 	}
@@ -60,11 +60,11 @@ func NewSimulatedEtherman(cfg Config, auth *bind.TransactOpts) (etherman *Client
 	if err != nil {
 		return nil, nil, common.Address{}, nil, err
 	}
-	poeAddr, _, poe, err := polygonzkevm.DeployPolygonzkevm(auth, client, exitManagerAddr, maticAddr, rollupVerifierAddr, bridgeAddr, 1000, 1) //nolint
+	polygonZkEVMAddress, _, polygonZkEVMContract, err := polygonzkevm.DeployPolygonzkevm(auth, client, exitManagerAddr, maticAddr, rollupVerifierAddr, bridgeAddr, 1000, 1) //nolint
 	if err != nil {
 		return nil, nil, common.Address{}, nil, err
 	}
-	_, err = mockbr.Initialize(auth, 0, exitManagerAddr, poeAddr)
+	_, err = mockbr.Initialize(auth, 0, exitManagerAddr, polygonZkEVMAddress)
 	if err != nil {
 		return nil, nil, common.Address{}, nil, err
 	}
@@ -72,14 +72,14 @@ func NewSimulatedEtherman(cfg Config, auth *bind.TransactOpts) (etherman *Client
 	if err != nil {
 		return nil, nil, common.Address{}, nil, err
 	}
-	poeParams := polygonzkevm.PolygonZkEVMInitializePackedParameters{
+	polygonZkEVMParams := polygonzkevm.PolygonZkEVMInitializePackedParameters{
 		Admin:                    auth.From,
 		TrustedSequencer:         auth.From,
 		PendingStateTimeout:      10000, //nolint:gomnd
 		TrustedAggregator:        auth.From,
 		TrustedAggregatorTimeout: 10000, //nolint:gomnd
 	}
-	_, err = poe.Initialize(auth, poeParams, genesis, "http://localhost", "L2", "v1") //nolint:gomnd
+	_, err = polygonZkEVMContract.Initialize(auth, polygonZkEVMParams, genesis, "http://localhost", "L2", "v1") //nolint:gomnd
 	if err != nil {
 		return nil, nil, common.Address{}, nil, err
 	}
@@ -88,26 +88,26 @@ func NewSimulatedEtherman(cfg Config, auth *bind.TransactOpts) (etherman *Client
 		return nil, nil, common.Address{}, nil, fmt.Errorf("bridgeAddr (%s) is different from the expected contract address (%s)",
 			bridgeAddr.String(), calculatedBridgeAddr.String())
 	}
-	if calculatedPoEAddr != poeAddr {
-		return nil, nil, common.Address{}, nil, fmt.Errorf("poeAddr (%s) is different from the expected contract address (%s)",
-			poeAddr.String(), calculatedPoEAddr.String())
+	if calculatedPolygonZkEVMAddress != polygonZkEVMAddress {
+		return nil, nil, common.Address{}, nil, fmt.Errorf("polygonZkEVMAddress (%s) is different from the expected contract address (%s)",
+			polygonZkEVMAddress.String(), calculatedPolygonZkEVMAddress.String())
 	}
 
-	// Approve the bridge and poe to spend 10000 matic tokens.
+	// Approve the bridge and polygonZkEVM to spend 10000 matic tokens.
 	approvedAmount, _ := new(big.Int).SetString("10000000000000000000000", 10) //nolint:gomnd
 	_, err = maticContract.Approve(auth, bridgeAddr, approvedAmount)
 	if err != nil {
 		return nil, nil, common.Address{}, nil, err
 	}
-	_, err = maticContract.Approve(auth, poeAddr, approvedAmount)
+	_, err = maticContract.Approve(auth, polygonZkEVMAddress, approvedAmount)
 	if err != nil {
 		return nil, nil, common.Address{}, nil, err
 	}
-	_, err = poe.ActivateForceBatches(auth)
+	_, err = polygonZkEVMContract.ActivateForceBatches(auth)
 	if err != nil {
 		return nil, nil, common.Address{}, nil, err
 	}
 
 	client.Commit()
-	return &Client{EtherClient: client, PoE: poe, Bridge: br, GlobalExitRootManager: globalExitRoot, SCAddresses: []common.Address{poeAddr, exitManagerAddr, bridgeAddr}}, client, maticAddr, mockbr, nil
+	return &Client{EtherClient: client, PolygonZkEVM: polygonZkEVMContract, PolygonBridge: br, PolygonZkEVMGlobalExitRoot: globalExitRoot, SCAddresses: []common.Address{polygonZkEVMAddress, exitManagerAddr, bridgeAddr}}, client, maticAddr, mockbr, nil
 }

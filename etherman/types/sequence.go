@@ -5,7 +5,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 )
 
-// Sequence represents an operation sent to the PoE smart contract to be
+// Sequence represents an operation sent to the polygonZkEVM smart contract to be
 // processed.
 type Sequence struct {
 	GlobalExitRoot  common.Hash
