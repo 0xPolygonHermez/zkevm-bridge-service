@@ -3,6 +3,7 @@ package config
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"path/filepath"
 	"strings"
 
@@ -71,8 +72,14 @@ func Load(configFilePath string, network string) (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
-	// Load genesis parameters
-	if network != "" {
+
+	if viper.IsSet("NetworkConfig") && network != "" {
+		return nil, errors.New("Network details are provided in the config file (the [NetworkConfig] section) and as a flag (the --network or -n). Configure it only once and try again please.")
+	}
+	if !viper.IsSet("NetworkConfig") && network == "" {
+		return nil, errors.New("Network details are not provided. Please configure the [NetworkConfig] section in your config file, or provide a --network flag.")
+	}
+	if !viper.IsSet("NetworkConfig") && network != "" {
 		cfg.loadNetworkConfig(network)
 	}
 
