@@ -51,7 +51,7 @@ contract PolygonZkEVMBridge is
     uint32 public networkID;
 
     // Global Exit Root address
-    IBasePolygonZkEVMGlobalExitRoot public globalExitRootManager;
+    IBasePolygonZkEVMGlobalExitRoot public polygonZkEVMGlobalExitRoot;
 
     // Last updated deposit count to the global exit root manager
     uint32 public lastUpdatedDepositCount;
@@ -70,18 +70,18 @@ contract PolygonZkEVMBridge is
 
     /**
      * @param _networkID networkID
-     * @param _globalExitRootManager global exit root manager address
+     * @param _polygonZkEVMGlobalExitRoot global exit root manager address
      * @param _polygonZkEVMaddress polygonZkEVM address
      * @notice The value of `_polygonZkEVMaddress` on the L2 deployment of the contract will be address(0), so
      * emergency state is not possible for the L2 deployment of the bridge, intentionally
      */
     function initialize(
         uint32 _networkID,
-        IBasePolygonZkEVMGlobalExitRoot _globalExitRootManager,
+        IBasePolygonZkEVMGlobalExitRoot _polygonZkEVMGlobalExitRoot,
         address _polygonZkEVMaddress
     ) external virtual initializer {
         networkID = _networkID;
-        globalExitRootManager = _globalExitRootManager;
+        polygonZkEVMGlobalExitRoot = _polygonZkEVMGlobalExitRoot;
         polygonZkEVMaddress = _polygonZkEVMaddress;
 
         // Initialize OZ contracts
@@ -279,7 +279,7 @@ contract PolygonZkEVMBridge is
 
         // Transfer funds
         if (originTokenAddress == address(0)) {
- 
+
         } else {
             emit NewWrappedToken(
                 originNetwork,
@@ -489,7 +489,7 @@ contract PolygonZkEVMBridge is
      */
     function _updateGlobalExitRoot() internal {
         lastUpdatedDepositCount = uint32(depositCount);
-        globalExitRootManager.updateExitRoot(getDepositRoot());
+        polygonZkEVMGlobalExitRoot.updateExitRoot(getDepositRoot());
     }
 
     /**
