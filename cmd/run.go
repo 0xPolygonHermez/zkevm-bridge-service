@@ -96,15 +96,20 @@ func start(ctx *cli.Context) error {
 		go runSynchronizer(0, bridgeController, client, c.Synchronizer, storage, zkEVMClient, chExitRootEvent)
 	}
 
-	for i := 0; i < len(c.Etherman.L2URLs); i++ {
-		// we should match the orders of L2URLs between etherman and claimtxman
-		// since we are using the networkIDs in the same order
-		claimTxManager, err := claimtxman.NewClaimTxManager(c.ClaimTxManager, chExitRootEvent, c.Etherman.L2URLs[i], networkIDs[i+1], c.NetworkConfig.L2PolygonBridgeAddresses[i], bridgeService, storage)
-		if err != nil {
-			log.Fatalf("error creating claim tx manager for L2 %s. Error: %v", c.Etherman.L2URLs[i], err)
+	if c.ClaimTxManager.Enabled {
+		for i := 0; i < len(c.Etherman.L2URLs); i++ {
+			// we should match the orders of L2URLs between etherman and claimtxman
+			// since we are using the networkIDs in the same order
+			claimTxManager, err := claimtxman.NewClaimTxManager(c.ClaimTxManager, chExitRootEvent, c.Etherman.L2URLs[i], networkIDs[i+1], c.NetworkConfig.L2PolygonBridgeAddresses[i], bridgeService, storage)
+			if err != nil {
+				log.Fatalf("error creating claim tx manager for L2 %s. Error: %v", c.Etherman.L2URLs[i], err)
+			}
+			go claimTxManager.Start()
 		}
-		go claimTxManager.Start()
+	} else {
+		log.Warn("ClaimTxManager not configured.")
 	}
+
 	// Wait for an in interrupt.
 	ch := make(chan os.Signal, 1)
 	signal.Notify(ch, os.Interrupt)

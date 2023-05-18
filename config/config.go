@@ -83,6 +83,8 @@ func Load(configFilePath string, network string) (*Config, error) {
 		cfg.loadNetworkConfig(network)
 	}
 
+	cfg.ClaimTxManager.Enabled = viper.IsSet("ClaimTxManager")
+
 	cfgJSON, _ := json.MarshalIndent(cfg, "", "  ")
 	log.Infof("Configuration loaded: \n%s\n", string(cfgJSON))
 	return &cfg, nil
