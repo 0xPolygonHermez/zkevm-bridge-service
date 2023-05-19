@@ -15,7 +15,7 @@ require (
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/rubenv/sql-migrate v1.4.0
 	github.com/spf13/viper v1.15.0
-	github.com/stretchr/testify v1.8.2
+	github.com/stretchr/testify v1.8.3
 	github.com/urfave/cli/v2 v2.25.3
 	golang.org/x/crypto v0.9.0
 	google.golang.org/genproto v0.0.0-20230306155012-7f2fa6fef1f4
