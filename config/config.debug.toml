@@ -12,6 +12,7 @@ Port = "5435"
 MaxConns = 20
 
 [ClaimTxManager]
+Enabled = true
 FrequencyToMonitorTxs = "1s"
 PrivateKey = {Path = "../test/test.keystore.sequencer", Password = "testonly"}
 

@@ -16,6 +16,7 @@ Port = "5432"
 MaxConns = 20
 
 [ClaimTxManager]
+Enabled = false
 FrequencyToMonitorTxs = "1s"
 PrivateKey = {Path = "./test/test.keystore", Password = "testonly"}
 
@@ -46,5 +47,4 @@ BridgeVersion = "v1"
     Host = "zkevm-bridge-db"
     Port = "5432"
     MaxConns = 20
-
 `
