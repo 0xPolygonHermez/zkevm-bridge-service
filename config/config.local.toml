@@ -12,6 +12,7 @@ Port = "5432"
 MaxConns = 20
 
 [ClaimTxManager]
+Enabled = true
 FrequencyToMonitorTxs = "1s"
 PrivateKey = {Path = "/pk/keystore.claimtxmanager", Password = "testonly"}
 
