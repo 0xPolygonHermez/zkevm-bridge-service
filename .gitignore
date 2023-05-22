@@ -15,3 +15,6 @@
 # vendor/
 /dist/
 .vscode
+
+config/config.mainnet.toml
+config/config.testnet.toml
