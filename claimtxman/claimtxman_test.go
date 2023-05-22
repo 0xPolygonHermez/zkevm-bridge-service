@@ -192,7 +192,7 @@ func TestUpdateDepositStatus(t *testing.T) {
 	require.Equal(t, deposits[0].DepositCount, uint(1))
 	require.Equal(t, deposits[0].NetworkID, uint(0))
 
-	require.NoError(t, pg.UpdateL2DepositsStatus(ctx, l2Root, nil))
+	require.NoError(t, pg.UpdateL2DepositsStatus(ctx, l2Root, 1, nil))
 	deposits, err = pg.GetDeposits(ctx, destAdr, 10, 0, nil)
 	require.NoError(t, err)
 	require.Len(t, deposits, 2)
