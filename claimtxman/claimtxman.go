@@ -101,8 +101,7 @@ func (tm *ClaimTxManager) updateDepositsStatus(ger *etherman.GlobalExitRoot) err
 	}
 	if ger.BlockID != 0 { // L2 exit root is updated
 		log.Infof("Rollup exitroot %v is updated", ger.ExitRoots[1])
-		// TODO Include networkID as input in UpdateL2DepositsStatus to handle multiple networkIDs in the query
-		if err := tm.storage.UpdateL2DepositsStatus(tm.ctx, ger.ExitRoots[1][:], dbTx); err != nil {
+		if err := tm.storage.UpdateL2DepositsStatus(tm.ctx, ger.ExitRoots[1][:], tm.l2NetworkID, dbTx); err != nil {
 			return err
 		}
 	} else { // L1 exit root is updated in the trusted state
