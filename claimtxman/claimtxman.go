@@ -181,6 +181,7 @@ func (tm *ClaimTxManager) updateDepositsStatus(ger *etherman.GlobalExitRoot) err
 	}
 	err = tm.storage.Commit(tm.ctx, dbTx)
 	if err != nil {
+		log.Errorf("AddClaimTx committing dbTx. Err: %v", err)
 		rollbackErr := tm.storage.Rollback(tm.ctx, dbTx)
 		if rollbackErr != nil {
 			log.Fatalf("claimtxman error rolling back state. RollbackErr: %s, err: %s", rollbackErr.Error(), err.Error())
