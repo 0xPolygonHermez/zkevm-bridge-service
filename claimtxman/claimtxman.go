@@ -102,17 +102,35 @@ func (tm *ClaimTxManager) updateDepositsStatus(ger *etherman.GlobalExitRoot) err
 	if ger.BlockID != 0 { // L2 exit root is updated
 		log.Infof("Rollup exitroot %v is updated", ger.ExitRoots[1])
 		if err := tm.storage.UpdateL2DepositsStatus(tm.ctx, ger.ExitRoots[1][:], tm.l2NetworkID, dbTx); err != nil {
+			log.Errorf("error updating L2DepositsStatus. Error: %v", err)
+			rollbackErr := tm.storage.Rollback(tm.ctx, dbTx)
+			if rollbackErr != nil {
+				log.Errorf("claimtxman error rolling back state. RollbackErr: %v, err: %s", rollbackErr, err.Error())
+				return rollbackErr
+			}
 			return err
 		}
 	} else { // L1 exit root is updated in the trusted state
 		log.Infof("Mainnet exitroot %v is updated", ger.ExitRoots[0])
 		deposits, err := tm.storage.UpdateL1DepositsStatus(tm.ctx, ger.ExitRoots[0][:], dbTx)
 		if err != nil {
+			log.Errorf("error getting and updating L1DepositsStatus. Error: %v", err)
+			rollbackErr := tm.storage.Rollback(tm.ctx, dbTx)
+			if rollbackErr != nil {
+				log.Errorf("claimtxman error rolling back state. RollbackErr: %v, err: %s", rollbackErr, err.Error())
+				return rollbackErr
+			}
 			return err
 		}
 		for _, deposit := range deposits {
 			claimHash, err := tm.bridgeService.GetDepositStatus(tm.ctx, deposit.DepositCount, deposit.DestinationNetwork)
 			if err != nil {
+				log.Errorf("error getting deposit status for deposit %d. Error: %v", deposit.DepositCount, err)
+				rollbackErr := tm.storage.Rollback(tm.ctx, dbTx)
+				if rollbackErr != nil {
+					log.Errorf("claimtxman error rolling back state. RollbackErr: %v, err: %s", rollbackErr, err.Error())
+					return rollbackErr
+				}
 				return err
 			}
 			if len(claimHash) > 0 || deposit.LeafType == LeafTypeMessage {
@@ -122,6 +140,12 @@ func (tm *ClaimTxManager) updateDepositsStatus(ger *etherman.GlobalExitRoot) err
 			log.Infof("create the claim tx for the deposit %d", deposit.DepositCount)
 			ger, proves, err := tm.bridgeService.GetClaimProof(deposit.DepositCount, deposit.NetworkID, dbTx)
 			if err != nil {
+				log.Errorf("error getting Claim Proof for deposit %d. Error: %v", deposit.DepositCount, err)
+				rollbackErr := tm.storage.Rollback(tm.ctx, dbTx)
+				if rollbackErr != nil {
+					log.Errorf("claimtxman error rolling back state. RollbackErr: %v, err: %s", rollbackErr, err.Error())
+					return rollbackErr
+				}
 				return err
 			}
 			var mtProves [mtHeight][keyLen]byte
@@ -136,9 +160,21 @@ func (tm *ClaimTxManager) updateDepositsStatus(ger *etherman.GlobalExitRoot) err
 					}},
 				tm.auth)
 			if err != nil {
+				log.Error("error BuildSendClaim tx for deposit %d. Error: %v", deposit.DepositCount, err)
+				rollbackErr := tm.storage.Rollback(tm.ctx, dbTx)
+				if rollbackErr != nil {
+					log.Errorf("claimtxman error rolling back state. RollbackErr: %v, err: %s", rollbackErr, err.Error())
+					return rollbackErr
+				}
 				return err
 			}
 			if err = tm.addClaimTx(deposit.DepositCount, deposit.BlockID, tm.auth.From, tx.To(), nil, tx.Data(), dbTx); err != nil {
+				log.Error("error adding claim tx for deposit %d. Error: %v", deposit.DepositCount, err)
+				rollbackErr := tm.storage.Rollback(tm.ctx, dbTx)
+				if rollbackErr != nil {
+					log.Error("claimtxman error rolling back state. RollbackErr: %v, err: %s", rollbackErr, err.Error())
+					return rollbackErr
+				}
 				return err
 			}
 		}
@@ -169,13 +205,6 @@ func (tm *ClaimTxManager) getNextNonce(from common.Address) (uint64, error) {
 }
 
 func (tm *ClaimTxManager) addClaimTx(id uint, blockID uint64, from common.Address, to *common.Address, value *big.Int, data []byte, dbTx pgx.Tx) error {
-	// get next nonce
-	nonce, err := tm.getNextNonce(from)
-	if err != nil {
-		err := fmt.Errorf("failed to get current nonce: %w", err)
-		log.Errorf(err.Error())
-		return err
-	}
 	// get gas
 	gas, err := tm.l2Node.EstimateGas(tm.ctx, ethereum.CallMsg{
 		From:  from,
@@ -184,7 +213,14 @@ func (tm *ClaimTxManager) addClaimTx(id uint, blockID uint64, from common.Addres
 		Data:  data,
 	})
 	if err != nil {
-		log.Errorf("failed to estimate gas: %w, data: %v", err, common.Bytes2Hex(data))
+		log.Errorf("failed to estimate gas. Ignoring tx... Error: %v, data: %s", err, common.Bytes2Hex(data))
+		return nil
+	}
+	// get next nonce
+	nonce, err := tm.getNextNonce(from)
+	if err != nil {
+		err := fmt.Errorf("failed to get current nonce: %w", err)
+		log.Errorf(err.Error())
 		return err
 	}
 
