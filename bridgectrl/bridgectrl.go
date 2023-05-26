@@ -28,8 +28,7 @@ func NewBridgeController(cfg Config, networks []uint, mtStore interface{}) (*Bri
 
 	for i, network := range networks {
 		networkIDs[network] = uint8(i)
-		// onlly add the zero hashes for the first tree to avoid duplication.
-		mt, err := NewMerkleTree(context.TODO(), mtStore.(merkleTreeStore), cfg.Height, uint8(i), i > 0)
+		mt, err := NewMerkleTree(context.TODO(), mtStore.(merkleTreeStore), cfg.Height, network)
 		if err != nil {
 			return nil, err
 		}
@@ -51,13 +50,13 @@ func (bt *BridgeController) getNetworkID(networkID uint) (uint8, error) {
 }
 
 // AddDeposit adds deposit information to the bridge tree.
-func (bt *BridgeController) AddDeposit(deposit *etherman.Deposit, dbTx pgx.Tx) error {
+func (bt *BridgeController) AddDeposit(deposit *etherman.Deposit, depositID uint64, dbTx pgx.Tx) error {
 	leaf := hashDeposit(deposit)
 	tID, err := bt.getNetworkID(deposit.NetworkID)
 	if err != nil {
 		return err
 	}
-	return bt.exitTrees[tID].addLeaf(context.TODO(), leaf, dbTx)
+	return bt.exitTrees[tID].addLeaf(context.TODO(), depositID, leaf, deposit.DepositCount, dbTx)
 }
 
 // ReorgMT reorg the specific merkle tree.

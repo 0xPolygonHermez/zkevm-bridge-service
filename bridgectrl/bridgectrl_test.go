@@ -13,6 +13,7 @@ import (
 	"github.com/0xPolygonHermez/zkevm-bridge-service/db/pgstorage"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/test/vectors"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/utils"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -49,19 +50,19 @@ func TestBridgeTree(t *testing.T) {
 	store, err := pgstorage.NewPostgresStorage(dbCfg)
 	require.NoError(t, err)
 
-	id, err := store.AddBlock(context.TODO(), &etherman.Block{
-		BlockNumber: 0,
-		BlockHash:   common.HexToHash("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9fc"),
-		ParentHash:  common.Hash{},
-	}, nil)
-	require.NoError(t, err)
-
 	bt, err := NewBridgeController(cfg, []uint{0, 1000}, store)
 	require.NoError(t, err)
 
 	ctx := context.TODO()
 	t.Run("Test adding deposit for the bridge tree", func(t *testing.T) {
 		for i, testVector := range testVectors {
+			block := &etherman.Block{
+				BlockNumber: uint64(i + 1),
+				BlockHash:   utils.GenerateRandomHash(),
+				ParentHash:  common.Hash{},
+			}
+			blockID, err := store.AddBlock(context.TODO(), block, nil)
+			require.NoError(t, err)
 			amount, _ := new(big.Int).SetString(testVector.Amount, 0)
 			deposit := &etherman.Deposit{
 				LeafType:           0,
@@ -70,24 +71,31 @@ func TestBridgeTree(t *testing.T) {
 				Amount:             amount,
 				DestinationNetwork: testVector.DestinationNetwork,
 				DestinationAddress: common.HexToAddress(testVector.DestinationAddress),
-				BlockNumber:        0,
+				BlockID:            blockID,
 				DepositCount:       uint(i),
 				Metadata:           common.FromHex(testVector.Metadata),
 			}
 			leafHash := hashDeposit(deposit)
 			assert.Equal(t, testVector.ExpectedHash, hex.EncodeToString(leafHash[:]))
-
-			err = bt.AddDeposit(deposit, nil)
+			depositID, err := store.AddDeposit(ctx, deposit, nil)
+			require.NoError(t, err)
+			err = bt.AddDeposit(deposit, depositID, nil)
 			require.NoError(t, err)
 
 			// test reorg
-			orgRoot, err := bt.exitTrees[0].store.GetRoot(ctx, uint(i+1), 0, nil)
+			orgRoot, err := bt.exitTrees[0].store.GetRoot(ctx, uint(i), 0, nil)
 			require.NoError(t, err)
+			require.NoError(t, store.Reset(ctx, uint64(i), deposit.NetworkID, nil))
 			err = bt.ReorgMT(uint(i), testVectors[i].OriginalNetwork, nil)
 			require.NoError(t, err)
-			err = bt.AddDeposit(deposit, nil)
+			blockID, err = store.AddBlock(context.TODO(), block, nil)
 			require.NoError(t, err)
-			newRoot, err := bt.exitTrees[0].store.GetRoot(ctx, uint(i+1), 0, nil)
+			deposit.BlockID = blockID
+			depositID, err = store.AddDeposit(ctx, deposit, nil)
+			require.NoError(t, err)
+			err = bt.AddDeposit(deposit, depositID, nil)
+			require.NoError(t, err)
+			newRoot, err := bt.exitTrees[0].store.GetRoot(ctx, uint(i), 0, nil)
 			require.NoError(t, err)
 			assert.Equal(t, orgRoot, newRoot)
 
@@ -101,16 +109,17 @@ func TestBridgeTree(t *testing.T) {
 				BlockNumber:    uint64(i + 1),
 				GlobalExitRoot: Hash(common.BytesToHash(roots[0]), common.BytesToHash(roots[1])),
 				ExitRoots:      []common.Hash{common.BytesToHash(roots[0]), common.BytesToHash(roots[1])},
-				BlockID:        id,
+				BlockID:        blockID,
 			}, nil)
 			require.NoError(t, err)
 
-			err = store.AddTrustedGlobalExitRoot(context.TODO(), &etherman.GlobalExitRoot{
+			isUpdated, err := store.AddTrustedGlobalExitRoot(context.TODO(), &etherman.GlobalExitRoot{
 				BlockNumber:    0,
 				GlobalExitRoot: Hash(common.BytesToHash(roots[0]), common.BytesToHash(roots[1])),
 				ExitRoots:      []common.Hash{common.BytesToHash(roots[0]), common.BytesToHash(roots[1])},
-				BlockID:        id,
+				BlockID:        blockID,
 			}, nil)
+			require.True(t, isUpdated)
 			require.NoError(t, err)
 		}
 	})

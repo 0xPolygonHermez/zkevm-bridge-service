@@ -53,7 +53,7 @@ func TestGEREvent(t *testing.T) {
 
 	amount := big.NewInt(1000000000000000)
 	auth.Value = amount
-	_, err = etherman.Bridge.BridgeAsset(auth, 1, auth.From, amount, common.Address{}, true, []byte{})
+	_, err = etherman.PolygonBridge.BridgeAsset(auth, 1, auth.From, amount, common.Address{}, true, []byte{})
 	require.NoError(t, err)
 
 	// Mine the tx in a block
@@ -82,21 +82,21 @@ func TestSequencedBatchesEvent(t *testing.T) {
 	// Make a bridge tx
 	a := auth
 	a.Value = big.NewInt(1000000000000000)
-	_, err = etherman.Bridge.BridgeAsset(a, 1, a.From, a.Value, common.Address{}, true, []byte{})
+	_, err = etherman.PolygonBridge.BridgeAsset(a, 1, a.From, a.Value, common.Address{}, true, []byte{})
 	require.NoError(t, err)
 	ethBackend.Commit()
 	a.Value = big.NewInt(0)
 
 	// Get the last ger
-	ger, err := etherman.GlobalExitRootManager.GetLastGlobalExitRoot(nil)
+	ger, err := etherman.PolygonZkEVMGlobalExitRoot.GetLastGlobalExitRoot(nil)
 	require.NoError(t, err)
 
-	amount, err := etherman.PoE.GetCurrentBatchFee(&bind.CallOpts{Pending: false})
+	amount, err := etherman.PolygonZkEVM.GetForcedBatchFee(&bind.CallOpts{Pending: false})
 	require.NoError(t, err)
 	rawTxs := "f84901843b9aca00827b0c945fbdb2315678afecb367f032d93f642f64180aa380a46057361d00000000000000000000000000000000000000000000000000000000000000048203e9808073efe1fa2d3e27f26f32208550ea9b0274d49050b816cadab05a771f4275d0242fd5d92b3fb89575c070e6c930587c520ee65a3aa8cfe382fcad20421bf51d621c"
 	data, err := hex.DecodeString(rawTxs)
 	require.NoError(t, err)
-	_, err = etherman.PoE.ForceBatch(auth, data, amount)
+	_, err = etherman.PolygonZkEVM.ForceBatch(auth, data, amount)
 	require.NoError(t, err)
 	ethBackend.Commit()
 
@@ -119,7 +119,7 @@ func TestSequencedBatchesEvent(t *testing.T) {
 		MinForcedTimestamp: 0,
 		Transactions:       common.Hex2Bytes(rawTxs),
 	})
-	_, err = etherman.PoE.SequenceBatches(auth, sequences, auth.From)
+	_, err = etherman.PolygonZkEVM.SequenceBatches(auth, sequences, auth.From)
 	require.NoError(t, err)
 
 	// Mine the tx in a block
@@ -157,13 +157,13 @@ func TestVerifyBatchEvent(t *testing.T) {
 		MinForcedTimestamp: 0,
 		Transactions:       common.Hex2Bytes(rawTxs),
 	}
-	_, err = etherman.PoE.SequenceBatches(auth, []polygonzkevm.PolygonZkEVMBatchData{tx}, auth.From)
+	_, err = etherman.PolygonZkEVM.SequenceBatches(auth, []polygonzkevm.PolygonZkEVMBatchData{tx}, auth.From)
 	require.NoError(t, err)
 
 	// Mine the tx in a block
 	ethBackend.Commit()
 
-	_, err = etherman.PoE.VerifyBatchesTrustedAggregator(auth, 0, 0, 1, common.Hash{}, common.Hash{}, []byte{})
+	_, err = etherman.PolygonZkEVM.VerifyBatchesTrustedAggregator(auth, 0, 0, 1, common.Hash{}, common.Hash{}, []byte{})
 	require.NoError(t, err)
 
 	// Mine the tx in a block
@@ -195,12 +195,12 @@ func TestSequenceForceBatchesEvent(t *testing.T) {
 	initBlock, err := etherman.EtherClient.BlockByNumber(ctx, nil)
 	require.NoError(t, err)
 
-	amount, err := etherman.PoE.GetCurrentBatchFee(&bind.CallOpts{Pending: false})
+	amount, err := etherman.PolygonZkEVM.GetForcedBatchFee(&bind.CallOpts{Pending: false})
 	require.NoError(t, err)
 	rawTxs := "f84901843b9aca00827b0c945fbdb2315678afecb367f032d93f642f64180aa380a46057361d00000000000000000000000000000000000000000000000000000000000000048203e9808073efe1fa2d3e27f26f32208550ea9b0274d49050b816cadab05a771f4275d0242fd5d92b3fb89575c070e6c930587c520ee65a3aa8cfe382fcad20421bf51d621c"
 	data, err := hex.DecodeString(rawTxs)
 	require.NoError(t, err)
-	_, err = etherman.PoE.ForceBatch(auth, data, amount)
+	_, err = etherman.PolygonZkEVM.ForceBatch(auth, data, amount)
 	require.NoError(t, err)
 	ethBackend.Commit()
 
@@ -220,7 +220,7 @@ func TestSequenceForceBatchesEvent(t *testing.T) {
 		GlobalExitRoot:     blocks[0].ForcedBatches[0].GlobalExitRoot,
 		MinForcedTimestamp: uint64(blocks[0].ForcedBatches[0].ForcedAt.Unix()),
 	}
-	_, err = etherman.PoE.SequenceForceBatches(auth, []polygonzkevm.PolygonZkEVMForcedBatchData{forceBatchData})
+	_, err = etherman.PolygonZkEVM.SequenceForceBatches(auth, []polygonzkevm.PolygonZkEVMForcedBatchData{forceBatchData})
 	require.NoError(t, err)
 	ethBackend.Commit()
 

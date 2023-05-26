@@ -1,3 +1,5 @@
+include version.mk
+
 DOCKER_COMPOSE := docker-compose -f docker-compose.yml
 DOCKER_COMPOSE_STATE_DB := zkevm-state-db
 DOCKER_COMPOSE_POOL_DB := zkevm-pool-db
@@ -26,10 +28,10 @@ STOP_ZKPROVER := $(DOCKER_COMPOSE) stop $(DOCKER_COMPOSE_ZKPROVER) && $(DOCKER_C
 STOP_BRIDGE := $(DOCKER_COMPOSE) stop $(DOCKER_COMPOSE_BRIDGE) && $(DOCKER_COMPOSE) rm -f $(DOCKER_COMPOSE_BRIDGE)
 STOP := $(DOCKER_COMPOSE) down --remove-orphans
 
-VERSION := $(shell git describe --tags --always)
-COMMIT := $(shell git rev-parse --short HEAD)
-DATE := $(shell date +%Y-%m-%dT%H:%M:%S%z)
-LDFLAGS := -ldflags "-X main.version=$(VERSION) -X main.commit=$(COMMIT) -X main.date=$(DATE)"
+LDFLAGS += -X 'github.com/0xPolygonHermez/zkevm-bridge-service.Version=$(VERSION)'
+LDFLAGS += -X 'github.com/0xPolygonHermez/zkevm-bridge-service.GitRev=$(GITREV)'
+LDFLAGS += -X 'github.com/0xPolygonHermez/zkevm-bridge-service.GitBranch=$(GITBRANCH)'
+LDFLAGS += -X 'github.com/0xPolygonHermez/zkevm-bridge-service.BuildDate=$(DATE)'
 
 GO_BASE := $(shell pwd)
 GO_BIN := $(GO_BASE)/dist
@@ -37,8 +39,8 @@ GO_ENV_VARS := GO_BIN=$(GO_BIN)
 GO_BINARY := zkevm-bridge
 GO_CMD := $(GO_BASE)/cmd
 
-LINT := $$(go env GOPATH)/bin/golangci-lint run --timeout=5m -E whitespace -E gosec -E gci -E misspell -E gomnd -E gofmt -E goimports -E golint --exclude-use-default=false --max-same-issues 0
-BUILD := $(GO_ENV_VARS) go build $(LDFLAGS) -o $(GO_BIN)/$(GO_BINARY) $(GO_CMD)
+LINT := $$(go env GOPATH)/bin/golangci-lint run --timeout=5m -E whitespace -E gosec -E gci -E misspell -E gomnd -E gofmt -E goimports --exclude-use-default=false --max-same-issues 0
+BUILD := $(GO_ENV_VARS) go build -ldflags "all=$(LDFLAGS)" -o $(GO_BIN)/$(GO_BINARY) $(GO_CMD)
 
 .PHONY: build
 build: ## Build the binary locally into ./dist
@@ -60,7 +62,7 @@ test: ## Runs only short tests without checking race conditions
 
 .PHONY: install-linter
 install-linter: ## Installs the linter
-	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $$(go env GOPATH)/bin v1.50.1
+	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $$(go env GOPATH)/bin v1.51.2
 
 .PHONY: build-docker
 build-docker: ## Builds a docker image with the zkevm bridge binary
@@ -157,7 +159,7 @@ stop-mockserver: ## Stops the mock bridge service
 bench: ## benchmark test
 	$(STOP_BRIDGE_DB) || true
 	$(RUN_BRIDGE_DB); sleep 3
-	trap '$(STOP_BRIDGE_DB)' EXIT; go test -run=NOTEST -bench=Small ./test/benchmark/...
+	trap '$(STOP_BRIDGE_DB)' EXIT; go test -run=NOTEST -timeout=30m -bench=Small ./test/benchmark/...
 
 .PHONY: bench-full
 bench-full: export ZKEVM_BRIDGE_DATABASE_PORT = 5432
@@ -197,4 +199,4 @@ generate-mocks: ## Generates mocks for the tests, using mockery tool
 	mockery --name=storageInterface --dir=synchronizer --output=synchronizer --outpkg=synchronizer --structname=storageMock --filename=mock_storage.go
 	mockery --name=bridgectrlInterface --dir=synchronizer --output=synchronizer --outpkg=synchronizer --structname=bridgectrlMock --filename=mock_bridgectrl.go
 	mockery --name=Tx --srcpkg=github.com/jackc/pgx/v4 --output=synchronizer --outpkg=synchronizer --structname=dbTxMock --filename=mock_dbtx.go
-	mockery --name=BroadcastServiceClient --srcpkg=github.com/0xPolygonHermez/zkevm-node/sequencer/broadcast/pb --output=synchronizer --outpkg=synchronizer --structname=broadcastMock --filename=mock_broadcast.go
+	mockery --name=zkEVMClientInterface --dir=synchronizer --output=synchronizer --outpkg=synchronizer --structname=zkEVMClientMock --filename=mock_zkevmclient.go

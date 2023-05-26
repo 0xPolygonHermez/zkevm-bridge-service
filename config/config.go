@@ -3,10 +3,12 @@ package config
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"path/filepath"
 	"strings"
 
 	"github.com/0xPolygonHermez/zkevm-bridge-service/bridgectrl"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/claimtxman"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/db"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/server"
@@ -20,6 +22,7 @@ import (
 type Config struct {
 	Log              log.Config
 	SyncDB           db.Config
+	ClaimTxManager   claimtxman.Config
 	Etherman         etherman.Config
 	Synchronizer     synchronizer.Config
 	BridgeController bridgectrl.Config
@@ -69,8 +72,14 @@ func Load(configFilePath string, network string) (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
-	// Load genesis parameters
-	if network != "" {
+
+	if viper.IsSet("NetworkConfig") && network != "" {
+		return nil, errors.New("Network details are provided in the config file (the [NetworkConfig] section) and as a flag (the --network or -n). Configure it only once and try again please.")
+	}
+	if !viper.IsSet("NetworkConfig") && network == "" {
+		return nil, errors.New("Network details are not provided. Please configure the [NetworkConfig] section in your config file, or provide a --network flag.")
+	}
+	if !viper.IsSet("NetworkConfig") && network != "" {
 		cfg.loadNetworkConfig(network)
 	}
 

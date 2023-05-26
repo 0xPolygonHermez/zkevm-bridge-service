@@ -77,6 +77,8 @@ type Deposit struct {
 	NetworkID          uint
 	TxHash             common.Hash
 	Metadata           []byte
+	// it is only used for the bridge service
+	ReadyForClaim bool
 }
 
 // Claim struct

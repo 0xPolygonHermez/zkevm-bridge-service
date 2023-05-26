@@ -11,6 +11,11 @@ Host = "zkevm-bridge-db"
 Port = "5432"
 MaxConns = 20
 
+[ClaimTxManager]
+Enabled = true
+FrequencyToMonitorTxs = "1s"
+PrivateKey = {Path = "/pk/keystore.claimtxmanager", Password = "testonly"}
+
 [Etherman]
 L1URL = "http://zkevm-mock-l1-network:8545"
 L2URLs = ["http://zkevm-node:8123"]
@@ -18,7 +23,6 @@ L2URLs = ["http://zkevm-node:8123"]
 [Synchronizer]
 SyncInterval = "1s"
 SyncChunkSize = 100
-GrpcURL = "zkevm-node:61090"
 
 [BridgeController]
 Store = "postgres"
@@ -27,6 +31,7 @@ Height = 32
 [BridgeServer]
 GRPCPort = "9090"
 HTTPPort = "8080"
+CacheSize = 100000
 DefaultPageLimit = 25
 MaxPageLimit = 100
 BridgeVersion = "v1"
@@ -41,9 +46,9 @@ BridgeVersion = "v1"
 
 [NetworkConfig]
 GenBlockNumber = 1
-PoEAddr = "0x610178dA211FEF7D417bC0e6FeD39F05609AD788"
-BridgeAddr = "0xAD1eA25D1133095d20D5C3f269ed887aC0a2496C"
-GlobalExitRootManAddr = "0x2279B7A0a67DB372996a5FaB50D91eAA73d2eBe6"
-MaticAddr = "0x5FbDB2315678afecb367f032d93F642f64180aa3"
-L2BridgeAddrs = ["0xfC5b0c5F677a3f3E29DB2e98c9eD455c7ACfCf03"]
+PolygonZkEVMAddress = "0x610178dA211FEF7D417bC0e6FeD39F05609AD788"
+PolygonBridgeAddress = "0xff0EE8ea08cEf5cb4322777F5CC3E8A584B8A4A0"
+PolygonZkEVMGlobalExitRootAddress = "0x2279B7A0a67DB372996a5FaB50D91eAA73d2eBe6"
+MaticTokenAddress = "0x5FbDB2315678afecb367f032d93F642f64180aa3"
+L2PolygonBridgeAddresses = ["0xff0EE8ea08cEf5cb4322777F5CC3E8A584B8A4A0"]
 L1ChainID = 1337

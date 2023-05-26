@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"math/big"
 
 	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman"
 	clientUtils "github.com/0xPolygonHermez/zkevm-bridge-service/test/client"
@@ -12,7 +11,7 @@ import (
 )
 
 const (
-	l2BridgeAddr = "0xfC5b0c5F677a3f3E29DB2e98c9eD455c7ACfCf03"
+	l2BridgeAddr = "0xff0EE8ea08cEf5cb4322777F5CC3E8A584B8A4A0"
 
 	l2AccHexAddress    = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
 	l2AccHexPrivateKey = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
@@ -24,7 +23,7 @@ const (
 
 func main() {
 	ctx := context.Background()
-	c, err := utils.NewClient(ctx, l2NetworkURL)
+	c, err := utils.NewClient(ctx, l2NetworkURL, common.HexToAddress(l2BridgeAddr))
 	if err != nil {
 		log.Fatal("Error: ", err)
 	}
@@ -32,13 +31,13 @@ func main() {
 	if err != nil {
 		log.Fatal("Error: ", err)
 	}
-	auth.GasPrice = big.NewInt(0)
 
 	// Get Claim data
 	cfg := clientUtils.Config{
-		L1NodeURL: l2NetworkURL,
-		L2NodeURL: l2NetworkURL,
-		BridgeURL: bridgeURL,
+		L1NodeURL:    l2NetworkURL,
+		L2NodeURL:    l2NetworkURL,
+		BridgeURL:    bridgeURL,
+		L2BridgeAddr: common.HexToAddress(l2BridgeAddr),
 	}
 	client, err := clientUtils.NewClient(ctx, cfg)
 	if err != nil {
@@ -66,7 +65,7 @@ func main() {
 		ExitRoots: []common.Hash{common.HexToHash(proof.MainExitRoot), common.HexToHash(proof.RollupExitRoot)},
 	}
 	log.Info("Sending claim tx...")
-	err = c.SendClaim(ctx, bridgeData, smt, globalExitRoot, common.HexToAddress(l2BridgeAddr), auth)
+	err = c.SendClaim(ctx, bridgeData, smt, globalExitRoot, auth)
 	if err != nil {
 		log.Fatal("error: ", err)
 	}
