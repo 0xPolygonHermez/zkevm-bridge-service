@@ -33,7 +33,7 @@ PollMinAllowedGasPriceInterval = "15s"
 [Etherman]
 URL = "http://zkevm-mock-l1-network:8545"
 MultiGasProvider = false
-	[Etherscan]
+	[Etherman.Etherscan]
 		ApiKey = ""
 
 [RPC]
