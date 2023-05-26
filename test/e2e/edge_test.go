@@ -28,11 +28,8 @@ func depositFromL1(ctx context.Context, opsman *operations.Manager, t *testing.T
 
 	deposits, err := opsman.GetBridgeInfoByDestAddr(ctx, &destAddr)
 	require.NoError(t, err)
-	// Get the claim data
-	smtProof, globalExitRoot, err := opsman.GetClaimData(ctx, uint(deposits[0].OrigNet), uint(deposits[0].DepositCnt))
-	require.NoError(t, err)
-	// Claim funds in L2
-	err = opsman.SendL2Claim(ctx, deposits[0], smtProof, globalExitRoot)
+	// Check a L2 claim tx
+	err = opsman.CheckL2Claim(ctx, uint(deposits[0].DestNet), uint(deposits[0].DepositCnt))
 	require.NoError(t, err)
 }
 
@@ -80,6 +77,7 @@ func TestEdgeCase(t *testing.T) {
 		BS: server.Config{
 			GRPCPort:         "9090",
 			HTTPPort:         "8080",
+			CacheSize:        100000,
 			DefaultPageLimit: 25,
 			MaxPageLimit:     100,
 			BridgeVersion:    "v1",

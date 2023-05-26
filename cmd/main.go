@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	zkevmbridgeservice "github.com/0xPolygonHermez/zkevm-bridge-service"
 	"github.com/urfave/cli/v2"
 )
 
@@ -14,19 +15,13 @@ const (
 
 const (
 	// App name
-	appName = "hermez-bridge"
-	// version represents the program based on the git tag
-	version = "v0.1.0"
-	// commit represents the program based on the git commit
-	commit = "dev"
-	// date represents the date of application was built
-	date = ""
+	appName = "zkevm-bridge"
 )
 
 func main() {
 	app := cli.NewApp()
 	app.Name = appName
-	app.Version = version
+	app.Version = zkevmbridgeservice.Version
 	flags := []cli.Flag{
 		&cli.StringFlag{
 			Name:     flagCfg,

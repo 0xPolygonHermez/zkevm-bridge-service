@@ -76,14 +76,16 @@ func TestAddTrustedGERDuplicated(t *testing.T) {
 		ExitRoots:      []common.Hash{common.HexToHash("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9f1"), common.HexToHash("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9f1")},
 		GlobalExitRoot: common.HexToHash("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9f1"),
 	}
-	err = pg.AddTrustedGlobalExitRoot(ctx, ger, tx)
+	isInserted, err := pg.AddTrustedGlobalExitRoot(ctx, ger, tx)
+	require.True(t, isInserted)
 	require.NoError(t, err)
 	getCount := "select count(*) from sync.exit_root where block_id = 0 AND global_exit_root = $1"
 	var result int
 	err = tx.QueryRow(ctx, getCount, ger.GlobalExitRoot).Scan(&result)
 	require.NoError(t, err)
 	assert.Equal(t, 1, result)
-	err = pg.AddTrustedGlobalExitRoot(ctx, ger, tx)
+	isInserted, err = pg.AddTrustedGlobalExitRoot(ctx, ger, tx)
+	require.False(t, isInserted)
 	require.NoError(t, err)
 	err = tx.QueryRow(ctx, getCount, ger.GlobalExitRoot).Scan(&result)
 	require.NoError(t, err)
@@ -97,12 +99,14 @@ func TestAddTrustedGERDuplicated(t *testing.T) {
 		ExitRoots:      []common.Hash{common.HexToHash("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9f2"), common.HexToHash("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9f2")},
 		GlobalExitRoot: common.HexToHash("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9f2"),
 	}
-	err = pg.AddTrustedGlobalExitRoot(ctx, ger, tx)
+	isInserted, err = pg.AddTrustedGlobalExitRoot(ctx, ger, tx)
+	require.False(t, isInserted)
 	require.NoError(t, err)
 	err = tx.QueryRow(ctx, getCount, ger.GlobalExitRoot).Scan(&result)
 	require.NoError(t, err)
 	assert.Equal(t, 1, result)
-	err = pg.AddTrustedGlobalExitRoot(ctx, ger1, tx)
+	isInserted, err = pg.AddTrustedGlobalExitRoot(ctx, ger1, tx)
+	require.True(t, isInserted)
 	require.NoError(t, err)
 	getCount2 := "select count(*) from sync.exit_root"
 	err = tx.QueryRow(ctx, getCount2).Scan(&result)
@@ -350,11 +354,15 @@ func TestMTStorage(t *testing.T) {
 	leaf1 := common.FromHex("0xa4bfa0908dc7b06d98da4309f859023d6947561bc19bc00d77f763dea1a0b9f5")
 	leaf2 := common.FromHex("0x315fee1aa202bf4a6bd0fde560c89be90b6e6e2aaf92dc5e8d118209abc3410f")
 	root := common.FromHex("0x88e652896cb1de5962a0173a222059f51e6b943a2ba6dfc9acbff051ceb1abb5")
-
-	rootID, err := pg.SetRoot(ctx, root, 1, 0, tx)
+	deposit := &etherman.Deposit{
+		Metadata: common.Hex2Bytes("0x0"),
+	}
+	depositID, err := pg.AddDeposit(ctx, deposit, tx)
+	require.NoError(t, err)
+	err = pg.SetRoot(ctx, root, depositID, 1, 0, tx)
 	require.NoError(t, err)
 
-	err = pg.Set(ctx, root, [][]byte{leaf1, leaf2}, rootID, tx)
+	err = pg.Set(ctx, root, [][]byte{leaf1, leaf2}, depositID, tx)
 	require.NoError(t, err)
 
 	vals, err := pg.Get(ctx, root, tx)
@@ -373,11 +381,6 @@ func TestMTStorage(t *testing.T) {
 	dCount, err := pg.GetDepositCountByRoot(ctx, root, 0, tx)
 	require.NoError(t, err)
 	require.Equal(t, dCount, uint(1))
-
-	err = pg.ResetMT(ctx, 0, 0, tx)
-	require.NoError(t, err)
-	_, err = pg.GetRoot(ctx, 1, 0, tx)
-	require.Error(t, err)
 
 	require.NoError(t, tx.Commit(ctx))
 }
@@ -416,7 +419,7 @@ func TestBSStorage(t *testing.T) {
 		DepositCount:       1,
 		Metadata:           common.FromHex("0x000000000000000000000000000000000000000000000000000000000000006000000000000000000000000000000000000000000000000000000000000000a0000000000000000000000000000000000000000000000000000000000000000c0000000000000000000000000000000000000000000000000000000000000005436f696e410000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000003434f410000000000000000000000000000000000000000000000000000000000"),
 	}
-	err = pg.AddDeposit(ctx, deposit, tx)
+	_, err = pg.AddDeposit(ctx, deposit, tx)
 	require.NoError(t, err)
 
 	claim := &etherman.Claim{

@@ -5,6 +5,7 @@ import (
 	"math/big"
 
 	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman"
+	rpcTypes "github.com/0xPolygonHermez/zkevm-node/jsonrpc/types"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/jackc/pgx/v4"
@@ -30,7 +31,7 @@ type storageInterface interface {
 	AddBatch(ctx context.Context, batch *etherman.Batch, dbTx pgx.Tx) error
 	AddVerifiedBatch(ctx context.Context, verifiedBatch *etherman.VerifiedBatch, dbTx pgx.Tx) error
 	AddGlobalExitRoot(ctx context.Context, exitRoot *etherman.GlobalExitRoot, dbTx pgx.Tx) error
-	AddDeposit(ctx context.Context, deposit *etherman.Deposit, dbTx pgx.Tx) error
+	AddDeposit(ctx context.Context, deposit *etherman.Deposit, dbTx pgx.Tx) (uint64, error)
 	AddClaim(ctx context.Context, claim *etherman.Claim, dbTx pgx.Tx) error
 	AddTokenWrapped(ctx context.Context, tokenWrapped *etherman.TokenWrapped, dbTx pgx.Tx) error
 	Reset(ctx context.Context, blockNumber uint64, networkID uint, dbTx pgx.Tx) error
@@ -41,11 +42,17 @@ type storageInterface interface {
 	GetNextForcedBatches(ctx context.Context, nextForcedBatches int, dbTx pgx.Tx) ([]etherman.ForcedBatch, error)
 	AddBatchNumberInForcedBatch(ctx context.Context, forceBatchNumber, batchNumber uint64, dbTx pgx.Tx) error
 	AddForcedBatch(ctx context.Context, forcedBatch *etherman.ForcedBatch, dbTx pgx.Tx) error
-	AddTrustedGlobalExitRoot(ctx context.Context, trustedExitRoot *etherman.GlobalExitRoot, dbTx pgx.Tx) error
+	AddTrustedGlobalExitRoot(ctx context.Context, trustedExitRoot *etherman.GlobalExitRoot, dbTx pgx.Tx) (bool, error)
 	GetLastVerifiedBatch(ctx context.Context, dbTx pgx.Tx) (*etherman.VerifiedBatch, error)
+	GetLatestL1SyncedExitRoot(ctx context.Context, dbTx pgx.Tx) (*etherman.GlobalExitRoot, error)
 }
 
 type bridgectrlInterface interface {
-	AddDeposit(deposit *etherman.Deposit, dbTx pgx.Tx) error
+	AddDeposit(deposit *etherman.Deposit, depositID uint64, dbTx pgx.Tx) error
 	ReorgMT(depositCount, networkID uint, dbTx pgx.Tx) error
+}
+
+type zkEVMClientInterface interface {
+	BatchNumber(ctx context.Context) (uint64, error)
+	BatchByNumber(ctx context.Context, number *big.Int) (*rpcTypes.Batch, error)
 }

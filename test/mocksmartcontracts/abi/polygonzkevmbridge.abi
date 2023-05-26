@@ -543,7 +543,7 @@
 	},
 	{
 		"inputs": [],
-		"name": "globalExitRootManager",
+		"name": "polygonZkEVMGlobalExitRoot",
 		"outputs": [
 			{
 				"internalType": "contract IBasePolygonZkEVMGlobalExitRoot",
@@ -563,7 +563,7 @@
 			},
 			{
 				"internalType": "contract IBasePolygonZkEVMGlobalExitRoot",
-				"name": "_globalExitRootManager",
+				"name": "_polygonZkEVMGlobalExitRoot",
 				"type": "address"
 			},
 			{

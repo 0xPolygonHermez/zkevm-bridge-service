@@ -5,7 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"time"
 
+	ctmtypes "github.com/0xPolygonHermez/zkevm-bridge-service/claimtxman/types"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/utils/gerror"
 	"github.com/0xPolygonHermez/zkevm-node/log"
@@ -110,9 +112,18 @@ func (p *PostgresStorage) GetBatchByNumber(ctx context.Context, batchNumber uint
 // AddBlock adds a new block to the storage.
 func (p *PostgresStorage) AddBlock(ctx context.Context, block *etherman.Block, dbTx pgx.Tx) (uint64, error) {
 	var blockID uint64
-	const addBlockSQL = "INSERT INTO sync.block (block_num, block_hash, parent_hash, network_id, received_at) VALUES ($1, $2, $3, $4, $5) RETURNING id;"
+	const addBlockSQL = `WITH block_id AS 
+		(INSERT INTO sync.block (block_num, block_hash, parent_hash, network_id, received_at) 
+		VALUES ($1, $2, $3, $4, $5) ON CONFLICT (block_hash) DO NOTHING RETURNING id)
+		SELECT * from block_id
+		UNION ALL
+		SELECT id FROM sync.block WHERE block_hash = $2;`
 	e := p.getExecQuerier(dbTx)
 	err := e.QueryRow(ctx, addBlockSQL, block.BlockNumber, block.BlockHash, block.ParentHash, block.NetworkID, block.ReceivedAt).Scan(&blockID)
+
+	if err == pgx.ErrNoRows {
+		err = nil
+	}
 
 	return blockID, err
 }
@@ -159,11 +170,12 @@ func (p *PostgresStorage) AddGlobalExitRoot(ctx context.Context, exitRoot *ether
 }
 
 // AddDeposit adds new deposit to the storage.
-func (p *PostgresStorage) AddDeposit(ctx context.Context, deposit *etherman.Deposit, dbTx pgx.Tx) error {
-	const addDepositSQL = "INSERT INTO sync.deposit (leaf_type, network_id, orig_net, orig_addr, amount, dest_net, dest_addr, block_id, deposit_cnt, tx_hash, metadata) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)"
+func (p *PostgresStorage) AddDeposit(ctx context.Context, deposit *etherman.Deposit, dbTx pgx.Tx) (uint64, error) {
+	const addDepositSQL = "INSERT INTO sync.deposit (leaf_type, network_id, orig_net, orig_addr, amount, dest_net, dest_addr, block_id, deposit_cnt, tx_hash, metadata) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING id"
 	e := p.getExecQuerier(dbTx)
-	_, err := e.Exec(ctx, addDepositSQL, deposit.LeafType, deposit.NetworkID, deposit.OriginalNetwork, deposit.OriginalAddress, deposit.Amount.String(), deposit.DestinationNetwork, deposit.DestinationAddress, deposit.BlockID, deposit.DepositCount, deposit.TxHash, deposit.Metadata)
-	return err
+	var depositID uint64
+	err := e.QueryRow(ctx, addDepositSQL, deposit.LeafType, deposit.NetworkID, deposit.OriginalNetwork, deposit.OriginalAddress, deposit.Amount.String(), deposit.DestinationNetwork, deposit.DestinationAddress, deposit.BlockID, deposit.DepositCount, deposit.TxHash, deposit.Metadata).Scan(&depositID)
+	return depositID, err
 }
 
 // AddClaim adds new claim to the storage.
@@ -278,23 +290,23 @@ func (p *PostgresStorage) AddForcedBatch(ctx context.Context, forcedBatch *ether
 }
 
 // AddTrustedGlobalExitRoot adds new global exit root which comes from the trusted sequencer.
-func (p *PostgresStorage) AddTrustedGlobalExitRoot(ctx context.Context, trustedExitRoot *etherman.GlobalExitRoot, dbTx pgx.Tx) error {
+func (p *PostgresStorage) AddTrustedGlobalExitRoot(ctx context.Context, trustedExitRoot *etherman.GlobalExitRoot, dbTx pgx.Tx) (bool, error) {
 	const addTrustedGerSQL = `
 		INSERT INTO sync.exit_root (block_id, global_exit_root, exit_roots) 
 		VALUES (0, $1, $2)
 		ON CONFLICT ON CONSTRAINT UC DO NOTHING;`
-	_, err := p.getExecQuerier(dbTx).Exec(ctx, addTrustedGerSQL, trustedExitRoot.GlobalExitRoot, pq.Array([][]byte{trustedExitRoot.ExitRoots[0][:], trustedExitRoot.ExitRoots[1][:]}))
-	return err
+	res, err := p.getExecQuerier(dbTx).Exec(ctx, addTrustedGerSQL, trustedExitRoot.GlobalExitRoot, pq.Array([][]byte{trustedExitRoot.ExitRoots[0][:], trustedExitRoot.ExitRoots[1][:]}))
+	return res.RowsAffected() > 0, err
 }
 
 // GetClaim gets a specific claim from the storage.
-func (p *PostgresStorage) GetClaim(ctx context.Context, depositCounterUser uint, networkID uint, dbTx pgx.Tx) (*etherman.Claim, error) {
+func (p *PostgresStorage) GetClaim(ctx context.Context, depositCount, networkID uint, dbTx pgx.Tx) (*etherman.Claim, error) {
 	var (
 		claim  etherman.Claim
 		amount string
 	)
 	const getClaimSQL = "SELECT index, orig_net, orig_addr, amount, dest_addr, block_id, network_id, tx_hash FROM sync.claim WHERE index = $1 AND network_id = $2"
-	err := p.getExecQuerier(dbTx).QueryRow(ctx, getClaimSQL, depositCounterUser, networkID).Scan(&claim.Index, &claim.OriginalNetwork, &claim.OriginalAddress, &amount, &claim.DestinationAddress, &claim.BlockID, &claim.NetworkID, &claim.TxHash)
+	err := p.getExecQuerier(dbTx).QueryRow(ctx, getClaimSQL, depositCount, networkID).Scan(&claim.Index, &claim.OriginalNetwork, &claim.OriginalAddress, &amount, &claim.DestinationAddress, &claim.BlockID, &claim.NetworkID, &claim.TxHash)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, gerror.ErrStorageNotFound
 	}
@@ -308,8 +320,8 @@ func (p *PostgresStorage) GetDeposit(ctx context.Context, depositCounterUser uin
 		deposit etherman.Deposit
 		amount  string
 	)
-	const getDepositSQL = "SELECT leaf_type, orig_net, orig_addr, amount, dest_net, dest_addr, deposit_cnt, block_id, b.block_num, d.network_id, tx_hash, metadata FROM sync.deposit as d INNER JOIN sync.block as b ON d.network_id = b.network_id AND d.block_id = b.id WHERE d.network_id = $1 AND deposit_cnt = $2"
-	err := p.getExecQuerier(dbTx).QueryRow(ctx, getDepositSQL, networkID, depositCounterUser).Scan(&deposit.LeafType, &deposit.OriginalNetwork, &deposit.OriginalAddress, &amount, &deposit.DestinationNetwork, &deposit.DestinationAddress, &deposit.DepositCount, &deposit.BlockID, &deposit.BlockNumber, &deposit.NetworkID, &deposit.TxHash, &deposit.Metadata)
+	const getDepositSQL = "SELECT leaf_type, orig_net, orig_addr, amount, dest_net, dest_addr, deposit_cnt, block_id, b.block_num, d.network_id, tx_hash, metadata, ready_for_claim FROM sync.deposit as d INNER JOIN sync.block as b ON d.network_id = b.network_id AND d.block_id = b.id WHERE d.network_id = $1 AND deposit_cnt = $2"
+	err := p.getExecQuerier(dbTx).QueryRow(ctx, getDepositSQL, networkID, depositCounterUser).Scan(&deposit.LeafType, &deposit.OriginalNetwork, &deposit.OriginalAddress, &amount, &deposit.DestinationNetwork, &deposit.DestinationAddress, &deposit.DepositCount, &deposit.BlockID, &deposit.BlockNumber, &deposit.NetworkID, &deposit.TxHash, &deposit.Metadata, &deposit.ReadyForClaim)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, gerror.ErrStorageNotFound
 	}
@@ -337,7 +349,7 @@ func (p *PostgresStorage) GetLatestL1SyncedExitRoot(ctx context.Context, dbTx pg
 	err := p.getExecQuerier(dbTx).QueryRow(ctx, getLatestL1SyncedExitRootSQL).Scan(&ger.BlockID, &ger.GlobalExitRoot, pq.Array(&exitRoots))
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, gerror.ErrStorageNotFound
+			return &ger, gerror.ErrStorageNotFound
 		}
 		return nil, err
 	}
@@ -410,7 +422,7 @@ func (p *PostgresStorage) GetDepositCountByRoot(ctx context.Context, root []byte
 }
 
 // GetRoot gets root by the deposit count from the merkle tree.
-func (p *PostgresStorage) GetRoot(ctx context.Context, depositCnt uint, network uint8, dbTx pgx.Tx) ([]byte, error) {
+func (p *PostgresStorage) GetRoot(ctx context.Context, depositCnt uint, network uint, dbTx pgx.Tx) ([]byte, error) {
 	var root []byte
 	const getRootByDepositCntSQL = "SELECT root FROM mt.root WHERE deposit_cnt = $1 AND network = $2"
 	err := p.getExecQuerier(dbTx).QueryRow(ctx, getRootByDepositCntSQL, depositCnt, network).Scan(&root)
@@ -421,11 +433,10 @@ func (p *PostgresStorage) GetRoot(ctx context.Context, depositCnt uint, network 
 }
 
 // SetRoot store the root with deposit count to the storage.
-func (p *PostgresStorage) SetRoot(ctx context.Context, root []byte, depositCnt uint, network uint8, dbTx pgx.Tx) (uint64, error) {
-	var rootID uint64
-	const setRootSQL = "INSERT INTO mt.root (root, deposit_cnt, network) VALUES ($1, $2, $3) RETURNING id;"
-	err := p.getExecQuerier(dbTx).QueryRow(ctx, setRootSQL, root, depositCnt, network).Scan(&rootID)
-	return rootID, err
+func (p *PostgresStorage) SetRoot(ctx context.Context, root []byte, depositID uint64, depositCnt uint, network uint, dbTx pgx.Tx) error {
+	const setRootSQL = "INSERT INTO mt.root (root, deposit_id, deposit_cnt, network) VALUES ($1, $2, $3, $4);"
+	_, err := p.getExecQuerier(dbTx).Exec(ctx, setRootSQL, root, depositID, depositCnt, network)
+	return err
 }
 
 // Get gets value of key from the merkle tree.
@@ -442,14 +453,20 @@ func (p *PostgresStorage) Get(ctx context.Context, key []byte, dbTx pgx.Tx) ([][
 // Set inserts a key-value pair into the db.
 // If record with such a key already exists its assumed that the value is correct,
 // because it's a reverse hash table, and the key is a hash of the value
-func (p *PostgresStorage) Set(ctx context.Context, key []byte, value [][]byte, rootID uint64, dbTx pgx.Tx) error {
-	const setNodeSQL = "INSERT INTO mt.rht (root_id, key, value) VALUES ($1, $2, $3)"
-	_, err := p.getExecQuerier(dbTx).Exec(ctx, setNodeSQL, rootID, key, pq.Array(value))
+func (p *PostgresStorage) Set(ctx context.Context, key []byte, value [][]byte, depositID uint64, dbTx pgx.Tx) error {
+	const setNodeSQL = "INSERT INTO mt.rht (deposit_id, key, value) VALUES ($1, $2, $3)"
+	_, err := p.getExecQuerier(dbTx).Exec(ctx, setNodeSQL, depositID, key, pq.Array(value))
+	return err
+}
+
+// BulkSet is similar to Set, but it inserts multiple key-value pairs into the db.
+func (p *PostgresStorage) BulkSet(ctx context.Context, rows [][]interface{}, dbTx pgx.Tx) error {
+	_, err := p.getExecQuerier(dbTx).CopyFrom(ctx, pgx.Identifier{"mt", "rht"}, []string{"key", "value", "deposit_id"}, pgx.CopyFromRows(rows))
 	return err
 }
 
 // GetLastDepositCount gets the last deposit count from the merkle tree.
-func (p *PostgresStorage) GetLastDepositCount(ctx context.Context, network uint8, dbTx pgx.Tx) (uint, error) {
+func (p *PostgresStorage) GetLastDepositCount(ctx context.Context, network uint, dbTx pgx.Tx) (uint, error) {
 	var depositCnt int64
 	const getLastDepositCountSQL = "SELECT coalesce(MAX(deposit_cnt), -1) FROM mt.root WHERE network = $1"
 	err := p.getExecQuerier(dbTx).QueryRow(ctx, getLastDepositCountSQL, network).Scan(&depositCnt)
@@ -460,13 +477,6 @@ func (p *PostgresStorage) GetLastDepositCount(ctx context.Context, network uint8
 		return 0, gerror.ErrStorageNotFound
 	}
 	return uint(depositCnt), nil
-}
-
-// ResetMT resets nodes of the Merkle Tree.
-func (p *PostgresStorage) ResetMT(ctx context.Context, depositCnt uint, network uint8, dbTx pgx.Tx) error {
-	const resetRootSQL = "DELETE FROM mt.root WHERE network = $1 AND deposit_cnt > $2"
-	_, err := p.getExecQuerier(dbTx).Exec(ctx, resetRootSQL, network, depositCnt)
-	return err
 }
 
 // GetClaimCount gets the claim count for the destination address.
@@ -506,7 +516,7 @@ func (p *PostgresStorage) GetClaims(ctx context.Context, destAddr string, limit 
 
 // GetDeposits gets the deposit list which be smaller than depositCount.
 func (p *PostgresStorage) GetDeposits(ctx context.Context, destAddr string, limit uint, offset uint, dbTx pgx.Tx) ([]*etherman.Deposit, error) {
-	const getDepositsSQL = "SELECT leaf_type, orig_net, orig_addr, amount, dest_net, dest_addr, deposit_cnt, block_id, b.block_num, d.network_id, tx_hash, metadata FROM sync.deposit as d INNER JOIN sync.block as b ON d.network_id = b.network_id AND d.block_id = b.id WHERE dest_addr = $1 ORDER BY d.block_id DESC LIMIT $2 OFFSET $3"
+	const getDepositsSQL = "SELECT leaf_type, orig_net, orig_addr, amount, dest_net, dest_addr, deposit_cnt, block_id, b.block_num, d.network_id, tx_hash, metadata, ready_for_claim FROM sync.deposit as d INNER JOIN sync.block as b ON d.network_id = b.network_id AND d.block_id = b.id WHERE dest_addr = $1 ORDER BY d.block_id DESC, d.deposit_cnt DESC LIMIT $2 OFFSET $3"
 	rows, err := p.getExecQuerier(dbTx).Query(ctx, getDepositsSQL, common.FromHex(destAddr), limit, offset)
 	if err != nil {
 		return nil, err
@@ -519,7 +529,7 @@ func (p *PostgresStorage) GetDeposits(ctx context.Context, destAddr string, limi
 			deposit etherman.Deposit
 			amount  string
 		)
-		err = rows.Scan(&deposit.LeafType, &deposit.OriginalNetwork, &deposit.OriginalAddress, &amount, &deposit.DestinationNetwork, &deposit.DestinationAddress, &deposit.DepositCount, &deposit.BlockID, &deposit.BlockNumber, &deposit.NetworkID, &deposit.TxHash, &deposit.Metadata)
+		err = rows.Scan(&deposit.LeafType, &deposit.OriginalNetwork, &deposit.OriginalAddress, &amount, &deposit.DestinationNetwork, &deposit.DestinationAddress, &deposit.DepositCount, &deposit.BlockID, &deposit.BlockNumber, &deposit.NetworkID, &deposit.TxHash, &deposit.Metadata, &deposit.ReadyForClaim)
 		if err != nil {
 			return nil, err
 		}
@@ -554,8 +564,8 @@ func (p *PostgresStorage) ResetTrustedState(ctx context.Context, batchNumber uin
 
 // UpdateBlocksForTesting updates the hash of blocks.
 func (p *PostgresStorage) UpdateBlocksForTesting(ctx context.Context, networkID uint, blockNum uint64, dbTx pgx.Tx) error {
-	const updateBlocksSQL = "UPDATE sync.block SET block_hash = $1 WHERE network_id = $2 AND block_num >= $3"
-	_, err := p.getExecQuerier(dbTx).Exec(ctx, updateBlocksSQL, common.Hash{}, networkID, blockNum)
+	const updateBlocksSQL = "UPDATE sync.block SET block_hash = SUBSTRING(block_hash FROM 1 FOR LENGTH(block_hash)-1) || '\x61' WHERE network_id = $1 AND block_num >= $2"
+	_, err := p.getExecQuerier(dbTx).Exec(ctx, updateBlocksSQL, networkID, blockNum)
 	return err
 }
 
@@ -563,5 +573,109 @@ func (p *PostgresStorage) UpdateBlocksForTesting(ctx context.Context, networkID 
 func (p *PostgresStorage) UpdateBatchesForTesting(ctx context.Context, batchNum uint64, dbTx pgx.Tx) error {
 	const updateBatchesSQL = "UPDATE sync.batch SET raw_tx_data = $1 WHERE batch_num >= $2"
 	_, err := p.getExecQuerier(dbTx).Exec(ctx, updateBatchesSQL, []byte{}, batchNum)
+	return err
+}
+
+// UpdateL1DepositsStatus updates the ready_for_claim status of L1 deposits.
+func (p *PostgresStorage) UpdateL1DepositsStatus(ctx context.Context, exitRoot []byte, dbTx pgx.Tx) ([]*etherman.Deposit, error) {
+	const updateDepositsStatusSQL = `UPDATE sync.deposit SET ready_for_claim = true 
+		WHERE deposit_cnt <=
+			(SELECT deposit_cnt FROM mt.root WHERE root = $1 AND network = 0) 
+			AND network_id = 0 AND ready_for_claim = false
+			RETURNING leaf_type, orig_net, orig_addr, amount, dest_net, dest_addr, deposit_cnt, block_id, network_id, tx_hash, metadata, ready_for_claim;`
+	rows, err := p.getExecQuerier(dbTx).Query(ctx, updateDepositsStatusSQL, exitRoot)
+	if err != nil {
+		return nil, err
+	}
+
+	deposits := make([]*etherman.Deposit, 0, len(rows.RawValues()))
+	for rows.Next() {
+		var (
+			deposit etherman.Deposit
+			amount  string
+		)
+		err = rows.Scan(&deposit.LeafType, &deposit.OriginalNetwork, &deposit.OriginalAddress, &amount, &deposit.DestinationNetwork, &deposit.DestinationAddress, &deposit.DepositCount, &deposit.BlockID, &deposit.NetworkID, &deposit.TxHash, &deposit.Metadata, &deposit.ReadyForClaim)
+		if err != nil {
+			return nil, err
+		}
+		deposit.Amount, _ = new(big.Int).SetString(amount, 10) //nolint:gomnd
+		deposits = append(deposits, &deposit)
+	}
+	return deposits, nil
+}
+
+// UpdateL2DepositsStatus updates the ready_for_claim status of L2 deposits.
+func (p *PostgresStorage) UpdateL2DepositsStatus(ctx context.Context, exitRoot []byte, networkID uint, dbTx pgx.Tx) error {
+	const updateDepositsStatusSQL = `UPDATE sync.deposit SET ready_for_claim = true
+		WHERE deposit_cnt <=
+			(SELECT deposit_cnt FROM mt.root WHERE root = $1 AND network = $2)
+			AND network_id = $2 AND ready_for_claim = false;`
+	_, err := p.getExecQuerier(dbTx).Exec(ctx, updateDepositsStatusSQL, exitRoot, networkID)
+	return err
+}
+
+// AddClaimTx adds a claim monitored transaction to the storage.
+func (p *PostgresStorage) AddClaimTx(ctx context.Context, mTx ctmtypes.MonitoredTx, dbTx pgx.Tx) error {
+	const addMonitoredTxSQL = `INSERT INTO sync.monitored_txs 
+		(id, block_id, from_addr, to_addr, nonce, value, data, gas, status, history, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`
+	_, err := p.getExecQuerier(dbTx).Exec(ctx, addMonitoredTxSQL, mTx.ID, mTx.BlockID, mTx.From, mTx.To, mTx.Nonce, mTx.Value.String(), mTx.Data, mTx.Gas, mTx.Status, pq.Array(mTx.HistoryHashSlice()), time.Now().UTC(), time.Now().UTC())
+	return err
+}
+
+// UpdateClaimTx updates a claim monitored transaction in the storage.
+func (p *PostgresStorage) UpdateClaimTx(ctx context.Context, mTx ctmtypes.MonitoredTx, dbTx pgx.Tx) error {
+	const updateMonitoredTxSQL = `UPDATE sync.monitored_txs 
+		SET block_id = $2
+		, from_addr = $3
+		, to_addr = $4
+		, nonce = $5
+		, value = $6
+		, data = $7
+		, gas = $8
+		, status = $9
+		, history = $10
+		, updated_at = $11
+		WHERE id = $1`
+	_, err := p.getExecQuerier(dbTx).Exec(ctx, updateMonitoredTxSQL, mTx.ID, mTx.BlockID, mTx.From, mTx.To, mTx.Nonce, mTx.Value.String(), mTx.Data, mTx.Gas, mTx.Status, pq.Array(mTx.HistoryHashSlice()), time.Now().UTC())
+	return err
+}
+
+// GetClaimTxsByStatus gets the monitored transactions by status.
+func (p *PostgresStorage) GetClaimTxsByStatus(ctx context.Context, statuses []ctmtypes.MonitoredTxStatus, dbTx pgx.Tx) ([]ctmtypes.MonitoredTx, error) {
+	const getMonitoredTxsSQL = "SELECT * FROM sync.monitored_txs WHERE status = ANY($1) ORDER BY created_at ASC"
+	rows, err := p.getExecQuerier(dbTx).Query(ctx, getMonitoredTxsSQL, pq.Array(statuses))
+	if errors.Is(err, pgx.ErrNoRows) {
+		return []ctmtypes.MonitoredTx{}, nil
+	} else if err != nil {
+		return nil, err
+	}
+
+	mTxs := make([]ctmtypes.MonitoredTx, 0, len(rows.RawValues()))
+	for rows.Next() {
+		var (
+			value   string
+			history [][]byte
+		)
+		mTx := ctmtypes.MonitoredTx{}
+		err = rows.Scan(&mTx.ID, &mTx.BlockID, &mTx.From, &mTx.To, &mTx.Nonce, &value, &mTx.Data, &mTx.Gas, &mTx.Status, pq.Array(&history), &mTx.CreatedAt, &mTx.UpdatedAt)
+		if err != nil {
+			return mTxs, err
+		}
+		mTx.Value, _ = new(big.Int).SetString(value, 10) //nolint:gomnd
+		mTx.History = make(map[common.Hash]bool)
+		for _, h := range history {
+			mTx.History[common.BytesToHash(h)] = true
+		}
+		mTxs = append(mTxs, mTx)
+	}
+
+	return mTxs, nil
+}
+
+// UpdateDepositsStatusForTesting updates the ready_for_claim status of all deposits for testing.
+func (p *PostgresStorage) UpdateDepositsStatusForTesting(ctx context.Context, dbTx pgx.Tx) error {
+	const updateDepositsStatusSQL = "UPDATE sync.deposit SET ready_for_claim = true;"
+	_, err := p.getExecQuerier(dbTx).Exec(ctx, updateDepositsStatusSQL)
 	return err
 }

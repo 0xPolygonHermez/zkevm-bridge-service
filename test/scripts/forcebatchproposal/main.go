@@ -14,16 +14,16 @@ import (
 const (
 	l1AccHexPrivateKey = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
 
-	l1NetworkURL   = "http://localhost:8545"
-	poeAddress     = "0x610178dA211FEF7D417bC0e6FeD39F05609AD788"
-	maticTokenAddr = "0x5FbDB2315678afecb367f032d93F642f64180aa3" //nolint:gosec
+	l1NetworkURL           = "http://localhost:8545"
+	polygonZkEVMAddressHex = "0x610178dA211FEF7D417bC0e6FeD39F05609AD788"
+	maticTokenAddressHex   = "0x5FbDB2315678afecb367f032d93F642f64180aa3" //nolint:gosec
 )
 
 func main() {
 	ctx := context.Background()
 	// Eth client
 	log.Infof("Connecting to l1")
-	client, err := utils.NewClient(ctx, l1NetworkURL)
+	client, err := utils.NewClient(ctx, l1NetworkURL, common.Address{})
 	if err != nil {
 		log.Fatal("Error: ", err)
 	}
@@ -31,20 +31,20 @@ func main() {
 	if err != nil {
 		log.Fatal("Error: ", err)
 	}
-	poeAddr := common.HexToAddress(poeAddress)
-	poe, err := polygonzkevm.NewPolygonzkevm(poeAddr, client)
+	polygonZkEVMAddress := common.HexToAddress(polygonZkEVMAddressHex)
+	polygonZkEVM, err := polygonzkevm.NewPolygonzkevm(polygonZkEVMAddress, client)
 	if err != nil {
 		log.Fatal("Error: ", err)
 	}
-	maticAmount, err := poe.GetCurrentBatchFee(&bind.CallOpts{Pending: false})
+	maticAmount, err := polygonZkEVM.GetForcedBatchFee(&bind.CallOpts{Pending: false})
 	if err != nil {
 		log.Fatal("Error getting collateral amount from smc: ", err)
 	}
-	err = client.ApproveERC20(ctx, common.HexToAddress(maticTokenAddr), poeAddr, maticAmount, auth)
+	err = client.ApproveERC20(ctx, common.HexToAddress(maticTokenAddressHex), polygonZkEVMAddress, maticAmount, auth)
 	if err != nil {
 		log.Fatal("Error approving matics: ", err)
 	}
-	tx, err := poe.SequenceBatches(auth, nil, auth.From)
+	tx, err := polygonZkEVM.SequenceBatches(auth, nil, auth.From)
 	if err != nil {
 		log.Fatal("Error sending the batch: ", err)
 	}
