@@ -29,6 +29,8 @@ const (
 	l2NetworkURL     = "http://localhost:8123"
 	bridgeURL        = "http://localhost:8080"
 
+	l2GasLimit = 1000000
+
 	mtHeight      = 32
 	miningTimeout = 180
 )
@@ -92,10 +94,14 @@ func main() {
 		Metadata:           []byte(bridgeData.Metadata),
 		ReadyForClaim:      bridgeData.ReadyForClaim,
 	}
-	tx, err := c.BuildSendClaim(ctx, &e, smt, globalExitRoot, auth)
+	tx, err := c.BuildSendClaim(ctx, &e, smt, globalExitRoot, 0, 0, l2GasLimit, auth)
 	if err != nil {
 		log.Fatal("error: ", err)
 	}
+	log.Info("L2 tx.Nonce: ", tx.Nonce())
+	log.Info("L2 tx.GasPrice: ", tx.GasPrice())
+	log.Info("L2 tx.Gas: ", tx.Gas())
+	log.Info("L2 tx.Hash: ", tx.Hash())
 	b, err := tx.MarshalBinary()
 	if err != nil {
 		log.Fatal("error: ", err)

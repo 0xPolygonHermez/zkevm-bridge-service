@@ -160,7 +160,7 @@ func (tm *ClaimTxManager) processDepositStatus(ger *etherman.GlobalExitRoot, dbT
 					ExitRoots: []common.Hash{
 						ger.ExitRoots[0],
 						ger.ExitRoots[1],
-					}},
+					}}, 1, 1, 1,
 				tm.auth)
 			if err != nil {
 				log.Error("error BuildSendClaim tx for deposit %d. Error: %v", deposit.DepositCount, err)
