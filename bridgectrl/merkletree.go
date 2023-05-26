@@ -149,7 +149,6 @@ func (mt *MerkleTree) addLeaf(ctx context.Context, depositID uint64, leaf [KeyLe
 	if err := mt.store.BulkSet(ctx, nodes, dbTx); err != nil {
 		return err
 	}
-	mt.siblings, err = mt.initSiblings(ctx, root, dbTx)
 
 	mt.count++
 	return nil
