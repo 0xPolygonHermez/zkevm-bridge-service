@@ -80,6 +80,10 @@ func main() {
 	}
 	log.Info("Sending claim tx...")
 	a, _ := big.NewInt(0).SetString(bridgeData.Amount, 0)
+	metadata, err := hex.DecodeHex(bridgeData.Metadata)
+	if err != nil {
+		log.Fatal("error converting metadata to bytes. Error: ", err)
+	}
 	e := etherman.Deposit{
 		LeafType:           uint8(bridgeData.LeafType),
 		OriginalNetwork:    uint(bridgeData.OrigNet),
@@ -91,7 +95,7 @@ func main() {
 		BlockNumber:        bridgeData.BlockNum,
 		NetworkID:          uint(bridgeData.NetworkId),
 		TxHash:             common.HexToHash(bridgeData.TxHash),
-		Metadata:           []byte(bridgeData.Metadata),
+		Metadata:           metadata,
 		ReadyForClaim:      bridgeData.ReadyForClaim,
 	}
 	tx, err := c.BuildSendClaim(ctx, &e, smt, globalExitRoot, 0, 0, l2GasLimit, auth)
