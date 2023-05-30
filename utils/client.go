@@ -191,13 +191,13 @@ func (c *Client) SendBridgeMessage(ctx context.Context, destNetwork uint32, dest
 }
 
 // BuildSendClaim builds a tx data to be sent to the bridge method SendClaim.
-func (c *Client) BuildSendClaim(ctx context.Context, deposit *etherman.Deposit, smtProof [mtHeight][keyLen]byte, globalExitRoot *etherman.GlobalExitRoot, auth *bind.TransactOpts) (*common.Address, []byte, error) {
+func (c *Client) BuildSendClaim(ctx context.Context, deposit *etherman.Deposit, smtProof [mtHeight][keyLen]byte, globalExitRoot *etherman.GlobalExitRoot, nonce, gasPrice int64, gasLimit uint64, auth *bind.TransactOpts) (*types.Transaction, error) {
 	opts := *auth
 	opts.NoSend = true
 	// force nonce, gas limit and gas price to avoid querying it from the chain
-	opts.Nonce = big.NewInt(1)
-	opts.GasLimit = uint64(1)
-	opts.GasPrice = big.NewInt(1)
+	opts.Nonce = big.NewInt(nonce)
+	opts.GasPrice = big.NewInt(gasPrice)
+	opts.GasLimit = gasLimit
 
 	var (
 		tx  *types.Transaction
@@ -214,10 +214,10 @@ func (c *Client) BuildSendClaim(ctx context.Context, deposit *etherman.Deposit, 
 			txHash = tx.Hash().String()
 		}
 		log.Error("Error: ", err, ". Tx Hash: ", txHash)
-		return nil, nil, fmt.Errorf("failed to build SendClaim tx, err: %w", err)
+		return nil, fmt.Errorf("failed to build SendClaim tx, err: %w", err)
 	}
 
-	return tx.To(), tx.Data(), nil
+	return tx, nil
 }
 
 // SendClaim sends a claim transaction.

@@ -605,12 +605,12 @@ func (p *PostgresStorage) UpdateL1DepositsStatus(ctx context.Context, exitRoot [
 }
 
 // UpdateL2DepositsStatus updates the ready_for_claim status of L2 deposits.
-func (p *PostgresStorage) UpdateL2DepositsStatus(ctx context.Context, exitRoot []byte, dbTx pgx.Tx) error {
-	const updateDepositsStatusSQL = `UPDATE sync.deposit SET ready_for_claim = true 
+func (p *PostgresStorage) UpdateL2DepositsStatus(ctx context.Context, exitRoot []byte, networkID uint, dbTx pgx.Tx) error {
+	const updateDepositsStatusSQL = `UPDATE sync.deposit SET ready_for_claim = true
 		WHERE deposit_cnt <=
-			(SELECT deposit_cnt FROM mt.root WHERE root = $1 AND network = 1) 
-			AND network_id != 0 AND ready_for_claim = false;`
-	_, err := p.getExecQuerier(dbTx).Exec(ctx, updateDepositsStatusSQL, exitRoot)
+			(SELECT deposit_cnt FROM mt.root WHERE root = $1 AND network = $2)
+			AND network_id = $2 AND ready_for_claim = false;`
+	_, err := p.getExecQuerier(dbTx).Exec(ctx, updateDepositsStatusSQL, exitRoot, networkID)
 	return err
 }
 

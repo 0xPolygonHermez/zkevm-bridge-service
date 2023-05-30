@@ -96,15 +96,20 @@ func start(ctx *cli.Context) error {
 		go runSynchronizer(0, bridgeController, client, c.Synchronizer, storage, zkEVMClient, chExitRootEvent)
 	}
 
-	for i := 0; i < len(c.Etherman.L2URLs); i++ {
-		// we should match the orders of L2URLs between etherman and claimtxman
-		// since we are using the networkIDs in the same order
-		claimTxManager, err := claimtxman.NewClaimTxManager(c.ClaimTxManager, chExitRootEvent, c.Etherman.L2URLs[i], networkIDs[i+1], c.NetworkConfig.L2BridgeAddrs[i], bridgeService, storage)
-		if err != nil {
-			log.Fatalf("error creating claim tx manager for L2 %s. Error: %v", c.Etherman.L2URLs[i], err)
+	if c.ClaimTxManager.Enabled {
+		for i := 0; i < len(c.Etherman.L2URLs); i++ {
+			// we should match the orders of L2URLs between etherman and claimtxman
+			// since we are using the networkIDs in the same order
+			claimTxManager, err := claimtxman.NewClaimTxManager(c.ClaimTxManager, chExitRootEvent, c.Etherman.L2URLs[i], networkIDs[i+1], c.NetworkConfig.L2PolygonBridgeAddresses[i], bridgeService, storage)
+			if err != nil {
+				log.Fatalf("error creating claim tx manager for L2 %s. Error: %v", c.Etherman.L2URLs[i], err)
+			}
+			go claimTxManager.Start()
 		}
-		go claimTxManager.Start()
+	} else {
+		log.Warn("ClaimTxManager not configured.")
 	}
+
 	// Wait for an in interrupt.
 	ch := make(chan os.Signal, 1)
 	signal.Notify(ch, os.Interrupt)
@@ -118,7 +123,7 @@ func setupLog(c log.Config) {
 }
 
 func newEthermans(c *config.Config) (*etherman.Client, []*etherman.Client, error) {
-	l1Etherman, err := etherman.NewClient(c.Etherman, c.NetworkConfig.PoEAddr, c.NetworkConfig.BridgeAddr, c.NetworkConfig.GlobalExitRootManAddr)
+	l1Etherman, err := etherman.NewClient(c.Etherman, c.NetworkConfig.PolygonZkEVMAddress, c.NetworkConfig.PolygonBridgeAddress, c.NetworkConfig.PolygonZkEVMGlobalExitRootAddress)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -129,11 +134,11 @@ func newEthermans(c *config.Config) (*etherman.Client, []*etherman.Client, error
 			log.Fatal("error getting trusted sequencer URI. Error: %v", err)
 		}
 	}
-	if len(c.L2BridgeAddrs) != len(c.Etherman.L2URLs) {
+	if len(c.L2PolygonBridgeAddresses) != len(c.Etherman.L2URLs) {
 		log.Fatal("environment configuration error. zkevm bridge addresses and zkevm node urls mismatch")
 	}
 	var l2Ethermans []*etherman.Client
-	for i, addr := range c.L2BridgeAddrs {
+	for i, addr := range c.L2PolygonBridgeAddresses {
 		l2Etherman, err := etherman.NewL2Client(c.Etherman.L2URLs[i], addr)
 		if err != nil {
 			return l1Etherman, nil, err

@@ -17,6 +17,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -94,15 +95,15 @@ type ethClienter interface {
 
 // Client is a simple implementation of EtherMan.
 type Client struct {
-	EtherClient           ethClienter
-	PoE                   *polygonzkevm.Polygonzkevm
-	Bridge                *polygonzkevmbridge.Polygonzkevmbridge
-	GlobalExitRootManager *polygonzkevmglobalexitroot.Polygonzkevmglobalexitroot
-	SCAddresses           []common.Address
+	EtherClient                ethClienter
+	PolygonZkEVM               *polygonzkevm.Polygonzkevm
+	PolygonBridge              *polygonzkevmbridge.Polygonzkevmbridge
+	PolygonZkEVMGlobalExitRoot *polygonzkevmglobalexitroot.Polygonzkevmglobalexitroot
+	SCAddresses                []common.Address
 }
 
 // NewClient creates a new etherman.
-func NewClient(cfg Config, PoEAddr, bridgeAddr, globalExitRootManAddr common.Address) (*Client, error) {
+func NewClient(cfg Config, polygonZkEVMAddress, polygonBridgeAddr, polygonZkEVMGlobalExitRootAddress common.Address) (*Client, error) {
 	// Connect to ethereum node
 	ethClient, err := ethclient.Dial(cfg.L1URL)
 	if err != nil {
@@ -110,22 +111,22 @@ func NewClient(cfg Config, PoEAddr, bridgeAddr, globalExitRootManAddr common.Add
 		return nil, err
 	}
 	// Create smc clients
-	poe, err := polygonzkevm.NewPolygonzkevm(PoEAddr, ethClient)
+	polygonZkEVM, err := polygonzkevm.NewPolygonzkevm(polygonZkEVMAddress, ethClient)
 	if err != nil {
 		return nil, err
 	}
-	bridge, err := polygonzkevmbridge.NewPolygonzkevmbridge(bridgeAddr, ethClient)
+	polygonBridge, err := polygonzkevmbridge.NewPolygonzkevmbridge(polygonBridgeAddr, ethClient)
 	if err != nil {
 		return nil, err
 	}
-	globalExitRoot, err := polygonzkevmglobalexitroot.NewPolygonzkevmglobalexitroot(globalExitRootManAddr, ethClient)
+	polygonZkEVMGlobalExitRoot, err := polygonzkevmglobalexitroot.NewPolygonzkevmglobalexitroot(polygonZkEVMGlobalExitRootAddress, ethClient)
 	if err != nil {
 		return nil, err
 	}
 	var scAddresses []common.Address
-	scAddresses = append(scAddresses, PoEAddr, globalExitRootManAddr, bridgeAddr)
+	scAddresses = append(scAddresses, polygonZkEVMAddress, polygonZkEVMGlobalExitRootAddress, polygonBridgeAddr)
 
-	return &Client{EtherClient: ethClient, PoE: poe, Bridge: bridge, GlobalExitRootManager: globalExitRoot, SCAddresses: scAddresses}, nil
+	return &Client{EtherClient: ethClient, PolygonZkEVM: polygonZkEVM, PolygonBridge: polygonBridge, PolygonZkEVMGlobalExitRoot: polygonZkEVMGlobalExitRoot, SCAddresses: scAddresses}, nil
 }
 
 // NewL2Client creates a new etherman for L2.
@@ -143,7 +144,7 @@ func NewL2Client(url string, bridgeAddr common.Address) (*Client, error) {
 	}
 	scAddresses := []common.Address{bridgeAddr}
 
-	return &Client{EtherClient: ethClient, Bridge: bridge, SCAddresses: scAddresses}, nil
+	return &Client{EtherClient: ethClient, PolygonBridge: bridge, SCAddresses: scAddresses}, nil
 }
 
 // GetRollupInfoByBlockRange function retrieves the Rollup information that are included in all this ethereum blocks
@@ -281,7 +282,7 @@ func (etherMan *Client) processEvent(ctx context.Context, vLog types.Log, blocks
 
 func (etherMan *Client) updateGlobalExitRootEvent(ctx context.Context, vLog types.Log, blocks *[]Block, blocksOrder *map[common.Hash][]Order) error {
 	log.Debug("UpdateGlobalExitRoot event detected")
-	globalExitRoot, err := etherMan.GlobalExitRootManager.ParseUpdateGlobalExitRoot(vLog)
+	globalExitRoot, err := etherMan.PolygonZkEVMGlobalExitRoot.ParseUpdateGlobalExitRoot(vLog)
 	if err != nil {
 		return err
 	}
@@ -317,7 +318,7 @@ func (etherMan *Client) updateGlobalExitRootEvent(ctx context.Context, vLog type
 
 func (etherMan *Client) depositEvent(ctx context.Context, vLog types.Log, blocks *[]Block, blocksOrder *map[common.Hash][]Order) error {
 	log.Debug("Deposit event detected")
-	d, err := etherMan.Bridge.ParseBridgeEvent(vLog)
+	d, err := etherMan.PolygonBridge.ParseBridgeEvent(vLog)
 	if err != nil {
 		return err
 	}
@@ -357,7 +358,7 @@ func (etherMan *Client) depositEvent(ctx context.Context, vLog types.Log, blocks
 
 func (etherMan *Client) claimEvent(ctx context.Context, vLog types.Log, blocks *[]Block, blocksOrder *map[common.Hash][]Order) error {
 	log.Debug("Claim event detected")
-	c, err := etherMan.Bridge.ParseClaimEvent(vLog)
+	c, err := etherMan.PolygonBridge.ParseClaimEvent(vLog)
 	if err != nil {
 		return err
 	}
@@ -394,7 +395,7 @@ func (etherMan *Client) claimEvent(ctx context.Context, vLog types.Log, blocks *
 
 func (etherMan *Client) tokenWrappedEvent(ctx context.Context, vLog types.Log, blocks *[]Block, blocksOrder *map[common.Hash][]Order) error {
 	log.Debug("TokenWrapped event detected")
-	tw, err := etherMan.Bridge.ParseNewWrappedToken(vLog)
+	tw, err := etherMan.PolygonBridge.ParseNewWrappedToken(vLog)
 	if err != nil {
 		return err
 	}
@@ -428,7 +429,7 @@ func (etherMan *Client) tokenWrappedEvent(ctx context.Context, vLog types.Log, b
 
 func (etherMan *Client) sequencedBatchesEvent(ctx context.Context, vLog types.Log, blocks *[]Block, blocksOrder *map[common.Hash][]Order) error {
 	log.Debug("SequenceBatches event detected")
-	sb, err := etherMan.PoE.ParseSequenceBatches(vLog)
+	sb, err := etherMan.PolygonZkEVM.ParseSequenceBatches(vLog)
 	if err != nil {
 		return err
 	}
@@ -439,12 +440,12 @@ func (etherMan *Client) sequencedBatchesEvent(ctx context.Context, vLog types.Lo
 	} else if isPending {
 		return fmt.Errorf("error tx is still pending. TxHash: %s", tx.Hash().String())
 	}
-	msg, err := tx.AsMessage(types.NewLondonSigner(tx.ChainId()), big.NewInt(0))
+	msg, err := core.TransactionToMessage(tx, types.NewLondonSigner(tx.ChainId()), big.NewInt(0))
 	if err != nil {
 		log.Error(err)
 		return err
 	}
-	sequences, err := decodeSequences(tx.Data(), sb.NumBatch, msg.From(), vLog.TxHash)
+	sequences, err := decodeSequences(tx.Data(), sb.NumBatch, msg.From, vLog.TxHash)
 	if err != nil {
 		return fmt.Errorf("error decoding the sequences: %v", err)
 	}
@@ -516,7 +517,7 @@ func decodeSequences(txData []byte, lastBatchNumber uint64, sequencer common.Add
 
 func (etherMan *Client) verifyBatchesTrustedAggregator(ctx context.Context, vLog types.Log, blocks *[]Block, blocksOrder *map[common.Hash][]Order) error {
 	log.Debug("trustedVerifyBatches event detected")
-	vb, err := etherMan.PoE.ParseVerifyBatchesTrustedAggregator(vLog)
+	vb, err := etherMan.PolygonZkEVM.ParseVerifyBatchesTrustedAggregator(vLog)
 	if err != nil {
 		return err
 	}
@@ -550,7 +551,7 @@ func (etherMan *Client) verifyBatchesTrustedAggregator(ctx context.Context, vLog
 
 func (etherMan *Client) forceSequencedBatchesEvent(ctx context.Context, vLog types.Log, blocks *[]Block, blocksOrder *map[common.Hash][]Order) error {
 	log.Debug("SequenceForceBatches event detect")
-	fsb, err := etherMan.PoE.ParseSequenceForceBatches(vLog)
+	fsb, err := etherMan.PolygonZkEVM.ParseSequenceForceBatches(vLog)
 	if err != nil {
 		return err
 	}
@@ -562,7 +563,7 @@ func (etherMan *Client) forceSequencedBatchesEvent(ctx context.Context, vLog typ
 	} else if isPending {
 		return fmt.Errorf("error: tx is still pending. TxHash: %s", tx.Hash().String())
 	}
-	msg, err := tx.AsMessage(types.NewLondonSigner(tx.ChainId()), big.NewInt(0))
+	msg, err := core.TransactionToMessage(tx, types.NewLondonSigner(tx.ChainId()), big.NewInt(0))
 	if err != nil {
 		log.Error(err)
 		return err
@@ -571,7 +572,7 @@ func (etherMan *Client) forceSequencedBatchesEvent(ctx context.Context, vLog typ
 	if err != nil {
 		return fmt.Errorf("error getting hashParent. BlockNumber: %d. Error: %w", vLog.BlockNumber, err)
 	}
-	sequencedForceBatch, err := decodeSequencedForceBatches(tx.Data(), fsb.NumBatch, msg.From(), vLog.TxHash, fullBlock)
+	sequencedForceBatch, err := decodeSequencedForceBatches(tx.Data(), fsb.NumBatch, msg.From, vLog.TxHash, fullBlock)
 	if err != nil {
 		return err
 	}
@@ -597,7 +598,7 @@ func (etherMan *Client) forceSequencedBatchesEvent(ctx context.Context, vLog typ
 
 func (etherMan *Client) forcedBatchEvent(ctx context.Context, vLog types.Log, blocks *[]Block, blocksOrder *map[common.Hash][]Order) error {
 	log.Debug("ForceBatch event detected")
-	fb, err := etherMan.PoE.ParseForceBatch(vLog)
+	fb, err := etherMan.PolygonZkEVM.ParseForceBatch(vLog)
 	if err != nil {
 		return err
 	}
@@ -612,12 +613,12 @@ func (etherMan *Client) forcedBatchEvent(ctx context.Context, vLog types.Log, bl
 	} else if isPending {
 		return fmt.Errorf("error: tx is still pending. TxHash: %s", tx.Hash().String())
 	}
-	msg, err := tx.AsMessage(types.NewLondonSigner(tx.ChainId()), big.NewInt(0))
+	msg, err := core.TransactionToMessage(tx, types.NewLondonSigner(tx.ChainId()), big.NewInt(0))
 	if err != nil {
 		log.Error(err)
 		return err
 	}
-	if fb.Sequencer == msg.From() {
+	if fb.Sequencer == msg.From {
 		txData := tx.Data()
 		// Extract coded txs.
 		// Load contract ABI
@@ -751,13 +752,13 @@ func (etherMan *Client) EthBlockByNumber(ctx context.Context, blockNumber uint64
 
 // GetLatestBatchNumber function allows to retrieve the latest proposed batch in the smc
 func (etherMan *Client) GetLatestBatchNumber() (uint64, error) {
-	latestBatch, err := etherMan.PoE.LastBatchSequenced(&bind.CallOpts{Pending: false})
+	latestBatch, err := etherMan.PolygonZkEVM.LastBatchSequenced(&bind.CallOpts{Pending: false})
 	return uint64(latestBatch), err
 }
 
 // GetNetworkID gets the network ID of the dedicated chain.
 func (etherMan *Client) GetNetworkID(ctx context.Context) (uint, error) {
-	networkID, err := etherMan.Bridge.NetworkID(&bind.CallOpts{Pending: false})
+	networkID, err := etherMan.PolygonBridge.NetworkID(&bind.CallOpts{Pending: false})
 	if err != nil {
 		return 0, err
 	}
@@ -766,5 +767,5 @@ func (etherMan *Client) GetNetworkID(ctx context.Context) (uint, error) {
 
 // GetTrustedSequencerURL Gets the trusted sequencer url from rollup smc
 func (etherMan *Client) GetTrustedSequencerURL() (string, error) {
-	return etherMan.PoE.TrustedSequencerURL(&bind.CallOpts{Pending: false})
+	return etherMan.PolygonZkEVM.TrustedSequencerURL(&bind.CallOpts{Pending: false})
 }

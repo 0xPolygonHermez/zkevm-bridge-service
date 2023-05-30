@@ -559,10 +559,6 @@ func (m *Manager) SendL2Claim(ctx context.Context, deposit *pb.Deposit, smtProof
 		return err
 	}
 
-	if deposit.LeafType == utils.LeafTypeAsset {
-		auth.GasPrice = big.NewInt(0)
-	}
-
 	err = client.SendClaim(ctx, deposit, smtProof, globalExitRoot, auth)
 	return err
 }
@@ -655,9 +651,6 @@ func (m *Manager) ApproveERC20(ctx context.Context, erc20Addr, bridgeAddr common
 	auth, err := client.GetSigner(ctx, accHexPrivateKeys[network])
 	if err != nil {
 		return err
-	}
-	if network == L2 {
-		auth.GasPrice = big.NewInt(0)
 	}
 	return client.ApproveERC20(ctx, erc20Addr, bridgeAddr, amount, auth)
 }
