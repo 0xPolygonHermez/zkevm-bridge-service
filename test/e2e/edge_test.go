@@ -106,10 +106,6 @@ func TestEdgeCase(t *testing.T) {
 		require.NoError(t, operations.StopBridge())
 		// Modify the L1 blocks for L1 reorg
 		require.NoError(t, opsman.UpdateBlocksForTesting(ctx, 0, 1))
-		// Modify the batch data to check the trusted state reorg
-		batchNum, err := opsman.GetLastBatchNumber(ctx)
-		require.NoError(t, err)
-		require.NoError(t, opsman.UpdateBatchesForTesting(ctx, batchNum))
 		// Restart the bridge service.
 		require.NoError(t, opsman.StartBridge())
 		time.Sleep(st * time.Second)

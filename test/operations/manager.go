@@ -676,16 +676,6 @@ func (m *Manager) UpdateBlocksForTesting(ctx context.Context, networkID uint, bl
 	return m.storage.UpdateBlocksForTesting(ctx, networkID, blockNum, nil)
 }
 
-// GetLastBatchNumber returns the last batch number.
-func (m *Manager) GetLastBatchNumber(ctx context.Context) (uint64, error) {
-	return m.storage.GetLastBatchNumber(ctx, nil)
-}
-
-// UpdateBatchesForTesting updates batches for testing.
-func (m *Manager) UpdateBatchesForTesting(ctx context.Context, batchNum uint64) error {
-	return m.storage.UpdateBatchesForTesting(ctx, batchNum, nil)
-}
-
 // WaitExitRootToBeSynced waits unitl new exit root is synced.
 func (m *Manager) WaitExitRootToBeSynced(ctx context.Context, orgExitRoot *etherman.GlobalExitRoot, isRollup bool) error {
 	log.Debugf("WaitExitRootToBeSynced: %v\n", orgExitRoot)
