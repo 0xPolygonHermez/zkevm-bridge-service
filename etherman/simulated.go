@@ -109,5 +109,5 @@ func NewSimulatedEtherman(cfg Config, auth *bind.TransactOpts) (etherman *Client
 	}
 
 	client.Commit()
-	return &Client{EtherClient: client, PolygonZkEVM: polygonZkEVMContract, PolygonBridge: br, PolygonZkEVMGlobalExitRoot: globalExitRoot, SCAddresses: []common.Address{polygonZkEVMAddress, exitManagerAddr, bridgeAddr}}, client, maticAddr, mockbr, nil
+	return &Client{EtherClient: client, PolygonBridge: br, PolygonZkEVMGlobalExitRoot: globalExitRoot, SCAddresses: []common.Address{exitManagerAddr, bridgeAddr}}, client, maticAddr, mockbr, nil
 }

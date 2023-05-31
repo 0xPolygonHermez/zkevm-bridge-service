@@ -9,7 +9,6 @@ import (
 	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/utils/gerror"
 	cfgTypes "github.com/0xPolygonHermez/zkevm-node/config/types"
-	"github.com/0xPolygonHermez/zkevm-node/etherman/smartcontracts/polygonzkevm"
 	rpcTypes "github.com/0xPolygonHermez/zkevm-node/jsonrpc/types"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -25,13 +24,8 @@ type mocks struct {
 	ZkEVMClient *zkEVMClientMock
 }
 
-func TestTrustedStateReorg(t *testing.T) {
-	type testCase struct {
-		Name            string
-		getTrustedBatch func(*mocks, etherman.SequencedBatch) *etherman.Batch
-	}
-
-	setupMocks := func(m *mocks, tc *testCase) Synchronizer {
+func TestSyncGer(t *testing.T) {
+	setupMocks := func(m *mocks) Synchronizer {
 		genBlockNumber := uint64(123456)
 		cfg := Config{
 			SyncInterval:  cfgTypes.Duration{Duration: 1 * time.Second},
@@ -43,6 +37,18 @@ func TestTrustedStateReorg(t *testing.T) {
 		chEvent := make(chan *etherman.GlobalExitRoot)
 		sync, err := NewSynchronizer(m.Storage, m.BridgeCtrl, m.Etherman, m.ZkEVMClient, genBlockNumber, chEvent, cfg)
 		require.NoError(t, err)
+
+		go func() {
+			for {
+				select {
+				case <-chEvent:
+					t.Log("New GER received")
+					return
+				case <-context.Background().Done():
+					return
+				}
+			}
+		}()
 
 		parentHash := common.HexToHash("0x111")
 		ethHeader := &types.Header{Number: big.NewInt(1), ParentHash: parentHash}
@@ -66,28 +72,25 @@ func TestTrustedStateReorg(t *testing.T) {
 			Return(ethHeader, nil).
 			Once()
 
-		sequencedBatch := etherman.SequencedBatch{
-			BatchNumber: uint64(1),
-			Sequencer:   common.HexToAddress("0x222"),
-			TxHash:      common.HexToHash("0x333"),
-			PolygonZkEVMBatchData: polygonzkevm.PolygonZkEVMBatchData{
-				Transactions:       []byte{},
-				GlobalExitRoot:     [32]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32},
-				Timestamp:          uint64(time.Now().Unix()),
-				MinForcedTimestamp: 0,
+		globalExitRoot := etherman.GlobalExitRoot{
+			BlockID: 1,
+			ExitRoots: []common.Hash{
+				common.HexToHash("0xc14c74e4dddf25627a745f46cae6ac98782e2783c3ccc28107c8210e60d58865"),
+				common.HexToHash("0xd14c74e4dddf25627a745f46cae6ac98782e2783c3ccc28107c8210e60d58866"),
 			},
+			GlobalExitRoot: common.HexToHash("0xb14c74e4dddf25627a745f46cae6ac98782e2783c3ccc28107c8210e60d58864"),
 		}
 
 		ethermanBlock := etherman.Block{
-			BlockHash:        ethBlock.Hash(),
-			SequencedBatches: [][]etherman.SequencedBatch{{sequencedBatch}},
-			NetworkID:        0,
+			BlockHash:       ethBlock.Hash(),
+			GlobalExitRoots: []etherman.GlobalExitRoot{globalExitRoot},
+			NetworkID:       0,
 		}
 		blocks := []etherman.Block{ethermanBlock}
 		order := map[common.Hash][]etherman.Order{
 			ethBlock.Hash(): {
 				{
-					Name: etherman.SequenceBatchesOrder,
+					Name: etherman.GlobalExitRootsOrder,
 					Pos:  0,
 				},
 			},
@@ -106,43 +109,13 @@ func TestTrustedStateReorg(t *testing.T) {
 			Return(m.DbTx, nil).
 			Once()
 
-		block := &etherman.Block{
-			ID:               0,
-			BlockNumber:      ethermanBlock.BlockNumber,
-			BlockHash:        ethermanBlock.BlockHash,
-			ParentHash:       ethermanBlock.ParentHash,
-			NetworkID:        0,
-			ReceivedAt:       ethermanBlock.ReceivedAt,
-			SequencedBatches: ethermanBlock.SequencedBatches,
-		}
-
 		m.Storage.
-			On("AddBlock", ctx, block, m.DbTx).
+			On("AddBlock", ctx, &blocks[0], m.DbTx).
 			Return(uint64(1), nil).
 			Once()
 
-		trustedBatch := tc.getTrustedBatch(m, sequencedBatch)
-
 		m.Storage.
-			On("GetBatchByNumber", ctx, sequencedBatch.BatchNumber, m.DbTx).
-			Return(trustedBatch, nil).
-			Once()
-
-		m.Storage.
-			On("ResetTrustedState", ctx, sequencedBatch.BatchNumber-1, m.DbTx).
-			Return(nil).
-			Once()
-
-		b := &etherman.Batch{
-			BatchNumber:    sequencedBatch.BatchNumber,
-			Coinbase:       sequencedBatch.Sequencer,
-			BatchL2Data:    sequencedBatch.Transactions,
-			Timestamp:      time.Unix(int64(sequencedBatch.Timestamp), 0),
-			GlobalExitRoot: sequencedBatch.GlobalExitRoot,
-		}
-
-		m.Storage.
-			On("AddBatch", ctx, b, m.DbTx).
+			On("AddGlobalExitRoot", ctx, &blocks[0].GlobalExitRoots[0], m.DbTx).
 			Return(nil).
 			Once()
 
@@ -183,53 +156,6 @@ func TestTrustedStateReorg(t *testing.T) {
 		return sync
 	}
 
-	testCases := []testCase{
-		{
-			Name: "Transactions are different",
-			getTrustedBatch: func(m *mocks, sequencedBatch etherman.SequencedBatch) *etherman.Batch {
-				return &etherman.Batch{
-					BatchL2Data:    []byte{1},
-					GlobalExitRoot: sequencedBatch.GlobalExitRoot,
-					Timestamp:      time.Unix(int64(sequencedBatch.Timestamp), 0),
-					Coinbase:       sequencedBatch.Sequencer,
-				}
-			},
-		},
-		{
-			Name: "Global Exit Root is different",
-			getTrustedBatch: func(m *mocks, sequencedBatch etherman.SequencedBatch) *etherman.Batch {
-				return &etherman.Batch{
-					BatchL2Data:    sequencedBatch.Transactions,
-					GlobalExitRoot: common.HexToHash("0x999888777"),
-					Timestamp:      time.Unix(int64(sequencedBatch.Timestamp), 0),
-					Coinbase:       sequencedBatch.Sequencer,
-				}
-			},
-		},
-		{
-			Name: "Timestamp is different",
-			getTrustedBatch: func(m *mocks, sequencedBatch etherman.SequencedBatch) *etherman.Batch {
-				return &etherman.Batch{
-					BatchL2Data:    sequencedBatch.Transactions,
-					GlobalExitRoot: sequencedBatch.GlobalExitRoot,
-					Timestamp:      time.Unix(int64(0), 0),
-					Coinbase:       sequencedBatch.Sequencer,
-				}
-			},
-		},
-		{
-			Name: "Coinbase is different",
-			getTrustedBatch: func(m *mocks, sequencedBatch etherman.SequencedBatch) *etherman.Batch {
-				return &etherman.Batch{
-					BatchL2Data:    sequencedBatch.Transactions,
-					GlobalExitRoot: sequencedBatch.GlobalExitRoot,
-					Timestamp:      time.Unix(int64(sequencedBatch.Timestamp), 0),
-					Coinbase:       common.HexToAddress("0x999888777"),
-				}
-			},
-		},
-	}
-
 	m := mocks{
 		Etherman:    newEthermanMock(t),
 		BridgeCtrl:  newBridgectrlMock(t),
@@ -239,12 +165,9 @@ func TestTrustedStateReorg(t *testing.T) {
 	}
 
 	// start synchronizing
-	for _, tc := range testCases {
-		t.Run(tc.Name, func(t *testing.T) {
-			testCase := tc
-			sync := setupMocks(&m, &testCase)
-			err := sync.Sync()
-			require.NoError(t, err)
-		})
-	}
+	t.Run("Sync Ger test", func(t *testing.T) {
+		sync := setupMocks(&m)
+		err := sync.Sync()
+		require.NoError(t, err)
+	})
 }
