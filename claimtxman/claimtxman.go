@@ -12,11 +12,11 @@ import (
 	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/utils"
 	"github.com/0xPolygonHermez/zkevm-node/log"
+	"github.com/0xPolygonHermez/zkevm-node/state/runtime"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/0xPolygonHermez/zkevm-node/state/runtime"
 	lru "github.com/hashicorp/golang-lru/v2"
 	"github.com/jackc/pgx/v4"
 )
@@ -200,8 +200,8 @@ func (tm *ClaimTxManager) addClaimTx(depositCount uint, blockID uint64, from com
 		Data:  data,
 	}
 	gas, err := tm.l2Node.EstimateGas(tm.ctx, tx)
-	i:=0
-	for err != nil && !errors.Is(err, runtime.ErrExecutionReverted) && i<maxRetries{
+	i := 0
+	for err != nil && !errors.Is(err, runtime.ErrExecutionReverted) && i < maxRetries {
 		log.Warn("error while doing gas estimation. Retrying... Error: %v, Data: %s", err, common.Bytes2Hex(data))
 		time.Sleep(1 * time.Second)
 		gas, err = tm.l2Node.EstimateGas(tm.ctx, tx)
@@ -452,7 +452,7 @@ func (tm *ClaimTxManager) ReviewMonitoredTx(ctx context.Context, mTx *ctmtypes.M
 	}
 	gas, err := tm.l2Node.EstimateGas(ctx, tx)
 	i := 0
-	for err != nil && !errors.Is(err, runtime.ErrExecutionReverted) && i<maxRetries{
+	for err != nil && !errors.Is(err, runtime.ErrExecutionReverted) && i < maxRetries {
 		mTxLog.Warn("error while doing gas estimation. Retrying... Error: %v, Data: %s", err, common.Bytes2Hex(tx.Data))
 		time.Sleep(1 * time.Second)
 		gas, err = tm.l2Node.EstimateGas(tm.ctx, tx)
