@@ -12,6 +12,7 @@ import (
 	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/utils"
 	"github.com/0xPolygonHermez/zkevm-node/log"
+	"github.com/0xPolygonHermez/zkevm-node/state/runtime"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -26,6 +27,7 @@ const (
 	mtHeight        = 32
 	cacheSize       = 1000
 	LeafTypeMessage = uint8(1)
+	maxRetries      = 10
 )
 
 // ClaimTxManager is the claim transaction manager for L2.
@@ -189,14 +191,20 @@ func (tm *ClaimTxManager) getNextNonce(from common.Address) (uint64, error) {
 	return nonce, nil
 }
 
-func (tm *ClaimTxManager) addClaimTx(id uint, blockID uint64, from common.Address, to *common.Address, value *big.Int, data []byte, dbTx pgx.Tx) error {
+func (tm *ClaimTxManager) addClaimTx(depositCount uint, blockID uint64, from common.Address, to *common.Address, value *big.Int, data []byte, dbTx pgx.Tx) error {
 	// get gas
-	gas, err := tm.l2Node.EstimateGas(tm.ctx, ethereum.CallMsg{
+	tx := ethereum.CallMsg{
 		From:  from,
 		To:    to,
 		Value: value,
 		Data:  data,
-	})
+	}
+	gas, err := tm.l2Node.EstimateGas(tm.ctx, tx)
+	for i := 0; err != nil && !errors.Is(err, runtime.ErrExecutionReverted) && i < maxRetries; i++ {
+		log.Warn("error while doing gas estimation. Retrying... Error: %v, Data: %s", err, common.Bytes2Hex(data))
+		time.Sleep(1 * time.Second)
+		gas, err = tm.l2Node.EstimateGas(tm.ctx, tx)
+	}
 	if err != nil {
 		log.Errorf("failed to estimate gas. Ignoring tx... Error: %v, data: %s", err, common.Bytes2Hex(data))
 		return nil
@@ -211,7 +219,7 @@ func (tm *ClaimTxManager) addClaimTx(id uint, blockID uint64, from common.Addres
 
 	// create monitored tx
 	mTx := ctmtypes.MonitoredTx{
-		ID: id, BlockID: blockID, From: from, To: to,
+		ID: depositCount, BlockID: blockID, From: from, To: to,
 		Nonce: nonce, Value: value, Data: data,
 		Gas: gas, Status: ctmtypes.MonitoredTxStatusCreated,
 	}
@@ -434,14 +442,20 @@ func (tm *ClaimTxManager) ReviewMonitoredTx(ctx context.Context, mTx *ctmtypes.M
 	mTxLog := log.WithFields("monitoredTx", mTx.ID)
 	mTxLog.Debug("reviewing")
 	// get gas
-	gas, err := tm.l2Node.EstimateGas(ctx, ethereum.CallMsg{
+	tx := ethereum.CallMsg{
 		From:  mTx.From,
 		To:    mTx.To,
 		Value: mTx.Value,
 		Data:  mTx.Data,
-	})
+	}
+	gas, err := tm.l2Node.EstimateGas(ctx, tx)
+	for i := 0; err != nil && !errors.Is(err, runtime.ErrExecutionReverted) && i < maxRetries; i++ {
+		mTxLog.Warn("error while doing gas estimation. Retrying... Error: %v, Data: %s", err, common.Bytes2Hex(tx.Data))
+		time.Sleep(1 * time.Second)
+		gas, err = tm.l2Node.EstimateGas(tm.ctx, tx)
+	}
 	if err != nil {
-		err := fmt.Errorf("failed to estimate gas: %v", err)
+		err := fmt.Errorf("failed to estimate gas. Error: %v, Data: %s", err, common.Bytes2Hex(tx.Data))
 		mTxLog.Errorf(err.Error())
 		return err
 	}
