@@ -200,12 +200,10 @@ func (tm *ClaimTxManager) addClaimTx(depositCount uint, blockID uint64, from com
 		Data:  data,
 	}
 	gas, err := tm.l2Node.EstimateGas(tm.ctx, tx)
-	i := 0
-	for err != nil && !errors.Is(err, runtime.ErrExecutionReverted) && i < maxRetries {
+	for i := 0; err != nil && !errors.Is(err, runtime.ErrExecutionReverted) && i < maxRetries; i++ {
 		log.Warn("error while doing gas estimation. Retrying... Error: %v, Data: %s", err, common.Bytes2Hex(data))
 		time.Sleep(1 * time.Second)
 		gas, err = tm.l2Node.EstimateGas(tm.ctx, tx)
-		i++
 	}
 	if err != nil {
 		log.Errorf("failed to estimate gas. Ignoring tx... Error: %v, data: %s", err, common.Bytes2Hex(data))
@@ -451,12 +449,10 @@ func (tm *ClaimTxManager) ReviewMonitoredTx(ctx context.Context, mTx *ctmtypes.M
 		Data:  mTx.Data,
 	}
 	gas, err := tm.l2Node.EstimateGas(ctx, tx)
-	i := 0
-	for err != nil && !errors.Is(err, runtime.ErrExecutionReverted) && i < maxRetries {
+	for i := 0; err != nil && !errors.Is(err, runtime.ErrExecutionReverted) && i < maxRetries; i++ {
 		mTxLog.Warn("error while doing gas estimation. Retrying... Error: %v, Data: %s", err, common.Bytes2Hex(tx.Data))
 		time.Sleep(1 * time.Second)
 		gas, err = tm.l2Node.EstimateGas(tm.ctx, tx)
-		i++
 	}
 	if err != nil {
 		err := fmt.Errorf("failed to estimate gas. Error: %v, Data: %s", err, common.Bytes2Hex(tx.Data))
