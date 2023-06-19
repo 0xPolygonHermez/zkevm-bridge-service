@@ -144,7 +144,7 @@ func (tm *ClaimTxManager) processDepositStatus(ger *etherman.GlobalExitRoot, dbT
 				return err
 			}
 			if len(claimHash) > 0 || deposit.LeafType == LeafTypeMessage {
-				log.Info("Ignoring deposit: %d, leafType: %d, claimHash: %s", deposit.DepositCount, deposit.LeafType, claimHash)
+				log.Infof("Ignoring deposit: %d, leafType: %d, claimHash: %s", deposit.DepositCount, deposit.LeafType, claimHash)
 				continue
 			}
 			log.Infof("create the claim tx for the deposit %d", deposit.DepositCount)
@@ -165,11 +165,11 @@ func (tm *ClaimTxManager) processDepositStatus(ger *etherman.GlobalExitRoot, dbT
 					}}, 1, 1, 1,
 				tm.auth)
 			if err != nil {
-				log.Error("error BuildSendClaim tx for deposit %d. Error: %v", deposit.DepositCount, err)
+				log.Errorf("error BuildSendClaim tx for deposit %d. Error: %v", deposit.DepositCount, err)
 				return err
 			}
 			if err = tm.addClaimTx(deposit.DepositCount, deposit.BlockID, tm.auth.From, tx.To(), nil, tx.Data(), dbTx); err != nil {
-				log.Error("error adding claim tx for deposit %d. Error: %v", deposit.DepositCount, err)
+				log.Errorf("error adding claim tx for deposit %d. Error: %v", deposit.DepositCount, err)
 				return err
 			}
 		}
@@ -201,7 +201,7 @@ func (tm *ClaimTxManager) addClaimTx(depositCount uint, blockID uint64, from com
 	}
 	gas, err := tm.l2Node.EstimateGas(tm.ctx, tx)
 	for i := 0; err != nil && !errors.Is(err, runtime.ErrExecutionReverted) && i < maxRetries; i++ {
-		log.Warn("error while doing gas estimation. Retrying... Error: %v, Data: %s", err, common.Bytes2Hex(data))
+		log.Warnf("error while doing gas estimation. Retrying... Error: %v, Data: %s", err, common.Bytes2Hex(data))
 		time.Sleep(1 * time.Second)
 		gas, err = tm.l2Node.EstimateGas(tm.ctx, tx)
 	}
@@ -212,8 +212,8 @@ func (tm *ClaimTxManager) addClaimTx(depositCount uint, blockID uint64, from com
 	// get next nonce
 	nonce, err := tm.getNextNonce(from)
 	if err != nil {
-		err := fmt.Errorf("failed to get current nonce: %w", err)
-		log.Errorf(err.Error())
+		err := fmt.Errorf("failed to get current nonce: %v", err)
+		log.Errorf("error getting next nonce. Error: %s", err.Error())
 		return err
 	}
 
@@ -227,8 +227,8 @@ func (tm *ClaimTxManager) addClaimTx(depositCount uint, blockID uint64, from com
 	// add to storage
 	err = tm.storage.AddClaimTx(tm.ctx, mTx, dbTx)
 	if err != nil {
-		err := fmt.Errorf("failed to add tx to get monitored: %w", err)
-		log.Errorf(err.Error())
+		err := fmt.Errorf("failed to add tx to get monitored: %v", err)
+		log.Errorf("error adding claim tx to db. Error: %s", err.Error())
 		return err
 	}
 
@@ -275,7 +275,7 @@ func (tm *ClaimTxManager) monitorTxs(ctx context.Context) error {
 				// check if the tx is in the pending pool
 				_, _, err = tm.l2Node.TransactionByHash(ctx, txHash)
 				if errors.Is(err, ethereum.NotFound) {
-					mTxLog.Errorf("tx %v was not found in the pending pool", txHash.String())
+					mTxLog.Errorf("tx %s was not found in the pending pool", txHash.String())
 					hasFailedReceipts = true
 					continue
 				} else if err != nil {
@@ -289,7 +289,7 @@ func (tm *ClaimTxManager) monitorTxs(ctx context.Context) error {
 
 			// if the tx was mined successfully we can break the loop and proceed
 			if receipt.Status == types.ReceiptStatusSuccessful {
-				mTxLog.Infof("tx %v was mined successfully", txHash.String())
+				mTxLog.Infof("tx %s was mined successfully", txHash.String())
 				receiptSuccessful = true
 				block, err := tm.l2Node.BlockByNumber(ctx, receipt.BlockNumber)
 				if err != nil {
@@ -450,13 +450,13 @@ func (tm *ClaimTxManager) ReviewMonitoredTx(ctx context.Context, mTx *ctmtypes.M
 	}
 	gas, err := tm.l2Node.EstimateGas(ctx, tx)
 	for i := 0; err != nil && !errors.Is(err, runtime.ErrExecutionReverted) && i < maxRetries; i++ {
-		mTxLog.Warn("error while doing gas estimation. Retrying... Error: %v, Data: %s", err, common.Bytes2Hex(tx.Data))
+		mTxLog.Warnf("error while doing gas estimation. Retrying... Error: %v, Data: %s", err, common.Bytes2Hex(tx.Data))
 		time.Sleep(1 * time.Second)
 		gas, err = tm.l2Node.EstimateGas(tm.ctx, tx)
 	}
 	if err != nil {
 		err := fmt.Errorf("failed to estimate gas. Error: %v, Data: %s", err, common.Bytes2Hex(tx.Data))
-		mTxLog.Errorf(err.Error())
+		mTxLog.Errorf("error: %s", err.Error())
 		return err
 	}
 
