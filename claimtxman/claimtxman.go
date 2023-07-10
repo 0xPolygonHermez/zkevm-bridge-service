@@ -363,7 +363,9 @@ func (tm *ClaimTxManager) monitorTxs(ctx context.Context) error {
 				mTxLog.Errorf("failed to get suggested gasPrice. Error: %v", err)
 				continue
 			}
-			mTx.GasPrice = gasPrice
+			//Multiply gasPrice by 10 to increase the efficiency of the tx in the sequence
+			mTx.GasPrice = big.NewInt(0).Mul(gasPrice, big.NewInt(10)) //nolint:gomnd
+			log.Infof("Using gasPrice: %s. The gasPrice suggested by the network is %s", mTx.GasPrice.String(), gasPrice.String())
 
 			// rebuild transaction
 			tx := mTx.Tx()
