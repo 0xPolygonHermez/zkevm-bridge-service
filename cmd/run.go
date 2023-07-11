@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"os"
 	"os/signal"
 
@@ -39,7 +38,7 @@ func start(ctx *cli.Context) error {
 		return err
 	}
 
-	networkID, err := l1Etherman.GetNetworkID(context.Background())
+	networkID, err := l1Etherman.GetNetworkID(ctx.Context)
 	log.Infof("main network id: %d", networkID)
 	if err != nil {
 		log.Error(err)
@@ -48,7 +47,7 @@ func start(ctx *cli.Context) error {
 
 	var networkIDs = []uint{networkID}
 	for _, client := range l2Ethermans {
-		networkID, err := client.GetNetworkID(context.Background())
+		networkID, err := client.GetNetworkID(ctx.Context)
 		if err != nil {
 			log.Error(err)
 			return err
@@ -107,7 +106,18 @@ func start(ctx *cli.Context) error {
 			go claimTxManager.Start()
 		}
 	} else {
-		log.Warn("ClaimTxManager not configured.")
+		log.Warn("ClaimTxManager not configured")
+		go func() {
+			for {
+				select {
+				case <-chExitRootEvent:
+					log.Debug("New GER received")
+				case <-ctx.Context.Done():
+					log.Debug("Stopping goroutine that listen new GER updates")
+					return
+				}
+			}
+		}()
 	}
 
 	// Wait for an in interrupt.

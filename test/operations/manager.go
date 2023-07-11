@@ -676,7 +676,7 @@ func (m *Manager) UpdateBlocksForTesting(ctx context.Context, networkID uint, bl
 	return m.storage.UpdateBlocksForTesting(ctx, networkID, blockNum, nil)
 }
 
-// WaitExitRootToBeSynced waits unitl new exit root is synced.
+// WaitExitRootToBeSynced waits until new exit root is synced.
 func (m *Manager) WaitExitRootToBeSynced(ctx context.Context, orgExitRoot *etherman.GlobalExitRoot, isRollup bool) error {
 	log.Debugf("WaitExitRootToBeSynced: %v\n", orgExitRoot)
 	if orgExitRoot == nil {

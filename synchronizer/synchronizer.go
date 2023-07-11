@@ -233,7 +233,7 @@ func (s *ClientSynchronizer) syncBlocks(lastBlockSynced *etherman.Block) (*ether
 
 		log.Debugf("NetworkID: %d, Getting bridge info from block %d to block %d", s.networkID, fromBlock, toBlock)
 		// This function returns the rollup information contained in the ethereum blocks and an extra param called order.
-		// Order param is a map that contains the event order to allow the synchronizer store the info in the same order that is readed.
+		// Order param is a map that contains the event order to allow the synchronizer store the info in the same order that is read.
 		// Name can be different in the order struct. This name is an identifier to check if the next info that must be stored in the db.
 		// The value pos (position) tells what is the array index where this value is.
 		blocks, order, err := s.etherMan.GetRollupInfoByBlockRange(s.ctx, fromBlock, &toBlock)
