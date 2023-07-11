@@ -11,7 +11,6 @@ type NetworkConfig struct {
 	PolygonBridgeAddress              common.Address
 	PolygonZkEVMGlobalExitRootAddress common.Address
 	L2PolygonBridgeAddresses          []common.Address
-	L1ChainID                         uint64
 }
 
 const (
@@ -26,7 +25,6 @@ var (
 			PolygonBridgeAddress:              common.HexToAddress("0x2a3DD3EB832aF982ec71669E178424b10Dca2EDe"),
 			PolygonZkEVMGlobalExitRootAddress: common.HexToAddress("0x580bda1e7A0CFAe92Fa7F6c20A3794F169CE3CFb"),
 			L2PolygonBridgeAddresses:          []common.Address{common.HexToAddress("0x2a3DD3EB832aF982ec71669E178424b10Dca2EDe")},
-			L1ChainID:                         1, //Mainnet
 		},
 
 		"testnet": {
@@ -34,21 +32,18 @@ var (
 			PolygonBridgeAddress:              common.HexToAddress("0xF6BEEeBB578e214CA9E23B0e9683454Ff88Ed2A7"),
 			PolygonZkEVMGlobalExitRootAddress: common.HexToAddress("0x4d9427DCA0406358445bC0a8F88C26b704004f74"),
 			L2PolygonBridgeAddresses:          []common.Address{common.HexToAddress("0xF6BEEeBB578e214CA9E23B0e9683454Ff88Ed2A7")},
-			L1ChainID:                         5, //Goerli
 		},
 		"internaltestnet": {
 			GenBlockNumber:                    7674349,
 			PolygonBridgeAddress:              common.HexToAddress("0x47c1090bc966280000Fe4356a501f1D0887Ce840"),
 			PolygonZkEVMGlobalExitRootAddress: common.HexToAddress("0xA379Dd55Eb12e8FCdb467A814A15DE2b29677066"),
 			L2PolygonBridgeAddresses:          []common.Address{common.HexToAddress("0xfC5b0c5F677a3f3E29DB2e98c9eD455c7ACfCf03")},
-			L1ChainID:                         5, //Goerli
 		},
 		"local": {
 			GenBlockNumber:                    1,
 			PolygonBridgeAddress:              common.HexToAddress("0xff0EE8ea08cEf5cb4322777F5CC3E8A584B8A4A0"),
 			PolygonZkEVMGlobalExitRootAddress: common.HexToAddress("0x2279B7A0a67DB372996a5FaB50D91eAA73d2eBe6"),
 			L2PolygonBridgeAddresses:          []common.Address{common.HexToAddress("0xff0EE8ea08cEf5cb4322777F5CC3E8A584B8A4A0")},
-			L1ChainID:                         1337,
 		},
 	}
 )
