@@ -200,7 +200,7 @@ func (tm *ClaimTxManager) addClaimTx(depositCount uint, blockID uint64, from com
 		Data:  data,
 	}
 	gas, err := tm.l2Node.EstimateGas(tm.ctx, tx)
-	for i := 0; err != nil && !errors.Is(err, runtime.ErrExecutionReverted) && i < maxRetries; i++ {
+	for i := 1; err != nil && err.Error() != runtime.ErrExecutionReverted.Error() && i < maxRetries; i++ {
 		log.Warnf("error while doing gas estimation. Retrying... Error: %v, Data: %s", err, common.Bytes2Hex(data))
 		time.Sleep(1 * time.Second)
 		gas, err = tm.l2Node.EstimateGas(tm.ctx, tx)
@@ -451,7 +451,7 @@ func (tm *ClaimTxManager) ReviewMonitoredTx(ctx context.Context, mTx *ctmtypes.M
 		Data:  mTx.Data,
 	}
 	gas, err := tm.l2Node.EstimateGas(ctx, tx)
-	for i := 0; err != nil && !errors.Is(err, runtime.ErrExecutionReverted) && i < maxRetries; i++ {
+	for i := 1; err != nil && err.Error() != runtime.ErrExecutionReverted.Error() && i < maxRetries; i++ {
 		mTxLog.Warnf("error while doing gas estimation. Retrying... Error: %v, Data: %s", err, common.Bytes2Hex(tx.Data))
 		time.Sleep(1 * time.Second)
 		gas, err = tm.l2Node.EstimateGas(tm.ctx, tx)
