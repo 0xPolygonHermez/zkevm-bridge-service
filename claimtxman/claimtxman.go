@@ -27,7 +27,6 @@ const (
 	mtHeight        = 32
 	cacheSize       = 1000
 	LeafTypeMessage = uint8(1)
-	maxRetries      = 10
 )
 
 // ClaimTxManager is the claim transaction manager for L2.
@@ -200,9 +199,9 @@ func (tm *ClaimTxManager) addClaimTx(depositCount uint, blockID uint64, from com
 		Data:  data,
 	}
 	gas, err := tm.l2Node.EstimateGas(tm.ctx, tx)
-	for i := 1; err != nil && err.Error() != runtime.ErrExecutionReverted.Error() && i < maxRetries; i++ {
+	for i := 1; err != nil && err.Error() != runtime.ErrExecutionReverted.Error() && i < tm.cfg.RetryNumber; i++ {
 		log.Warnf("error while doing gas estimation. Retrying... Error: %v, Data: %s", err, common.Bytes2Hex(data))
-		time.Sleep(1 * time.Second)
+		time.Sleep(tm.cfg.RetryInterval.Duration)
 		gas, err = tm.l2Node.EstimateGas(tm.ctx, tx)
 	}
 	if err != nil {
@@ -451,9 +450,9 @@ func (tm *ClaimTxManager) ReviewMonitoredTx(ctx context.Context, mTx *ctmtypes.M
 		Data:  mTx.Data,
 	}
 	gas, err := tm.l2Node.EstimateGas(ctx, tx)
-	for i := 1; err != nil && err.Error() != runtime.ErrExecutionReverted.Error() && i < maxRetries; i++ {
+	for i := 1; err != nil && err.Error() != runtime.ErrExecutionReverted.Error() && i < tm.cfg.RetryNumber; i++ {
 		mTxLog.Warnf("error while doing gas estimation. Retrying... Error: %v, Data: %s", err, common.Bytes2Hex(tx.Data))
-		time.Sleep(1 * time.Second)
+		time.Sleep(tm.cfg.RetryInterval.Duration)
 		gas, err = tm.l2Node.EstimateGas(tm.ctx, tx)
 	}
 	if err != nil {
