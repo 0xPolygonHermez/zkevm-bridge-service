@@ -19,6 +19,8 @@ MaxConns = 20
 Enabled = false
 FrequencyToMonitorTxs = "1s"
 PrivateKey = {Path = "./test/test.keystore", Password = "testonly"}
+RetryInterval = "1s"
+RetryNumber = "10"
 
 [Etherman]
 L1URL = "http://localhost:8545"
