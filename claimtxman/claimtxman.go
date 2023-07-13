@@ -451,7 +451,7 @@ func (tm *ClaimTxManager) ReviewMonitoredTx(ctx context.Context, mTx *ctmtypes.M
 	}
 	gas, err := tm.l2Node.EstimateGas(ctx, tx)
 	for i := 1; err != nil && err.Error() != runtime.ErrExecutionReverted.Error() && i < tm.cfg.RetryNumber; i++ {
-		mTxLog.Warnf("error while doing gas estimation. Retrying... Error: %v, Data: %s", err, common.Bytes2Hex(tx.Data))
+		mTxLog.Warnf("error during gas estimation. Retrying... Error: %v, Data: %s", err, common.Bytes2Hex(tx.Data))
 		time.Sleep(tm.cfg.RetryInterval.Duration)
 		gas, err = tm.l2Node.EstimateGas(tm.ctx, tx)
 	}
