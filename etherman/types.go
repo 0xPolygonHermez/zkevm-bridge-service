@@ -4,26 +4,21 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/0xPolygonHermez/zkevm-node/etherman/smartcontracts/polygonzkevm"
 	"github.com/ethereum/go-ethereum/common"
 )
 
 // Block struct
 type Block struct {
-	ID                    uint64
-	BlockNumber           uint64
-	BlockHash             common.Hash
-	ParentHash            common.Hash
-	NetworkID             uint
-	GlobalExitRoots       []GlobalExitRoot
-	ForcedBatches         []ForcedBatch
-	SequencedBatches      [][]SequencedBatch
-	VerifiedBatches       []VerifiedBatch
-	SequencedForceBatches [][]SequencedForceBatch
-	Deposits              []Deposit
-	Claims                []Claim
-	Tokens                []TokenWrapped
-	ReceivedAt            time.Time
+	ID              uint64
+	BlockNumber     uint64
+	BlockHash       common.Hash
+	ParentHash      common.Hash
+	NetworkID       uint
+	GlobalExitRoots []GlobalExitRoot
+	Deposits        []Deposit
+	Claims          []Claim
+	Tokens          []TokenWrapped
+	ReceivedAt      time.Time
 }
 
 // GlobalExitRoot struct
@@ -32,35 +27,6 @@ type GlobalExitRoot struct {
 	BlockNumber    uint64
 	ExitRoots      []common.Hash
 	GlobalExitRoot common.Hash
-}
-
-// SequencedBatch represents virtual batches
-type SequencedBatch struct {
-	BatchNumber uint64
-	Sequencer   common.Address
-	TxHash      common.Hash
-	polygonzkevm.PolygonZkEVMBatchData
-}
-
-// ForcedBatch represents a ForcedBatch
-type ForcedBatch struct {
-	BlockID           uint64
-	BlockNumber       uint64
-	BatchNumber       *uint64
-	ForcedBatchNumber uint64
-	Sequencer         common.Address
-	GlobalExitRoot    common.Hash
-	RawTxsData        []byte
-	ForcedAt          time.Time
-}
-
-// SequencedForceBatch is a sturct to track the ForceSequencedBatches event.
-type SequencedForceBatch struct {
-	BatchNumber uint64
-	Sequencer   common.Address
-	TxHash      common.Hash
-	Timestamp   time.Time
-	polygonzkevm.PolygonZkEVMForcedBatchData
 }
 
 // Deposit struct
@@ -103,24 +69,6 @@ type TokenWrapped struct {
 	BlockID              uint64
 	BlockNumber          uint64
 	NetworkID            uint
-}
-
-// Batch struct
-type Batch struct {
-	BatchNumber    uint64
-	Coinbase       common.Address
-	BatchL2Data    []byte
-	Timestamp      time.Time
-	GlobalExitRoot common.Hash
-}
-
-// VerifiedBatch represents a VerifiedBatch
-type VerifiedBatch struct {
-	BatchNumber uint64
-	BlockID     uint64
-	Aggregator  common.Address
-	StateRoot   common.Hash
-	TxHash      common.Hash
 }
 
 // TokenMetadata is a metadata of ERC20 token.

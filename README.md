@@ -11,5 +11,5 @@ to interact with the [bridge smart contract](https://github.com/0xPolygonHermez/
 
 ## Running the bridge service
 
-- [Running localy](docs/running_local.md)
+- [Running locally](docs/running_local.md)
 
