@@ -29,6 +29,8 @@ const (
 	l2NetworkURL     = "http://localhost:8123"
 	bridgeURL        = "http://localhost:8080"
 
+	forkID = 4
+
 	l2GasLimit = 1000000
 
 	mtHeight      = 32
@@ -112,7 +114,7 @@ func main() {
 	}
 	encoded := hex.EncodeToHex(b)
 	log.Info("tx encoded: ", encoded)
-	byt, err := state.EncodeTransaction(*tx)
+	byt, err := state.EncodeTransaction(*tx, state.MaxEffectivePercentage, forkID)
 	if err != nil {
 		log.Fatal("error: ", err)
 	}
