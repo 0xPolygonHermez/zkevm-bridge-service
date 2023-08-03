@@ -21,7 +21,7 @@ func poll(interval, deadline time.Duration, condition ops.ConditionFunc) error {
 	return ops.Poll(interval, deadline, condition)
 }
 
-// WaitRestHealthy waits for a rest enpoint to be ready
+// WaitRestHealthy waits for a rest endpoint to be ready
 func WaitRestHealthy(address string) error {
 	return poll(defaultInterval, defaultDeadline, func() (bool, error) {
 		return restHealthyCondition(address)

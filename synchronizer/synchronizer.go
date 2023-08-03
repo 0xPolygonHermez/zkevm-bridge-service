@@ -2,7 +2,6 @@ package synchronizer
 
 import (
 	"context"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"math/big"
@@ -234,10 +233,9 @@ func (s *ClientSynchronizer) syncBlocks(lastBlockSynced *etherman.Block) (*ether
 
 		log.Debugf("NetworkID: %d, Getting bridge info from block %d to block %d", s.networkID, fromBlock, toBlock)
 		// This function returns the rollup information contained in the ethereum blocks and an extra param called order.
-		// Order param is a map that contains the event order to allow the synchronizer store the info in the same order that is readed.
-		// Name can be defferent in the order struct. For instance: Batches or Name:NewSequencers. This name is an identifier to check
-		// if the next info that must be stored in the db is a new sequencer or a batch. The value pos (position) tells what is the
-		// array index where this value is.
+		// Order param is a map that contains the event order to allow the synchronizer store the info in the same order that is read.
+		// Name can be different in the order struct. This name is an identifier to check if the next info that must be stored in the db.
+		// The value pos (position) tells what is the array index where this value is.
 		blocks, order, err := s.etherMan.GetRollupInfoByBlockRange(s.ctx, fromBlock, &toBlock)
 		if err != nil {
 			return lastBlockSynced, err
@@ -311,28 +309,8 @@ func (s *ClientSynchronizer) processBlockRange(blocks []etherman.Block, order ma
 		}
 		for _, element := range order[blocks[i].BlockHash] {
 			switch element.Name {
-			case etherman.SequenceBatchesOrder:
-				err = s.processSequenceBatches(blocks[i].SequencedBatches[element.Pos], blockID, blocks[i].BlockNumber, dbTx)
-				if err != nil {
-					return err
-				}
-			case etherman.ForcedBatchesOrder:
-				err = s.processForcedBatch(blocks[i].ForcedBatches[element.Pos], blockID, dbTx)
-				if err != nil {
-					return err
-				}
 			case etherman.GlobalExitRootsOrder:
 				err = s.processGlobalExitRoot(blocks[i].GlobalExitRoots[element.Pos], blockID, dbTx)
-				if err != nil {
-					return err
-				}
-			case etherman.SequenceForceBatchesOrder:
-				err = s.processSequenceForceBatches(blocks[i].SequencedForceBatches[element.Pos], blocks[i], dbTx)
-				if err != nil {
-					return err
-				}
-			case etherman.TrustedVerifyBatchOrder:
-				err = s.processTrustedVerifyBatch(blocks[i].VerifiedBatches[element.Pos], blockID, blocks[i].BlockNumber, dbTx)
 				if err != nil {
 					return err
 				}
@@ -498,254 +476,6 @@ func (s *ClientSynchronizer) checkReorg(latestBlock *etherman.Block) (*etherman.
 	return nil, nil
 }
 
-func (s *ClientSynchronizer) checkTrustedState(batch etherman.Batch, dbTx pgx.Tx) (bool, error) {
-	// First get trusted batch from db
-	tBatch, err := s.storage.GetBatchByNumber(s.ctx, batch.BatchNumber, dbTx)
-	if err != nil {
-		return false, err
-	}
-	//Compare virtual state with trusted state
-	if hex.EncodeToString(batch.BatchL2Data) == hex.EncodeToString(tBatch.BatchL2Data) &&
-		batch.GlobalExitRoot == tBatch.GlobalExitRoot &&
-		batch.Timestamp == tBatch.Timestamp &&
-		batch.Coinbase == tBatch.Coinbase {
-		return false, nil
-	}
-	log.Errorf("networkID: %d, TRUSTED REORG DETECTED! Batch: %d", s.networkID, batch.BatchNumber)
-	log.Warnf("networkID: %d, BatchL2Data. Virtual: %s, Trusted: %s", s.networkID, hex.EncodeToString(batch.BatchL2Data), hex.EncodeToString(tBatch.BatchL2Data))
-	log.Warnf("networkID: %d, GlobalExitRoot. Virtual: %s, Trusted: %s", s.networkID, batch.GlobalExitRoot.String(), tBatch.GlobalExitRoot.String())
-	log.Warnf("networkID: %d, Timestamp. Virtual: %d, Trusted: %d", s.networkID, batch.Timestamp.Unix(), tBatch.Timestamp.Unix())
-	log.Warnf("networkID: %d, Coinbase. Virtual: %s, Trusted: %s", s.networkID, batch.Coinbase.String(), tBatch.Coinbase.String())
-	return true, nil
-}
-
-func (s *ClientSynchronizer) processSequenceBatches(sequencedBatches []etherman.SequencedBatch, blockID, blockNumber uint64, dbTx pgx.Tx) error {
-	for _, sbatch := range sequencedBatches {
-		log.Infof("NetworkID: %d, Processing batch: %d", s.networkID, sbatch.BatchNumber)
-		batch := etherman.Batch{
-			BatchNumber:    sbatch.BatchNumber,
-			GlobalExitRoot: sbatch.GlobalExitRoot,
-			Timestamp:      time.Unix(int64(sbatch.Timestamp), 0),
-			Coinbase:       sbatch.Sequencer,
-			BatchL2Data:    sbatch.Transactions,
-		}
-		// ForcedBatches must be processed
-		if sbatch.MinForcedTimestamp > 0 {
-			// Read forcedBatches from db
-			forcedBatches, err := s.storage.GetNextForcedBatches(s.ctx, 1, dbTx)
-			if err != nil {
-				log.Errorf("networkID: %d, error getting forcedBatches. BatchNumber: %d, BlockNumber: %d, error: %v", s.networkID, batch.BatchNumber, blockNumber, err)
-				rollbackErr := s.storage.Rollback(s.ctx, dbTx)
-				if rollbackErr != nil {
-					log.Errorf("NetworkID: %d, error rolling back state. BatchNumber: %d, BlockNumber: %d, rollbackErr: %v, error: %s",
-						s.networkID, batch.BatchNumber, blockNumber, rollbackErr, err.Error())
-					return rollbackErr
-				}
-				return err
-			}
-			if len(forcedBatches) == 0 {
-				log.Errorf("networkID: %d, error: empty forcedBatches array read from db. BatchNumber: %d", s.networkID, batch.BatchNumber)
-				rollbackErr := dbTx.Rollback(s.ctx)
-				if rollbackErr != nil {
-					log.Errorf("networkID: %d, error rolling back state. BatchNumber: %d, BlockNumber: %d, rollbackErr: %v, error: %s", s.networkID, batch.BatchNumber, blockNumber, rollbackErr, err.Error())
-					return rollbackErr
-				}
-				return fmt.Errorf("networkID: %d, error: empty forcedBatches array read from db. BatchNumber: %d", s.networkID, batch.BatchNumber)
-			}
-			if uint64(forcedBatches[0].ForcedAt.Unix()) != sbatch.MinForcedTimestamp ||
-				forcedBatches[0].GlobalExitRoot != sbatch.GlobalExitRoot ||
-				common.Bytes2Hex(forcedBatches[0].RawTxsData) != common.Bytes2Hex(sbatch.Transactions) {
-				log.Errorf("networkID: %d, error: forcedBatch received doesn't match with the next expected forcedBatch stored in db. Expected: %+v, Synced: %+v", s.networkID, forcedBatches, sbatch)
-				rollbackErr := dbTx.Rollback(s.ctx)
-				if rollbackErr != nil {
-					log.Errorf("networkID: %d, error rolling back state. BatchNumber: %d, BlockNumber: %d, rollbackErr: %v", s.networkID, sbatch.BatchNumber, blockNumber, rollbackErr)
-					return rollbackErr
-				}
-				return fmt.Errorf("networkID: %d, error: forcedBatch received doesn't match with the next expected forcedBatch stored in db. Expected: %+v, Synced: %+v", s.networkID, forcedBatches, sbatch)
-			}
-
-			// Store batchNumber in forced_batch table
-			err = s.storage.AddBatchNumberInForcedBatch(s.ctx, forcedBatches[0].ForcedBatchNumber, batch.BatchNumber, dbTx)
-			if err != nil {
-				log.Errorf("networkID: %d, error adding the batchNumber to forcedBatch in processSequenceBatches. BlockNumber: %d. Error: %v", s.networkID, blockNumber, err)
-				rollbackErr := s.storage.Rollback(s.ctx, dbTx)
-				if rollbackErr != nil {
-					log.Errorf("networkID: %d, error rolling back state. BlockNumber: %d, rollbackErr: %v, error : %s", s.networkID, blockNumber, rollbackErr, err.Error())
-					return rollbackErr
-				}
-				return err
-			}
-		}
-
-		// Call the check trusted state method to compare trusted and virtual state
-		status, err := s.checkTrustedState(batch, dbTx)
-		if err != nil {
-			if errors.Is(err, gerror.ErrStorageNotFound) {
-				log.Debugf("NetworkID: %d, BatchNumber: %d, not found in trusted state. Storing it...", s.networkID, batch.BatchNumber)
-				// If it is not found, store batch
-				err = s.storage.AddBatch(s.ctx, &batch, dbTx)
-				if err != nil {
-					log.Errorf("networkID: %d, error storing batch. BatchNumber: %d, BlockNumber: %d, error: %v", s.networkID, batch.BatchNumber, blockNumber, err)
-					rollbackErr := s.storage.Rollback(s.ctx, dbTx)
-					if rollbackErr != nil {
-						log.Errorf("networkID: %d, error rolling back state. BatchNumber: %d, BlockNumber: %d, rollbackErr: %v, error: %s",
-							s.networkID, batch.BatchNumber, blockNumber, rollbackErr, err.Error())
-						return rollbackErr
-					}
-					return err
-				}
-			} else {
-				log.Errorf("networkID: %d, error checking trusted state. Error: %v", s.networkID, err)
-				rollbackErr := s.storage.Rollback(s.ctx, dbTx)
-				if rollbackErr != nil {
-					log.Errorf("networkID: %d, error rolling back state. BatchNumber: %d, BlockNumber: %d, rollbackErr: %v, error: %s",
-						s.networkID, batch.BatchNumber, blockNumber, rollbackErr, err.Error())
-					return rollbackErr
-				}
-				return err
-			}
-		}
-		if status {
-			// Reset trusted state
-			log.Warnf("NetworkID: %d, BatchNumber: %d, trusted state reorg detected. Reseting it...", s.networkID, batch.BatchNumber)
-			previousBatchNumber := batch.BatchNumber - 1
-			err := s.storage.ResetTrustedState(s.ctx, previousBatchNumber, dbTx) // This method has to reset the forced batches deleting the batchNumber for higher batchNumbers
-			if err != nil {
-				log.Errorf("networkID: %d, error resetting trusted state. BatchNumber: %d, BlockNumber: %d, error: %v", s.networkID, batch.BatchNumber, blockNumber, err)
-				rollbackErr := s.storage.Rollback(s.ctx, dbTx)
-				if rollbackErr != nil {
-					log.Errorf("networkID: %d, error rolling back state. BatchNumber: %d, BlockNumber: %d, rollbackErr: %v, error: %s",
-						s.networkID, batch.BatchNumber, blockNumber, rollbackErr, err.Error())
-					return rollbackErr
-				}
-				return err
-			}
-			err = s.storage.AddBatch(s.ctx, &batch, dbTx)
-			if err != nil {
-				log.Errorf("networkID: %d, error storing batch. BatchNumber: %d, BlockNumber: %d, error: %v", s.networkID, batch.BatchNumber, blockNumber, err)
-				rollbackErr := s.storage.Rollback(s.ctx, dbTx)
-				if rollbackErr != nil {
-					log.Errorf("networkID: %d, error rolling back state. BatchNumber: %d, BlockNumber: %d, rollbackErr: %v, error: %s",
-						s.networkID, batch.BatchNumber, blockNumber, rollbackErr, err.Error())
-					return rollbackErr
-				}
-				return err
-			}
-		}
-	}
-	return nil
-}
-
-func (s *ClientSynchronizer) processSequenceForceBatches(sequenceForceBatches []etherman.SequencedForceBatch, block etherman.Block, dbTx pgx.Tx) error {
-	if len(sequenceForceBatches) == 0 {
-		log.Error("networkID: %d, error: empty sequenceForceBatches array", s.networkID)
-		return nil
-	}
-	// First, reset trusted state
-	lastVirtualizedBatchNumber := sequenceForceBatches[0].BatchNumber - 1
-	err := s.storage.ResetTrustedState(s.ctx, lastVirtualizedBatchNumber, dbTx) // This method has to reset the forced batches deleting the batchNumber for higher batchNumbers
-	if err != nil {
-		log.Errorf("networkID: %d, error resetting trusted state. BatchNumber: %d, BlockNumber: %d, error: %v",
-			s.networkID, lastVirtualizedBatchNumber, block.BlockNumber, err)
-		rollbackErr := s.storage.Rollback(s.ctx, dbTx)
-		if rollbackErr != nil {
-			log.Errorf("networkID: %d, error rolling back state. BatchNumber: %d, BlockNumber: %d, rollbackErr: %v, error : %s",
-				s.networkID, lastVirtualizedBatchNumber, block.BlockNumber, rollbackErr, err.Error())
-			return rollbackErr
-		}
-		return err
-	}
-	// Read forcedBatches from db
-	forcedBatches, err := s.storage.GetNextForcedBatches(s.ctx, len(sequenceForceBatches), dbTx)
-	if err != nil {
-		log.Errorf("networkID: %d, error getting forcedBatches in processSequenceForceBatches. BlockNumber: %d. Error: %v",
-			s.networkID, block.BlockNumber, err)
-		rollbackErr := s.storage.Rollback(s.ctx, dbTx)
-		if rollbackErr != nil {
-			log.Errorf("networkID: %d, error rolling back state. BlockNumber: %d, rollbackErr: %v, error : %s",
-				s.networkID, block.BlockNumber, rollbackErr, err.Error())
-			return rollbackErr
-		}
-		return err
-	}
-
-	if len(sequenceForceBatches) != len(forcedBatches) {
-		log.Errorf("networkID: %d, error number of forced batches doesn't match", s.networkID)
-		rollbackErr := dbTx.Rollback(s.ctx)
-		if rollbackErr != nil {
-			log.Errorf("networkID: %d, error rolling back state. BlockNumber: %d, rollbackErr: %v", s.networkID, block.BlockNumber, rollbackErr)
-			return rollbackErr
-		}
-		return fmt.Errorf("error number of forced batches doesn't match")
-	}
-
-	for i, fbatch := range sequenceForceBatches {
-		log.Infof("NetworkID: %d, Processing forced batch: %d", s.networkID, fbatch.BatchNumber)
-		if uint64(forcedBatches[i].ForcedAt.Unix()) != fbatch.MinForcedTimestamp ||
-			forcedBatches[i].GlobalExitRoot != fbatch.GlobalExitRoot ||
-			common.Bytes2Hex(forcedBatches[i].RawTxsData) != common.Bytes2Hex(fbatch.Transactions) {
-			log.Errorf("networkID: %d, error: forcedBatch received doesn't match with the next expected forcedBatch stored in db. Expected: %+v, Synced: %+v", s.networkID, forcedBatches[i], fbatch)
-			rollbackErr := dbTx.Rollback(s.ctx)
-			if rollbackErr != nil {
-				log.Errorf("networkID: %d, error rolling back state. BatchNumber: %d, BlockNumber: %d, rollbackErr: %v", s.networkID, fbatch.BatchNumber, block.BlockNumber, rollbackErr)
-				return rollbackErr
-			}
-			return fmt.Errorf("networkID: %d, error: forcedBatch received doesn't match with the next expected forcedBatch stored in db. Expected: %+v, Synced: %+v", s.networkID, forcedBatches[i], fbatch)
-		}
-		b := etherman.Batch{
-			BatchNumber:    fbatch.BatchNumber,
-			GlobalExitRoot: fbatch.GlobalExitRoot,
-			Timestamp:      forcedBatches[i].ForcedAt,
-			Coinbase:       fbatch.Sequencer,
-			BatchL2Data:    forcedBatches[i].RawTxsData,
-		}
-		// Add batch, only store it. No need to process txs
-		err := s.storage.AddBatch(s.ctx, &b, dbTx)
-		if err != nil {
-			log.Errorf("networkID: %d, error adding batch in processSequenceForceBatches. BatchNumber: %d, BlockNumber: %d, error: %v",
-				s.networkID, b.BatchNumber, block.BlockNumber, err)
-			rollbackErr := s.storage.Rollback(s.ctx, dbTx)
-			if rollbackErr != nil {
-				log.Errorf("networkID: %d, error rolling back state. BatchNumber: %d, BlockNumber: %d, rollbackErr: %v, error: %s",
-					s.networkID, b.BatchNumber, block.BlockNumber, rollbackErr, err.Error())
-				return rollbackErr
-			}
-			return err
-		}
-		// Store batchNumber in forced_batch table
-		err = s.storage.AddBatchNumberInForcedBatch(s.ctx, forcedBatches[i].ForcedBatchNumber, b.BatchNumber, dbTx)
-		if err != nil {
-			log.Errorf("networkID: %d, error adding the batchNumber to forcedBatch in processSequenceForceBatches. BlockNumber: %d. Error: %v",
-				s.networkID, block.BlockNumber, err)
-			rollbackErr := s.storage.Rollback(s.ctx, dbTx)
-			if rollbackErr != nil {
-				log.Errorf("networkID: %d, error rolling back state. BlockNumber: %d, rollbackErr: %v, error: %s",
-					s.networkID, block.BlockNumber, rollbackErr, err.Error())
-				return rollbackErr
-			}
-			return err
-		}
-	}
-	return nil
-}
-
-func (s *ClientSynchronizer) processForcedBatch(forcedBatch etherman.ForcedBatch, blockID uint64, dbTx pgx.Tx) error {
-	// Store forced batch into the db
-	forcedBatch.BlockID = blockID
-	err := s.storage.AddForcedBatch(s.ctx, &forcedBatch, dbTx)
-	if err != nil {
-		log.Errorf("networkID: %d, error storing the forcedBatch in processForcedBatch. BlockNumber: %d. Error: %v", s.networkID, forcedBatch.BlockNumber, err)
-		rollbackErr := s.storage.Rollback(s.ctx, dbTx)
-		if rollbackErr != nil {
-			log.Errorf("networkID: %d, error rolling back state. BlockNumber: %d, rollbackErr: %v, error : %s",
-				s.networkID, forcedBatch.BlockNumber, rollbackErr, err.Error())
-			return rollbackErr
-		}
-		return err
-	}
-	return nil
-}
-
 func (s *ClientSynchronizer) processGlobalExitRoot(globalExitRoot etherman.GlobalExitRoot, blockID uint64, dbTx pgx.Tx) error {
 	// Store GlobalExitRoot
 	globalExitRoot.BlockID = blockID
@@ -763,46 +493,6 @@ func (s *ClientSynchronizer) processGlobalExitRoot(globalExitRoot etherman.Globa
 	if s.l1RollupExitRoot != globalExitRoot.ExitRoots[1] {
 		s.l1RollupExitRoot = globalExitRoot.ExitRoots[1]
 		s.chExitRootEvent <- &globalExitRoot
-	}
-	return nil
-}
-
-func (s *ClientSynchronizer) processTrustedVerifyBatch(verifiedBatch etherman.VerifiedBatch, blockID, blockNumber uint64, dbTx pgx.Tx) error {
-	lastVBatch, err := s.storage.GetLastVerifiedBatch(s.ctx, dbTx)
-	if errors.Is(err, gerror.ErrStorageNotFound) {
-		lastVBatch = &etherman.VerifiedBatch{
-			BatchNumber: 0,
-		}
-	} else if err != nil {
-		log.Errorf("networkID: %d, error getting lastVerifiedBatch stored in db in processTrustedVerifyBatches. Processing synced blockNumber: %d, error: %v", s.networkID, blockNumber, err)
-		rollbackErr := dbTx.Rollback(s.ctx)
-		if rollbackErr != nil {
-			log.Errorf("networkID: %d, error rolling back state. Processing synced blockNumber: %d, rollbackErr: %v, error : %s", s.networkID, blockNumber, rollbackErr, err.Error())
-			return rollbackErr
-		}
-		return err
-	}
-	nbatches := verifiedBatch.BatchNumber - lastVBatch.BatchNumber
-	var i uint64
-	for i = 1; i <= nbatches; i++ {
-		verifiedB := etherman.VerifiedBatch{
-			BlockID:     blockID,
-			BatchNumber: lastVBatch.BatchNumber + i,
-			Aggregator:  verifiedBatch.Aggregator,
-			StateRoot:   verifiedBatch.StateRoot,
-			TxHash:      verifiedBatch.TxHash,
-		}
-		err = s.storage.AddVerifiedBatch(s.ctx, &verifiedB, dbTx)
-		if err != nil {
-			log.Errorf("networkID: %d, error storing the verifiedB in processTrustedVerifyBatches. verifiedBatch: %+v, verifiedBatch: %+v", s.networkID, verifiedB, verifiedBatch)
-			rollbackErr := dbTx.Rollback(s.ctx)
-			if rollbackErr != nil {
-				log.Errorf("networkID: %d, error rolling back state. BlockNumber: %d, rollbackErr: %v, error : %s", s.networkID, blockNumber, rollbackErr, err.Error())
-				return rollbackErr
-			}
-			log.Errorf("networkID: %d, error storing the verifiedB in processTrustedVerifyBatches. BlockNumber: %d, error: %v", s.networkID, blockNumber, err)
-			return err
-		}
 	}
 	return nil
 }

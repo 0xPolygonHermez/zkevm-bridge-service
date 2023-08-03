@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"os"
 	"os/signal"
 
@@ -39,7 +38,7 @@ func start(ctx *cli.Context) error {
 		return err
 	}
 
-	networkID, err := l1Etherman.GetNetworkID(context.Background())
+	networkID, err := l1Etherman.GetNetworkID(ctx.Context)
 	log.Infof("main network id: %d", networkID)
 	if err != nil {
 		log.Error(err)
@@ -48,7 +47,7 @@ func start(ctx *cli.Context) error {
 
 	var networkIDs = []uint{networkID}
 	for _, client := range l2Ethermans {
-		networkID, err := client.GetNetworkID(context.Background())
+		networkID, err := client.GetNetworkID(ctx.Context)
 		if err != nil {
 			log.Error(err)
 			return err
@@ -107,7 +106,18 @@ func start(ctx *cli.Context) error {
 			go claimTxManager.Start()
 		}
 	} else {
-		log.Warn("ClaimTxManager not configured.")
+		log.Warn("ClaimTxManager not configured")
+		go func() {
+			for {
+				select {
+				case <-chExitRootEvent:
+					log.Debug("New GER received")
+				case <-ctx.Context.Done():
+					log.Debug("Stopping goroutine that listen new GER updates")
+					return
+				}
+			}
+		}()
 	}
 
 	// Wait for an in interrupt.
@@ -123,16 +133,9 @@ func setupLog(c log.Config) {
 }
 
 func newEthermans(c *config.Config) (*etherman.Client, []*etherman.Client, error) {
-	l1Etherman, err := etherman.NewClient(c.Etherman, c.NetworkConfig.PolygonZkEVMAddress, c.NetworkConfig.PolygonBridgeAddress, c.NetworkConfig.PolygonZkEVMGlobalExitRootAddress)
+	l1Etherman, err := etherman.NewClient(c.Etherman, c.NetworkConfig.PolygonBridgeAddress, c.NetworkConfig.PolygonZkEVMGlobalExitRootAddress)
 	if err != nil {
 		return nil, nil, err
-	}
-	if c.Etherman.L2URLs[0] == "" {
-		log.Debug("getting trusted sequencer URL from smc")
-		c.Etherman.L2URLs[0], err = l1Etherman.GetTrustedSequencerURL()
-		if err != nil {
-			log.Fatal("error getting trusted sequencer URI. Error: %v", err)
-		}
 	}
 	if len(c.L2PolygonBridgeAddresses) != len(c.Etherman.L2URLs) {
 		log.Fatal("environment configuration error. zkevm bridge addresses and zkevm node urls mismatch")
