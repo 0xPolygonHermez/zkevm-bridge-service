@@ -40,13 +40,15 @@ type ClaimTxManager struct {
 	bridgeService   bridgeServiceInterface
 	cfg             Config
 	chExitRootEvent chan *etherman.GlobalExitRoot
+	chSynced        chan uint
 	storage         storageInterface
 	auth            *bind.TransactOpts
 	nonceCache      *lru.Cache[string, uint64]
+	synced          bool
 }
 
 // NewClaimTxManager creates a new claim transaction manager.
-func NewClaimTxManager(cfg Config, chExitRootEvent chan *etherman.GlobalExitRoot, l2NodeURL string, l2NetworkID uint, l2BridgeAddr common.Address, bridgeService bridgeServiceInterface, storage interface{}) (*ClaimTxManager, error) {
+func NewClaimTxManager(cfg Config, chExitRootEvent chan *etherman.GlobalExitRoot, chSynced chan uint, l2NodeURL string, l2NetworkID uint, l2BridgeAddr common.Address, bridgeService bridgeServiceInterface, storage interface{}) (*ClaimTxManager, error) {
 	client, err := utils.NewClient(context.Background(), l2NodeURL, l2BridgeAddr)
 	if err != nil {
 		return nil, err
@@ -65,6 +67,7 @@ func NewClaimTxManager(cfg Config, chExitRootEvent chan *etherman.GlobalExitRoot
 		bridgeService:   bridgeService,
 		cfg:             cfg,
 		chExitRootEvent: chExitRootEvent,
+		chSynced:        chSynced,
 		storage:         storage.(storageInterface),
 		auth:            auth,
 		nonceCache:      cache,
@@ -79,13 +82,21 @@ func (tm *ClaimTxManager) Start() {
 		select {
 		case <-tm.ctx.Done():
 			return
+		case netID := <-tm.chSynced:
+			if netID == tm.l2NetworkID {
+				tm.synced = true
+			}
 		case ger := <-tm.chExitRootEvent:
-			go func() {
-				err := tm.updateDepositsStatus(ger)
-				if err != nil {
-					log.Errorf("failed to update deposits status: %v", err)
-				}
-			}()
+			if tm.synced {
+				go func() {
+					err := tm.updateDepositsStatus(ger)
+					if err != nil {
+						log.Errorf("failed to update deposits status: %v", err)
+					}
+				}()
+			} else {
+				log.Info("Waiting for networkID %d to be synced before processing deposits")
+			}
 		case <-time.After(tm.cfg.FrequencyToMonitorTxs.Duration):
 			err := tm.monitorTxs(context.Background())
 			if err != nil {
@@ -262,7 +273,7 @@ func (tm *ClaimTxManager) monitorTxs(ctx context.Context) error {
 		receiptSuccessful := false
 
 		for txHash := range mTx.History {
-			mTxLog.Debugf("Checking if tx %s is mined", txHash)
+			mTxLog.Infof("Checking if tx %s is mined", txHash)
 			mined, receipt, err = tm.l2Node.CheckTxWasMined(ctx, txHash)
 			if err != nil {
 				mTxLog.Errorf("failed to check if tx %s was mined: %v", txHash.String(), err)
@@ -281,6 +292,7 @@ func (tm *ClaimTxManager) monitorTxs(ctx context.Context) error {
 					mTxLog.Errorf("failed to get tx %s: %v", txHash.String(), err)
 					continue
 				}
+				log.Infof("tx: %s not mined yet", txHash.String())
 
 				allHistoryTxMined = false
 				continue
@@ -421,7 +433,7 @@ func (tm *ClaimTxManager) monitorTxs(ctx context.Context) error {
 				mTxLog.Errorf("failed to update monitored tx: %v", err)
 				continue
 			}
-			mTxLog.Debugf("signed tx added to the monitored tx history")
+			mTxLog.Infof("signed tx %s added to the monitored tx history", signedTx.Hash().String())
 		}
 	}
 

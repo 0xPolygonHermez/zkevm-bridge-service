@@ -35,7 +35,8 @@ func TestSyncGer(t *testing.T) {
 		m.Etherman.On("GetNetworkID", ctx).Return(uint(0), nil)
 		m.Storage.On("GetLatestL1SyncedExitRoot", context.Background(), nil).Return(&etherman.GlobalExitRoot{}, gerror.ErrStorageNotFound)
 		chEvent := make(chan *etherman.GlobalExitRoot)
-		sync, err := NewSynchronizer(m.Storage, m.BridgeCtrl, m.Etherman, m.ZkEVMClient, genBlockNumber, chEvent, cfg)
+		chSynced := make(chan uint)
+		sync, err := NewSynchronizer(m.Storage, m.BridgeCtrl, m.Etherman, m.ZkEVMClient, genBlockNumber, chEvent, chSynced, cfg)
 		require.NoError(t, err)
 
 		go func() {
@@ -44,6 +45,8 @@ func TestSyncGer(t *testing.T) {
 				case <-chEvent:
 					t.Log("New GER received")
 					return
+				case netID := <-chSynced:
+					t.Log("Synced networkID: ", netID)
 				case <-context.Background().Done():
 					return
 				}
