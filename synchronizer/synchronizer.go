@@ -85,6 +85,7 @@ func NewSynchronizer(
 		cancelCtx:      cancel,
 		genBlockNumber: genBlockNumber,
 		cfg:            cfg,
+		chSynced:       chSynced,
 		networkID:      networkID,
 	}, nil
 }
@@ -115,15 +116,16 @@ func (s *ClientSynchronizer) Sync() error {
 	for {
 		select {
 		case <-s.ctx.Done():
-			log.Debug("synchronizer ctx done. NetworkID: ", s.networkID)
+			log.Debugf("NetworkID: %d, synchronizer ctx done", s.networkID)
 			return nil
 		case <-time.After(waitDuration):
+			log.Debugf("NetworkID: %d, syncing...", s.networkID)
 			//Sync L1Blocks
 			if lastBlockSynced, err = s.syncBlocks(lastBlockSynced); err != nil {
-				log.Warn("error syncing blocks: ", err)
+				log.Warnf("networkID: %d, error syncing blocks: ", s.networkID, err)
 				lastBlockSynced, err = s.storage.GetLastBlock(s.ctx, s.networkID, nil)
 				if err != nil {
-					log.Fatal("error getting lastBlockSynced to resume the synchronization... Error: ", err)
+					log.Fatalf("networkID: %d, error getting lastBlockSynced to resume the synchronization... Error: ", s.networkID, err)
 				}
 				if s.ctx.Err() != nil {
 					continue
@@ -204,7 +206,6 @@ func (s *ClientSynchronizer) syncTrustedState() error {
 
 // This function syncs the node from a specific block to the latest
 func (s *ClientSynchronizer) syncBlocks(lastBlockSynced *etherman.Block) (*etherman.Block, error) {
-	log.Debugf("NetworkID: %d, before checkReorg. lastBlockSynced: %+v", s.networkID, lastBlockSynced)
 	// This function will read events fromBlockNum to latestEthBlock. Check reorg to be sure that everything is ok.
 	block, err := s.checkReorg(lastBlockSynced)
 	if err != nil {

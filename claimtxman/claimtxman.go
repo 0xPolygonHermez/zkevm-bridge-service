@@ -49,7 +49,8 @@ type ClaimTxManager struct {
 
 // NewClaimTxManager creates a new claim transaction manager.
 func NewClaimTxManager(cfg Config, chExitRootEvent chan *etherman.GlobalExitRoot, chSynced chan uint, l2NodeURL string, l2NetworkID uint, l2BridgeAddr common.Address, bridgeService bridgeServiceInterface, storage interface{}) (*ClaimTxManager, error) {
-	client, err := utils.NewClient(context.Background(), l2NodeURL, l2BridgeAddr)
+	ctx := context.Background()
+	client, err := utils.NewClient(ctx, l2NodeURL, l2BridgeAddr)
 	if err != nil {
 		return nil, err
 	}
@@ -57,7 +58,7 @@ func NewClaimTxManager(cfg Config, chExitRootEvent chan *etherman.GlobalExitRoot
 	if err != nil {
 		return nil, err
 	}
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(ctx)
 	auth, err := client.GetSignerFromKeystore(ctx, cfg.PrivateKey)
 	return &ClaimTxManager{
 		ctx:             ctx,
@@ -78,16 +79,19 @@ func NewClaimTxManager(cfg Config, chExitRootEvent chan *etherman.GlobalExitRoot
 // send then to the blockchain and keep monitoring them until they
 // get mined
 func (tm *ClaimTxManager) Start() {
+	ticker := time.NewTicker(tm.cfg.FrequencyToMonitorTxs.Duration)
 	for {
 		select {
 		case <-tm.ctx.Done():
 			return
 		case netID := <-tm.chSynced:
-			if netID == tm.l2NetworkID {
+			if netID == tm.l2NetworkID && !tm.synced {
+				log.Info("NetworkID synced: ", netID)
 				tm.synced = true
 			}
 		case ger := <-tm.chExitRootEvent:
 			if tm.synced {
+				log.Debug("UpdateDepositsStatus for ger: ", ger.GlobalExitRoot)
 				go func() {
 					err := tm.updateDepositsStatus(ger)
 					if err != nil {
@@ -95,10 +99,10 @@ func (tm *ClaimTxManager) Start() {
 					}
 				}()
 			} else {
-				log.Info("Waiting for networkID %d to be synced before processing deposits")
+				log.Infof("Waiting for networkID %d to be synced before processing deposits", tm.l2NetworkID)
 			}
-		case <-time.After(tm.cfg.FrequencyToMonitorTxs.Duration):
-			err := tm.monitorTxs(context.Background())
+		case <-ticker.C:
+			err := tm.monitorTxs(tm.ctx)
 			if err != nil {
 				log.Errorf("failed to monitor txs: %v", err)
 			}
@@ -255,6 +259,12 @@ func (tm *ClaimTxManager) monitorTxs(ctx context.Context) error {
 	statusesFilter := []ctmtypes.MonitoredTxStatus{ctmtypes.MonitoredTxStatusCreated}
 	mTxs, err := tm.storage.GetClaimTxsByStatus(ctx, statusesFilter, dbTx)
 	if err != nil {
+		log.Errorf("failed to get created monitored txs: %v", err)
+		rollbackErr := tm.storage.Rollback(tm.ctx, dbTx)
+		if rollbackErr != nil {
+			log.Errorf("claimtxman error rolling back state. RollbackErr: %s, err: %v", rollbackErr.Error(), err)
+			return rollbackErr
+		}
 		return fmt.Errorf("failed to get created monitored txs: %v", err)
 	}
 
@@ -439,11 +449,13 @@ func (tm *ClaimTxManager) monitorTxs(ctx context.Context) error {
 
 	err = tm.storage.Commit(tm.ctx, dbTx)
 	if err != nil {
+		log.Errorf("UpdateClaimTx committing dbTx, err: %v", err)
 		rollbackErr := tm.storage.Rollback(tm.ctx, dbTx)
 		if rollbackErr != nil {
-			log.Fatalf("claimtxman error rolling back state. RollbackErr: %s, err: %s", rollbackErr.Error(), err.Error())
+			log.Errorf("claimtxman error rolling back state. RollbackErr: %s, err: %v", rollbackErr.Error(), err)
+			return rollbackErr
 		}
-		log.Fatalf("UpdateClaimTx committing dbTx, err: %s", err.Error())
+		return err
 	}
 	return nil
 }
