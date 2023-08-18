@@ -139,7 +139,8 @@ func (s *ClientSynchronizer) Sync() error {
 					continue
 				}
 				lastKnownBlock := header.Number.Uint64()
-				if lastBlockSynced.BlockNumber == lastKnownBlock {
+				if lastBlockSynced.BlockNumber == lastKnownBlock && !s.synced {
+					log.Infof("NetworkID %d Synced!", s.networkID)
 					waitDuration = s.cfg.SyncInterval.Duration
 					s.synced = true
 					s.chSynced <- s.networkID
@@ -258,9 +259,12 @@ func (s *ClientSynchronizer) syncBlocks(lastBlockSynced *etherman.Block) (*ether
 		fromBlock = toBlock + 1
 
 		if lastKnownBlock.Cmp(new(big.Int).SetUint64(toBlock)) < 1 {
-			waitDuration = s.cfg.SyncInterval.Duration
-			s.synced = true
-			s.chSynced <- s.networkID
+			if !s.synced {
+				log.Infof("NetworkID %d Synced!", s.networkID)
+				waitDuration = s.cfg.SyncInterval.Duration
+				s.synced = true
+				s.chSynced <- s.networkID
+			}
 			break
 		}
 		if len(blocks) == 0 { // If there is no events in the checked blocks range and lastKnownBlock > fromBlock.
