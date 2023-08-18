@@ -40,14 +40,17 @@ type ClaimTxManager struct {
 	bridgeService   bridgeServiceInterface
 	cfg             Config
 	chExitRootEvent chan *etherman.GlobalExitRoot
+	chSynced        chan uint
 	storage         storageInterface
 	auth            *bind.TransactOpts
 	nonceCache      *lru.Cache[string, uint64]
+	synced          bool
 }
 
 // NewClaimTxManager creates a new claim transaction manager.
-func NewClaimTxManager(cfg Config, chExitRootEvent chan *etherman.GlobalExitRoot, l2NodeURL string, l2NetworkID uint, l2BridgeAddr common.Address, bridgeService bridgeServiceInterface, storage interface{}) (*ClaimTxManager, error) {
-	client, err := utils.NewClient(context.Background(), l2NodeURL, l2BridgeAddr)
+func NewClaimTxManager(cfg Config, chExitRootEvent chan *etherman.GlobalExitRoot, chSynced chan uint, l2NodeURL string, l2NetworkID uint, l2BridgeAddr common.Address, bridgeService bridgeServiceInterface, storage interface{}) (*ClaimTxManager, error) {
+	ctx := context.Background()
+	client, err := utils.NewClient(ctx, l2NodeURL, l2BridgeAddr)
 	if err != nil {
 		return nil, err
 	}
@@ -55,7 +58,7 @@ func NewClaimTxManager(cfg Config, chExitRootEvent chan *etherman.GlobalExitRoot
 	if err != nil {
 		return nil, err
 	}
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(ctx)
 	auth, err := client.GetSignerFromKeystore(ctx, cfg.PrivateKey)
 	return &ClaimTxManager{
 		ctx:             ctx,
@@ -65,6 +68,7 @@ func NewClaimTxManager(cfg Config, chExitRootEvent chan *etherman.GlobalExitRoot
 		bridgeService:   bridgeService,
 		cfg:             cfg,
 		chExitRootEvent: chExitRootEvent,
+		chSynced:        chSynced,
 		storage:         storage.(storageInterface),
 		auth:            auth,
 		nonceCache:      cache,
@@ -75,19 +79,30 @@ func NewClaimTxManager(cfg Config, chExitRootEvent chan *etherman.GlobalExitRoot
 // send then to the blockchain and keep monitoring them until they
 // get mined
 func (tm *ClaimTxManager) Start() {
+	ticker := time.NewTicker(tm.cfg.FrequencyToMonitorTxs.Duration)
 	for {
 		select {
 		case <-tm.ctx.Done():
 			return
+		case netID := <-tm.chSynced:
+			if netID == tm.l2NetworkID && !tm.synced {
+				log.Info("NetworkID synced: ", netID)
+				tm.synced = true
+			}
 		case ger := <-tm.chExitRootEvent:
-			go func() {
-				err := tm.updateDepositsStatus(ger)
-				if err != nil {
-					log.Errorf("failed to update deposits status: %v", err)
-				}
-			}()
-		case <-time.After(tm.cfg.FrequencyToMonitorTxs.Duration):
-			err := tm.monitorTxs(context.Background())
+			if tm.synced {
+				log.Debug("UpdateDepositsStatus for ger: ", ger.GlobalExitRoot)
+				go func() {
+					err := tm.updateDepositsStatus(ger)
+					if err != nil {
+						log.Errorf("failed to update deposits status: %v", err)
+					}
+				}()
+			} else {
+				log.Infof("Waiting for networkID %d to be synced before processing deposits", tm.l2NetworkID)
+			}
+		case <-ticker.C:
+			err := tm.monitorTxs(tm.ctx)
 			if err != nil {
 				log.Errorf("failed to monitor txs: %v", err)
 			}
@@ -244,6 +259,12 @@ func (tm *ClaimTxManager) monitorTxs(ctx context.Context) error {
 	statusesFilter := []ctmtypes.MonitoredTxStatus{ctmtypes.MonitoredTxStatusCreated}
 	mTxs, err := tm.storage.GetClaimTxsByStatus(ctx, statusesFilter, dbTx)
 	if err != nil {
+		log.Errorf("failed to get created monitored txs: %v", err)
+		rollbackErr := tm.storage.Rollback(tm.ctx, dbTx)
+		if rollbackErr != nil {
+			log.Errorf("claimtxman error rolling back state. RollbackErr: %s, err: %v", rollbackErr.Error(), err)
+			return rollbackErr
+		}
 		return fmt.Errorf("failed to get created monitored txs: %v", err)
 	}
 
@@ -262,7 +283,7 @@ func (tm *ClaimTxManager) monitorTxs(ctx context.Context) error {
 		receiptSuccessful := false
 
 		for txHash := range mTx.History {
-			mTxLog.Debugf("Checking if tx %s is mined", txHash)
+			mTxLog.Infof("Checking if tx %s is mined", txHash)
 			mined, receipt, err = tm.l2Node.CheckTxWasMined(ctx, txHash)
 			if err != nil {
 				mTxLog.Errorf("failed to check if tx %s was mined: %v", txHash.String(), err)
@@ -281,6 +302,7 @@ func (tm *ClaimTxManager) monitorTxs(ctx context.Context) error {
 					mTxLog.Errorf("failed to get tx %s: %v", txHash.String(), err)
 					continue
 				}
+				log.Infof("tx: %s not mined yet", txHash.String())
 
 				allHistoryTxMined = false
 				continue
@@ -421,17 +443,19 @@ func (tm *ClaimTxManager) monitorTxs(ctx context.Context) error {
 				mTxLog.Errorf("failed to update monitored tx: %v", err)
 				continue
 			}
-			mTxLog.Debugf("signed tx added to the monitored tx history")
+			mTxLog.Infof("signed tx %s added to the monitored tx history", signedTx.Hash().String())
 		}
 	}
 
 	err = tm.storage.Commit(tm.ctx, dbTx)
 	if err != nil {
+		log.Errorf("UpdateClaimTx committing dbTx, err: %v", err)
 		rollbackErr := tm.storage.Rollback(tm.ctx, dbTx)
 		if rollbackErr != nil {
-			log.Fatalf("claimtxman error rolling back state. RollbackErr: %s, err: %s", rollbackErr.Error(), err.Error())
+			log.Errorf("claimtxman error rolling back state. RollbackErr: %s, err: %v", rollbackErr.Error(), err)
+			return rollbackErr
 		}
-		log.Fatalf("UpdateClaimTx committing dbTx, err: %s", err.Error())
+		return err
 	}
 	return nil
 }
