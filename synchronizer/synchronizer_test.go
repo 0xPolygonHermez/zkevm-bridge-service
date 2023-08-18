@@ -44,7 +44,6 @@ func TestSyncGer(t *testing.T) {
 				select {
 				case <-chEvent:
 					t.Log("New GER received")
-					return
 				case netID := <-chSynced:
 					t.Log("Synced networkID: ", netID)
 				case <-context.Background().Done():
