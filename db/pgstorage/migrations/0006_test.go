@@ -12,7 +12,6 @@ import (
 type migrationTest0006 struct{}
 
 func (m migrationTest0006) InsertData(db *sql.DB) error {
-	
 	return nil
 }
 
