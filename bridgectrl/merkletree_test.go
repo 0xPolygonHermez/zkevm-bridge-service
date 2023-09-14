@@ -99,9 +99,9 @@ func TestMTAddLeaf(t *testing.T) {
 			require.True(t, result)
 			var (
 				depositIDs []uint64
-				deposit *etherman.Deposit
+				deposit    *etherman.Deposit
 			)
-			for i := 0; i<=ti; i++ {
+			for i := 0; i <= ti; i++ {
 				deposit = &etherman.Deposit{
 					OriginalNetwork:    testVector.NewLeaf.OriginalNetwork,
 					OriginalAddress:    common.HexToAddress(testVector.NewLeaf.TokenAddress),
@@ -116,7 +116,7 @@ func TestMTAddLeaf(t *testing.T) {
 				require.NoError(t, err)
 				depositIDs = append(depositIDs, depositID)
 			}
-			
+
 			for i, leaf := range testVector.ExistingLeaves {
 				leafValue, err := formatBytes32String(leaf[2:])
 				require.NoError(t, err)
