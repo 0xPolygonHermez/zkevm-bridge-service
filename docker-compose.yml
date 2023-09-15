@@ -280,4 +280,5 @@ services:
     command:
       - "/bin/sh"
       - "-c"
-      - "/app/cdk-validium-node run --network custom --custom-network-file /app/genesis.json --cfg /app/config.toml --components eth-tx-manager,sequencer,rpc,synchronizer,sequence-sender,aggregator"
+      - "/app/cdk-validium-node approve --network custom --custom-network-file /app/genesis.json --am 115792089237316195423570985008687907853269984665640564039457584007913129639935 -y --cfg /app/config.toml --key-store-path /pk/sequencer.keystore --password testonly &&
+         /app/cdk-validium-node run --network custom --custom-network-file /app/genesis.json --cfg /app/config.toml --components \"synchronizer,rpc,sequencer,sequence-sender,aggregator,eth-tx-manager\""
