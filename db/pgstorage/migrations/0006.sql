@@ -4,8 +4,18 @@ ALTER TABLE mt.root ADD primary key(deposit_id);
 ALTER TABLE sync.token_wrapped ADD primary key(block_id);
 DROP TABLE IF EXISTS mt.rht_temp;
 
+CREATE INDEX IF NOT EXISTS claim_block_id ON sync.claim USING btree (block_id);
+CREATE INDEX IF NOT EXISTS deposit_block_id ON sync.deposit USING btree (block_id);
+CREATE INDEX IF NOT EXISTS monitored_txs_block_id ON sync.monitored_txs USING btree (block_id);
+CREATE INDEX IF NOT EXISTS token_wrapped_block_id ON sync.token_wrapped USING btree (block_id);
+
 -- +migrate Down
 ALTER TABLE mt.rht DROP CONSTRAINT rht_pkey;
 ALTER TABLE mt.root DROP CONSTRAINT root_pkey;
 ALTER TABLE sync.token_wrapped DROP CONSTRAINT token_wrapped_pkey;
 CREATE TABLE IF NOT EXISTS mt.rht_temp AS (SELECT key, min(value), max(deposit_id) FROM mt.rht GROUP BY key HAVING count(key) > 1);
+
+DROP INDEX IF EXISTS sync.claim_block_id;
+DROP INDEX IF EXISTS sync.deposit_block_id;
+DROP INDEX IF EXISTS sync.monitored_txs_block_id;
+DROP INDEX IF EXISTS sync.token_wrapped_block_id;
