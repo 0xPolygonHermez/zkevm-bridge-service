@@ -294,13 +294,22 @@ func (tm *ClaimTxManager) monitorTxs(ctx context.Context) error {
 			if !mined {
 				// check if the tx is in the pending pool
 				_, _, err = tm.l2Node.TransactionByHash(ctx, txHash)
-				if errors.Is(err, ethereum.NotFound) {
-					mTxLog.Errorf("tx %s was not found in the pending pool", txHash.String())
-					hasFailedReceipts = true
-					continue
-				} else if err != nil {
-					mTxLog.Errorf("failed to get tx %s: %v", txHash.String(), err)
-					continue
+				if err != nil {
+					mTxLog.Errorf("error getting txByHash %s. Error: %v", txHash.String(), err)
+					// Retry if the tx has not appeared in the pool yet.
+					for i:=0; i<tm.cfg.RetryNumber && err != nil; i++ {
+						mTxLog.Warn("waiting and retrying to find the tx in the pool. TxHash: %s. Error: %v", txHash.String(), err)
+						time.Sleep(tm.cfg.RetryInterval.Duration)
+						_, _, err = tm.l2Node.TransactionByHash(ctx, txHash)
+					}
+					if errors.Is(err, ethereum.NotFound) {
+						mTxLog.Error("maximum retries and the tx is still missing in the pool. TxHash: ", txHash.String())
+						hasFailedReceipts = true
+						continue
+					} else if err != nil {
+						mTxLog.Errorf("failed to retry to get tx %s: %v", txHash.String(), err)
+						continue
+					}
 				}
 				log.Infof("tx: %s not mined yet", txHash.String())
 
@@ -433,6 +442,9 @@ func (tm *ClaimTxManager) monitorTxs(ctx context.Context) error {
 						mTxLog.Errorf("failed to review monitored tx: %v", err)
 					}
 				}
+			} else if err != nil && !errors.Is(err, ethereum.NotFound) {
+				log.Error("unexpected error getting TransactionByHash. Error: ", err)
+				continue
 			} else {
 				mTxLog.Infof("signed tx %v already found in the network for the monitored tx: %v", signedTx.Hash().String(), err)
 			}
