@@ -297,7 +297,7 @@ func (tm *ClaimTxManager) monitorTxs(ctx context.Context) error {
 				if err != nil {
 					mTxLog.Errorf("error getting txByHash %s. Error: %v", txHash.String(), err)
 					// Retry if the tx has not appeared in the pool yet.
-					for i:=0; i<tm.cfg.RetryNumber && err != nil; i++ {
+					for i := 0; i < tm.cfg.RetryNumber && err != nil; i++ {
 						mTxLog.Warn("waiting and retrying to find the tx in the pool. TxHash: %s. Error: %v", txHash.String(), err)
 						time.Sleep(tm.cfg.RetryInterval.Duration)
 						_, _, err = tm.l2Node.TransactionByHash(ctx, txHash)

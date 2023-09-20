@@ -11,11 +11,11 @@ import (
 )
 
 func TestHistoryHashSlice(t *testing.T) {
-	mTx := MonitoredTx {
+	mTx := MonitoredTx{
 		History: make(map[common.Hash]bool),
 	}
-	tx1 := types.NewTransaction(0, common.HexToAddress("0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266"), big.NewInt(10), 100000, big.NewInt(1000000000),[]byte{})
-	tx2 := types.NewTransaction(1, common.HexToAddress("0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266"), big.NewInt(11), 100001, big.NewInt(1000000010),[]byte{})
+	tx1 := types.NewTransaction(0, common.HexToAddress("0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266"), big.NewInt(10), 100000, big.NewInt(1000000000), []byte{})
+	tx2 := types.NewTransaction(1, common.HexToAddress("0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266"), big.NewInt(11), 100001, big.NewInt(1000000010), []byte{})
 	txs := []*types.Transaction{tx1, tx2}
 	err := mTx.AddHistory(tx1)
 	require.NoError(t, err)
