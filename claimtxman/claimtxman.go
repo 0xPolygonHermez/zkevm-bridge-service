@@ -443,10 +443,9 @@ func (tm *ClaimTxManager) monitorTxs(ctx context.Context) error {
 					}
 				}
 			} else if err != nil && !errors.Is(err, ethereum.NotFound) {
-				log.Error("unexpected error getting TransactionByHash. Error: ", err)
-				continue
+				mTxLog.Error("unexpected error getting TransactionByHash. Error: ", err)
 			} else {
-				mTxLog.Infof("signed tx %v already found in the network for the monitored tx: %v", signedTx.Hash().String(), err)
+				mTxLog.Infof("signed tx %v already found in the network for the monitored tx.", signedTx.Hash().String())
 			}
 
 			// update monitored tx changes into storage
