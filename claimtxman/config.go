@@ -18,6 +18,6 @@ type Config struct {
 	RetryInterval types.Duration `mapstructure:"RetryInterval"`
 	// RetryNumber is the number of retries before giving up
 	RetryNumber int `mapstructure:"RetryNumber"`
-	// AuthorizedClaimMessageAddress are the allowed address to bridge message with autoClaim
-	AuthorizedClaimMessageAddress []common.Address `mapstructure:"AuthorizedClaimMessageAddress"`
+	// AuthorizedClaimMessageAddresses are the allowed address to bridge message with autoClaim
+	AuthorizedClaimMessageAddresses []common.Address `mapstructure:"AuthorizedClaimMessageAddresses"`
 }

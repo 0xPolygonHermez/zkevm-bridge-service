@@ -192,9 +192,9 @@ func (tm *ClaimTxManager) processDepositStatus(ger *etherman.GlobalExitRoot, dbT
 }
 
 func (tm *ClaimTxManager) isDepositMessageAllowed(deposit *etherman.Deposit) bool {
-	for _, ak := range tm.cfg.AuthorizedClaimMessageAddress {
-		if deposit.OriginalAddress == ak {
-			log.Debugf("MessageBridge from authorized account detected: %+v, account: %s", deposit, ak)
+	for _, addr := range tm.cfg.AuthorizedClaimMessageAddresses {
+		if deposit.OriginalAddress == addr {
+			log.Debugf("MessageBridge from authorized account detected: %+v, account: %s", deposit, addr.String())
 			return true
 		}
 	}
