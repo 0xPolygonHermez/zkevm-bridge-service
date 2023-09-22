@@ -17,6 +17,7 @@ FrequencyToMonitorTxs = "1s"
 PrivateKey = {Path = "../test/test.keystore.sequencer", Password = "testonly"}
 RetryInterval = "1s"
 RetryNumber = 10
+AuthorizedClaimMessageAddress = ["0x90F79bf6EB2c4f870365E785982E1f101E93b906"]
 
 [Etherman]
 L1URL = "http://localhost:8545"

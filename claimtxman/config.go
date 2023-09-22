@@ -1,6 +1,9 @@
 package claimtxman
 
-import "github.com/0xPolygonHermez/zkevm-node/config/types"
+import (
+	"github.com/0xPolygonHermez/zkevm-node/config/types"
+	"github.com/ethereum/go-ethereum/common"
+)
 
 // Config is configuration for L2 claim transaction manager
 type Config struct {
@@ -15,4 +18,6 @@ type Config struct {
 	RetryInterval types.Duration `mapstructure:"RetryInterval"`
 	// RetryNumber is the number of retries before giving up
 	RetryNumber int `mapstructure:"RetryNumber"`
+	// AuthorizedClaimMessageAddress are the allowed address to bridge message with autoClaim
+	AuthorizedClaimMessageAddress []common.Address `mapstructure:"AuthorizedClaimMessageAddress"`
 }
