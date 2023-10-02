@@ -4,7 +4,7 @@ go 1.19
 
 require (
 	github.com/0xPolygonHermez/zkevm-node v0.3.1
-	github.com/ethereum/go-ethereum v1.13.1
+	github.com/ethereum/go-ethereum v1.13.2
 	github.com/gobuffalo/packr/v2 v2.8.3
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.18.0
 	github.com/hashicorp/golang-lru/v2 v2.0.7
