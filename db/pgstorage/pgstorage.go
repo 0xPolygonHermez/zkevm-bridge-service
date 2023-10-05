@@ -494,33 +494,32 @@ func (p *PostgresStorage) UpdateL2DepositsStatus(ctx context.Context, exitRoot [
 // AddClaimTx adds a claim monitored transaction to the storage.
 func (p *PostgresStorage) AddClaimTx(ctx context.Context, mTx ctmtypes.MonitoredTx, dbTx pgx.Tx) error {
 	const addMonitoredTxSQL = `INSERT INTO sync.monitored_txs 
-		(id, block_id, from_addr, to_addr, nonce, value, data, gas, status, history, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`
-	_, err := p.getExecQuerier(dbTx).Exec(ctx, addMonitoredTxSQL, mTx.ID, mTx.BlockID, mTx.From, mTx.To, mTx.Nonce, mTx.Value.String(), mTx.Data, mTx.Gas, mTx.Status, pq.Array(mTx.HistoryHashSlice()), time.Now().UTC(), time.Now().UTC())
+		(deposit_id, from_addr, to_addr, nonce, value, data, gas, status, history, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`
+	_, err := p.getExecQuerier(dbTx).Exec(ctx, addMonitoredTxSQL, mTx.DepositID, mTx.From, mTx.To, mTx.Nonce, mTx.Value.String(), mTx.Data, mTx.Gas, mTx.Status, pq.Array(mTx.HistoryHashSlice()), time.Now().UTC(), time.Now().UTC())
 	return err
 }
 
 // UpdateClaimTx updates a claim monitored transaction in the storage.
 func (p *PostgresStorage) UpdateClaimTx(ctx context.Context, mTx ctmtypes.MonitoredTx, dbTx pgx.Tx) error {
 	const updateMonitoredTxSQL = `UPDATE sync.monitored_txs 
-		SET block_id = $2
-		, from_addr = $3
-		, to_addr = $4
-		, nonce = $5
-		, value = $6
-		, data = $7
-		, gas = $8
-		, status = $9
-		, history = $10
-		, updated_at = $11
-		WHERE id = $1`
-	_, err := p.getExecQuerier(dbTx).Exec(ctx, updateMonitoredTxSQL, mTx.ID, mTx.BlockID, mTx.From, mTx.To, mTx.Nonce, mTx.Value.String(), mTx.Data, mTx.Gas, mTx.Status, pq.Array(mTx.HistoryHashSlice()), time.Now().UTC())
+		SET from_addr = $2
+		, to_addr = $3
+		, nonce = $4
+		, value = $5
+		, data = $6
+		, gas = $7
+		, status = $8
+		, history = $9
+		, updated_at = $10
+		WHERE deposit_id = $1`
+	_, err := p.getExecQuerier(dbTx).Exec(ctx, updateMonitoredTxSQL, mTx.DepositID, mTx.From, mTx.To, mTx.Nonce, mTx.Value.String(), mTx.Data, mTx.Gas, mTx.Status, pq.Array(mTx.HistoryHashSlice()), time.Now().UTC())
 	return err
 }
 
 // GetClaimTxsByStatus gets the monitored transactions by status.
 func (p *PostgresStorage) GetClaimTxsByStatus(ctx context.Context, statuses []ctmtypes.MonitoredTxStatus, dbTx pgx.Tx) ([]ctmtypes.MonitoredTx, error) {
-	const getMonitoredTxsSQL = "SELECT * FROM sync.monitored_txs WHERE status = ANY($1) ORDER BY created_at ASC"
+	const getMonitoredTxsSQL = "SELECT deposit_id, from_addr, to_addr, nonce, value, data, gas, status, history, created_at, updated_at FROM sync.monitored_txs WHERE status = ANY($1) ORDER BY created_at ASC"
 	rows, err := p.getExecQuerier(dbTx).Query(ctx, getMonitoredTxsSQL, pq.Array(statuses))
 	if errors.Is(err, pgx.ErrNoRows) {
 		return []ctmtypes.MonitoredTx{}, nil
@@ -535,7 +534,7 @@ func (p *PostgresStorage) GetClaimTxsByStatus(ctx context.Context, statuses []ct
 			history [][]byte
 		)
 		mTx := ctmtypes.MonitoredTx{}
-		err = rows.Scan(&mTx.ID, &mTx.BlockID, &mTx.From, &mTx.To, &mTx.Nonce, &value, &mTx.Data, &mTx.Gas, &mTx.Status, pq.Array(&history), &mTx.CreatedAt, &mTx.UpdatedAt)
+		err = rows.Scan(&mTx.DepositID, &mTx.From, &mTx.To, &mTx.Nonce, &value, &mTx.Data, &mTx.Gas, &mTx.Status, pq.Array(&history), &mTx.CreatedAt, &mTx.UpdatedAt)
 		if err != nil {
 			return mTxs, err
 		}
