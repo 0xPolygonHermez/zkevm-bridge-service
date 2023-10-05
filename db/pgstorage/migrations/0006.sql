@@ -24,6 +24,6 @@ DROP INDEX IF EXISTS sync.deposit_block_id;
 DROP INDEX IF EXISTS sync.token_wrapped_block_id;
 
 ALTER TABLE sync.monitored_txs
-ADD COLUMN block_id BIGINT REFERENCES sync.block (id) ON DELETE CASCADE;
+ADD COLUMN block_id BIGINT DEFAULT 0 REFERENCES sync.block (id) ON DELETE CASCADE;
 ALTER TABLE sync.monitored_txs
 RENAME COLUMN deposit_id TO id;

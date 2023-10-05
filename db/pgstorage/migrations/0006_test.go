@@ -110,9 +110,9 @@ func (m migrationTest0006) RunAssertsAfterMigrationDown(t *testing.T, db *sql.DB
 
 	checkBlockID := "select block_id from sync.monitored_txs;"
 	row5 := db.QueryRow(checkBlockID)
-	var blockID *int
+	var blockID int
 	assert.NoError(t, row5.Scan(&blockID))
-	assert.Nil(t, blockID)
+	assert.Equal(t, 0, blockID)
 
 	checkDepositID := "select deposit_id from sync.monitored_txs;"
 	row6 := db.QueryRow(checkDepositID)
