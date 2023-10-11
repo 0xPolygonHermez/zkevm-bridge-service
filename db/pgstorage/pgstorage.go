@@ -322,7 +322,7 @@ func (p *PostgresStorage) GetDepositCountByRoot(ctx context.Context, root []byte
 // GetRoot gets root by the deposit count from the merkle tree.
 func (p *PostgresStorage) GetRoot(ctx context.Context, depositCnt uint, network uint, dbTx pgx.Tx) ([]byte, error) {
 	var root []byte
-	const getRootByDepositCntSQL = "SELECT root FROM mt.root WHERE deposit_cnt = $1 AND network = $2"
+	const getRootByDepositCntSQL = "SELECT root FROM mt.root inner join sync.deposit on mt.root.deposit_id = sync.deposit.id WHERE sync.deposit.deposit_cnt = $1 AND network = $2"
 	err := p.getExecQuerier(dbTx).QueryRow(ctx, getRootByDepositCntSQL, depositCnt, network).Scan(&root)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, gerror.ErrStorageNotFound
@@ -331,9 +331,9 @@ func (p *PostgresStorage) GetRoot(ctx context.Context, depositCnt uint, network 
 }
 
 // SetRoot store the root with deposit count to the storage.
-func (p *PostgresStorage) SetRoot(ctx context.Context, root []byte, depositID uint64, depositCnt uint, network uint, dbTx pgx.Tx) error {
-	const setRootSQL = "INSERT INTO mt.root (root, deposit_id, deposit_cnt, network) VALUES ($1, $2, $3, $4);"
-	_, err := p.getExecQuerier(dbTx).Exec(ctx, setRootSQL, root, depositID, depositCnt, network)
+func (p *PostgresStorage) SetRoot(ctx context.Context, root []byte, depositID uint64, network uint, dbTx pgx.Tx) error {
+	const setRootSQL = "INSERT INTO mt.root (root, deposit_id, network) VALUES ($1, $2, $3);"
+	_, err := p.getExecQuerier(dbTx).Exec(ctx, setRootSQL, root, depositID, network)
 	return err
 }
 
@@ -366,7 +366,7 @@ func (p *PostgresStorage) BulkSet(ctx context.Context, rows [][]interface{}, dbT
 // GetLastDepositCount gets the last deposit count from the merkle tree.
 func (p *PostgresStorage) GetLastDepositCount(ctx context.Context, network uint, dbTx pgx.Tx) (uint, error) {
 	var depositCnt int64
-	const getLastDepositCountSQL = "SELECT coalesce(MAX(deposit_cnt), -1) FROM mt.root WHERE network = $1"
+	const getLastDepositCountSQL = "SELECT coalesce(MAX(deposit_cnt), -1) FROM sync.deposit WHERE id = (SELECT coalesce(MAX(deposit_id), -1) FROM mt.root WHERE network = $1)"
 	err := p.getExecQuerier(dbTx).QueryRow(ctx, getLastDepositCountSQL, network).Scan(&depositCnt)
 	if err != nil {
 		return 0, nil

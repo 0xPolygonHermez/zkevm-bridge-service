@@ -229,7 +229,7 @@ func TestMTStorage(t *testing.T) {
 	}
 	depositID, err := pg.AddDeposit(ctx, deposit, tx)
 	require.NoError(t, err)
-	err = pg.SetRoot(ctx, root, depositID, 1, 0, tx)
+	err = pg.SetRoot(ctx, root, depositID, 0, tx)
 	require.NoError(t, err)
 
 	err = pg.Set(ctx, root, [][]byte{leaf1, leaf2}, depositID, tx)
