@@ -176,8 +176,8 @@ func TestUpdateDepositStatus(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, deposits, 1)
 	require.True(t, deposits[0].ReadyForClaim)
-	require.Equal(t, deposits[0].DepositCount, uint(1))
-	require.Equal(t, deposits[0].NetworkID, uint(0))
+	require.Equal(t, uint(1), deposits[0].DepositCount)
+	require.Equal(t, uint(0), deposits[0].NetworkID)
 
 	require.NoError(t, pg.UpdateL2DepositsStatus(ctx, l2Root, 1, nil))
 	deposits, err = pg.GetDeposits(ctx, destAdr, 10, 0, nil)
