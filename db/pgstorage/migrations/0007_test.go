@@ -49,7 +49,7 @@ func (m migrationTest0007) RunAssertsAfterMigrationUp(t *testing.T, db *sql.DB) 
 }
 
 func (m migrationTest0007) RunAssertsAfterMigrationDown(t *testing.T, db *sql.DB) {
-	for i:=0; i<3; i++ {
+	for i := 0; i < 3; i++ {
 		queryDepositCount := "select deposit_cnt from mt.root where deposit_id = $1;"
 		row := db.QueryRow(queryDepositCount, i+1)
 		var depositCnt int
