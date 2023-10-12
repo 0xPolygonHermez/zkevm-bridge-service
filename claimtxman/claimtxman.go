@@ -365,6 +365,7 @@ func (tm *ClaimTxManager) monitorTxs(ctx context.Context) error {
 					continue
 				}
 			}
+
 			//Multiply gasPrice by 10 to increase the efficiency of the tx in the sequence
 			mTx.GasPrice = big.NewInt(0).Mul(gasPrice, big.NewInt(10)) //nolint:gomnd
 			log.Infof("Using gasPrice: %s. The gasPrice suggested by the network is %s", mTx.GasPrice.String(), gasPrice.String())

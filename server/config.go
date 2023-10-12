@@ -1,6 +1,9 @@
 package server
 
-import "github.com/0xPolygonHermez/zkevm-bridge-service/db"
+import (
+	"github.com/0xPolygonHermez/zkevm-bridge-service/db"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/redisstorage"
+)
 
 // Config struct
 type Config struct {
@@ -18,4 +21,8 @@ type Config struct {
 	BridgeVersion string `mapstructure:"BridgeVersion"`
 	// DB is the database config
 	DB db.Config `mapstructure:"DB"`
+	// Redis is the redis connection config
+	Redis redisstorage.Config `mapstructure:"Redis"`
+	// SentinelConfigFilePath is the file path to store the sentinel config
+	SentinelConfigFilePath string `mapstructure:"SentinelConfigFilePath"`
 }

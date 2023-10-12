@@ -45,6 +45,8 @@ type Deposit struct {
 	Metadata           []byte
 	// it is only used for the bridge service
 	ReadyForClaim bool
+	Time          time.Time
+	Id            uint64
 }
 
 // Claim struct
@@ -58,6 +60,7 @@ type Claim struct {
 	BlockNumber        uint64
 	NetworkID          uint
 	TxHash             common.Hash
+	Time               time.Time
 }
 
 // TokenWrapped struct

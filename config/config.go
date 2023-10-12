@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/coinmiddleware"
 	"path/filepath"
 	"strings"
 
@@ -20,13 +21,14 @@ import (
 
 // Config struct
 type Config struct {
-	Log              log.Config
-	SyncDB           db.Config
-	ClaimTxManager   claimtxman.Config
-	Etherman         etherman.Config
-	Synchronizer     synchronizer.Config
-	BridgeController bridgectrl.Config
-	BridgeServer     server.Config
+	Log               log.Config
+	SyncDB            db.Config
+	ClaimTxManager    claimtxman.Config
+	Etherman          etherman.Config
+	Synchronizer      synchronizer.Config
+	BridgeController  bridgectrl.Config
+	BridgeServer      server.Config
+	CoinKafkaConsumer coinmiddleware.Config
 	NetworkConfig
 }
 

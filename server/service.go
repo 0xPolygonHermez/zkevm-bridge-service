@@ -4,6 +4,9 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/localcache"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/redisstorage"
+	"github.com/pkg/errors"
 
 	"github.com/0xPolygonHermez/zkevm-bridge-service/bridgectrl"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/bridgectrl/pb"
@@ -14,9 +17,19 @@ import (
 	"github.com/jackc/pgx/v4"
 )
 
+const (
+	defaultL2TxEstimateTime = 15
+	defaultL1TxEstimateTime = 10
+	defaultErrorCode        = 1
+	defaultSuccessCode      = 0
+)
+
 type bridgeService struct {
-	storage          bridgeServiceStorage
+	storage          BridgeServiceStorage
+	redisStorage     redisstorage.RedisStorage
+	mainCoinsCache   localcache.MainCoinsCache
 	networkIDs       map[uint]uint8
+	chainIDs         map[uint]uint16
 	height           uint8
 	defaultPageLimit uint32
 	maxPageLimit     uint32
@@ -26,19 +39,24 @@ type bridgeService struct {
 }
 
 // NewBridgeService creates new bridge service.
-func NewBridgeService(cfg Config, height uint8, networks []uint, storage interface{}) *bridgeService {
+func NewBridgeService(cfg Config, height uint8, networks []uint, chainIds []uint, storage interface{}, redisStorage redisstorage.RedisStorage, mainCoinsCache localcache.MainCoinsCache) *bridgeService {
 	var networkIDs = make(map[uint]uint8)
+	var chainIDs = make(map[uint]uint16)
 	for i, network := range networks {
 		networkIDs[network] = uint8(i)
+		chainIDs[network] = uint16(chainIds[i])
 	}
 	cache, err := lru.New[string, [][]byte](cfg.CacheSize)
 	if err != nil {
 		panic(err)
 	}
 	return &bridgeService{
-		storage:          storage.(bridgeServiceStorage),
+		storage:          storage.(BridgeServiceStorage),
+		redisStorage:     redisStorage,
+		mainCoinsCache:   mainCoinsCache,
 		height:           height,
 		networkIDs:       networkIDs,
+		chainIDs:         chainIDs,
 		defaultPageLimit: cfg.DefaultPageLimit,
 		maxPageLimit:     cfg.MaxPageLimit,
 		version:          cfg.BridgeVersion,
@@ -289,6 +307,29 @@ func (s *bridgeService) GetProof(ctx context.Context, req *pb.GetProofRequest) (
 	}, nil
 }
 
+func (s *bridgeService) GetSmtProof(ctx context.Context, req *pb.GetSmtProofRequest) (*pb.CommonProofResponse, error) {
+	globalExitRoot, merkleProof, err := s.GetClaimProof(uint(req.Index), uint(req.FromChain), nil)
+	if err != nil {
+		return &pb.CommonProofResponse{
+			Code: defaultErrorCode,
+			Data: nil,
+		}, nil
+	}
+	var proof []string
+	for i := 0; i < len(merkleProof); i++ {
+		proof = append(proof, "0x"+hex.EncodeToString(merkleProof[i][:]))
+	}
+
+	return &pb.CommonProofResponse{
+		Code: defaultSuccessCode,
+		Data: &pb.ProofDetail{
+			SmtProof:        proof,
+			MainnetExitRoot: globalExitRoot.ExitRoots[0].Hex(),
+			RollupExitRoot:  globalExitRoot.ExitRoots[1].Hex(),
+		},
+	}, nil
+}
+
 // GetBridge returns the bridge  with status whether it is able to send a claim transaction or not.
 // Bridge rest API endpoint
 func (s *bridgeService) GetBridge(ctx context.Context, req *pb.GetBridgeRequest) (*pb.GetBridgeResponse, error) {
@@ -338,5 +379,164 @@ func (s *bridgeService) GetTokenWrapped(ctx context.Context, req *pb.GetTokenWra
 			Symbol:            tokenWrapped.Symbol,
 			Decimals:          uint32(tokenWrapped.Decimals),
 		},
+	}, nil
+}
+
+// GetCoinPrice returns the price for each coin symbol in the request
+// Bridge rest API endpoint
+func (s *bridgeService) GetCoinPrice(ctx context.Context, req *pb.GetCoinPriceRequest) (*pb.CommonCoinPricesResponse, error) {
+	priceList, err := s.redisStorage.GetCoinPrice(ctx, req.SymbolInfos)
+	if err != nil {
+		return &pb.CommonCoinPricesResponse{
+			Code: defaultErrorCode,
+			Data: nil,
+		}, nil
+	}
+	return &pb.CommonCoinPricesResponse{
+		Code: defaultSuccessCode,
+		Data: priceList,
+	}, nil
+}
+
+// GetMainCoins returns the info of the main coins in a network
+// Bridge rest API endpoint
+func (s *bridgeService) GetMainCoins(ctx context.Context, req *pb.GetMainCoinsRequest) (*pb.CommonCoinsResponse, error) {
+	coins, err := s.mainCoinsCache.GetMainCoinsByNetwork(ctx, req.NetworkId)
+	if err != nil {
+		return &pb.CommonCoinsResponse{
+			Code: defaultErrorCode,
+			Data: nil,
+		}, nil
+	}
+	return &pb.CommonCoinsResponse{
+		Code: defaultSuccessCode,
+		Data: coins,
+	}, nil
+}
+
+// GetPendingTransactions returns the pending transactions of an account
+// Bridge rest API endpoint
+func (s *bridgeService) GetPendingTransactions(ctx context.Context, req *pb.GetPendingTransactionsRequest) (*pb.CommonTransactionsResponse, error) {
+	limit := req.Limit
+	if limit == 0 {
+		limit = s.defaultPageLimit
+	}
+	if limit > s.maxPageLimit {
+		limit = s.maxPageLimit
+	}
+
+	deposits, err := s.storage.GetPendingTransactions(ctx, req.DestAddr, uint(limit+1), uint(req.Offset), nil)
+	if err != nil {
+		return &pb.CommonTransactionsResponse{
+			Code: defaultErrorCode,
+			Data: nil,
+		}, nil
+	}
+
+	hasNext := len(deposits) > int(limit)
+	if hasNext {
+		deposits = deposits[:limit]
+	}
+
+	var pbTransactions []*pb.Transaction
+	for _, deposit := range deposits {
+		defaultTxEstimateTime := defaultL1TxEstimateTime
+		if deposit.NetworkID == 1 {
+			defaultTxEstimateTime = defaultL2TxEstimateTime
+		}
+		transaction := &pb.Transaction{
+			FromChain:    uint32(deposit.NetworkID),
+			ToChain:      uint32(deposit.DestinationNetwork),
+			BridgeToken:  deposit.OriginalAddress.Hex(),
+			TokenAmount:  deposit.Amount.String(),
+			EstimateTime: uint32(defaultTxEstimateTime),
+			Time:         uint64(deposit.Time.UnixMilli()),
+			TxHash:       deposit.TxHash.String(),
+			FromChainId:  uint32(s.chainIDs[deposit.NetworkID]),
+			ToChainId:    uint32(s.chainIDs[deposit.DestinationNetwork]),
+			Id:           deposit.Id,
+			Index:        uint64(deposit.DepositCount),
+			Metadata:     "0x" + hex.EncodeToString(deposit.Metadata),
+		}
+		transaction.Status = 0
+		if deposit.ReadyForClaim {
+			transaction.Status = 1
+		}
+		pbTransactions = append(pbTransactions, transaction)
+	}
+	return &pb.CommonTransactionsResponse{
+		Code: defaultSuccessCode,
+		Data: &pb.TransactionDetail{HasNext: hasNext, Transactions: pbTransactions},
+	}, nil
+}
+
+// GetAllTransactions returns all the transactions of an account, similar to GetBridges
+// Bridge rest API endpoint
+func (s *bridgeService) GetAllTransactions(ctx context.Context, req *pb.GetAllTransactionsRequest) (*pb.CommonTransactionsResponse, error) {
+	limit := req.Limit
+	if limit == 0 {
+		limit = s.defaultPageLimit
+	}
+	if limit > s.maxPageLimit {
+		limit = s.maxPageLimit
+	}
+
+	deposits, err := s.storage.GetDeposits(ctx, req.DestAddr, uint(limit+1), uint(req.Offset), nil)
+	if err != nil {
+		return &pb.CommonTransactionsResponse{
+			Code: defaultErrorCode,
+			Data: nil,
+		}, nil
+	}
+
+	hasNext := len(deposits) > int(limit)
+	if hasNext {
+		deposits = deposits[0:limit]
+	}
+
+	var pbTransactions []*pb.Transaction
+	for _, deposit := range deposits {
+		defaultTxEstimateTime := defaultL1TxEstimateTime
+		if deposit.NetworkID == 1 {
+			defaultTxEstimateTime = defaultL2TxEstimateTime
+		}
+		transaction := &pb.Transaction{
+			FromChain:    uint32(deposit.NetworkID),
+			ToChain:      uint32(deposit.DestinationNetwork),
+			BridgeToken:  deposit.OriginalAddress.Hex(),
+			TokenAmount:  deposit.Amount.String(),
+			EstimateTime: uint32(defaultTxEstimateTime),
+			Time:         uint64(deposit.Time.UnixMilli()),
+			TxHash:       deposit.TxHash.String(),
+			FromChainId:  uint32(s.chainIDs[deposit.NetworkID]),
+			ToChainId:    uint32(s.chainIDs[deposit.DestinationNetwork]),
+			Id:           deposit.Id,
+			Index:        uint64(deposit.DepositCount),
+			Metadata:     "0x" + hex.EncodeToString(deposit.Metadata),
+		}
+		transaction.Status = 0 // Not ready for claim
+		if deposit.ReadyForClaim {
+			// Check whether it has been claimed or not
+			claim, err := s.storage.GetClaim(ctx, deposit.DepositCount, deposit.DestinationNetwork, nil)
+			transaction.Status = 1 // Ready but not claimed
+			if err != nil {
+				if !errors.Is(err, gerror.ErrStorageNotFound) {
+					return &pb.CommonTransactionsResponse{
+						Code: defaultErrorCode,
+						Data: nil,
+					}, nil
+				}
+			} else {
+				transaction.Status = 2 // Claimed
+				transaction.ClaimTxHash = claim.TxHash.String()
+				transaction.ClaimTime = uint64(claim.Time.UnixMilli())
+			}
+		}
+		pbTransactions = append(pbTransactions, transaction)
+	}
+
+	return &pb.CommonTransactionsResponse{
+		Code: defaultSuccessCode,
+		Data: &pb.TransactionDetail{HasNext: hasNext, Transactions: pbTransactions},
 	}, nil
 }

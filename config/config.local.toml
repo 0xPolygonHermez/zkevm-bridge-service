@@ -10,6 +10,7 @@ Name = "test_db"
 Host = "zkevm-bridge-db"
 Port = "5432"
 MaxConns = 20
+TableSuffix = ""
 
 [ClaimTxManager]
 Enabled = true
@@ -22,6 +23,8 @@ FreeGas = true
 [Etherman]
 L1URL = "http://zkevm-mock-l1-network:8545"
 L2URLs = ["http://zkevm-node:8123"]
+L1ChainId = 5
+L2ChainIds = [1001]
 
 [Synchronizer]
 SyncInterval = "1s"
@@ -38,6 +41,7 @@ CacheSize = 100000
 DefaultPageLimit = 25
 MaxPageLimit = 100
 BridgeVersion = "v1"
+SentinelConfigFilePath = "/app/sentinel_config.json"
     [BridgeServer.DB]
     Database = "postgres"
     User = "test_user"
@@ -46,6 +50,22 @@ BridgeVersion = "v1"
     Host = "zkevm-bridge-db"
     Port = "5432"
     MaxConns = 20
+    TableSuffix = ""
+    [BridgeServer.Redis]
+    Addr = "zkevm-bridge-redis:6379"
+    Username = ""
+    Password = ""
+    DB = 0
+    MockPrice = true
+
+[CoinKafkaConsumer]
+Brokers = ["zkevm-bridge-coin-kafka:9092"]
+Topics = ["explorer_chainAddressPrice_push"]
+ConsumerGroupID = "zkevm-bridge-service"
+InitialOffset = -1
+Username = ""
+Password = ""
+RootCAPath = "/app/root-ca-cert"
 
 [NetworkConfig]
 GenBlockNumber = 1

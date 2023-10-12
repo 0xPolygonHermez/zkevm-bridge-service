@@ -3,20 +3,20 @@ package server
 import (
 	"context"
 	"fmt"
+	"google.golang.org/protobuf/encoding/protojson"
 	"net"
 	"net/http"
 	"os"
 	"os/signal"
-	"strings"
 	"time"
 
 	"github.com/0xPolygonHermez/zkevm-bridge-service/bridgectrl/pb"
 	"github.com/0xPolygonHermez/zkevm-node/log"
+	sentinelGrpc "github.com/alibaba/sentinel-golang/pkg/adapters/grpc"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/health/grpc_health_v1"
-	"google.golang.org/protobuf/encoding/protojson"
 )
 
 // RunServer runs gRPC server and HTTP gateway
@@ -75,7 +75,7 @@ func runGRPCServer(ctx context.Context, bridgeServer pb.BridgeServiceServer, por
 		return err
 	}
 
-	server := grpc.NewServer()
+	server := grpc.NewServer(grpc.UnaryInterceptor(sentinelGrpc.NewUnaryServerInterceptor()))
 	pb.RegisterBridgeServiceServer(server, bridgeServer)
 
 	healthService := newHealthChecker()
@@ -95,10 +95,11 @@ func runGRPCServer(ctx context.Context, bridgeServer pb.BridgeServiceServer, por
 }
 
 func preflightHandler(w http.ResponseWriter, r *http.Request) {
-	headers := []string{"Content-Type", "Accept"}
-	w.Header().Set("Access-Control-Allow-Headers", strings.Join(headers, ","))
-	methods := []string{"GET", "HEAD", "POST", "PUT", "DELETE"}
-	w.Header().Set("Access-Control-Allow-Methods", strings.Join(methods, ","))
+	//headers := []string{"Content-Type", "Accept", "X-Locale", "X-Utc", "X-Zkdex-Env", "App-Type", "Referer", "User-Agent", "Devid"}
+	w.Header().Set("Access-Control-Allow-Headers", "*")
+	//methods := []string{"GET", "HEAD", "POST", "PUT", "DELETE"}
+	w.Header().Set("Access-Control-Allow-Methods", "*")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
 }
 
 // allowCORS allows Cross Origin Resource Sharing from any origin.

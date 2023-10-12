@@ -14,42 +14,111 @@ service BridgeService {
     /// Get api version
     rpc CheckAPI(CheckAPIRequest) returns (CheckAPIResponse) {
         option (google.api.http) = {
-            get: "/api"
+            get: "/priapi/v1/ob/bridge/api",
+            additional_bindings: {
+                get: "/api"
+            }
         };
     }
 
     /// Get bridges for the destination address both in L1 and L2
     rpc GetBridges(GetBridgesRequest) returns (GetBridgesResponse) {
         option (google.api.http) = {
-            get: "/bridges/{dest_addr}"
+            get: "/priapi/v1/ob/bridge/bridges/{dest_addr}",
+            additional_bindings: {
+                get: "/bridges/{dest_addr}"
+            }
         };
     }
 
     /// Get the merkle proof for the specific deposit
     rpc GetProof(GetProofRequest) returns (GetProofResponse) {
         option (google.api.http) = {
-            get: "/merkle-proof"
+            get: "/priapi/v1/ob/bridge/merkle-proof",
+            additional_bindings: {
+                get: "/merkle-proof"
+            }
         };
     }
 
     /// Get the specific deposit
     rpc GetBridge(GetBridgeRequest) returns (GetBridgeResponse) {
         option (google.api.http) = {
-            get: "/bridge"
+            get: "/priapi/v1/ob/bridge/bridge",
+            additional_bindings: {
+                get: "/bridge"
+            }
         };
     }
 
     /// Get claims for the specific smart contract address both in L1 and L2
     rpc GetClaims(GetClaimsRequest) returns (GetClaimsResponse) {
         option (google.api.http) = {
-            get: "/claims/{dest_addr}"
+            get: "/priapi/v1/ob/bridge/claims/{dest_addr}",
+            additional_bindings: {
+                get: "/claims/{dest_addr}"
+            }
         };
     }
 
     /// Get token wrapped for the specific smart contract address both in L1 and L2
     rpc GetTokenWrapped(GetTokenWrappedRequest) returns (GetTokenWrappedResponse) {
         option (google.api.http) = {
-            get: "/tokenwrapped"
+            get: "/priapi/v1/ob/bridge/tokenwrapped",
+            additional_bindings: {
+                get: "/tokenwrapped"
+            }
+        };
+    }
+
+    /// Get the latest price of the specified coins
+    rpc GetCoinPrice(GetCoinPriceRequest) returns (CommonCoinPricesResponse) {
+        option (google.api.http) = {
+            post: "/priapi/v1/ob/bridge/coin-price",
+            additional_bindings: {
+                post: "/coin-price",
+                body: "*",
+            },
+            body: "*",
+        };
+    }
+
+    /// Get the list of all the main coins of a specified network
+    rpc GetMainCoins(GetMainCoinsRequest) returns (CommonCoinsResponse) {
+        option (google.api.http) = {
+            get: "/priapi/v1/ob/bridge/main-coins/{networkId}",
+            additional_bindings: {
+                get: "/main-coins/{networkId}"
+            }
+        };
+    }
+
+    /// Get the pending (not claimed) transactions of an account
+    rpc GetPendingTransactions(GetPendingTransactionsRequest) returns (CommonTransactionsResponse) {
+        option (google.api.http) = {
+            get: "/priapi/v1/ob/bridge/pending/{destAddr}",
+            additional_bindings: {
+                get: "/pending/{destAddr}"
+            }
+        };
+    }
+
+    /// Get all the transactions of an account. Similar to GetBridges but the field names are changed
+    rpc GetAllTransactions(GetAllTransactionsRequest) returns (CommonTransactionsResponse) {
+        option (google.api.http) = {
+            get: "/priapi/v1/ob/bridge/all/{destAddr}",
+            additional_bindings: {
+                get: "/all/{destAddr}"
+            }
+        };
+    }
+
+    rpc GetSmtProof(GetSmtProofRequest) returns (CommonProofResponse) {
+        option (google.api.http) = {
+            get: "/priapi/v1/ob/bridge/smt-proof",
+            additional_bindings: {
+                get: "/smt-proof"
+            }
         };
     }
 }
@@ -101,6 +170,50 @@ message Proof {
     string rollup_exit_root = 3;
 }
 
+// Symbol info message
+message SymbolInfo {
+    uint64 chainId = 1;
+    string address = 2;
+}
+
+message SymbolPrice {
+    string symbol = 1;
+    double price = 2;
+    uint64 time = 3;
+    string address = 4;
+    uint64 chainId = 5;
+}
+
+// Coin info message
+message CoinInfo {
+    string symbol = 1;
+    string name = 2;
+    uint64 decimals = 3;
+    uint64 chainId = 4;
+    uint32 networkId = 5;
+    string logoLink = 6;
+    string address = 7;
+}
+
+// Transaction message
+message Transaction {
+    uint32 fromChain = 1; // 0:L1, 1:L2
+    uint32 toChain = 2; // 0:L1, 1:L2
+    string bridgeToken = 3;
+    string tokenAmount = 4;
+    uint32 estimateTime = 5;
+    uint32 status = 6; // 0: cannot claim; 1: pending & not claimed; 2; claimed
+    uint64 time = 7; // Deposit's block time
+    string txHash = 8; // Deposit tx hash
+    string claimTxHash = 9;
+    uint64 claimTime = 10; // Claim's block time
+    uint32 fromChainId = 11;
+    uint32 toChainId = 12;
+    uint64 id = 13;
+    uint64 index = 14;
+    string metadata = 15;
+}
+
 // Get requests
 
 message CheckAPIRequest {}
@@ -132,6 +245,26 @@ message GetClaimsRequest {
     uint32 limit = 3;
 }
 
+message GetCoinPriceRequest {
+    repeated SymbolInfo symbolInfos = 1;
+}
+
+message GetMainCoinsRequest {
+    uint32 networkId = 1;
+}
+
+message GetPendingTransactionsRequest {
+    string destAddr = 1;
+    uint64 offset = 2;
+    uint32 limit = 3;
+}
+
+message GetAllTransactionsRequest {
+    string destAddr = 1;
+    uint64 offset = 2;
+    uint32 limit = 3;
+}
+
 // Get responses
 
 message CheckAPIResponse {
@@ -158,4 +291,72 @@ message GetBridgeResponse {
 message GetClaimsResponse {
     repeated Claim claims = 1;
     uint64 total_cnt = 2;
+}
+
+message GetCoinPriceResponse {
+    repeated SymbolPrice prices = 1;
+}
+
+message GetMainCoinsResponse {
+    repeated CoinInfo coinInfos = 1;
+}
+
+message GetPendingTransactionsResponse {
+    repeated Transaction transactions = 1;
+}
+
+message GetAllTransactionsResponse {
+    repeated Transaction transactions = 1;
+}
+
+message CommonTransactionsResponse {
+    uint32 code = 1;
+    string msg = 2;
+    string error_code = 3;
+    string error_message = 4;
+    string detailMsg = 5;
+    TransactionDetail data = 6;
+}
+
+message CommonCoinsResponse {
+    uint32 code = 1;
+    string msg = 2;
+    string error_code = 3;
+    string error_message = 4;
+    string detailMsg = 5;
+    repeated CoinInfo data = 6;
+}
+
+message CommonCoinPricesResponse {
+    uint32 code = 1;
+    string msg = 2;
+    string error_code = 3;
+    string error_message = 4;
+    string detailMsg = 5;
+    repeated SymbolPrice data = 6;
+}
+
+message TransactionDetail {
+    bool hasNext = 1;
+    repeated Transaction transactions = 2;
+}
+
+message CommonProofResponse {
+    uint32 code = 1;
+    string msg = 2;
+    string error_code = 3;
+    string error_message = 4;
+    string detailMsg = 5;
+    ProofDetail data = 6;
+}
+
+message ProofDetail {
+    repeated string smtProof = 1;
+    string mainnetExitRoot = 2;
+    string rollupExitRoot = 3;
+}
+
+message GetSmtProofRequest {
+    uint32 index = 1;
+    uint64 fromChain = 2;
 }

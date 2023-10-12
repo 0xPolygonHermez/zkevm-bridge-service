@@ -1,6 +1,10 @@
 package main
 
 import (
+	"github.com/0xPolygonHermez/zkevm-bridge-service/coinmiddleware"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/localcache"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/redisstorage"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/sentinel"
 	"os"
 	"os/signal"
 
@@ -17,21 +21,28 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-func start(ctx *cli.Context) error {
-	configFilePath := ctx.String(flagCfg)
-	network := ctx.String(flagNetwork)
-
-	c, err := config.Load(configFilePath, network)
+func startServer(ctx *cli.Context) error {
+	c, err := initCommon(ctx)
 	if err != nil {
 		return err
 	}
-	setupLog(c.Log)
+
+	// Init sentinel
+	err = sentinel.InitFileDataSource(c.BridgeServer.SentinelConfigFilePath)
+	if err != nil {
+		log.Infof("init sentinel error[%v]; ignored and proceed with no sentinel config", err)
+	}
+
 	err = db.RunMigrations(c.SyncDB)
 	if err != nil {
 		log.Error(err)
 		return err
 	}
 
+	l1ChainId := c.Etherman.L1ChainId
+	l2ChainIds := c.Etherman.L2ChainIds
+	var chainIDs = []uint{l1ChainId}
+	chainIDs = append(chainIDs, l2ChainIds...)
 	l1Etherman, l2Ethermans, err := newEthermans(c)
 	if err != nil {
 		log.Error(err)
@@ -80,7 +91,19 @@ func start(ctx *cli.Context) error {
 		log.Error(err)
 		return err
 	}
-	bridgeService := server.NewBridgeService(c.BridgeServer, c.BridgeController.Height, networkIDs, apiStorage)
+
+	redisStorage, err := redisstorage.NewRedisStorage(c.BridgeServer.Redis)
+	if err != nil {
+		log.Error(err)
+		return err
+	}
+
+	mainCoinsCache, err := localcache.NewMainCoinsCache(apiStorage)
+	if err != nil {
+		log.Error(err)
+		return err
+	}
+	bridgeService := server.NewBridgeService(c.BridgeServer, c.BridgeController.Height, networkIDs, chainIDs, apiStorage, redisStorage, mainCoinsCache)
 	err = server.RunServer(c.BridgeServer, bridgeService)
 	if err != nil {
 		log.Error(err)
@@ -126,6 +149,54 @@ func start(ctx *cli.Context) error {
 	<-ch
 
 	return nil
+}
+
+func startKafkaConsumer(ctx *cli.Context) error {
+	c, err := initCommon(ctx)
+	if err != nil {
+		return err
+	}
+
+	redisStorage, err := redisstorage.NewRedisStorage(c.BridgeServer.Redis)
+	if err != nil {
+		log.Error(err)
+		return err
+	}
+
+	// Start the coin middleware kafka consumer
+	log.Debugf("start initializing kafka consumer...")
+	coinKafkaConsumer, err := coinmiddleware.NewKafkaConsumer(c.CoinKafkaConsumer, redisStorage)
+	if err != nil {
+		log.Error(err)
+		return err
+	}
+	log.Debugf("finish initializing kafka consumer")
+	go coinKafkaConsumer.Start(ctx.Context)
+	defer func() {
+		err := coinKafkaConsumer.Close()
+		if err != nil {
+			log.Errorf("close kafka consumer error: %v", err)
+		}
+	}()
+
+	// Wait for an in interrupt.
+	ch := make(chan os.Signal, 1)
+	signal.Notify(ch, os.Interrupt)
+	<-ch
+
+	return nil
+}
+
+func initCommon(ctx *cli.Context) (*config.Config, error) {
+	configFilePath := ctx.String(flagCfg)
+	network := ctx.String(flagNetwork)
+
+	c, err := config.Load(configFilePath, network)
+	if err != nil {
+		return nil, err
+	}
+	setupLog(c.Log)
+	return c, nil
 }
 
 func setupLog(c log.Config) {

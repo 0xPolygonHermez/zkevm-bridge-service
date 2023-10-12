@@ -48,7 +48,14 @@ func main() {
 			Name:    "run",
 			Aliases: []string{},
 			Usage:   "Run the zkevm bridge",
-			Action:  start,
+			Action:  startServer,
+			Flags:   flags,
+		},
+		{
+			Name:    "runKafkaConsumer",
+			Aliases: []string{},
+			Usage:   "Run the coin middleware kafka consumer",
+			Action:  startKafkaConsumer,
 			Flags:   flags,
 		},
 	}
