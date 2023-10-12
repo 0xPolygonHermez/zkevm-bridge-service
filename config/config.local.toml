@@ -17,6 +17,7 @@ FrequencyToMonitorTxs = "1s"
 PrivateKey = {Path = "/pk/keystore.claimtxmanager", Password = "testonly"}
 RetryInterval = "1s"
 RetryNumber = 10
+FreeGas = true
 
 [Etherman]
 L1URL = "http://zkevm-mock-l1-network:8545"

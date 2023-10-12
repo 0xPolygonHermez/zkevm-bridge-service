@@ -15,4 +15,6 @@ type Config struct {
 	RetryInterval types.Duration `mapstructure:"RetryInterval"`
 	// RetryNumber is the number of retries before giving up
 	RetryNumber int `mapstructure:"RetryNumber"`
+	// FreeGas enabled whether gas price is 0
+	FreeGas bool `mapstructure:"FreeGas"`
 }
