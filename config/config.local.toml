@@ -7,7 +7,7 @@ Database = "postgres"
 User = "test_user"
 Password = "test_password"
 Name = "test_db"
-Host = "zkevm-bridge-db"
+Host = "xagon-bridge-db"
 Port = "5432"
 MaxConns = 20
 TableSuffix = ""
@@ -21,8 +21,8 @@ RetryNumber = 10
 FreeGas = true
 
 [Etherman]
-L1URL = "http://zkevm-mock-l1-network:8545"
-L2URLs = ["http://zkevm-node:8123"]
+L1URL = "http://xagon-mock-l1-network:8545"
+L2URLs = ["http://xagon-node:8123"]
 L1ChainId = 5
 L2ChainIds = [1001]
 
@@ -47,21 +47,21 @@ SentinelConfigFilePath = "/app/sentinel_config.json"
     User = "test_user"
     Password = "test_password"
     Name = "test_db"
-    Host = "zkevm-bridge-db"
+    Host = "xagon-bridge-db"
     Port = "5432"
     MaxConns = 20
     TableSuffix = ""
     [BridgeServer.Redis]
-    Addr = "zkevm-bridge-redis:6379"
+    Addr = "xagon-bridge-redis:6379"
     Username = ""
     Password = ""
     DB = 0
     MockPrice = true
 
 [CoinKafkaConsumer]
-Brokers = ["zkevm-bridge-coin-kafka:9092"]
+Brokers = ["xagon-bridge-coin-kafka:9092"]
 Topics = ["explorer_chainAddressPrice_push"]
-ConsumerGroupID = "zkevm-bridge-service"
+ConsumerGroupID = "xagon-bridge-service"
 InitialOffset = -1
 Username = ""
 Password = ""

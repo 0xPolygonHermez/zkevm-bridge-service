@@ -1,4 +1,4 @@
-# zkEVM Bridge service
+# Xagon Bridge service
 
 This repo implements a backend service written in Go, that enables clients, like the [web UI](),
 to interact with the [bridge smart contract](https://github.com/okx/Xagon-contracts) by providing Merkleproofs.

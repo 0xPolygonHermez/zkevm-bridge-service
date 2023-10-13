@@ -15,7 +15,7 @@ const (
 
 const (
 	// App name
-	appName = "zkevm-bridge"
+	appName = "xagon-bridge"
 )
 
 func main() {

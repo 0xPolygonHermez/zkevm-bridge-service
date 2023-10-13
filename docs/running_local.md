@@ -6,12 +6,12 @@
 
 This documentation will help you running the following components:
 
-- zkEVM Node Databases
-- zkEVM Bridge Database
+- Xagon Node Databases
+- Xagon Bridge Database
 - L1 Network
 - Prover
-- zkEVM Node
-- zkEVM Bridge Service
+- Xagon Node
+- Xagon Bridge Service
 
 ## Requirements
 
@@ -53,7 +53,7 @@ make test-edge
 
 ## Accessing the environment
 
-- zkEVM Bridge Database 
+- Xagon Bridge Database 
   - `Type:` Postgres DB
   - `User:` test_user
   - `Password:` test_password
@@ -61,7 +61,7 @@ make test-edge
   - `Host:` localhost
   - `Port:` 5435
   - `Url:` <postgres://test_user:test_password@localhost:5435/test_db>
-- zkEVM Bridge Service
+- Xagon Bridge Service
   - `Type:` Web
   - `Host:` localhost
   - `Port:` 8080

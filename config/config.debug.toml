@@ -60,7 +60,7 @@ BridgeVersion = "v1"
 [CoinKafkaConsumer]
 Brokers = ["localhost:9092"]
 Topics = ["explorer_chainAddressPrice_push"]
-ConsumerGroupID = "zkevm-bridge-service"
+ConsumerGroupID = "xagon-bridge-service"
 InitialOffset = -1
 Username = ""
 Password = ""

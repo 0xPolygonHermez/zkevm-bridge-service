@@ -1,7 +1,7 @@
 version: '3.5'
 services:
-  zkevm-state-db:
-    container_name: zkevm-state-db
+  xagon-state-db:
+    container_name: xagon-state-db
     image: postgres
     deploy:
       resources:
@@ -19,8 +19,8 @@ services:
       - POSTGRES_DB=state_db
     command: ["postgres", "-N", "500"]
 
-  zkevm-pool-db:
-    container_name: zkevm-pool-db
+  xagon-pool-db:
+    container_name: xagon-pool-db
     image: postgres
     deploy:
       resources:
@@ -36,8 +36,8 @@ services:
       - POSTGRES_DB=pool_db
     command: ["postgres", "-N", "500"]
 
-  zkevm-bridge-db:
-    container_name: zkevm-bridge-db
+  xagon-bridge-db:
+    container_name: xagon-bridge-db
     image: postgres
     deploy:
       resources:
@@ -55,8 +55,8 @@ services:
       - POSTGRES_DB=test_db
     command: ["postgres", "-N", "500"]
 
-  zkevm-bridge-redis:
-    container_name: zkevm-bridge-redis
+  xagon-bridge-redis:
+    container_name: xagon-bridge-redis
     image: redis
     deploy:
       resources:
@@ -81,9 +81,9 @@ services:
     expose:
       - 2181
 
-  zkevm-bridge-coin-kafka:
+  xagon-bridge-coin-kafka:
     image: wurstmeister/kafka
-    container_name: zkevm-bridge-coin-kafka
+    container_name: xagon-bridge-coin-kafka
     expose:
       - 9092
     environment:
@@ -145,7 +145,7 @@ services:
       - ZKEVM_BRIDGE_DATABASE_USER=test_user
       - ZKEVM_BRIDGE_DATABASE_PASSWORD=test_password
       - ZKEVM_BRIDGE_DATABASE_NAME=test_db
-      - ZKEVM_BRIDGE_DATABASE_HOST=zkevm-bridge-db
+      - ZKEVM_BRIDGE_DATABASE_HOST=xagon-bridge-db
       - ZKEVM_BRIDGE_DATABASE_PORT=5432
     volumes:
       - ./test/test.keystore.claimtx:/pk/keystore.claimtxmanager
@@ -154,10 +154,10 @@ services:
     command:
       - "/bin/sh"
       - "-c"
-      - "/app/zkevm-bridge run --cfg /app/config.toml"
+      - "/app/xagon-bridge run --cfg /app/config.toml"
 
-  zkevm-bridge-kafka-consumer:
-    container_name: zkevm-bridge-kafka-consumer
+  xagon-bridge-kafka-consumer:
+    container_name: xagon-bridge-kafka-consumer
     image: xagon-bridge-service
     volumes:
       - ./config/config.local.toml:/app/config.toml
@@ -165,4 +165,4 @@ services:
     command:
       - "/bin/sh"
       - "-c"
-      - "/app/zkevm-bridge runKafkaConsumer --cfg /app/config.toml"
+      - "/app/xagon-bridge runKafkaConsumer --cfg /app/config.toml"

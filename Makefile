@@ -1,13 +1,13 @@
 include version.mk
 
 DOCKER_COMPOSE := docker-compose -f docker-compose.yml
-DOCKER_COMPOSE_STATE_DB := zkevm-state-db
-DOCKER_COMPOSE_POOL_DB := zkevm-pool-db
-DOCKER_COMPOSE_RPC_DB := zkevm-rpc-db
-DOCKER_COMPOSE_BRIDGE_DB := zkevm-bridge-db
-DOCKER_COMPOSE_ZKEVM_NODE := zkevm-node
-DOCKER_COMPOSE_L1_NETWORK := zkevm-mock-l1-network
-DOCKER_COMPOSE_ZKPROVER := zkevm-prover
+DOCKER_COMPOSE_STATE_DB := xagon-state-db
+DOCKER_COMPOSE_POOL_DB := xagon-pool-db
+DOCKER_COMPOSE_RPC_DB := xagon-rpc-db
+DOCKER_COMPOSE_BRIDGE_DB := xagon-bridge-db
+DOCKER_COMPOSE_ZKEVM_NODE := xagon-node
+DOCKER_COMPOSE_L1_NETWORK := xagon-mock-l1-network
+DOCKER_COMPOSE_ZKPROVER := xagon-prover
 DOCKER_COMPOSE_BRIDGE := xagon-bridge-service
 
 RUN_STATE_DB := $(DOCKER_COMPOSE) up -d $(DOCKER_COMPOSE_STATE_DB)
@@ -36,7 +36,7 @@ LDFLAGS += -X 'github.com/0xPolygonHermez/zkevm-bridge-service.BuildDate=$(DATE)
 GO_BASE := $(shell pwd)
 GO_BIN := $(GO_BASE)/dist
 GO_ENV_VARS := GO_BIN=$(GO_BIN)
-GO_BINARY := zkevm-bridge
+GO_BINARY := xagon-bridge
 GO_CMD := $(GO_BASE)/cmd
 
 LINT := $$(go env GOPATH)/bin/golangci-lint run --timeout=5m -E whitespace -E gosec -E gci -E misspell -E gomnd -E gofmt -E goimports --exclude-use-default=false --max-same-issues 0
