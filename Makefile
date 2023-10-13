@@ -8,7 +8,7 @@ DOCKER_COMPOSE_BRIDGE_DB := zkevm-bridge-db
 DOCKER_COMPOSE_ZKEVM_NODE := zkevm-node
 DOCKER_COMPOSE_L1_NETWORK := zkevm-mock-l1-network
 DOCKER_COMPOSE_ZKPROVER := zkevm-prover
-DOCKER_COMPOSE_BRIDGE := zkevm-bridge-service
+DOCKER_COMPOSE_BRIDGE := xagon-bridge-service
 
 RUN_STATE_DB := $(DOCKER_COMPOSE) up -d $(DOCKER_COMPOSE_STATE_DB)
 RUN_POOL_DB := $(DOCKER_COMPOSE) up -d $(DOCKER_COMPOSE_POOL_DB)
@@ -66,7 +66,7 @@ install-linter: ## Installs the linter
 
 .PHONY: build-docker
 build-docker: ## Builds a docker image with the zkevm bridge binary
-	docker build -t zkevm-bridge-service -f ./Dockerfile .
+	docker build -t xagon-bridge-service -f ./Dockerfile .
 
 .PHONY: run-db-node
 run-db-node: ## Runs the node database

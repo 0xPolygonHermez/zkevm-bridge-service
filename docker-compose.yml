@@ -135,9 +135,9 @@ services:
     command: >
       zkProver -c /usr/src/app/config.json
 
-  zkevm-bridge-service:
-    container_name: zkevm-bridge-service
-    image: zkevm-bridge-service
+  xagon-bridge-service:
+    container_name: xagon-bridge-service
+    image: xagon-bridge-service
     ports:
       - 8080:8080
       - 9090:9090
@@ -158,7 +158,7 @@ services:
 
   zkevm-bridge-kafka-consumer:
     container_name: zkevm-bridge-kafka-consumer
-    image: zkevm-bridge-service
+    image: xagon-bridge-service
     volumes:
       - ./config/config.local.toml:/app/config.toml
       - ./coinmiddleware/root-ca-cert:/app/root-ca-cert
