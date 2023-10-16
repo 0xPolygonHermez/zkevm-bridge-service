@@ -109,7 +109,7 @@ func TestMTAddLeaf(t *testing.T) {
 					DestinationNetwork: testVector.NewLeaf.DestinationNetwork,
 					DestinationAddress: common.HexToAddress(testVector.NewLeaf.DestinationAddress),
 					BlockNumber:        0,
-					DepositCount:       uint(i + 1),
+					DepositCount:       uint(i),
 					Metadata:           common.FromHex(testVector.NewLeaf.Metadata),
 				}
 				depositID, err := store.AddDeposit(ctx, deposit, nil)
@@ -177,7 +177,7 @@ func TestMTGetProof(t *testing.T) {
 					DestinationNetwork: leaf.DestinationNetwork,
 					DestinationAddress: common.HexToAddress(leaf.DestinationAddress),
 					BlockID:            blockID,
-					DepositCount:       uint(li + 1),
+					DepositCount:       uint(li),
 					Metadata:           common.FromHex(leaf.Metadata),
 				}
 				depositID, err := store.AddDeposit(ctx, deposit, nil)
