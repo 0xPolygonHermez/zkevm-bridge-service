@@ -49,7 +49,7 @@ func (h *MessageHandler) ConsumeClaim(session sarama.ConsumerGroupSession, claim
 				if err == nil {
 					break
 				}
-				log.Errorf("handle kafka message error[%v] retryCnt[%v] message[%+v]", err, i, message)
+				log.Errorf("handle kafka message error[%v] retryCnt[%v]", err, i)
 				time.Sleep(retryBackoff)
 			}
 			session.MarkMessage(message, "")

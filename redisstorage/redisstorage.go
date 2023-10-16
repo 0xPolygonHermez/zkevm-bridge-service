@@ -48,9 +48,15 @@ func (s *redisStorageImpl) SetCoinPrice(ctx context.Context, prices []*pb.Symbol
 	}
 
 	var valueList []interface{}
-	for _, price := range prices {
-		if price == nil {
-			// Nothing to set, ignored
+	symbols := convertPricesToSymbols(prices)
+	currentPrices, err := s.getCoinPrice(ctx, symbols)
+	if err != nil {
+		return errors.Wrap(err, "SetCoinPrice get current price error")
+	}
+	// Assuming size of currentPrices and prices is the same
+	for i, price := range prices {
+		if price.Time < currentPrices[i].Time {
+			// Old price, ignored
 			continue
 		}
 
@@ -61,7 +67,10 @@ func (s *redisStorageImpl) SetCoinPrice(ctx context.Context, prices []*pb.Symbol
 		}
 		valueList = append(valueList, priceKey, priceVal)
 	}
-	err := s.client.HSet(ctx, coinPriceHashKey, valueList...).Err()
+	if len(valueList) < 2 {
+		return nil
+	}
+	err = s.client.HSet(ctx, coinPriceHashKey, valueList...).Err()
 	if err != nil {
 		return errors.Wrap(err, "SetCoinPrice redis HSet error")
 	}
@@ -69,8 +78,7 @@ func (s *redisStorageImpl) SetCoinPrice(ctx context.Context, prices []*pb.Symbol
 	return nil
 }
 
-func (s *redisStorageImpl) GetCoinPrice(ctx context.Context, symbols []*pb.SymbolInfo) ([]*pb.SymbolPrice, error) {
-	log.Debugf("GetCoinPrice size[%v]", len(symbols))
+func (s *redisStorageImpl) getCoinPrice(ctx context.Context, symbols []*pb.SymbolInfo) ([]*pb.SymbolPrice, error) {
 	if len(symbols) == 0 {
 		return nil, nil
 	}
@@ -91,13 +99,13 @@ func (s *redisStorageImpl) GetCoinPrice(ctx context.Context, symbols []*pb.Symbo
 
 	redisResult, err := s.client.HMGet(ctx, coinPriceHashKey, keyList...).Result()
 	if err != nil {
-		return nil, errors.Wrap(err, "GetCoinPrice redis HMGet error")
+		return nil, errors.Wrap(err, "getCoinPrice redis HMGet error")
 	}
 
 	var priceList []*pb.SymbolPrice
 	for i, res := range redisResult {
 		if res == nil {
-			log.Infof("GetCoinPrice price not found chainId[%v] address[%v]", symbols[i].ChainId, symbols[i].Address)
+			log.Infof("getCoinPrice price not found chainId[%v] address[%v]", symbols[i].ChainId, symbols[i].Address)
 			priceList = append(priceList, &pb.SymbolPrice{ChainId: symbols[i].ChainId, Address: symbols[i].Address})
 			continue
 		}
@@ -109,6 +117,16 @@ func (s *redisStorageImpl) GetCoinPrice(ctx context.Context, symbols []*pb.Symbo
 		} else {
 			priceList = append(priceList, price)
 		}
+	}
+
+	return priceList, nil
+}
+
+func (s *redisStorageImpl) GetCoinPrice(ctx context.Context, symbols []*pb.SymbolInfo) ([]*pb.SymbolPrice, error) {
+	log.Debugf("GetCoinPrice size[%v]", len(symbols))
+	priceList, err := s.getCoinPrice(ctx, symbols)
+	if err != nil {
+		return nil, err
 	}
 
 	if s.mockPrice {
@@ -125,4 +143,15 @@ func getCoinPriceKey(chainID uint64, tokenAddr string) string {
 		tokenAddr = "null"
 	}
 	return strings.ToLower(strconv.FormatUint(chainID, 10) + "_" + tokenAddr)
+}
+
+func convertPricesToSymbols(prices []*pb.SymbolPrice) []*pb.SymbolInfo {
+	var result = make([]*pb.SymbolInfo, len(prices))
+	for i, price := range prices {
+		result[i] = &pb.SymbolInfo{
+			ChainId: price.ChainId,
+			Address: price.Address,
+		}
+	}
+	return result
 }

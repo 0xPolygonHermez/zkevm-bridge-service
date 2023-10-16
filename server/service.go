@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
+	ctmtypes "github.com/0xPolygonHermez/zkevm-bridge-service/claimtxman/types"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/localcache"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/redisstorage"
 	"github.com/pkg/errors"
@@ -18,8 +19,8 @@ import (
 )
 
 const (
-	defaultL2TxEstimateTime = 15
-	defaultL1TxEstimateTime = 10
+	defaultL2TxEstimateTime = 60
+	defaultL1TxEstimateTime = 15
 	defaultErrorCode        = 1
 	defaultSuccessCode      = 0
 )
@@ -461,6 +462,14 @@ func (s *bridgeService) GetPendingTransactions(ctx context.Context, req *pb.GetP
 		transaction.Status = 0
 		if deposit.ReadyForClaim {
 			transaction.Status = 1
+			// For L1->L2, if backend is trying to auto-claim, set the status to 0 to block the user from manual-claim
+			// When the auto-claim failed, set status to 1 to let the user claim manually through front-end
+			if deposit.NetworkID == 0 {
+				mTx, err := s.storage.GetClaimTxById(ctx, deposit.DepositCount, nil)
+				if err == nil && mTx.Status != ctmtypes.MonitoredTxStatusFailed {
+					transaction.Status = 0
+				}
+			}
 		}
 		pbTransactions = append(pbTransactions, transaction)
 	}
@@ -525,6 +534,14 @@ func (s *bridgeService) GetAllTransactions(ctx context.Context, req *pb.GetAllTr
 						Code: defaultErrorCode,
 						Data: nil,
 					}, nil
+				}
+				// For L1->L2, if backend is trying to auto-claim, set the status to 0 to block the user from manual-claim
+				// When the auto-claim failed, set status to 1 to let the user claim manually through front-end
+				if deposit.NetworkID == 0 {
+					mTx, err := s.storage.GetClaimTxById(ctx, deposit.DepositCount, nil)
+					if err == nil && mTx.Status != ctmtypes.MonitoredTxStatusFailed {
+						transaction.Status = 0
+					}
 				}
 			} else {
 				transaction.Status = 2 // Claimed

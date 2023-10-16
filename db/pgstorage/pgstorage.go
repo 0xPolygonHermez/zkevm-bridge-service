@@ -606,6 +606,31 @@ func (p *PostgresStorage) GetClaimTxsByStatus(ctx context.Context, statuses []ct
 	return mTxs, nil
 }
 
+// GetClaimTxById gets the monitored transactions by id (depositCount)
+func (p *PostgresStorage) GetClaimTxById(ctx context.Context, id uint, dbTx pgx.Tx) (*ctmtypes.MonitoredTx, error) {
+	getClaimSql := fmt.Sprintf("SELECT * FROM sync.monitored_txs%[1]v WHERE id = $1", p.tableSuffix)
+	var (
+		value   string
+		history [][]byte
+		mTx     = &ctmtypes.MonitoredTx{}
+	)
+	err := p.getExecQuerier(dbTx).QueryRow(ctx, getClaimSql, id).
+		Scan(&mTx.ID, &mTx.BlockID, &mTx.From, &mTx.To, &mTx.Nonce, &value, &mTx.Data, &mTx.Gas, &mTx.Status, pq.Array(&history), &mTx.CreatedAt, &mTx.UpdatedAt)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, gerror.ErrStorageNotFound
+		}
+		return nil, err
+	}
+	mTx.Value, _ = new(big.Int).SetString(value, 10) //nolint:gomnd
+	mTx.History = make(map[common.Hash]bool)
+	for _, h := range history {
+		mTx.History[common.BytesToHash(h)] = true
+	}
+
+	return mTx, nil
+}
+
 // UpdateDepositsStatusForTesting updates the ready_for_claim status of all deposits for testing.
 func (p *PostgresStorage) UpdateDepositsStatusForTesting(ctx context.Context, dbTx pgx.Tx) error {
 	updateDepositsStatusSQL := fmt.Sprintf("UPDATE sync.deposit%[1]v SET ready_for_claim = true;", p.tableSuffix)
