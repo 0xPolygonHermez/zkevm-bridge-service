@@ -1,7 +1,7 @@
 version: '3.5'
 services:
-  xagon-state-db:
-    container_name: xagon-state-db
+  xgon-state-db:
+    container_name: xgon-state-db
     image: postgres
     deploy:
       resources:
@@ -19,8 +19,8 @@ services:
       - POSTGRES_DB=state_db
     command: ["postgres", "-N", "500"]
 
-  xagon-pool-db:
-    container_name: xagon-pool-db
+  xgon-pool-db:
+    container_name: xgon-pool-db
     image: postgres
     deploy:
       resources:
@@ -36,8 +36,8 @@ services:
       - POSTGRES_DB=pool_db
     command: ["postgres", "-N", "500"]
 
-  xagon-bridge-db:
-    container_name: xagon-bridge-db
+  xgon-bridge-db:
+    container_name: xgon-bridge-db
     image: postgres
     deploy:
       resources:
@@ -55,8 +55,8 @@ services:
       - POSTGRES_DB=test_db
     command: ["postgres", "-N", "500"]
 
-  xagon-bridge-redis:
-    container_name: xagon-bridge-redis
+  xgon-bridge-redis:
+    container_name: xgon-bridge-redis
     image: redis
     deploy:
       resources:
@@ -81,9 +81,9 @@ services:
     expose:
       - 2181
 
-  xagon-bridge-coin-kafka:
+  xgon-bridge-coin-kafka:
     image: wurstmeister/kafka
-    container_name: xagon-bridge-coin-kafka
+    container_name: xgon-bridge-coin-kafka
     expose:
       - 9092
     environment:
@@ -135,9 +135,9 @@ services:
     command: >
       zkProver -c /usr/src/app/config.json
 
-  xagon-bridge-service:
-    container_name: xagon-bridge-service
-    image: xagon-bridge-service
+  xgon-bridge-service:
+    container_name: xgon-bridge-service
+    image: xgon-bridge-service
     ports:
       - 8080:8080
       - 9090:9090
@@ -145,7 +145,7 @@ services:
       - ZKEVM_BRIDGE_DATABASE_USER=test_user
       - ZKEVM_BRIDGE_DATABASE_PASSWORD=test_password
       - ZKEVM_BRIDGE_DATABASE_NAME=test_db
-      - ZKEVM_BRIDGE_DATABASE_HOST=xagon-bridge-db
+      - ZKEVM_BRIDGE_DATABASE_HOST=xgon-bridge-db
       - ZKEVM_BRIDGE_DATABASE_PORT=5432
     volumes:
       - ./test/test.keystore.claimtx:/pk/keystore.claimtxmanager
@@ -154,15 +154,15 @@ services:
     command:
       - "/bin/sh"
       - "-c"
-      - "/app/xagon-bridge run --cfg /app/config.toml"
+      - "/app/xgon-bridge run --cfg /app/config.toml"
 
-  xagon-bridge-kafka-consumer:
-    container_name: xagon-bridge-kafka-consumer
-    image: xagon-bridge-service
+  xgon-bridge-kafka-consumer:
+    container_name: xgon-bridge-kafka-consumer
+    image: xgon-bridge-service
     volumes:
       - ./config/config.local.toml:/app/config.toml
       - ./coinmiddleware/root-ca-cert:/app/root-ca-cert
     command:
       - "/bin/sh"
       - "-c"
-      - "/app/xagon-bridge runKafkaConsumer --cfg /app/config.toml"
+      - "/app/xgon-bridge runKafkaConsumer --cfg /app/config.toml"

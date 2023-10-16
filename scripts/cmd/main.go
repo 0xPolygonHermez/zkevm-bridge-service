@@ -9,7 +9,7 @@ import (
 
 func main() {
 	app := cli.NewApp()
-	app.Name = "xagon-bridge-scripts"
+	app.Name = "xgon-bridge-scripts"
 	app.Commands = []*cli.Command{
 		{
 			Name:   "updatedeps",

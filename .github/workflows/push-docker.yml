@@ -29,7 +29,7 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: true
           tags: |
-            okx/xagon-bridge-service
-            okx/xagon-bridge-service:2.0
+            okx/xgon-bridge-service
+            okx/xgon-bridge-service:2.0
           build-args: |
             PRIVATE_TOKEN=${{secrets.GIT_TOKEN}}

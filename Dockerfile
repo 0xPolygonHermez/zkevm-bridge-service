@@ -14,8 +14,8 @@ RUN cd /src && make build
 
 # CONTAINER FOR RUNNING BINARY
 FROM alpine:3.16.0
-COPY --from=build /src/dist/xagon-bridge /app/xagon-bridge
+COPY --from=build /src/dist/xgon-bridge /app/xgon-bridge
 COPY --from=build /src/test/vectors /app/test/vectors
 EXPOSE 8080
 EXPOSE 9090
-CMD ["/bin/sh", "-c", "/app/xagon-bridge run"]
+CMD ["/bin/sh", "-c", "/app/xgon-bridge run"]
