@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"math"
 	"math/big"
 	"testing"
 	"time"
@@ -362,5 +363,30 @@ func TestBSStorage(t *testing.T) {
 	require.Equal(t, wt.TokenMetadata.Symbol, "COA")
 	require.Equal(t, wt.TokenMetadata.Decimals, uint8(12))
 
+	require.NoError(t, tx.Commit(ctx))
+}
+
+// Test Set Max uint as networkID into setRoot storage
+func TestSetMaxUintNetworkID(t *testing.T) {
+	// Init database instance
+	cfg := pgstorage.NewConfigFromEnv()
+	err := pgstorage.InitOrReset(cfg)
+	require.NoError(t, err)
+	ctx := context.Background()
+	pg, err := pgstorage.NewPostgresStorage(cfg)
+	require.NoError(t, err)
+	tx, err := pg.BeginDBTransaction(ctx)
+	require.NoError(t, err)
+	deposit := &etherman.Deposit{
+		Metadata: common.Hex2Bytes("0x0"),
+	}
+	depositID, err := pg.AddDeposit(ctx, deposit, tx)
+	require.NoError(t, err)
+	root := common.FromHex("0x88e652896cb1de5962a0173a222059f51e6b943a2ba6dfc9acbff051ceb1abb5")
+	err = pg.SetRoot(ctx, root, depositID, math.MaxInt32, tx)
+	require.NoError(t, err)
+	rRoot, err := pg.GetRoot(ctx, 0, math.MaxInt32, tx)
+	require.NoError(t, err)
+	require.Equal(t, root, rRoot)
 	require.NoError(t, tx.Commit(ctx))
 }

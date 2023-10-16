@@ -2,9 +2,11 @@ package bridgectrl
 
 import (
 	"context"
+	"math"
 
 	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/utils/gerror"
+	"github.com/0xPolygonHermez/zkevm-node/log"
 	"github.com/jackc/pgx/v4"
 )
 
@@ -15,8 +17,9 @@ const (
 
 // BridgeController struct
 type BridgeController struct {
-	exitTrees  []*MerkleTree
-	networkIDs map[uint]uint8
+	exitTrees   []*MerkleTree
+	rollupsTree *MerkleTree
+	networkIDs  map[uint]uint8
 }
 
 // NewBridgeController creates new BridgeController.
@@ -34,9 +37,15 @@ func NewBridgeController(cfg Config, networks []uint, mtStore interface{}) (*Bri
 		}
 		exitTrees = append(exitTrees, mt)
 	}
+	rollupsTree, err := NewMerkleTree(context.TODO(), mtStore.(merkleTreeStore), cfg.Height, math.MaxInt32)
+	if err != nil {
+		log.Error("error creating rollupsTree. Error: ", err)
+		return nil, err
+	}
 
 	return &BridgeController{
 		exitTrees:  exitTrees,
+		rollupsTree: rollupsTree,
 		networkIDs: networkIDs,
 	}, nil
 }

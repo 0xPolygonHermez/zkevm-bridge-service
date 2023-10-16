@@ -5,6 +5,8 @@ import (
 	"fmt"
 
 	"github.com/0xPolygonHermez/zkevm-bridge-service/utils/gerror"
+	"github.com/0xPolygonHermez/zkevm-node/log"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/jackc/pgx/v4"
 )
 
@@ -167,4 +169,56 @@ func (mt *MerkleTree) getRoot(ctx context.Context, dbTx pgx.Tx) ([]byte, error) 
 		return zeroHashes[mt.height][:], nil
 	}
 	return mt.store.GetRoot(ctx, mt.count-1, mt.network, dbTx)
+}
+
+func buildIntermediate(leaves [][KeyLen]byte) ([][][]byte, [][32]byte) {
+	var (
+		nodes [][][]byte
+		hashes [][KeyLen]byte
+	)
+	for i := 0; i < len(leaves); i += 2 {
+		var left, right int = i, i + 1
+		hash := Hash(leaves[left], leaves[right])
+		nodes = append(nodes, [][]byte{hash[:], leaves[left][:], leaves[right][:]})
+		hashes = append(hashes, hash)
+	}
+	return nodes, hashes
+}
+
+func (mt *MerkleTree) updateLeaf(ctx context.Context, depositID uint64, leaves [][KeyLen]byte, dbTx pgx.Tx) error {
+	var (
+		nodes [][][][]byte
+		ns [][][]byte
+	)
+	initLeavesCount := uint(len(leaves))
+	if len(leaves) == 0 {
+		leaves = append(leaves, zeroHashes[0])
+	}
+
+	for h := uint8(0); h < mt.height; h++ {
+		if len(leaves)%2 == 1 {
+			leaves = append(leaves, zeroHashes[h])
+		}
+		ns, leaves = buildIntermediate(leaves)
+		nodes = append(nodes, ns)
+	}
+	if len(ns) != 1 {
+		return fmt.Errorf("error: more than one root detected: %+v", nodes)
+	}
+	log.Debug("Root calculated: ", common.Bytes2Hex(ns[0][0]))
+	err := mt.store.SetRoot(ctx, ns[0][0], depositID, mt.network, dbTx)
+	if err != nil {
+		return err
+	}
+	var nodesToStore [][]interface{}
+	for _, leaves := range nodes {
+		for _, leaf := range leaves {
+			nodesToStore = append(nodesToStore, []interface{}{leaf[0], [][]byte{leaf[1], leaf[2]}, depositID})
+		}
+	}
+	if err := mt.store.BulkSet(ctx, nodesToStore, dbTx); err != nil {
+		return err
+	}
+	mt.count = initLeavesCount
+	return nil
 }

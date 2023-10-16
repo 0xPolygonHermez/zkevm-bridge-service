@@ -14,6 +14,7 @@ import (
 	"github.com/0xPolygonHermez/zkevm-bridge-service/db/pgstorage"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/test/vectors"
+	"github.com/0xPolygonHermez/zkevm-node/log"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -203,5 +204,73 @@ func TestMTGetProof(t *testing.T) {
 			}
 			assert.Equal(t, hex.EncodeToString(cur[:]), testVector.ExpectedRoot[2:])
 		})
+	}
+}
+
+func TestUpdateMT(t *testing.T) {
+	data, err := os.ReadFile("test/vectors/src/mt-bridge/root-vectors.json")
+	require.NoError(t, err)
+
+	var mtTestVectors []vectors.MTRootVectorRaw
+	err = json.Unmarshal(data, &mtTestVectors)
+	require.NoError(t, err)
+	for ti, testVector := range mtTestVectors {
+		input := testVector.ExistingLeaves
+		log.Debug("input: ", input)
+		dbCfg := pgstorage.NewConfigFromEnv()
+		ctx := context.Background()
+		err := pgstorage.InitOrReset(dbCfg)
+		require.NoError(t, err)
+
+		store, err := pgstorage.NewPostgresStorage(dbCfg)
+		require.NoError(t, err)
+
+		mt, err := NewMerkleTree(ctx, store, uint8(32), 0)
+		require.NoError(t, err)
+
+		amount, result := new(big.Int).SetString(testVector.NewLeaf.Amount, 0)
+		require.True(t, result)
+		for i := 0; i <= ti; i++ {
+			deposit := &etherman.Deposit{
+				OriginalNetwork:    testVector.NewLeaf.OriginalNetwork,
+				OriginalAddress:    common.HexToAddress(testVector.NewLeaf.TokenAddress),
+				Amount:             amount,
+				DestinationNetwork: testVector.NewLeaf.DestinationNetwork,
+				DestinationAddress: common.HexToAddress(testVector.NewLeaf.DestinationAddress),
+				BlockNumber:        0,
+				DepositCount:       uint(i),
+				Metadata:           common.FromHex(testVector.NewLeaf.Metadata),
+			}
+			_, err := store.AddDeposit(ctx, deposit, nil)
+			require.NoError(t, err)
+		}
+
+		var leaves [][KeyLen]byte
+		for _, v := range input {
+			var res [KeyLen]byte
+			copy(res[:], common.Hex2Bytes(v[2:]))
+			leaves = append(leaves, res)
+		}
+
+		depositID := uint64(len(leaves))
+		if depositID != 0 {
+			err = mt.updateLeaf(ctx, depositID, leaves, nil)
+			require.NoError(t, err)
+			// Check root
+			newRoot, err := mt.getRoot(ctx, nil)
+			require.NoError(t, err)
+			require.Equal(t, testVector.CurrentRoot[2:], hex.EncodeToString(newRoot[:]))	
+		}
+		
+		var res [KeyLen]byte
+		copy(res[:], common.Hex2Bytes(testVector.NewLeaf.CurrentHash[2:]))
+		leaves = append(leaves, res)
+		depositID = uint64(len(leaves))
+		err = mt.updateLeaf(ctx, depositID, leaves, nil)
+		require.NoError(t, err)
+		// Check new root
+		newRoot, err := mt.getRoot(ctx, nil)
+		require.NoError(t, err)
+		require.Equal(t, testVector.NewRoot[2:], hex.EncodeToString(newRoot[:]))
 	}
 }
