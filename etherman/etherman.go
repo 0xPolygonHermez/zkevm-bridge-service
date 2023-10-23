@@ -8,7 +8,9 @@ import (
 	"time"
 
 	"github.com/0xPolygonHermez/zkevm-node/etherman/smartcontracts/polygonzkevmbridge"
+	"github.com/0xPolygonHermez/zkevm-node/etherman/smartcontracts/oldpolygonzkevmbridge"
 	"github.com/0xPolygonHermez/zkevm-node/etherman/smartcontracts/polygonzkevmglobalexitroot"
+	"github.com/0xPolygonHermez/zkevm-node/etherman/smartcontracts/polygonrollupmanager"
 	"github.com/0xPolygonHermez/zkevm-node/log"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -23,17 +25,47 @@ var (
 	updateGlobalExitRootSignatureHash = crypto.Keccak256Hash([]byte("UpdateGlobalExitRoot(bytes32,bytes32)"))
 	transferOwnershipSignatureHash    = crypto.Keccak256Hash([]byte("OwnershipTransferred(address,address)"))
 
-	// Bridge events
-	depositEventSignatureHash         = crypto.Keccak256Hash([]byte("BridgeEvent(uint8,uint32,address,uint32,address,uint256,bytes,uint32)"))
-	claimEventSignatureHash           = crypto.Keccak256Hash([]byte("ClaimEvent(uint32,uint32,address,address,uint256)"))
-	newWrappedTokenEventSignatureHash = crypto.Keccak256Hash([]byte("NewWrappedToken(uint32,address,address,bytes)"))
+	// New Bridge events
+	depositEventSignatureHash         = crypto.Keccak256Hash([]byte("BridgeEvent(uint8,uint32,address,uint32,address,uint256,bytes,uint32)")) // Used in oldBridge as well
+	claimEventSignatureHash           = crypto.Keccak256Hash([]byte("ClaimEvent(uint256,uint32,address,address,uint256)"))
+	newWrappedTokenEventSignatureHash = crypto.Keccak256Hash([]byte("NewWrappedToken(uint32,address,address,bytes)"))  // Used in oldBridge as well
+
+	// Old Bridge events
+	oldClaimEventSignatureHash           = crypto.Keccak256Hash([]byte("ClaimEvent(uint32,uint32,address,address,uint256)"))
 
 	// Proxy events
-	initializedSignatureHash    = crypto.Keccak256Hash([]byte("Initialized(uint8)"))
+	initializedProxySignatureHash    = crypto.Keccak256Hash([]byte("Initialized(uint8)"))
 	adminChangedSignatureHash   = crypto.Keccak256Hash([]byte("AdminChanged(address,address)"))
 	beaconUpgradedSignatureHash = crypto.Keccak256Hash([]byte("BeaconUpgraded(address)"))
 	upgradedSignatureHash       = crypto.Keccak256Hash([]byte("Upgraded(address)"))
 
+	// Events RollupManager
+	setBatchFeeSignatureHash                       = crypto.Keccak256Hash([]byte("SetBatchFee(uint256)"))
+	setTrustedAggregatorSignatureHash              = crypto.Keccak256Hash([]byte("SetTrustedAggregator(address)"))       // Used in oldZkEvm as well
+	setVerifyBatchTimeTargetSignatureHash          = crypto.Keccak256Hash([]byte("SetVerifyBatchTimeTarget(uint64)"))    // Used in oldZkEvm as well
+	setMultiplierBatchFeeSignatureHash             = crypto.Keccak256Hash([]byte("SetMultiplierBatchFee(uint16)"))       // Used in oldZkEvm as well
+	setPendingStateTimeoutSignatureHash            = crypto.Keccak256Hash([]byte("SetPendingStateTimeout(uint64)"))      // Used in oldZkEvm as well
+	setTrustedAggregatorTimeoutSignatureHash       = crypto.Keccak256Hash([]byte("SetTrustedAggregatorTimeout(uint64)")) // Used in oldZkEvm as well
+	overridePendingStateSignatureHash              = crypto.Keccak256Hash([]byte("OverridePendingState(uint32,uint64,bytes32,bytes32,address)"))
+	proveNonDeterministicPendingStateSignatureHash = crypto.Keccak256Hash([]byte("ProveNonDeterministicPendingState(bytes32,bytes32)")) // Used in oldZkEvm as well
+	consolidatePendingStateSignatureHash           = crypto.Keccak256Hash([]byte("ConsolidatePendingState(uint32,uint64,bytes32,bytes32,uint64)"))
+	verifyBatchesTrustedAggregatorSignatureHash    = crypto.Keccak256Hash([]byte("VerifyBatchesTrustedAggregator(uint32,uint64,bytes32,bytes32,address)"))
+	rollupManagerVerifyBatchesSignatureHash        = crypto.Keccak256Hash([]byte("VerifyBatches(uint32,uint64,bytes32,bytes32,address)"))
+	onSequenceBatchesSignatureHash                 = crypto.Keccak256Hash([]byte("OnSequenceBatches(uint32,uint64)"))
+	updateRollupSignatureHash                      = crypto.Keccak256Hash([]byte("UpdateRollup(uint32,uint32,uint64)"))
+	addExistingRollupSignatureHash                 = crypto.Keccak256Hash([]byte("AddExistingRollup(uint32,uint64,address,uint64,uint8)"))
+	createNewRollupSignatureHash                   = crypto.Keccak256Hash([]byte("CreateNewRollup(uint32,uint32,address,uint64,address,uint32)"))
+	obsoleteRollupTypeSignatureHash                = crypto.Keccak256Hash([]byte("ObsoleteRollupType(uint32)"))
+	addNewRollupTypeSignatureHash                  = crypto.Keccak256Hash([]byte("AddNewRollupType(uint32,address,address,uint64,uint8,bytes32,string)"))
+
+	// Extra RollupManager
+	initializedSignatureHash               = crypto.Keccak256Hash([]byte("Initialized(uint64)"))                       // Initializable. Used in RollupBase as well
+	roleAdminChangedSignatureHash          = crypto.Keccak256Hash([]byte("RoleAdminChanged(bytes32,bytes32,bytes32)")) // IAccessControlUpgradeable
+	roleGrantedSignatureHash               = crypto.Keccak256Hash([]byte("RoleGranted(bytes32,address,address)"))      // IAccessControlUpgradeable
+	roleRevokedSignatureHash               = crypto.Keccak256Hash([]byte("RoleRevoked(bytes32,address,address)"))      // IAccessControlUpgradeable
+	emergencyStateActivatedSignatureHash   = crypto.Keccak256Hash([]byte("EmergencyStateActivated()"))                 // EmergencyManager. Used in oldZkEvm as well
+	emergencyStateDeactivatedSignatureHash = crypto.Keccak256Hash([]byte("EmergencyStateDeactivated()"))               // EmergencyManager. Used in oldZkEvm as well
+	
 	// ErrNotFound is used when the object is not found
 	ErrNotFound = errors.New("Not found")
 )
@@ -62,12 +94,14 @@ type ethClienter interface {
 type Client struct {
 	EtherClient                ethClienter
 	PolygonBridge              *polygonzkevmbridge.Polygonzkevmbridge
+	OldPolygonBridge           *oldpolygonzkevmbridge.Oldpolygonzkevmbridge
 	PolygonZkEVMGlobalExitRoot *polygonzkevmglobalexitroot.Polygonzkevmglobalexitroot
+	PolygonRollupManager       *polygonrollupmanager.Polygonrollupmanager
 	SCAddresses                []common.Address
 }
 
 // NewClient creates a new etherman.
-func NewClient(cfg Config, polygonBridgeAddr, polygonZkEVMGlobalExitRootAddress common.Address) (*Client, error) {
+func NewClient(cfg Config, polygonBridgeAddr, polygonZkEVMGlobalExitRootAddress, polygonRollupManagerAddress common.Address) (*Client, error) {
 	// Connect to ethereum node
 	ethClient, err := ethclient.Dial(cfg.L1URL)
 	if err != nil {
@@ -79,14 +113,22 @@ func NewClient(cfg Config, polygonBridgeAddr, polygonZkEVMGlobalExitRootAddress 
 	if err != nil {
 		return nil, err
 	}
+	oldpolygonBridge, err := oldpolygonzkevmbridge.NewOldpolygonzkevmbridge(polygonBridgeAddr, ethClient)
+	if err != nil {
+		return nil, err
+	}
 	polygonZkEVMGlobalExitRoot, err := polygonzkevmglobalexitroot.NewPolygonzkevmglobalexitroot(polygonZkEVMGlobalExitRootAddress, ethClient)
 	if err != nil {
 		return nil, err
 	}
+	polygonRollupManager, err := polygonrollupmanager.NewPolygonrollupmanager(polygonRollupManagerAddress, ethClient)
+	if err != nil {
+		return nil, err
+	}
 	var scAddresses []common.Address
-	scAddresses = append(scAddresses, polygonZkEVMGlobalExitRootAddress, polygonBridgeAddr)
+	scAddresses = append(scAddresses, polygonZkEVMGlobalExitRootAddress, polygonBridgeAddr, polygonRollupManagerAddress)
 
-	return &Client{EtherClient: ethClient, PolygonBridge: polygonBridge, PolygonZkEVMGlobalExitRoot: polygonZkEVMGlobalExitRoot, SCAddresses: scAddresses}, nil
+	return &Client{EtherClient: ethClient, PolygonBridge: polygonBridge, OldPolygonBridge: oldpolygonBridge, PolygonZkEVMGlobalExitRoot: polygonZkEVMGlobalExitRoot, PolygonRollupManager: polygonRollupManager, SCAddresses: scAddresses}, nil
 }
 
 // NewL2Client creates a new etherman for L2.
@@ -155,11 +197,13 @@ func (etherMan *Client) processEvent(ctx context.Context, vLog types.Log, blocks
 	case depositEventSignatureHash:
 		return etherMan.depositEvent(ctx, vLog, blocks, blocksOrder)
 	case claimEventSignatureHash:
-		return etherMan.claimEvent(ctx, vLog, blocks, blocksOrder)
+		return etherMan.newClaimEvent(ctx, vLog, blocks, blocksOrder)
+	case oldClaimEventSignatureHash:
+		return etherMan.oldClaimEvent(ctx, vLog, blocks, blocksOrder)
 	case newWrappedTokenEventSignatureHash:
 		return etherMan.tokenWrappedEvent(ctx, vLog, blocks, blocksOrder)
-	case initializedSignatureHash:
-		log.Debug("Initialized event detected")
+	case initializedProxySignatureHash:
+		log.Debug("Initialized proxy event detected")
 		return nil
 	case adminChangedSignatureHash:
 		log.Debug("AdminChanged event detected")
@@ -172,6 +216,75 @@ func (etherMan *Client) processEvent(ctx context.Context, vLog types.Log, blocks
 		return nil
 	case transferOwnershipSignatureHash:
 		log.Debug("TransferOwnership event detected")
+		return nil
+	case setBatchFeeSignatureHash:
+		log.Debug("SetBatchFee event detected")
+		return nil
+	case setTrustedAggregatorSignatureHash:
+		log.Debug("SetTrustedAggregator event detected") // TODO
+		return nil
+	case setVerifyBatchTimeTargetSignatureHash:
+		log.Debug("SetVerifyBatchTimeTarget event detected") // TODO
+		return nil
+	case setMultiplierBatchFeeSignatureHash:
+		log.Debug("SetMultiplierBatchFee event detected")
+		return nil
+	case setPendingStateTimeoutSignatureHash:
+		log.Debug("SetPendingStateTimeout event detected")
+		return nil
+	case setTrustedAggregatorTimeoutSignatureHash:
+		log.Debug("SetTrustedAggregatorTimeout event detected")
+		return nil
+	case overridePendingStateSignatureHash:
+		log.Debug("OverridePendingState event detected")
+		return nil
+	case proveNonDeterministicPendingStateSignatureHash:
+		log.Debug("ProveNonDeterministicPendingState event detected")
+		return nil
+	case consolidatePendingStateSignatureHash:
+		log.Debug("ConsolidatePendingState event detected")
+		return nil
+	case verifyBatchesTrustedAggregatorSignatureHash:
+		log.Debug("VerifyBatchesTrustedAggregator event detected") // TODO
+		return nil
+	case rollupManagerVerifyBatchesSignatureHash:
+		log.Debug("RollupManagerVerifyBatches event detected") // TODO
+		return nil
+	case onSequenceBatchesSignatureHash:
+		log.Debug("OnSequenceBatches event detected")
+		return nil
+	case updateRollupSignatureHash:
+		log.Debug("UpdateRollup event detected")
+		return nil
+	case addExistingRollupSignatureHash:
+		log.Debug("AddExistingRollup event detected")
+		return nil
+	case createNewRollupSignatureHash:
+		log.Debug("CreateNewRollup event detected")
+		return nil
+	case obsoleteRollupTypeSignatureHash:
+		log.Debug("ObsoleteRollupType event detected")
+		return nil
+	case addNewRollupTypeSignatureHash:
+		log.Debug("AddNewRollupType event detected")
+		return nil
+	case initializedSignatureHash:
+		log.Debug("Initialized event detected")
+		return nil
+	case roleAdminChangedSignatureHash:
+		log.Debug("RoleAdminChanged event detected")
+		return nil
+	case roleGrantedSignatureHash:
+		log.Debug("RoleGranted event detected")
+		return nil
+	case roleRevokedSignatureHash:
+		log.Debug("RoleRevoked event detected")
+		return nil
+	case emergencyStateActivatedSignatureHash:
+		log.Debug("EmergencyStateActivated event detected")
+		return nil
+	case emergencyStateDeactivatedSignatureHash:
+		log.Debug("EmergencyStateDeactivated event detected")
 		return nil
 	}
 	log.Warnf("Event not registered: %+v", vLog)
@@ -254,18 +367,31 @@ func (etherMan *Client) depositEvent(ctx context.Context, vLog types.Log, blocks
 	return nil
 }
 
-func (etherMan *Client) claimEvent(ctx context.Context, vLog types.Log, blocks *[]Block, blocksOrder *map[common.Hash][]Order) error {
-	log.Debug("Claim event detected")
+func (etherMan *Client) oldClaimEvent(ctx context.Context, vLog types.Log, blocks *[]Block, blocksOrder *map[common.Hash][]Order) error {
+	log.Debug("Old claim event detected")
+	c, err := etherMan.OldPolygonBridge.ParseClaimEvent(vLog)
+	if err != nil {
+		return err
+	}
+	return etherMan.claimEvent(ctx, vLog, blocks, blocksOrder, c.Amount, c.DestinationAddress, c.OriginAddress, uint64(c.Index), uint(c.OriginNetwork))
+}
+
+func (etherMan *Client) newClaimEvent(ctx context.Context, vLog types.Log, blocks *[]Block, blocksOrder *map[common.Hash][]Order) error {
+	log.Debug("New claim event detected")
 	c, err := etherMan.PolygonBridge.ParseClaimEvent(vLog)
 	if err != nil {
 		return err
 	}
+	return etherMan.claimEvent(ctx, vLog, blocks, blocksOrder, c.Amount, c.DestinationAddress, c.OriginAddress, c.GlobalIndex.Uint64(), uint(c.OriginNetwork))
+}
+
+func (etherMan *Client) claimEvent(ctx context.Context, vLog types.Log, blocks *[]Block, blocksOrder *map[common.Hash][]Order, amount *big.Int, destinationAddress, originAddress common.Address, index uint64, originNetwork uint) error {
 	var claim Claim
-	claim.Amount = c.Amount
-	claim.DestinationAddress = c.DestinationAddress
-	claim.Index = uint(c.Index)
-	claim.OriginalNetwork = uint(c.OriginNetwork)
-	claim.OriginalAddress = c.OriginAddress
+	claim.Amount = amount
+	claim.DestinationAddress = destinationAddress
+	claim.Index = index
+	claim.OriginalNetwork = originNetwork
+	claim.OriginalAddress = originAddress
 	claim.BlockNumber = vLog.BlockNumber
 	claim.TxHash = vLog.TxHash
 

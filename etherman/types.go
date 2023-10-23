@@ -49,7 +49,7 @@ type Deposit struct {
 
 // Claim struct
 type Claim struct {
-	Index              uint
+	Index              uint64
 	OriginalNetwork    uint
 	OriginalAddress    common.Address
 	Amount             *big.Int
