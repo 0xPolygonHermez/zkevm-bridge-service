@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0
 
-pragma solidity 0.8.17;
+pragma solidity 0.8.20;
 
-import "./lib/DepositContract.sol";
+import "./lib/DepositContractV2.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import "./lib/TokenWrapped.sol";
 import "./interfaces/IBasePolygonZkEVMGlobalExitRoot.sol";
 import "./interfaces/IBridgeMessageReceiver.sol";
-import "./interfaces/IPolygonZkEVMBridge.sol";
+import "./interfaces/IPolygonZkEVMBridgeV2.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/IERC20MetadataUpgradeable.sol";
 import "./lib/EmergencyManager.sol";
 import "./lib/GlobalExitRootLib.sol";
@@ -16,10 +16,10 @@ import "./lib/GlobalExitRootLib.sol";
  * PolygonZkEVMBridge that will be deployed on both networks Ethereum and Polygon zkEVM
  * Contract responsible to manage the token interactions with other networks
  */
-contract PolygonZkEVMBridge is
-    DepositContract,
+contract PolygonZkEVMBridgeV2 is
+    DepositContractV2,
     EmergencyManager,
-    IPolygonZkEVMBridge
+    IPolygonZkEVMBridgeV2
 {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
@@ -38,8 +38,8 @@ contract PolygonZkEVMBridge is
     // Mainnet identifier
     uint32 private constant _MAINNET_NETWORK_ID = 0;
 
-    // Number of networks supported by the bridge
-    uint32 private constant _CURRENT_SUPPORTED_NETWORKS = 2;
+    // ZkEVM identifier
+    uint32 private constant _ZKEVM_NETWORK_ID = 1;
 
     // Leaf type asset
     uint8 private constant _LEAF_TYPE_ASSET = 0;
@@ -47,11 +47,17 @@ contract PolygonZkEVMBridge is
     // Leaf type message
     uint8 private constant _LEAF_TYPE_MESSAGE = 1;
 
+    // Nullifier offset
+    uint256 private constant _MAX_LEAFS_PER_NETWORK = 2 ** 32;
+
+    // // Indicate where's the mainnet flag bit in the global index
+    uint256 private constant _GLOBAL_INDEX_MAINNET_FLAG = 2 ** 64;
+
     // Network identifier
     uint32 public networkID;
 
     // Global Exit Root address
-    IBasePolygonZkEVMGlobalExitRoot public polygonZkEVMGlobalExitRoot;
+    IBasePolygonZkEVMGlobalExitRoot public globalExitRootManager;
 
     // Last updated deposit count to the global exit root manager
     uint32 public lastUpdatedDepositCount;
@@ -65,32 +71,64 @@ contract PolygonZkEVMBridge is
     // Wrapped token Address --> Origin token information
     mapping(address => TokenInformation) public wrappedTokenToTokenInfo;
 
-    // PolygonZkEVM address
-    address public polygonZkEVMaddress;
+    // Rollup manager address, previously PolygonZkEVM
+    /// @custom:oz-renamed-from polygonZkEVMaddress
+    address public polygonRollupManager;
+
+    // Native address
+    address public gasTokenAddress;
+
+    // Native address
+    uint32 public gasTokenNetwork;
+
+    // WETH address
+    TokenWrapped public WETHToken;
 
     /**
      * @param _networkID networkID
-     * @param _polygonZkEVMGlobalExitRoot global exit root manager address
-     * @param _polygonZkEVMaddress polygonZkEVM address
-     * @notice The value of `_polygonZkEVMaddress` on the L2 deployment of the contract will be address(0), so
+     * @param _gasTokenAddress gas token address
+     * @param _gasTokenNetwork gas token network
+     * @param _globalExitRootManager global exit root manager address
+     * @param _polygonRollupManager polygonZkEVM address
+     * @notice The value of `_polygonRollupManager` on the L2 deployment of the contract will be address(0), so
      * emergency state is not possible for the L2 deployment of the bridge, intentionally
      */
     function initialize(
         uint32 _networkID,
-        IBasePolygonZkEVMGlobalExitRoot _polygonZkEVMGlobalExitRoot,
-        address _polygonZkEVMaddress
+        address _gasTokenAddress,
+        uint32 _gasTokenNetwork,
+        IBasePolygonZkEVMGlobalExitRoot _globalExitRootManager,
+        address _polygonRollupManager
     ) external virtual initializer {
         networkID = _networkID;
-        polygonZkEVMGlobalExitRoot = _polygonZkEVMGlobalExitRoot;
-        polygonZkEVMaddress = _polygonZkEVMaddress;
+        globalExitRootManager = _globalExitRootManager;
+        polygonRollupManager = _polygonRollupManager;
+
+        // Set gas token
+        if (gasTokenAddress == address(0)) {
+            // gas token will be ether
+            if (gasTokenNetwork != 0) {
+                revert GasTokenNetworkMustBeZeroOnEther();
+            }
+            //WETHToken, gasTokenAddress and gasTokenNetwork will be 0
+        } else {
+            // Gas token will be an erc20
+            gasTokenAddress = _gasTokenAddress;
+            gasTokenNetwork = _gasTokenNetwork;
+            WETHToken = (new TokenWrapped){salt: bytes32(0)}(
+                "Wrapped Ether",
+                "WETH",
+                18
+            );
+        }
 
         // Initialize OZ contracts
         __ReentrancyGuard_init();
     }
 
-    modifier onlyPolygonZkEVM() {
-        if (polygonZkEVMaddress != msg.sender) {
-            revert OnlyPolygonZkEVM();
+    modifier onlyRollupManager() {
+        if (polygonRollupManager != msg.sender) {
+            revert OnlyRollupManager();
         }
         _;
     }
@@ -113,7 +151,7 @@ contract PolygonZkEVMBridge is
      * @dev Emitted when a claim is done from another network
      */
     event ClaimEvent(
-        uint32 index,
+        uint256 globalIndex,
         uint32 originNetwork,
         address originAddress,
         address destinationAddress,
@@ -132,11 +170,15 @@ contract PolygonZkEVMBridge is
 
     /**
      * @notice Deposit add a new leaf to the merkle tree
+     * note If this function is called with a reentrant token, it would be possible to `claimTokens` in the same call
+     * Reducing the supply of tokens on this contract, and actually locking tokens in the contract.
+     * Therefore we recommend to third parties bridges that if they do implement reentrant call of `beforeTransfer` of some reentrant tokens
+     * do not call any external address in that case
      * @param destinationNetwork Network destination
      * @param destinationAddress Address destination
      * @param amount Amount of tokens
      * @param token Token address, 0 address is reserved for ether
-     * @param forceUpdateGlobalExitRoot Indicates if the new root is updated or not
+     * @param forceUpdateGlobalExitRoot Indicates if the new global exit root is updated or not
      * @param permitData Raw data of the call `permit` of the token
      */
     function bridgeAsset(
@@ -147,10 +189,8 @@ contract PolygonZkEVMBridge is
         bool forceUpdateGlobalExitRoot,
         bytes calldata permitData
     ) public payable virtual ifNotEmergencyState nonReentrant {
-        if (
-            destinationNetwork == networkID ||
-            destinationNetwork >= _CURRENT_SUPPORTED_NETWORKS
-        ) {
+        // User/UI must be aware of the existing/available networks
+        if (destinationNetwork == networkID) {
             revert DestinationNetworkInvalid();
         }
 
@@ -160,13 +200,14 @@ contract PolygonZkEVMBridge is
         uint256 leafAmount = amount;
 
         if (token == address(0)) {
-            // Ether transfer
+            // Check gas token transfer
             if (msg.value != amount) {
                 revert AmountDoesNotMatchMsgValue();
             }
 
-            // Ether is treated as ether from mainnet
-            originNetwork = _MAINNET_NETWORK_ID;
+            // Set gas token parameters
+            originNetwork = gasTokenNetwork;
+            originTokenAddress = gasTokenAddress;
         } else {
             // Check msg.value is 0 if tokens are bridged
             if (msg.value != 0) {
@@ -204,7 +245,7 @@ contract PolygonZkEVMBridge is
      * @notice Bridge message and send ETH value
      * @param destinationNetwork Network destination
      * @param destinationAddress Address destination
-     * @param forceUpdateGlobalExitRoot Indicates if the new root is updated or not
+     * @param forceUpdateGlobalExitRoot Indicates if the new global exit root is updated or not
      * @param metadata Message metadata
      */
     function bridgeMessage(
@@ -212,11 +253,70 @@ contract PolygonZkEVMBridge is
         address destinationAddress,
         bool forceUpdateGlobalExitRoot,
         bytes calldata metadata
-    ) external payable ifNotEmergencyState {
-        if (
-            destinationNetwork == networkID ||
-            destinationNetwork >= _CURRENT_SUPPORTED_NETWORKS
-        ) {
+    ) external payable {
+        // If exist a gas token, only let call this function without value
+        if (msg.value != 0 && address(WETHToken) != address(0)) {
+            revert NoValueInMessagesOnGasTokenNetworks();
+        }
+
+        _bridgeMessage(
+            destinationNetwork,
+            destinationAddress,
+            msg.value,
+            forceUpdateGlobalExitRoot,
+            metadata
+        );
+    }
+
+    /**
+     * @notice Bridge message and send ETH value
+     * @param destinationNetwork Network destination
+     * @param destinationAddress Address destination
+     * @param amountWETH Amount of WETH tokens
+     * @param forceUpdateGlobalExitRoot Indicates if the new global exit root is updated or not
+     * @param metadata Message metadata
+     */
+    function bridgeMessageWETH(
+        uint32 destinationNetwork,
+        address destinationAddress,
+        uint256 amountWETH,
+        bool forceUpdateGlobalExitRoot,
+        bytes calldata metadata
+    ) external {
+        // if native token is ether, disable this function
+        if (address(WETHToken) == address(0)) {
+            revert NativeTokenIsEther();
+        }
+
+        // Burn wETH tokens
+        WETHToken.burn(msg.sender, amountWETH);
+
+        _bridgeMessage(
+            destinationNetwork,
+            destinationAddress,
+            amountWETH,
+            forceUpdateGlobalExitRoot,
+            metadata
+        );
+    }
+
+    /**
+     * @notice Bridge message and send ETH value
+     * @param destinationNetwork Network destination
+     * @param destinationAddress Address destination
+     * @param amountEther Amount of ether along with the message
+     * @param forceUpdateGlobalExitRoot Indicates if the new global exit root is updated or not
+     * @param metadata Message metadata
+     */
+    function _bridgeMessage(
+        uint32 destinationNetwork,
+        address destinationAddress,
+        uint256 amountEther,
+        bool forceUpdateGlobalExitRoot,
+        bytes calldata metadata
+    ) internal {
+        // User/UI must be aware of the existing/available networks
+        if (destinationNetwork == networkID) {
             revert DestinationNetworkInvalid();
         }
 
@@ -226,7 +326,7 @@ contract PolygonZkEVMBridge is
             msg.sender,
             destinationNetwork,
             destinationAddress,
-            msg.value,
+            amountEther,
             metadata,
             uint32(depositCount)
         );
@@ -239,8 +339,14 @@ contract PolygonZkEVMBridge is
 
     /**
      * @notice Verify merkle proof and withdraw tokens/ether
-     * @param smtProof Smt proof
-     * @param index Index of the leaf
+     * @param smtProofLocalExitRoot Smt proof to proof the leaf agains the exit root
+     * @param smtProofRollupExitRoot Smt proof to proof the rollupLocalExitRoot agains the RollupExitRoot
+     * @param globalIndex Global index is defined as:
+     * [0:190] not checked, [191] mainnet flag, rollupIndex [192, 223], localRootIndex[224, 255]
+     * note that only the rollup index will be used only in case the mainnet flag is 0
+     * note that global index do not assert the unused bits to 0.
+     * This means that when synching the events, the globalIndex must be decoded the same way that in the Smart contract
+     * To avoid possible synch attacks
      * @param mainnetExitRoot Mainnet exit root
      * @param rollupExitRoot Rollup exit root
      * @param originNetwork Origin network
@@ -251,8 +357,9 @@ contract PolygonZkEVMBridge is
      * @param metadata Abi encoded metadata if any, empty otherwise
      */
     function claimAsset(
-        bytes32[_DEPOSIT_CONTRACT_TREE_DEPTH] calldata smtProof,
-        uint32 index,
+        bytes32[_DEPOSIT_CONTRACT_TREE_DEPTH] calldata smtProofLocalExitRoot,
+        bytes32[_DEPOSIT_CONTRACT_TREE_DEPTH] calldata smtProofRollupExitRoot,
+        uint256 globalIndex,
         bytes32 mainnetExitRoot,
         bytes32 rollupExitRoot,
         uint32 originNetwork,
@@ -264,22 +371,29 @@ contract PolygonZkEVMBridge is
     ) external ifNotEmergencyState {
         // Verify leaf exist and it does not have been claimed
         _verifyLeaf(
-            smtProof,
-            index,
+            smtProofLocalExitRoot,
+            smtProofRollupExitRoot,
+            globalIndex,
             mainnetExitRoot,
             rollupExitRoot,
-            originNetwork,
-            originTokenAddress,
-            destinationNetwork,
-            destinationAddress,
-            amount,
-            metadata,
-            _LEAF_TYPE_ASSET
+            getLeafValue(
+                _LEAF_TYPE_ASSET,
+                originNetwork,
+                originTokenAddress,
+                destinationNetwork,
+                destinationAddress,
+                amount,
+                keccak256(metadata)
+            )
         );
 
         // Transfer funds
         if (originTokenAddress == address(0)) {
-
+            if (address(WETHToken) == address(0)) {
+            } else {
+                // Claim wETH
+                WETHToken.mint(destinationAddress, amount);
+            }
         } else {
             emit NewWrappedToken(
                 originNetwork,
@@ -290,7 +404,7 @@ contract PolygonZkEVMBridge is
         }
 
         emit ClaimEvent(
-            index,
+            globalIndex,
             originNetwork,
             originTokenAddress,
             destinationAddress,
@@ -303,8 +417,14 @@ contract PolygonZkEVMBridge is
      * If the receiving address is an EOA, the call will result as a success
      * Which means that the amount of ether will be transferred correctly, but the message
      * will not trigger any execution
-     * @param smtProof Smt proof
-     * @param index Index of the leaf
+     * @param smtProofLocalExitRoot Smt proof to proof the leaf agains the exit root
+     * @param smtProofRollupExitRoot Smt proof to proof the rollupLocalExitRoot agains the RollupExitRoot
+     * @param globalIndex Global index is defined as:
+     * [0:190] not checked, [191] mainnet flag, rollupIndex [192, 223], localRootIndex [224, 255]
+     * note that only the rollup index will be used only in case the mainnet flag is 0
+     * note that global index do not assert the unused bits to 0.
+     * This means that when synching the events, the globalIndex must be decoded the same way that in the Smart contract
+     * To avoid possible synch attacks
      * @param mainnetExitRoot Mainnet exit root
      * @param rollupExitRoot Rollup exit root
      * @param originNetwork Origin network
@@ -315,8 +435,9 @@ contract PolygonZkEVMBridge is
      * @param metadata Abi encoded metadata if any, empty otherwise
      */
     function claimMessage(
-        bytes32[_DEPOSIT_CONTRACT_TREE_DEPTH] calldata smtProof,
-        uint32 index,
+        bytes32[_DEPOSIT_CONTRACT_TREE_DEPTH] calldata smtProofLocalExitRoot,
+        bytes32[_DEPOSIT_CONTRACT_TREE_DEPTH] calldata smtProofRollupExitRoot,
+        uint256 globalIndex,
         bytes32 mainnetExitRoot,
         bytes32 rollupExitRoot,
         uint32 originNetwork,
@@ -326,23 +447,31 @@ contract PolygonZkEVMBridge is
         uint256 amount,
         bytes calldata metadata
     ) external ifNotEmergencyState {
+        // Destination network must be this networkID
+        if (destinationNetwork != networkID) {
+            revert DestinationNetworkInvalid();
+        }
+
         // Verify leaf exist and it does not have been claimed
         _verifyLeaf(
-            smtProof,
-            index,
+            smtProofLocalExitRoot,
+            smtProofRollupExitRoot,
+            globalIndex,
             mainnetExitRoot,
             rollupExitRoot,
-            originNetwork,
-            originAddress,
-            destinationNetwork,
-            destinationAddress,
-            amount,
-            metadata,
-            _LEAF_TYPE_MESSAGE
+            getLeafValue(
+                _LEAF_TYPE_MESSAGE,
+                originNetwork,
+                originAddress,
+                destinationNetwork,
+                destinationAddress,
+                amount,
+                keccak256(metadata)
+            )
         );
 
         emit ClaimEvent(
-            index,
+            globalIndex,
             originNetwork,
             originAddress,
             destinationAddress,
@@ -409,7 +538,7 @@ contract PolygonZkEVMBridge is
      * @notice Function to activate the emergency state
      " Only can be called by the Polygon ZK-EVM in extreme situations
      */
-    function activateEmergencyState() external onlyPolygonZkEVM {
+    function activateEmergencyState() external onlyRollupManager {
         _activateEmergencyState();
     }
 
@@ -417,57 +546,57 @@ contract PolygonZkEVMBridge is
      * @notice Function to deactivate the emergency state
      " Only can be called by the Polygon ZK-EVM
      */
-    function deactivateEmergencyState() external onlyPolygonZkEVM {
+    function deactivateEmergencyState() external onlyRollupManager {
         _deactivateEmergencyState();
     }
 
     /**
      * @notice Verify leaf and checks that it has not been claimed
-     * @param smtProof Smt proof
-     * @param index Index of the leaf
+     * @param smtProofLocalExitRoot Smt proof
+     * @param smtProofRollupExitRoot Smt proof
+     * @param globalIndex Index of the leaf
      * @param mainnetExitRoot Mainnet exit root
      * @param rollupExitRoot Rollup exit root
-     * @param originNetwork Origin network
-     * @param originAddress Origin address
-     * @param destinationNetwork Network destination
-     * @param destinationAddress Address destination
-     * @param amount Amount of tokens
-     * @param metadata Abi encoded metadata if any, empty otherwise
-     * @param leafType Leaf type -->  [0] transfer Ether / ERC20 tokens, [1] message
+     * @param leafValue leaf value
      */
     function _verifyLeaf(
-        bytes32[_DEPOSIT_CONTRACT_TREE_DEPTH] calldata smtProof,
-        uint32 index,
+        bytes32[_DEPOSIT_CONTRACT_TREE_DEPTH] calldata smtProofLocalExitRoot,
+        bytes32[_DEPOSIT_CONTRACT_TREE_DEPTH] calldata smtProofRollupExitRoot,
+        uint256 globalIndex,
         bytes32 mainnetExitRoot,
         bytes32 rollupExitRoot,
-        uint32 originNetwork,
-        address originAddress,
-        uint32 destinationNetwork,
-        address destinationAddress,
-        uint256 amount,
-        bytes calldata metadata,
-        uint8 leafType
+        bytes32 leafValue
     ) internal {
         // Set and check nullifier
-        _setAndCheckClaimed(index);
+        _setAndCheckClaimed(0, 0);
     }
 
     /**
      * @notice Function to check if an index is claimed or not
-     * @param index Index
+     * @param leafIndex Index
+     * @param sourceBridgeNetwork origin network
      */
-    function isClaimed(uint256 index) external view returns (bool) {
-        (uint256 wordPos, uint256 bitPos) = _bitmapPositions(index);
+    function isClaimed(
+        uint32 leafIndex,
+        uint32 sourceBridgeNetwork
+    ) external view returns (bool) {
+        uint256 globalIndex;
+        (uint256 wordPos, uint256 bitPos) = _bitmapPositions(globalIndex);
         uint256 mask = (1 << bitPos);
         return (claimedBitMap[wordPos] & mask) == mask;
     }
 
     /**
      * @notice Function to check that an index is not claimed and set it as claimed
-     * @param index Index
+     * @param leafIndex Index
+     * @param sourceBridgeNetwork origin network
      */
-    function _setAndCheckClaimed(uint256 index) private {
-        (uint256 wordPos, uint256 bitPos) = _bitmapPositions(index);
+    function _setAndCheckClaimed(
+        uint32 leafIndex,
+        uint32 sourceBridgeNetwork
+    ) private {
+        uint256 globalIndex;
+        (uint256 wordPos, uint256 bitPos) = _bitmapPositions(globalIndex);
         uint256 mask = 1 << bitPos;
         uint256 flipped = claimedBitMap[wordPos] ^= mask;
         if (flipped & mask == 0) {
@@ -489,7 +618,7 @@ contract PolygonZkEVMBridge is
      */
     function _updateGlobalExitRoot() internal {
         lastUpdatedDepositCount = uint32(depositCount);
-        polygonZkEVMGlobalExitRoot.updateExitRoot(getDepositRoot());
+        globalExitRootManager.updateExitRoot(getRoot());
     }
 
     /**
