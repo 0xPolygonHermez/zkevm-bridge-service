@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"fmt"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/nacos"
 	"google.golang.org/protobuf/encoding/protojson"
 	"net"
 	"net/http"
@@ -18,6 +19,12 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/health/grpc_health_v1"
 )
+
+func RegisterNacos(cfg nacos.Config) {
+	if cfg.NacosUrls != "" {
+		nacos.StartNacosClient(cfg.NacosUrls, cfg.NamespaceId, cfg.ApplicationName, cfg.ExternalListenAddr)
+	}
+}
 
 // RunServer runs gRPC server and HTTP gateway
 func RunServer(cfg Config, bridgeService pb.BridgeServiceServer) error {

@@ -104,6 +104,9 @@ func startServer(ctx *cli.Context) error {
 		return err
 	}
 	bridgeService := server.NewBridgeService(c.BridgeServer, c.BridgeController.Height, networkIDs, chainIDs, apiStorage, redisStorage, mainCoinsCache)
+
+	server.RegisterNacos(c.NacosConfig)
+
 	err = server.RunServer(c.BridgeServer, bridgeService)
 	if err != nil {
 		log.Error(err)

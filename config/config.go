@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/coinmiddleware"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/nacos"
 	"path/filepath"
 	"strings"
 
@@ -30,6 +31,7 @@ type Config struct {
 	BridgeServer      server.Config
 	CoinKafkaConsumer coinmiddleware.Config
 	NetworkConfig
+	NacosConfig nacos.Config
 }
 
 // Load loads the configuration
