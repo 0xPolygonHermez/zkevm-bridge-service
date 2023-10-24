@@ -18,6 +18,7 @@ type Block struct {
 	Deposits        []Deposit
 	Claims          []Claim
 	Tokens          []TokenWrapped
+	VerifiedBatches []VerifiedBatch
 	ReceivedAt      time.Time
 }
 
@@ -76,4 +77,14 @@ type TokenMetadata struct {
 	Name     string
 	Symbol   string
 	Decimals uint8
+}
+
+type VerifiedBatch struct {
+	BlockNumber uint64
+	BatchNumber uint64
+	RollupID uint
+	LocalExitRoot common.Hash
+	TxHash common.Hash
+	StateRoot common.Hash
+	Aggregator common.Address
 }
