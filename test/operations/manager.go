@@ -16,7 +16,7 @@ import (
 	"github.com/0xPolygonHermez/zkevm-bridge-service/utils"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/utils/gerror"
 	"github.com/0xPolygonHermez/zkevm-node/encoding"
-	erc20 "github.com/0xPolygonHermez/zkevm-node/etherman/smartcontracts/matic"
+	erc20 "github.com/0xPolygonHermez/zkevm-node/etherman/smartcontracts/pol"
 	"github.com/0xPolygonHermez/zkevm-node/etherman/smartcontracts/polygonzkevmbridge"
 	"github.com/0xPolygonHermez/zkevm-node/etherman/smartcontracts/polygonzkevmglobalexitroot"
 	"github.com/0xPolygonHermez/zkevm-node/log"
@@ -42,8 +42,8 @@ const (
 	l1NetworkURL = "http://localhost:8545"
 	l2NetworkURL = "http://localhost:8123"
 
-	// MaticTokenAddress token address
-	MaticTokenAddress = "0x5FbDB2315678afecb367f032d93F642f64180aa3" //nolint:gosec
+	// PolTokenAddress token address
+	PolTokenAddress = "0x5FbDB2315678afecb367f032d93F642f64180aa3" //nolint:gosec
 	l1BridgeAddr      = "0xff0EE8ea08cEf5cb4322777F5CC3E8A584B8A4A0"
 	l2BridgeAddr      = "0xff0EE8ea08cEf5cb4322777F5CC3E8A584B8A4A0"
 
@@ -291,7 +291,7 @@ func (m *Manager) Setup() error {
 	return nil
 }
 
-// AddFunds adds matic and eth to the zkevm node wallet.
+// AddFunds adds pol and eth to the zkevm node wallet.
 func (m *Manager) AddFunds(ctx context.Context) error {
 	// Eth client
 	log.Infof("Connecting to l1")
@@ -336,26 +336,26 @@ func (m *Manager) AddFunds(ctx context.Context) error {
 		return err
 	}
 
-	// Create matic maticTokenSC sc instance
-	log.Infof("Loading Matic token SC instance")
-	maticAddr := common.HexToAddress(MaticTokenAddress)
-	maticTokenSC, err := operations.NewToken(maticAddr, client)
+	// Create pol polTokenSC sc instance
+	log.Infof("Loading pol token SC instance")
+	polAddr := common.HexToAddress(PolTokenAddress)
+	PolTokenSC, err := operations.NewToken(polAddr, client)
 	if err != nil {
 		return err
 	}
 
-	// Send matic to sequencer
-	log.Infof("Transferring MATIC tokens to sequencer")
-	maticAmount, _ := big.NewInt(0).SetString("200000000000000000000000", encoding.Base10)
-	tx, err = maticTokenSC.Transfer(auth, toAddress, maticAmount)
+	// Send pol to sequencer
+	log.Infof("Transferring pol tokens to sequencer")
+	polAmount, _ := big.NewInt(0).SetString("200000000000000000000000", encoding.Base10)
+	tx, err = polTokenSC.Transfer(auth, toAddress, polAmount)
 	if err != nil {
 		return err
 	}
 
-	// wait matic transfer to be mined
+	// wait pol transfer to be mined
 	log.Infof("Waiting tx to be mined")
-	const txMaticTransferTimeout = 5 * time.Second
-	return WaitTxToBeMined(ctx, client.Client, tx, txMaticTransferTimeout)
+	const txPolTransferTimeout = 5 * time.Second
+	return WaitTxToBeMined(ctx, client.Client, tx, txPolTransferTimeout)
 }
 
 // Teardown stops all the components.
@@ -493,7 +493,7 @@ func (m *Manager) CheckAccountTokenBalance(ctx context.Context, network NetworkS
 	if account == nil {
 		account = &auth.From
 	}
-	erc20Token, err := erc20.NewMatic(tokenAddr, client)
+	erc20Token, err := erc20.NewPol(tokenAddr, client)
 	if err != nil {
 		return big.NewInt(0), nil
 	}

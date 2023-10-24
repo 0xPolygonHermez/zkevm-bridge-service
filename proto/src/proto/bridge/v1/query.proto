@@ -84,7 +84,7 @@ message Deposit {
 
 // Claim message
 message Claim {
-    uint64 index = 1;
+    uint64 global_index = 1;
     uint32 orig_net = 2;
     string orig_addr = 3;
     string amount = 4;

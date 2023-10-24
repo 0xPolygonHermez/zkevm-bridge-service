@@ -33,11 +33,11 @@ func newTestingEnv() (*Client, *backends.SimulatedBackend, *bind.TransactOpts, c
 	if err != nil {
 		log.Fatal(err)
 	}
-	ethman, ethBackend, maticAddr, bridge, zkevm, err := NewSimulatedEtherman(Config{}, auth)
+	ethman, ethBackend, polAddr, bridge, zkevm, err := NewSimulatedEtherman(Config{}, auth)
 	if err != nil {
 		log.Fatal(err)
 	}
-	return ethman, ethBackend, auth, maticAddr, bridge, zkevm
+	return ethman, ethBackend, auth, polAddr, bridge, zkevm
 }
 
 func TestGEREvent(t *testing.T) {
@@ -70,7 +70,7 @@ func TestGEREvent(t *testing.T) {
 
 func TestBridgeEvents(t *testing.T) {
 	// Set up testing environment
-	etherman, ethBackend, auth, maticAddr, bridge, _ := newTestingEnv()
+	etherman, ethBackend, auth, polAddr, bridge, _ := newTestingEnv()
 
 	// Read currentBlock
 	ctx := context.Background()
@@ -81,7 +81,7 @@ func TestBridgeEvents(t *testing.T) {
 	amount := big.NewInt(9000000000000000000)
 	var destNetwork uint32 = 1 // 0 is reserved to mainnet. This variable is set in the smc
 	destinationAddr := common.HexToAddress("0x61A1d716a74fb45d29f148C6C20A2eccabaFD753")
-	_, err = bridge.BridgeAsset(auth, destNetwork, destinationAddr, amount, maticAddr, true, []byte{})
+	_, err = bridge.BridgeAsset(auth, destNetwork, destinationAddr, amount, polAddr, true, []byte{})
 	require.NoError(t, err)
 
 	// Mine the tx in a block
@@ -108,7 +108,7 @@ func TestBridgeEvents(t *testing.T) {
 
 	destNetwork = 1
 	_, err = bridge.ClaimAsset(auth, smtProofLocalExitRoot, smtProofRollupExitRoot, globalIndex, mainnetExitRoot, rollupExitRoot,
-		network, maticAddr, destNetwork, auth.From, big.NewInt(1000000000000000000), []byte{})
+		network, polAddr, destNetwork, auth.From, big.NewInt(1000000000000000000), []byte{})
 	require.NoError(t, err)
 
 	// Mine the tx in a block
@@ -125,7 +125,7 @@ func TestBridgeEvents(t *testing.T) {
 	assert.Equal(t, uint64(6), block[0].BlockNumber)
 	assert.NotEqual(t, common.Address{}, block[0].Claims[0].OriginalAddress)
 	assert.Equal(t, auth.From, block[0].Claims[0].DestinationAddress)
-	assert.Equal(t, uint64(0), block[0].Claims[0].Index)
+	assert.Equal(t, uint64(0), block[0].Claims[0].GlobalIndex)
 	assert.Equal(t, uint(0), block[0].Claims[0].OriginalNetwork)
 	assert.Equal(t, uint64(6), block[0].Claims[0].BlockNumber)
 }

@@ -9,6 +9,7 @@ import (
 	clientUtils "github.com/0xPolygonHermez/zkevm-bridge-service/test/client"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/utils"
 	"github.com/0xPolygonHermez/zkevm-node/etherman/smartcontracts/polygonzkevm"
+	"github.com/0xPolygonHermez/zkevm-node/etherman/smartcontracts/polygonrollupmanager"
 	"github.com/0xPolygonHermez/zkevm-node/hex"
 	"github.com/0xPolygonHermez/zkevm-node/log"
 	"github.com/0xPolygonHermez/zkevm-node/state"
@@ -20,8 +21,9 @@ import (
 )
 
 const (
-	l2BridgeAddr = "0xff0EE8ea08cEf5cb4322777F5CC3E8A584B8A4A0"
-	zkevmAddr    = "0x610178dA211FEF7D417bC0e6FeD39F05609AD788"
+	l2BridgeAddr = "0x40E0576c0A7dff9dc460B29ba73e79aBf73dD2a9"
+	zkevmAddr    = "0x8dAF17A20c9DBA35f005b6324F493785D239719d"
+	rollupManagerAddr = "0xB7f8BC63BbcaD18155201308C8f3540b07f84F5e"
 
 	accHexAddress    = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
 	accHexPrivateKey = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
@@ -141,6 +143,11 @@ func main() {
 	if err != nil {
 		log.Fatal("error: ", err)
 	}
+	polygonRollupManagerAddress := common.HexToAddress(rollupManagerAddr)
+	polygonRollupManager, err := polygonrollupmanager.NewPolygonrollupmanager(polygonRollupManagerAddress, ethClient)
+	if err != nil {
+		log.Fatal("Error: ", err)
+	}
 	num, err := zkevm.LastForceBatch(&bind.CallOpts{Pending: false})
 	if err != nil {
 		log.Fatal("error getting lastForBatch number. Error : ", err)
@@ -154,7 +161,7 @@ func main() {
 	log.Debug("currentBlock.Time(): ", currentBlock.Time())
 
 	// Get tip
-	tip, err := zkevm.GetForcedBatchFee(&bind.CallOpts{Pending: false})
+	tip, err := polygonRollupManager.GetForcedBatchFee(&bind.CallOpts{Pending: false})
 	if err != nil {
 		log.Fatal("error getting tip. Error: ", err)
 	}

@@ -385,11 +385,11 @@ func (etherMan *Client) newClaimEvent(ctx context.Context, vLog types.Log, block
 	return etherMan.claimEvent(ctx, vLog, blocks, blocksOrder, c.Amount, c.DestinationAddress, c.OriginAddress, c.GlobalIndex.Uint64(), uint(c.OriginNetwork))
 }
 
-func (etherMan *Client) claimEvent(ctx context.Context, vLog types.Log, blocks *[]Block, blocksOrder *map[common.Hash][]Order, amount *big.Int, destinationAddress, originAddress common.Address, index uint64, originNetwork uint) error {
+func (etherMan *Client) claimEvent(ctx context.Context, vLog types.Log, blocks *[]Block, blocksOrder *map[common.Hash][]Order, amount *big.Int, destinationAddress, originAddress common.Address, globalIndex uint64, originNetwork uint) error {
 	var claim Claim
 	claim.Amount = amount
 	claim.DestinationAddress = destinationAddress
-	claim.Index = index
+	claim.GlobalIndex = globalIndex
 	claim.OriginalNetwork = originNetwork
 	claim.OriginalAddress = originAddress
 	claim.BlockNumber = vLog.BlockNumber

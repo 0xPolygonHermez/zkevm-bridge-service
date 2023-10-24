@@ -136,7 +136,7 @@ func setupLog(c log.Config) {
 }
 
 func newEthermans(c *config.Config) (*etherman.Client, []*etherman.Client, error) {
-	l1Etherman, err := etherman.NewClient(c.Etherman, c.NetworkConfig.PolygonBridgeAddress, c.NetworkConfig.PolygonZkEVMGlobalExitRootAddress)
+	l1Etherman, err := etherman.NewClient(c.Etherman, c.NetworkConfig.PolygonBridgeAddress, c.NetworkConfig.PolygonZkEVMGlobalExitRootAddress, c.NetworkConfig.PolygonRollupManagerAddress)
 	if err != nil {
 		return nil, nil, err
 	}
