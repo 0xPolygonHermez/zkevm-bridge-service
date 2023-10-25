@@ -72,7 +72,7 @@ PolygonBridgeAddress = "0xff0EE8ea08cEf5cb4322777F5CC3E8A584B8A4A0"
 PolygonZkEVMGlobalExitRootAddress = "0x2279B7A0a67DB372996a5FaB50D91eAA73d2eBe6"
 L2PolygonBridgeAddresses = ["0xff0EE8ea08cEf5cb4322777F5CC3E8A584B8A4A0"]
 
-[Nacos]
+[NacosConfig]
 NacosUrls = ""
 NamespaceId = "public"
 ApplicationName = ""

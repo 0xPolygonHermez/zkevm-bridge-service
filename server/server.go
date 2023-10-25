@@ -21,6 +21,7 @@ import (
 )
 
 func RegisterNacos(cfg nacos.Config) {
+	log.Info(fmt.Sprintf("nacos config NacosUrls %s NamespaceId %s ApplicationName %s ExternalListenAddr %s", cfg.NacosUrls, cfg.NamespaceId, cfg.ApplicationName, cfg.ExternalListenAddr))
 	if cfg.NacosUrls != "" {
 		nacos.StartNacosClient(cfg.NacosUrls, cfg.NamespaceId, cfg.ApplicationName, cfg.ExternalListenAddr)
 	}
