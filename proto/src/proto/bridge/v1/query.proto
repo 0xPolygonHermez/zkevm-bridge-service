@@ -121,6 +121,26 @@ service BridgeService {
             }
         };
     }
+
+    /// Get all transactions with ready_for_claim = false
+    rpc GetNotReadyTransactions(GetNotReadyTransactionsRequest) returns (CommonTransactionsResponse) {
+        option (google.api.http) = {
+            get: "/priapi/v1/ob/bridge/not-ready",
+            additional_bindings: {
+                get: "/not-ready"
+            }
+        };
+    }
+
+    /// Get list of monitored transactions, filtered by status
+    rpc GetMonitoredTxsByStatus(GetMonitoredTxsByStatusRequest) returns (CommonMonitoredTxsResponse) {
+        option (google.api.http) = {
+            get: "/priapi/v1/ob/bridge/monitored-txs/status/{status}",
+            additional_bindings: {
+                get: "/monitored-txs/status/{status}"
+            }
+        };
+    }
 }
 
 // TokenWrapped message
@@ -214,6 +234,23 @@ message Transaction {
     string metadata = 15;
 }
 
+// Monitored tx
+message MonitoredTx {
+    uint64 id = 1;
+    string from = 2; // Sender address of the tx
+    string to = 3; // Receiver address of the tx
+    uint64 nonce = 4; // Nonce used to create the tx
+    string value = 5; // Transaction value
+    string data = 6; // Transaction data
+    uint64 gas = 7;
+    string gasPrice = 8;
+    string status = 9; // created/confirmed/failed
+    uint64 blockId = 10;
+    repeated string history = 11; // List of all transaction hashes created from this tx and sent to the network. The order of transactions is NOT guaranteed.
+    uint64 createdAt = 12; // Unix timestamp ms
+    uint64 updatedAt = 13; // Unix timestamp ms
+}
+
 // Get requests
 
 message CheckAPIRequest {}
@@ -261,6 +298,17 @@ message GetPendingTransactionsRequest {
 
 message GetAllTransactionsRequest {
     string destAddr = 1;
+    uint64 offset = 2;
+    uint32 limit = 3;
+}
+
+message GetNotReadyTransactionsRequest {
+    uint64 offset = 1;
+    uint32 limit = 2;
+}
+
+message GetMonitoredTxsByStatusRequest {
+    string status = 1; // created/failed/confirmed
     uint64 offset = 2;
     uint32 limit = 3;
 }
@@ -359,4 +407,18 @@ message ProofDetail {
 message GetSmtProofRequest {
     uint32 index = 1;
     uint64 fromChain = 2;
+}
+
+message CommonMonitoredTxsResponse {
+    uint32 code = 1;
+    string msg = 2;
+    string error_code = 3;
+    string error_message = 4;
+    string detailMsg = 5;
+    MonitoredTxsDetail data = 6;
+}
+
+message MonitoredTxsDetail {
+    bool hasNext = 1;
+    repeated MonitoredTx transactions = 2;
 }

@@ -242,7 +242,7 @@ func (tm *ClaimTxManager) monitorTxs(ctx context.Context) error {
 	}
 
 	statusesFilter := []ctmtypes.MonitoredTxStatus{ctmtypes.MonitoredTxStatusCreated}
-	mTxs, err := tm.storage.GetClaimTxsByStatus(ctx, statusesFilter, dbTx)
+	mTxs, err := tm.storage.GetClaimTxsByStatus(ctx, statusesFilter, 100, 0, dbTx)
 	if err != nil {
 		return fmt.Errorf("failed to get created monitored txs: %v", err)
 	}

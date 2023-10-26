@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
+
 	ctmtypes "github.com/0xPolygonHermez/zkevm-bridge-service/claimtxman/types"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/localcache"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/redisstorage"
@@ -555,5 +556,109 @@ func (s *bridgeService) GetAllTransactions(ctx context.Context, req *pb.GetAllTr
 	return &pb.CommonTransactionsResponse{
 		Code: defaultSuccessCode,
 		Data: &pb.TransactionDetail{HasNext: hasNext, Transactions: pbTransactions},
+	}, nil
+}
+
+// GetNotReadyTransactions returns all deposit transactions with ready_for_claim = false
+func (s *bridgeService) GetNotReadyTransactions(ctx context.Context, req *pb.GetNotReadyTransactionsRequest) (*pb.CommonTransactionsResponse, error) {
+	limit := req.Limit
+	if limit == 0 {
+		limit = s.defaultPageLimit
+	}
+	if limit > s.maxPageLimit {
+		limit = s.maxPageLimit
+	}
+
+	deposits, err := s.storage.GetNotReadyTransactions(ctx, uint(limit+1), uint(req.Offset), nil)
+	if err != nil {
+		return &pb.CommonTransactionsResponse{
+			Code: defaultErrorCode,
+			Data: nil,
+		}, nil
+	}
+
+	hasNext := len(deposits) > int(limit)
+	if hasNext {
+		deposits = deposits[0:limit]
+	}
+
+	var pbTransactions []*pb.Transaction
+	for _, deposit := range deposits {
+		defaultTxEstimateTime := defaultL1TxEstimateTime
+		if deposit.NetworkID == 1 {
+			defaultTxEstimateTime = defaultL2TxEstimateTime
+		}
+		transaction := &pb.Transaction{
+			FromChain:    uint32(deposit.NetworkID),
+			ToChain:      uint32(deposit.DestinationNetwork),
+			BridgeToken:  deposit.OriginalAddress.Hex(),
+			TokenAmount:  deposit.Amount.String(),
+			EstimateTime: uint32(defaultTxEstimateTime),
+			Status:       0,
+			Time:         uint64(deposit.Time.UnixMilli()),
+			TxHash:       deposit.TxHash.String(),
+			FromChainId:  uint32(s.chainIDs[deposit.NetworkID]),
+			ToChainId:    uint32(s.chainIDs[deposit.DestinationNetwork]),
+			Id:           deposit.Id,
+			Index:        uint64(deposit.DepositCount),
+			Metadata:     "0x" + hex.EncodeToString(deposit.Metadata),
+		}
+		pbTransactions = append(pbTransactions, transaction)
+	}
+
+	return &pb.CommonTransactionsResponse{
+		Code: defaultSuccessCode,
+		Data: &pb.TransactionDetail{HasNext: hasNext, Transactions: pbTransactions},
+	}, nil
+}
+
+// GetMonitoredTxsByStatus returns list of monitored transactions, filtered by status
+func (s *bridgeService) GetMonitoredTxsByStatus(ctx context.Context, req *pb.GetMonitoredTxsByStatusRequest) (*pb.CommonMonitoredTxsResponse, error) {
+	limit := req.Limit
+	if limit == 0 {
+		limit = s.defaultPageLimit
+	}
+	if limit > s.maxPageLimit {
+		limit = s.maxPageLimit
+	}
+
+	mTxs, err := s.storage.GetClaimTxsByStatus(ctx, []ctmtypes.MonitoredTxStatus{ctmtypes.MonitoredTxStatusFailed}, uint(limit+1), uint(req.Offset), nil)
+	if err != nil {
+		return &pb.CommonMonitoredTxsResponse{
+			Code: defaultErrorCode,
+			Data: nil,
+		}, nil
+	}
+
+	hasNext := len(mTxs) > int(limit)
+	if hasNext {
+		mTxs = mTxs[0:limit]
+	}
+
+	var pbTransactions []*pb.MonitoredTx
+	for _, mTx := range mTxs {
+		transaction := &pb.MonitoredTx{
+			Id:        uint64(mTx.ID),
+			From:      "0x" + mTx.From.String(),
+			To:        "0x" + mTx.To.String(),
+			Nonce:     mTx.Nonce,
+			Value:     mTx.Value.String(),
+			Data:      "0x" + hex.EncodeToString(mTx.Data),
+			Gas:       mTx.Gas,
+			GasPrice:  mTx.GasPrice.String(),
+			Status:    string(mTx.Status),
+			BlockId:   mTx.BlockID,
+			CreatedAt: uint64(mTx.CreatedAt.UnixMilli()),
+			UpdatedAt: uint64(mTx.UpdatedAt.UnixMilli()),
+		}
+		for h := range mTx.History {
+			transaction.History = append(transaction.History, h.String())
+		}
+		pbTransactions = append(pbTransactions, transaction)
+	}
+
+	return &pb.CommonMonitoredTxsResponse{
+		Code: defaultSuccessCode,
+		Data: &pb.MonitoredTxsDetail{HasNext: hasNext, Transactions: pbTransactions},
 	}, nil
 }
