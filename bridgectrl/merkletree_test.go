@@ -97,24 +97,31 @@ func TestMTAddLeaf(t *testing.T) {
 
 			amount, result := new(big.Int).SetString(testVector.NewLeaf.Amount, 0)
 			require.True(t, result)
-			deposit := &etherman.Deposit{
-				OriginalNetwork:    testVector.NewLeaf.OriginalNetwork,
-				OriginalAddress:    common.HexToAddress(testVector.NewLeaf.TokenAddress),
-				Amount:             amount,
-				DestinationNetwork: testVector.NewLeaf.DestinationNetwork,
-				DestinationAddress: common.HexToAddress(testVector.NewLeaf.DestinationAddress),
-				BlockNumber:        0,
-				DepositCount:       uint(ti + 1),
-				Metadata:           common.FromHex(testVector.NewLeaf.Metadata),
+			var (
+				depositIDs []uint64
+				deposit    *etherman.Deposit
+			)
+			for i := 0; i <= ti; i++ {
+				deposit = &etherman.Deposit{
+					OriginalNetwork:    testVector.NewLeaf.OriginalNetwork,
+					OriginalAddress:    common.HexToAddress(testVector.NewLeaf.TokenAddress),
+					Amount:             amount,
+					DestinationNetwork: testVector.NewLeaf.DestinationNetwork,
+					DestinationAddress: common.HexToAddress(testVector.NewLeaf.DestinationAddress),
+					BlockNumber:        0,
+					DepositCount:       uint(i),
+					Metadata:           common.FromHex(testVector.NewLeaf.Metadata),
+				}
+				depositID, err := store.AddDeposit(ctx, deposit, nil)
+				require.NoError(t, err)
+				depositIDs = append(depositIDs, depositID)
 			}
-			depositID, err := store.AddDeposit(ctx, deposit, nil)
-			require.NoError(t, err)
 
 			for i, leaf := range testVector.ExistingLeaves {
 				leafValue, err := formatBytes32String(leaf[2:])
 				require.NoError(t, err)
 
-				err = mt.addLeaf(ctx, depositID, leafValue, uint(i), nil)
+				err = mt.addLeaf(ctx, depositIDs[i], leafValue, uint(i), nil)
 				require.NoError(t, err)
 			}
 			curRoot, err := mt.getRoot(ctx, nil)
@@ -122,7 +129,7 @@ func TestMTAddLeaf(t *testing.T) {
 			assert.Equal(t, hex.EncodeToString(curRoot), testVector.CurrentRoot[2:])
 
 			leafHash := hashDeposit(deposit)
-			err = mt.addLeaf(ctx, depositID, leafHash, uint(len(testVector.ExistingLeaves)), nil)
+			err = mt.addLeaf(ctx, depositIDs[len(depositIDs)-1], leafHash, uint(len(testVector.ExistingLeaves)), nil)
 			require.NoError(t, err)
 			newRoot, err := mt.getRoot(ctx, nil)
 			require.NoError(t, err)
@@ -170,7 +177,7 @@ func TestMTGetProof(t *testing.T) {
 					DestinationNetwork: leaf.DestinationNetwork,
 					DestinationAddress: common.HexToAddress(leaf.DestinationAddress),
 					BlockID:            blockID,
-					DepositCount:       uint(li + 1),
+					DepositCount:       uint(li),
 					Metadata:           common.FromHex(leaf.Metadata),
 				}
 				depositID, err := store.AddDeposit(ctx, deposit, nil)

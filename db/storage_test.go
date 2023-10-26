@@ -229,7 +229,7 @@ func TestMTStorage(t *testing.T) {
 	}
 	depositID, err := pg.AddDeposit(ctx, deposit, tx)
 	require.NoError(t, err)
-	err = pg.SetRoot(ctx, root, depositID, 1, 0, tx)
+	err = pg.SetRoot(ctx, root, depositID, 0, tx)
 	require.NoError(t, err)
 
 	err = pg.Set(ctx, root, [][]byte{leaf1, leaf2}, depositID, tx)
@@ -237,20 +237,20 @@ func TestMTStorage(t *testing.T) {
 
 	vals, err := pg.Get(ctx, root, tx)
 	require.NoError(t, err)
-	require.Equal(t, vals[0], leaf1)
-	require.Equal(t, vals[1], leaf2)
+	require.Equal(t, leaf1, vals[0])
+	require.Equal(t, leaf2, vals[1])
 
-	rRoot, err := pg.GetRoot(ctx, 1, 0, tx)
+	rRoot, err := pg.GetRoot(ctx, 0, 0, tx)
 	require.NoError(t, err)
-	require.Equal(t, rRoot, root)
+	require.Equal(t, root, rRoot)
 
 	count, err := pg.GetLastDepositCount(ctx, 0, tx)
 	require.NoError(t, err)
-	require.Equal(t, count, uint(1))
+	require.Equal(t, uint(0), count)
 
 	dCount, err := pg.GetDepositCountByRoot(ctx, root, 0, tx)
 	require.NoError(t, err)
-	require.Equal(t, dCount, uint(1))
+	require.Equal(t, uint(0), dCount)
 
 	require.NoError(t, tx.Commit(ctx))
 }

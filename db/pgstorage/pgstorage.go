@@ -32,7 +32,6 @@ func (p *PostgresStorage) getExecQuerier(dbTx pgx.Tx) execQuerier {
 
 // NewPostgresStorage creates a new Storage DB
 func NewPostgresStorage(cfg Config) (*PostgresStorage, error) {
-	log.Debugf("Create PostgresStorage with Config: %v\n", cfg)
 	config, err := pgxpool.ParseConfig(fmt.Sprintf("postgres://%s:%s@%s:%s/%s?pool_max_conns=%d", cfg.User, cfg.Password, cfg.Host, cfg.Port, cfg.Name, cfg.MaxConns))
 	if err != nil {
 		log.Errorf("Unable to parse DB config: %v\n", err)
@@ -312,7 +311,7 @@ func (p *PostgresStorage) GetTokenWrapped(ctx context.Context, originalNetwork u
 // GetDepositCountByRoot gets the deposit count by the root.
 func (p *PostgresStorage) GetDepositCountByRoot(ctx context.Context, root []byte, network uint8, dbTx pgx.Tx) (uint, error) {
 	var depositCount uint
-	const getDepositCountByRootSQL = "SELECT deposit_cnt FROM mt.root WHERE root = $1 AND network = $2"
+	const getDepositCountByRootSQL = "SELECT sync.deposit.deposit_cnt FROM mt.root INNER JOIN sync.deposit ON sync.deposit.id = mt.root.deposit_id WHERE mt.root.root = $1 AND mt.root.network = $2"
 	err := p.getExecQuerier(dbTx).QueryRow(ctx, getDepositCountByRootSQL, root, network).Scan(&depositCount)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return 0, gerror.ErrStorageNotFound
@@ -323,7 +322,7 @@ func (p *PostgresStorage) GetDepositCountByRoot(ctx context.Context, root []byte
 // GetRoot gets root by the deposit count from the merkle tree.
 func (p *PostgresStorage) GetRoot(ctx context.Context, depositCnt uint, network uint, dbTx pgx.Tx) ([]byte, error) {
 	var root []byte
-	const getRootByDepositCntSQL = "SELECT root FROM mt.root WHERE deposit_cnt = $1 AND network = $2"
+	const getRootByDepositCntSQL = "SELECT root FROM mt.root inner join sync.deposit on mt.root.deposit_id = sync.deposit.id WHERE sync.deposit.deposit_cnt = $1 AND network = $2"
 	err := p.getExecQuerier(dbTx).QueryRow(ctx, getRootByDepositCntSQL, depositCnt, network).Scan(&root)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, gerror.ErrStorageNotFound
@@ -332,9 +331,9 @@ func (p *PostgresStorage) GetRoot(ctx context.Context, depositCnt uint, network 
 }
 
 // SetRoot store the root with deposit count to the storage.
-func (p *PostgresStorage) SetRoot(ctx context.Context, root []byte, depositID uint64, depositCnt uint, network uint, dbTx pgx.Tx) error {
-	const setRootSQL = "INSERT INTO mt.root (root, deposit_id, deposit_cnt, network) VALUES ($1, $2, $3, $4);"
-	_, err := p.getExecQuerier(dbTx).Exec(ctx, setRootSQL, root, depositID, depositCnt, network)
+func (p *PostgresStorage) SetRoot(ctx context.Context, root []byte, depositID uint64, network uint, dbTx pgx.Tx) error {
+	const setRootSQL = "INSERT INTO mt.root (root, deposit_id, network) VALUES ($1, $2, $3);"
+	_, err := p.getExecQuerier(dbTx).Exec(ctx, setRootSQL, root, depositID, network)
 	return err
 }
 
@@ -367,7 +366,7 @@ func (p *PostgresStorage) BulkSet(ctx context.Context, rows [][]interface{}, dbT
 // GetLastDepositCount gets the last deposit count from the merkle tree.
 func (p *PostgresStorage) GetLastDepositCount(ctx context.Context, network uint, dbTx pgx.Tx) (uint, error) {
 	var depositCnt int64
-	const getLastDepositCountSQL = "SELECT coalesce(MAX(deposit_cnt), -1) FROM mt.root WHERE network = $1"
+	const getLastDepositCountSQL = "SELECT coalesce(MAX(deposit_cnt), -1) FROM sync.deposit WHERE id = (SELECT coalesce(MAX(deposit_id), -1) FROM mt.root WHERE network = $1)"
 	err := p.getExecQuerier(dbTx).QueryRow(ctx, getLastDepositCountSQL, network).Scan(&depositCnt)
 	if err != nil {
 		return 0, nil
@@ -458,7 +457,7 @@ func (p *PostgresStorage) UpdateBlocksForTesting(ctx context.Context, networkID 
 func (p *PostgresStorage) UpdateL1DepositsStatus(ctx context.Context, exitRoot []byte, dbTx pgx.Tx) ([]*etherman.Deposit, error) {
 	const updateDepositsStatusSQL = `UPDATE sync.deposit SET ready_for_claim = true 
 		WHERE deposit_cnt <=
-			(SELECT deposit_cnt FROM mt.root WHERE root = $1 AND network = 0) 
+			(SELECT sync.deposit.deposit_cnt FROM mt.root INNER JOIN sync.deposit ON sync.deposit.id = mt.root.deposit_id WHERE mt.root.root = $1 AND mt.root.network = 0) 
 			AND network_id = 0 AND ready_for_claim = false
 			RETURNING leaf_type, orig_net, orig_addr, amount, dest_net, dest_addr, deposit_cnt, block_id, network_id, tx_hash, metadata, ready_for_claim;`
 	rows, err := p.getExecQuerier(dbTx).Query(ctx, updateDepositsStatusSQL, exitRoot)
@@ -486,7 +485,7 @@ func (p *PostgresStorage) UpdateL1DepositsStatus(ctx context.Context, exitRoot [
 func (p *PostgresStorage) UpdateL2DepositsStatus(ctx context.Context, exitRoot []byte, networkID uint, dbTx pgx.Tx) error {
 	const updateDepositsStatusSQL = `UPDATE sync.deposit SET ready_for_claim = true
 		WHERE deposit_cnt <=
-			(SELECT deposit_cnt FROM mt.root WHERE root = $1 AND network = $2)
+			(SELECT sync.deposit.deposit_cnt FROM mt.root INNER JOIN sync.deposit ON sync.deposit.id = mt.root.deposit_id WHERE mt.root.root = $1 AND mt.root.network = $2)
 			AND network_id = $2 AND ready_for_claim = false;`
 	_, err := p.getExecQuerier(dbTx).Exec(ctx, updateDepositsStatusSQL, exitRoot, networkID)
 	return err
@@ -495,33 +494,32 @@ func (p *PostgresStorage) UpdateL2DepositsStatus(ctx context.Context, exitRoot [
 // AddClaimTx adds a claim monitored transaction to the storage.
 func (p *PostgresStorage) AddClaimTx(ctx context.Context, mTx ctmtypes.MonitoredTx, dbTx pgx.Tx) error {
 	const addMonitoredTxSQL = `INSERT INTO sync.monitored_txs 
-		(id, block_id, from_addr, to_addr, nonce, value, data, gas, status, history, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`
-	_, err := p.getExecQuerier(dbTx).Exec(ctx, addMonitoredTxSQL, mTx.ID, mTx.BlockID, mTx.From, mTx.To, mTx.Nonce, mTx.Value.String(), mTx.Data, mTx.Gas, mTx.Status, pq.Array(mTx.HistoryHashSlice()), time.Now().UTC(), time.Now().UTC())
+		(deposit_id, from_addr, to_addr, nonce, value, data, gas, status, history, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`
+	_, err := p.getExecQuerier(dbTx).Exec(ctx, addMonitoredTxSQL, mTx.DepositID, mTx.From, mTx.To, mTx.Nonce, mTx.Value.String(), mTx.Data, mTx.Gas, mTx.Status, pq.Array(mTx.HistoryHashSlice()), time.Now().UTC(), time.Now().UTC())
 	return err
 }
 
 // UpdateClaimTx updates a claim monitored transaction in the storage.
 func (p *PostgresStorage) UpdateClaimTx(ctx context.Context, mTx ctmtypes.MonitoredTx, dbTx pgx.Tx) error {
 	const updateMonitoredTxSQL = `UPDATE sync.monitored_txs 
-		SET block_id = $2
-		, from_addr = $3
-		, to_addr = $4
-		, nonce = $5
-		, value = $6
-		, data = $7
-		, gas = $8
-		, status = $9
-		, history = $10
-		, updated_at = $11
-		WHERE id = $1`
-	_, err := p.getExecQuerier(dbTx).Exec(ctx, updateMonitoredTxSQL, mTx.ID, mTx.BlockID, mTx.From, mTx.To, mTx.Nonce, mTx.Value.String(), mTx.Data, mTx.Gas, mTx.Status, pq.Array(mTx.HistoryHashSlice()), time.Now().UTC())
+		SET from_addr = $2
+		, to_addr = $3
+		, nonce = $4
+		, value = $5
+		, data = $6
+		, gas = $7
+		, status = $8
+		, history = $9
+		, updated_at = $10
+		WHERE deposit_id = $1`
+	_, err := p.getExecQuerier(dbTx).Exec(ctx, updateMonitoredTxSQL, mTx.DepositID, mTx.From, mTx.To, mTx.Nonce, mTx.Value.String(), mTx.Data, mTx.Gas, mTx.Status, pq.Array(mTx.HistoryHashSlice()), time.Now().UTC())
 	return err
 }
 
 // GetClaimTxsByStatus gets the monitored transactions by status.
 func (p *PostgresStorage) GetClaimTxsByStatus(ctx context.Context, statuses []ctmtypes.MonitoredTxStatus, dbTx pgx.Tx) ([]ctmtypes.MonitoredTx, error) {
-	const getMonitoredTxsSQL = "SELECT * FROM sync.monitored_txs WHERE status = ANY($1) ORDER BY created_at ASC"
+	const getMonitoredTxsSQL = "SELECT deposit_id, from_addr, to_addr, nonce, value, data, gas, status, history, created_at, updated_at FROM sync.monitored_txs WHERE status = ANY($1) ORDER BY created_at ASC"
 	rows, err := p.getExecQuerier(dbTx).Query(ctx, getMonitoredTxsSQL, pq.Array(statuses))
 	if errors.Is(err, pgx.ErrNoRows) {
 		return []ctmtypes.MonitoredTx{}, nil
@@ -536,7 +534,7 @@ func (p *PostgresStorage) GetClaimTxsByStatus(ctx context.Context, statuses []ct
 			history [][]byte
 		)
 		mTx := ctmtypes.MonitoredTx{}
-		err = rows.Scan(&mTx.ID, &mTx.BlockID, &mTx.From, &mTx.To, &mTx.Nonce, &value, &mTx.Data, &mTx.Gas, &mTx.Status, pq.Array(&history), &mTx.CreatedAt, &mTx.UpdatedAt)
+		err = rows.Scan(&mTx.DepositID, &mTx.From, &mTx.To, &mTx.Nonce, &value, &mTx.Data, &mTx.Gas, &mTx.Status, pq.Array(&history), &mTx.CreatedAt, &mTx.UpdatedAt)
 		if err != nil {
 			return mTxs, err
 		}

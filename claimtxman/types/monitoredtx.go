@@ -39,8 +39,8 @@ func (s MonitoredTxStatus) String() string {
 // MonitoredTx represents a set of information used to build tx
 // plus information to monitor if the transactions was sent successfully
 type MonitoredTx struct {
-	// Id is the tx identifier controller by the caller
-	ID uint
+	// DepositID is the tx identifier controller by the caller
+	DepositID uint
 
 	// From is a sender of the tx, used to identify which private key should be used to sing the tx
 	From common.Address
@@ -65,11 +65,6 @@ type MonitoredTx struct {
 
 	// Status of this monitoring
 	Status MonitoredTxStatus
-
-	// BlockID represents the block where the tx was identified
-	// to be mined, it's the same as the block id found in the
-	// tx receipt, this is used to control reorged monitored txs
-	BlockID uint64
 
 	// History represent all transaction hashes from
 	// transactions created using this struct data and
@@ -115,7 +110,7 @@ func (mTx MonitoredTx) RemoveHistory(tx *types.Transaction) {
 func (mTx *MonitoredTx) HistoryHashSlice() [][]byte {
 	history := make([][]byte, 0, len(mTx.History))
 	for h := range mTx.History {
-		history = append(history, h[:])
+		history = append(history, h.Bytes())
 	}
 	return history
 }

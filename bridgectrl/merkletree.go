@@ -138,7 +138,7 @@ func (mt *MerkleTree) addLeaf(ctx context.Context, depositID uint64, leaf [KeyLe
 		}
 	}
 
-	err := mt.store.SetRoot(ctx, cur[:], depositID, mt.count, mt.network, dbTx)
+	err := mt.store.SetRoot(ctx, cur[:], depositID, mt.network, dbTx)
 	if err != nil {
 		return err
 	}
