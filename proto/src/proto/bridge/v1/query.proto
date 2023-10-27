@@ -14,60 +14,42 @@ service BridgeService {
     /// Get api version
     rpc CheckAPI(CheckAPIRequest) returns (CheckAPIResponse) {
         option (google.api.http) = {
-            get: "/priapi/v1/ob/bridge/api",
-            additional_bindings: {
-                get: "/api"
-            }
+            get: "/api",
         };
     }
 
     /// Get bridges for the destination address both in L1 and L2
     rpc GetBridges(GetBridgesRequest) returns (GetBridgesResponse) {
         option (google.api.http) = {
-            get: "/priapi/v1/ob/bridge/bridges/{dest_addr}",
-            additional_bindings: {
-                get: "/bridges/{dest_addr}"
-            }
+            get: "/bridges/{dest_addr}",
         };
     }
 
     /// Get the merkle proof for the specific deposit
     rpc GetProof(GetProofRequest) returns (GetProofResponse) {
         option (google.api.http) = {
-            get: "/priapi/v1/ob/bridge/merkle-proof",
-            additional_bindings: {
-                get: "/merkle-proof"
-            }
+            get: "/merkle-proof",
         };
     }
 
     /// Get the specific deposit
     rpc GetBridge(GetBridgeRequest) returns (GetBridgeResponse) {
         option (google.api.http) = {
-            get: "/priapi/v1/ob/bridge/bridge",
-            additional_bindings: {
-                get: "/bridge"
-            }
+            get: "/bridge",
         };
     }
 
     /// Get claims for the specific smart contract address both in L1 and L2
     rpc GetClaims(GetClaimsRequest) returns (GetClaimsResponse) {
         option (google.api.http) = {
-            get: "/priapi/v1/ob/bridge/claims/{dest_addr}",
-            additional_bindings: {
-                get: "/claims/{dest_addr}"
-            }
+            get: "/claims/{dest_addr}",
         };
     }
 
     /// Get token wrapped for the specific smart contract address both in L1 and L2
     rpc GetTokenWrapped(GetTokenWrappedRequest) returns (GetTokenWrappedResponse) {
         option (google.api.http) = {
-            get: "/priapi/v1/ob/bridge/tokenwrapped",
-            additional_bindings: {
-                get: "/tokenwrapped"
-            }
+            get: "/bridge/tokenwrapped",
         };
     }
 
@@ -82,59 +64,41 @@ service BridgeService {
     /// Get the list of all the main coins of a specified network
     rpc GetMainCoins(GetMainCoinsRequest) returns (CommonCoinsResponse) {
         option (google.api.http) = {
-            get: "/priapi/v1/ob/bridge/main-coins/{networkId}",
-            additional_bindings: {
-                get: "/main-coins/{networkId}"
-            }
+            get: "/main-coins/{networkId}",
         };
     }
 
     /// Get the pending (not claimed) transactions of an account
     rpc GetPendingTransactions(GetPendingTransactionsRequest) returns (CommonTransactionsResponse) {
         option (google.api.http) = {
-            get: "/priapi/v1/ob/bridge/pending/{destAddr}",
-            additional_bindings: {
-                get: "/pending/{destAddr}"
-            }
+            get: "/pending/{destAddr}",
         };
     }
 
     /// Get all the transactions of an account. Similar to GetBridges but the field names are changed
     rpc GetAllTransactions(GetAllTransactionsRequest) returns (CommonTransactionsResponse) {
         option (google.api.http) = {
-            get: "/priapi/v1/ob/bridge/all/{destAddr}",
-            additional_bindings: {
-                get: "/all/{destAddr}"
-            }
+            get: "/all/{destAddr}",
         };
     }
 
     rpc GetSmtProof(GetSmtProofRequest) returns (CommonProofResponse) {
         option (google.api.http) = {
-            get: "/priapi/v1/ob/bridge/smt-proof",
-            additional_bindings: {
-                get: "/smt-proof"
-            }
+            get: "/smt-proof",
         };
     }
 
     /// Get all transactions with ready_for_claim = false
     rpc GetNotReadyTransactions(GetNotReadyTransactionsRequest) returns (CommonTransactionsResponse) {
         option (google.api.http) = {
-            get: "/priapi/v1/ob/bridge/not-ready",
-            additional_bindings: {
-                get: "/not-ready"
-            }
+            get: "/not-ready",
         };
     }
 
     /// Get list of monitored transactions, filtered by status
     rpc GetMonitoredTxsByStatus(GetMonitoredTxsByStatusRequest) returns (CommonMonitoredTxsResponse) {
         option (google.api.http) = {
-            get: "/priapi/v1/ob/bridge/monitored-txs/status/{status}",
-            additional_bindings: {
-                get: "/monitored-txs/status/{status}"
-            }
+            get: "/monitored-txs/status/{status}",
         };
     }
 }

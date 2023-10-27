@@ -49,24 +49,6 @@ func local_request_BridgeService_CheckAPI_0(ctx context.Context, marshaler runti
 
 }
 
-func request_BridgeService_CheckAPI_1(ctx context.Context, marshaler runtime.Marshaler, client BridgeServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq CheckAPIRequest
-	var metadata runtime.ServerMetadata
-
-	msg, err := client.CheckAPI(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
-	return msg, metadata, err
-
-}
-
-func local_request_BridgeService_CheckAPI_1(ctx context.Context, marshaler runtime.Marshaler, server BridgeServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq CheckAPIRequest
-	var metadata runtime.ServerMetadata
-
-	msg, err := server.CheckAPI(ctx, &protoReq)
-	return msg, metadata, err
-
-}
-
 var (
 	filter_BridgeService_GetBridges_0 = &utilities.DoubleArray{Encoding: map[string]int{"dest_addr": 0, "destAddr": 1}, Base: []int{1, 1, 2, 0, 0}, Check: []int{0, 1, 1, 2, 3}}
 )
@@ -138,76 +120,6 @@ func local_request_BridgeService_GetBridges_0(ctx context.Context, marshaler run
 }
 
 var (
-	filter_BridgeService_GetBridges_1 = &utilities.DoubleArray{Encoding: map[string]int{"dest_addr": 0, "destAddr": 1}, Base: []int{1, 1, 2, 0, 0}, Check: []int{0, 1, 1, 2, 3}}
-)
-
-func request_BridgeService_GetBridges_1(ctx context.Context, marshaler runtime.Marshaler, client BridgeServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq GetBridgesRequest
-	var metadata runtime.ServerMetadata
-
-	var (
-		val string
-		ok  bool
-		err error
-		_   = err
-	)
-
-	val, ok = pathParams["dest_addr"]
-	if !ok {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "dest_addr")
-	}
-
-	protoReq.DestAddr, err = runtime.String(val)
-	if err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "dest_addr", err)
-	}
-
-	if err := req.ParseForm(); err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
-	}
-	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_BridgeService_GetBridges_1); err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
-	}
-
-	msg, err := client.GetBridges(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
-	return msg, metadata, err
-
-}
-
-func local_request_BridgeService_GetBridges_1(ctx context.Context, marshaler runtime.Marshaler, server BridgeServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq GetBridgesRequest
-	var metadata runtime.ServerMetadata
-
-	var (
-		val string
-		ok  bool
-		err error
-		_   = err
-	)
-
-	val, ok = pathParams["dest_addr"]
-	if !ok {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "dest_addr")
-	}
-
-	protoReq.DestAddr, err = runtime.String(val)
-	if err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "dest_addr", err)
-	}
-
-	if err := req.ParseForm(); err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
-	}
-	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_BridgeService_GetBridges_1); err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
-	}
-
-	msg, err := server.GetBridges(ctx, &protoReq)
-	return msg, metadata, err
-
-}
-
-var (
 	filter_BridgeService_GetProof_0 = &utilities.DoubleArray{Encoding: map[string]int{}, Base: []int(nil), Check: []int(nil)}
 )
 
@@ -244,42 +156,6 @@ func local_request_BridgeService_GetProof_0(ctx context.Context, marshaler runti
 }
 
 var (
-	filter_BridgeService_GetProof_1 = &utilities.DoubleArray{Encoding: map[string]int{}, Base: []int(nil), Check: []int(nil)}
-)
-
-func request_BridgeService_GetProof_1(ctx context.Context, marshaler runtime.Marshaler, client BridgeServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq GetProofRequest
-	var metadata runtime.ServerMetadata
-
-	if err := req.ParseForm(); err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
-	}
-	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_BridgeService_GetProof_1); err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
-	}
-
-	msg, err := client.GetProof(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
-	return msg, metadata, err
-
-}
-
-func local_request_BridgeService_GetProof_1(ctx context.Context, marshaler runtime.Marshaler, server BridgeServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq GetProofRequest
-	var metadata runtime.ServerMetadata
-
-	if err := req.ParseForm(); err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
-	}
-	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_BridgeService_GetProof_1); err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
-	}
-
-	msg, err := server.GetProof(ctx, &protoReq)
-	return msg, metadata, err
-
-}
-
-var (
 	filter_BridgeService_GetBridge_0 = &utilities.DoubleArray{Encoding: map[string]int{}, Base: []int(nil), Check: []int(nil)}
 )
 
@@ -307,42 +183,6 @@ func local_request_BridgeService_GetBridge_0(ctx context.Context, marshaler runt
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
 	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_BridgeService_GetBridge_0); err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
-	}
-
-	msg, err := server.GetBridge(ctx, &protoReq)
-	return msg, metadata, err
-
-}
-
-var (
-	filter_BridgeService_GetBridge_1 = &utilities.DoubleArray{Encoding: map[string]int{}, Base: []int(nil), Check: []int(nil)}
-)
-
-func request_BridgeService_GetBridge_1(ctx context.Context, marshaler runtime.Marshaler, client BridgeServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq GetBridgeRequest
-	var metadata runtime.ServerMetadata
-
-	if err := req.ParseForm(); err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
-	}
-	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_BridgeService_GetBridge_1); err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
-	}
-
-	msg, err := client.GetBridge(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
-	return msg, metadata, err
-
-}
-
-func local_request_BridgeService_GetBridge_1(ctx context.Context, marshaler runtime.Marshaler, server BridgeServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq GetBridgeRequest
-	var metadata runtime.ServerMetadata
-
-	if err := req.ParseForm(); err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
-	}
-	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_BridgeService_GetBridge_1); err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
 
@@ -422,76 +262,6 @@ func local_request_BridgeService_GetClaims_0(ctx context.Context, marshaler runt
 }
 
 var (
-	filter_BridgeService_GetClaims_1 = &utilities.DoubleArray{Encoding: map[string]int{"dest_addr": 0, "destAddr": 1}, Base: []int{1, 1, 2, 0, 0}, Check: []int{0, 1, 1, 2, 3}}
-)
-
-func request_BridgeService_GetClaims_1(ctx context.Context, marshaler runtime.Marshaler, client BridgeServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq GetClaimsRequest
-	var metadata runtime.ServerMetadata
-
-	var (
-		val string
-		ok  bool
-		err error
-		_   = err
-	)
-
-	val, ok = pathParams["dest_addr"]
-	if !ok {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "dest_addr")
-	}
-
-	protoReq.DestAddr, err = runtime.String(val)
-	if err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "dest_addr", err)
-	}
-
-	if err := req.ParseForm(); err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
-	}
-	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_BridgeService_GetClaims_1); err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
-	}
-
-	msg, err := client.GetClaims(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
-	return msg, metadata, err
-
-}
-
-func local_request_BridgeService_GetClaims_1(ctx context.Context, marshaler runtime.Marshaler, server BridgeServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq GetClaimsRequest
-	var metadata runtime.ServerMetadata
-
-	var (
-		val string
-		ok  bool
-		err error
-		_   = err
-	)
-
-	val, ok = pathParams["dest_addr"]
-	if !ok {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "dest_addr")
-	}
-
-	protoReq.DestAddr, err = runtime.String(val)
-	if err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "dest_addr", err)
-	}
-
-	if err := req.ParseForm(); err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
-	}
-	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_BridgeService_GetClaims_1); err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
-	}
-
-	msg, err := server.GetClaims(ctx, &protoReq)
-	return msg, metadata, err
-
-}
-
-var (
 	filter_BridgeService_GetTokenWrapped_0 = &utilities.DoubleArray{Encoding: map[string]int{}, Base: []int(nil), Check: []int(nil)}
 )
 
@@ -519,42 +289,6 @@ func local_request_BridgeService_GetTokenWrapped_0(ctx context.Context, marshale
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
 	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_BridgeService_GetTokenWrapped_0); err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
-	}
-
-	msg, err := server.GetTokenWrapped(ctx, &protoReq)
-	return msg, metadata, err
-
-}
-
-var (
-	filter_BridgeService_GetTokenWrapped_1 = &utilities.DoubleArray{Encoding: map[string]int{}, Base: []int(nil), Check: []int(nil)}
-)
-
-func request_BridgeService_GetTokenWrapped_1(ctx context.Context, marshaler runtime.Marshaler, client BridgeServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq GetTokenWrappedRequest
-	var metadata runtime.ServerMetadata
-
-	if err := req.ParseForm(); err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
-	}
-	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_BridgeService_GetTokenWrapped_1); err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
-	}
-
-	msg, err := client.GetTokenWrapped(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
-	return msg, metadata, err
-
-}
-
-func local_request_BridgeService_GetTokenWrapped_1(ctx context.Context, marshaler runtime.Marshaler, server BridgeServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq GetTokenWrappedRequest
-	var metadata runtime.ServerMetadata
-
-	if err := req.ParseForm(); err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
-	}
-	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_BridgeService_GetTokenWrapped_1); err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
 
@@ -624,58 +358,6 @@ func request_BridgeService_GetMainCoins_0(ctx context.Context, marshaler runtime
 }
 
 func local_request_BridgeService_GetMainCoins_0(ctx context.Context, marshaler runtime.Marshaler, server BridgeServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq GetMainCoinsRequest
-	var metadata runtime.ServerMetadata
-
-	var (
-		val string
-		ok  bool
-		err error
-		_   = err
-	)
-
-	val, ok = pathParams["networkId"]
-	if !ok {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "networkId")
-	}
-
-	protoReq.NetworkId, err = runtime.Uint32(val)
-	if err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "networkId", err)
-	}
-
-	msg, err := server.GetMainCoins(ctx, &protoReq)
-	return msg, metadata, err
-
-}
-
-func request_BridgeService_GetMainCoins_1(ctx context.Context, marshaler runtime.Marshaler, client BridgeServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq GetMainCoinsRequest
-	var metadata runtime.ServerMetadata
-
-	var (
-		val string
-		ok  bool
-		err error
-		_   = err
-	)
-
-	val, ok = pathParams["networkId"]
-	if !ok {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "networkId")
-	}
-
-	protoReq.NetworkId, err = runtime.Uint32(val)
-	if err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "networkId", err)
-	}
-
-	msg, err := client.GetMainCoins(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
-	return msg, metadata, err
-
-}
-
-func local_request_BridgeService_GetMainCoins_1(ctx context.Context, marshaler runtime.Marshaler, server BridgeServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq GetMainCoinsRequest
 	var metadata runtime.ServerMetadata
 
@@ -772,76 +454,6 @@ func local_request_BridgeService_GetPendingTransactions_0(ctx context.Context, m
 }
 
 var (
-	filter_BridgeService_GetPendingTransactions_1 = &utilities.DoubleArray{Encoding: map[string]int{"destAddr": 0}, Base: []int{1, 2, 0, 0}, Check: []int{0, 1, 2, 2}}
-)
-
-func request_BridgeService_GetPendingTransactions_1(ctx context.Context, marshaler runtime.Marshaler, client BridgeServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq GetPendingTransactionsRequest
-	var metadata runtime.ServerMetadata
-
-	var (
-		val string
-		ok  bool
-		err error
-		_   = err
-	)
-
-	val, ok = pathParams["destAddr"]
-	if !ok {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "destAddr")
-	}
-
-	protoReq.DestAddr, err = runtime.String(val)
-	if err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "destAddr", err)
-	}
-
-	if err := req.ParseForm(); err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
-	}
-	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_BridgeService_GetPendingTransactions_1); err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
-	}
-
-	msg, err := client.GetPendingTransactions(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
-	return msg, metadata, err
-
-}
-
-func local_request_BridgeService_GetPendingTransactions_1(ctx context.Context, marshaler runtime.Marshaler, server BridgeServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq GetPendingTransactionsRequest
-	var metadata runtime.ServerMetadata
-
-	var (
-		val string
-		ok  bool
-		err error
-		_   = err
-	)
-
-	val, ok = pathParams["destAddr"]
-	if !ok {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "destAddr")
-	}
-
-	protoReq.DestAddr, err = runtime.String(val)
-	if err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "destAddr", err)
-	}
-
-	if err := req.ParseForm(); err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
-	}
-	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_BridgeService_GetPendingTransactions_1); err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
-	}
-
-	msg, err := server.GetPendingTransactions(ctx, &protoReq)
-	return msg, metadata, err
-
-}
-
-var (
 	filter_BridgeService_GetAllTransactions_0 = &utilities.DoubleArray{Encoding: map[string]int{"destAddr": 0}, Base: []int{1, 2, 0, 0}, Check: []int{0, 1, 2, 2}}
 )
 
@@ -912,76 +524,6 @@ func local_request_BridgeService_GetAllTransactions_0(ctx context.Context, marsh
 }
 
 var (
-	filter_BridgeService_GetAllTransactions_1 = &utilities.DoubleArray{Encoding: map[string]int{"destAddr": 0}, Base: []int{1, 2, 0, 0}, Check: []int{0, 1, 2, 2}}
-)
-
-func request_BridgeService_GetAllTransactions_1(ctx context.Context, marshaler runtime.Marshaler, client BridgeServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq GetAllTransactionsRequest
-	var metadata runtime.ServerMetadata
-
-	var (
-		val string
-		ok  bool
-		err error
-		_   = err
-	)
-
-	val, ok = pathParams["destAddr"]
-	if !ok {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "destAddr")
-	}
-
-	protoReq.DestAddr, err = runtime.String(val)
-	if err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "destAddr", err)
-	}
-
-	if err := req.ParseForm(); err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
-	}
-	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_BridgeService_GetAllTransactions_1); err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
-	}
-
-	msg, err := client.GetAllTransactions(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
-	return msg, metadata, err
-
-}
-
-func local_request_BridgeService_GetAllTransactions_1(ctx context.Context, marshaler runtime.Marshaler, server BridgeServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq GetAllTransactionsRequest
-	var metadata runtime.ServerMetadata
-
-	var (
-		val string
-		ok  bool
-		err error
-		_   = err
-	)
-
-	val, ok = pathParams["destAddr"]
-	if !ok {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "destAddr")
-	}
-
-	protoReq.DestAddr, err = runtime.String(val)
-	if err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "destAddr", err)
-	}
-
-	if err := req.ParseForm(); err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
-	}
-	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_BridgeService_GetAllTransactions_1); err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
-	}
-
-	msg, err := server.GetAllTransactions(ctx, &protoReq)
-	return msg, metadata, err
-
-}
-
-var (
 	filter_BridgeService_GetSmtProof_0 = &utilities.DoubleArray{Encoding: map[string]int{}, Base: []int(nil), Check: []int(nil)}
 )
 
@@ -1018,42 +560,6 @@ func local_request_BridgeService_GetSmtProof_0(ctx context.Context, marshaler ru
 }
 
 var (
-	filter_BridgeService_GetSmtProof_1 = &utilities.DoubleArray{Encoding: map[string]int{}, Base: []int(nil), Check: []int(nil)}
-)
-
-func request_BridgeService_GetSmtProof_1(ctx context.Context, marshaler runtime.Marshaler, client BridgeServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq GetSmtProofRequest
-	var metadata runtime.ServerMetadata
-
-	if err := req.ParseForm(); err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
-	}
-	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_BridgeService_GetSmtProof_1); err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
-	}
-
-	msg, err := client.GetSmtProof(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
-	return msg, metadata, err
-
-}
-
-func local_request_BridgeService_GetSmtProof_1(ctx context.Context, marshaler runtime.Marshaler, server BridgeServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq GetSmtProofRequest
-	var metadata runtime.ServerMetadata
-
-	if err := req.ParseForm(); err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
-	}
-	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_BridgeService_GetSmtProof_1); err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
-	}
-
-	msg, err := server.GetSmtProof(ctx, &protoReq)
-	return msg, metadata, err
-
-}
-
-var (
 	filter_BridgeService_GetNotReadyTransactions_0 = &utilities.DoubleArray{Encoding: map[string]int{}, Base: []int(nil), Check: []int(nil)}
 )
 
@@ -1081,42 +587,6 @@ func local_request_BridgeService_GetNotReadyTransactions_0(ctx context.Context, 
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
 	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_BridgeService_GetNotReadyTransactions_0); err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
-	}
-
-	msg, err := server.GetNotReadyTransactions(ctx, &protoReq)
-	return msg, metadata, err
-
-}
-
-var (
-	filter_BridgeService_GetNotReadyTransactions_1 = &utilities.DoubleArray{Encoding: map[string]int{}, Base: []int(nil), Check: []int(nil)}
-)
-
-func request_BridgeService_GetNotReadyTransactions_1(ctx context.Context, marshaler runtime.Marshaler, client BridgeServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq GetNotReadyTransactionsRequest
-	var metadata runtime.ServerMetadata
-
-	if err := req.ParseForm(); err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
-	}
-	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_BridgeService_GetNotReadyTransactions_1); err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
-	}
-
-	msg, err := client.GetNotReadyTransactions(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
-	return msg, metadata, err
-
-}
-
-func local_request_BridgeService_GetNotReadyTransactions_1(ctx context.Context, marshaler runtime.Marshaler, server BridgeServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq GetNotReadyTransactionsRequest
-	var metadata runtime.ServerMetadata
-
-	if err := req.ParseForm(); err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
-	}
-	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_BridgeService_GetNotReadyTransactions_1); err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
 
@@ -1195,76 +665,6 @@ func local_request_BridgeService_GetMonitoredTxsByStatus_0(ctx context.Context, 
 
 }
 
-var (
-	filter_BridgeService_GetMonitoredTxsByStatus_1 = &utilities.DoubleArray{Encoding: map[string]int{"status": 0}, Base: []int{1, 2, 0, 0}, Check: []int{0, 1, 2, 2}}
-)
-
-func request_BridgeService_GetMonitoredTxsByStatus_1(ctx context.Context, marshaler runtime.Marshaler, client BridgeServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq GetMonitoredTxsByStatusRequest
-	var metadata runtime.ServerMetadata
-
-	var (
-		val string
-		ok  bool
-		err error
-		_   = err
-	)
-
-	val, ok = pathParams["status"]
-	if !ok {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "status")
-	}
-
-	protoReq.Status, err = runtime.String(val)
-	if err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "status", err)
-	}
-
-	if err := req.ParseForm(); err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
-	}
-	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_BridgeService_GetMonitoredTxsByStatus_1); err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
-	}
-
-	msg, err := client.GetMonitoredTxsByStatus(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
-	return msg, metadata, err
-
-}
-
-func local_request_BridgeService_GetMonitoredTxsByStatus_1(ctx context.Context, marshaler runtime.Marshaler, server BridgeServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq GetMonitoredTxsByStatusRequest
-	var metadata runtime.ServerMetadata
-
-	var (
-		val string
-		ok  bool
-		err error
-		_   = err
-	)
-
-	val, ok = pathParams["status"]
-	if !ok {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "status")
-	}
-
-	protoReq.Status, err = runtime.String(val)
-	if err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "status", err)
-	}
-
-	if err := req.ParseForm(); err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
-	}
-	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_BridgeService_GetMonitoredTxsByStatus_1); err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
-	}
-
-	msg, err := server.GetMonitoredTxsByStatus(ctx, &protoReq)
-	return msg, metadata, err
-
-}
-
 // RegisterBridgeServiceHandlerServer registers the http handlers for service BridgeService to "mux".
 // UnaryRPC     :call BridgeServiceServer directly.
 // StreamingRPC :currently unsupported pending https://github.com/grpc/grpc-go/issues/906.
@@ -1279,7 +679,7 @@ func RegisterBridgeServiceHandlerServer(ctx context.Context, mux *runtime.ServeM
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/bridge.v1.BridgeService/CheckAPI", runtime.WithHTTPPathPattern("/priapi/v1/ob/bridge/api"))
+		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/bridge.v1.BridgeService/CheckAPI", runtime.WithHTTPPathPattern("/api"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1296,31 +696,6 @@ func RegisterBridgeServiceHandlerServer(ctx context.Context, mux *runtime.ServeM
 
 	})
 
-	mux.Handle("GET", pattern_BridgeService_CheckAPI_1, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
-		ctx, cancel := context.WithCancel(req.Context())
-		defer cancel()
-		var stream runtime.ServerTransportStream
-		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
-		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		var err error
-		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/bridge.v1.BridgeService/CheckAPI", runtime.WithHTTPPathPattern("/api"))
-		if err != nil {
-			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
-			return
-		}
-		resp, md, err := local_request_BridgeService_CheckAPI_1(annotatedContext, inboundMarshaler, server, req, pathParams)
-		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
-		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
-		if err != nil {
-			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
-			return
-		}
-
-		forward_BridgeService_CheckAPI_1(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
-
-	})
-
 	mux.Handle("GET", pattern_BridgeService_GetBridges_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
@@ -1329,7 +704,7 @@ func RegisterBridgeServiceHandlerServer(ctx context.Context, mux *runtime.ServeM
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/bridge.v1.BridgeService/GetBridges", runtime.WithHTTPPathPattern("/priapi/v1/ob/bridge/bridges/{dest_addr}"))
+		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/bridge.v1.BridgeService/GetBridges", runtime.WithHTTPPathPattern("/bridges/{dest_addr}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1346,31 +721,6 @@ func RegisterBridgeServiceHandlerServer(ctx context.Context, mux *runtime.ServeM
 
 	})
 
-	mux.Handle("GET", pattern_BridgeService_GetBridges_1, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
-		ctx, cancel := context.WithCancel(req.Context())
-		defer cancel()
-		var stream runtime.ServerTransportStream
-		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
-		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		var err error
-		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/bridge.v1.BridgeService/GetBridges", runtime.WithHTTPPathPattern("/bridges/{dest_addr}"))
-		if err != nil {
-			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
-			return
-		}
-		resp, md, err := local_request_BridgeService_GetBridges_1(annotatedContext, inboundMarshaler, server, req, pathParams)
-		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
-		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
-		if err != nil {
-			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
-			return
-		}
-
-		forward_BridgeService_GetBridges_1(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
-
-	})
-
 	mux.Handle("GET", pattern_BridgeService_GetProof_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
@@ -1379,7 +729,7 @@ func RegisterBridgeServiceHandlerServer(ctx context.Context, mux *runtime.ServeM
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/bridge.v1.BridgeService/GetProof", runtime.WithHTTPPathPattern("/priapi/v1/ob/bridge/merkle-proof"))
+		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/bridge.v1.BridgeService/GetProof", runtime.WithHTTPPathPattern("/merkle-proof"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1396,31 +746,6 @@ func RegisterBridgeServiceHandlerServer(ctx context.Context, mux *runtime.ServeM
 
 	})
 
-	mux.Handle("GET", pattern_BridgeService_GetProof_1, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
-		ctx, cancel := context.WithCancel(req.Context())
-		defer cancel()
-		var stream runtime.ServerTransportStream
-		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
-		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		var err error
-		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/bridge.v1.BridgeService/GetProof", runtime.WithHTTPPathPattern("/merkle-proof"))
-		if err != nil {
-			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
-			return
-		}
-		resp, md, err := local_request_BridgeService_GetProof_1(annotatedContext, inboundMarshaler, server, req, pathParams)
-		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
-		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
-		if err != nil {
-			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
-			return
-		}
-
-		forward_BridgeService_GetProof_1(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
-
-	})
-
 	mux.Handle("GET", pattern_BridgeService_GetBridge_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
@@ -1429,7 +754,7 @@ func RegisterBridgeServiceHandlerServer(ctx context.Context, mux *runtime.ServeM
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/bridge.v1.BridgeService/GetBridge", runtime.WithHTTPPathPattern("/priapi/v1/ob/bridge/bridge"))
+		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/bridge.v1.BridgeService/GetBridge", runtime.WithHTTPPathPattern("/bridge"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1446,31 +771,6 @@ func RegisterBridgeServiceHandlerServer(ctx context.Context, mux *runtime.ServeM
 
 	})
 
-	mux.Handle("GET", pattern_BridgeService_GetBridge_1, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
-		ctx, cancel := context.WithCancel(req.Context())
-		defer cancel()
-		var stream runtime.ServerTransportStream
-		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
-		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		var err error
-		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/bridge.v1.BridgeService/GetBridge", runtime.WithHTTPPathPattern("/bridge"))
-		if err != nil {
-			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
-			return
-		}
-		resp, md, err := local_request_BridgeService_GetBridge_1(annotatedContext, inboundMarshaler, server, req, pathParams)
-		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
-		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
-		if err != nil {
-			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
-			return
-		}
-
-		forward_BridgeService_GetBridge_1(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
-
-	})
-
 	mux.Handle("GET", pattern_BridgeService_GetClaims_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
@@ -1479,7 +779,7 @@ func RegisterBridgeServiceHandlerServer(ctx context.Context, mux *runtime.ServeM
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/bridge.v1.BridgeService/GetClaims", runtime.WithHTTPPathPattern("/priapi/v1/ob/bridge/claims/{dest_addr}"))
+		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/bridge.v1.BridgeService/GetClaims", runtime.WithHTTPPathPattern("/claims/{dest_addr}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1496,31 +796,6 @@ func RegisterBridgeServiceHandlerServer(ctx context.Context, mux *runtime.ServeM
 
 	})
 
-	mux.Handle("GET", pattern_BridgeService_GetClaims_1, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
-		ctx, cancel := context.WithCancel(req.Context())
-		defer cancel()
-		var stream runtime.ServerTransportStream
-		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
-		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		var err error
-		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/bridge.v1.BridgeService/GetClaims", runtime.WithHTTPPathPattern("/claims/{dest_addr}"))
-		if err != nil {
-			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
-			return
-		}
-		resp, md, err := local_request_BridgeService_GetClaims_1(annotatedContext, inboundMarshaler, server, req, pathParams)
-		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
-		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
-		if err != nil {
-			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
-			return
-		}
-
-		forward_BridgeService_GetClaims_1(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
-
-	})
-
 	mux.Handle("GET", pattern_BridgeService_GetTokenWrapped_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
@@ -1529,7 +804,7 @@ func RegisterBridgeServiceHandlerServer(ctx context.Context, mux *runtime.ServeM
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/bridge.v1.BridgeService/GetTokenWrapped", runtime.WithHTTPPathPattern("/priapi/v1/ob/bridge/tokenwrapped"))
+		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/bridge.v1.BridgeService/GetTokenWrapped", runtime.WithHTTPPathPattern("/bridge/tokenwrapped"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1543,31 +818,6 @@ func RegisterBridgeServiceHandlerServer(ctx context.Context, mux *runtime.ServeM
 		}
 
 		forward_BridgeService_GetTokenWrapped_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
-
-	})
-
-	mux.Handle("GET", pattern_BridgeService_GetTokenWrapped_1, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
-		ctx, cancel := context.WithCancel(req.Context())
-		defer cancel()
-		var stream runtime.ServerTransportStream
-		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
-		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		var err error
-		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/bridge.v1.BridgeService/GetTokenWrapped", runtime.WithHTTPPathPattern("/tokenwrapped"))
-		if err != nil {
-			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
-			return
-		}
-		resp, md, err := local_request_BridgeService_GetTokenWrapped_1(annotatedContext, inboundMarshaler, server, req, pathParams)
-		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
-		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
-		if err != nil {
-			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
-			return
-		}
-
-		forward_BridgeService_GetTokenWrapped_1(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 
 	})
 
@@ -1604,7 +854,7 @@ func RegisterBridgeServiceHandlerServer(ctx context.Context, mux *runtime.ServeM
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/bridge.v1.BridgeService/GetMainCoins", runtime.WithHTTPPathPattern("/priapi/v1/ob/bridge/main-coins/{networkId}"))
+		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/bridge.v1.BridgeService/GetMainCoins", runtime.WithHTTPPathPattern("/main-coins/{networkId}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1621,31 +871,6 @@ func RegisterBridgeServiceHandlerServer(ctx context.Context, mux *runtime.ServeM
 
 	})
 
-	mux.Handle("GET", pattern_BridgeService_GetMainCoins_1, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
-		ctx, cancel := context.WithCancel(req.Context())
-		defer cancel()
-		var stream runtime.ServerTransportStream
-		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
-		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		var err error
-		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/bridge.v1.BridgeService/GetMainCoins", runtime.WithHTTPPathPattern("/main-coins/{networkId}"))
-		if err != nil {
-			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
-			return
-		}
-		resp, md, err := local_request_BridgeService_GetMainCoins_1(annotatedContext, inboundMarshaler, server, req, pathParams)
-		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
-		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
-		if err != nil {
-			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
-			return
-		}
-
-		forward_BridgeService_GetMainCoins_1(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
-
-	})
-
 	mux.Handle("GET", pattern_BridgeService_GetPendingTransactions_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
@@ -1654,7 +879,7 @@ func RegisterBridgeServiceHandlerServer(ctx context.Context, mux *runtime.ServeM
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/bridge.v1.BridgeService/GetPendingTransactions", runtime.WithHTTPPathPattern("/priapi/v1/ob/bridge/pending/{destAddr}"))
+		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/bridge.v1.BridgeService/GetPendingTransactions", runtime.WithHTTPPathPattern("/pending/{destAddr}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1671,31 +896,6 @@ func RegisterBridgeServiceHandlerServer(ctx context.Context, mux *runtime.ServeM
 
 	})
 
-	mux.Handle("GET", pattern_BridgeService_GetPendingTransactions_1, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
-		ctx, cancel := context.WithCancel(req.Context())
-		defer cancel()
-		var stream runtime.ServerTransportStream
-		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
-		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		var err error
-		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/bridge.v1.BridgeService/GetPendingTransactions", runtime.WithHTTPPathPattern("/pending/{destAddr}"))
-		if err != nil {
-			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
-			return
-		}
-		resp, md, err := local_request_BridgeService_GetPendingTransactions_1(annotatedContext, inboundMarshaler, server, req, pathParams)
-		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
-		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
-		if err != nil {
-			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
-			return
-		}
-
-		forward_BridgeService_GetPendingTransactions_1(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
-
-	})
-
 	mux.Handle("GET", pattern_BridgeService_GetAllTransactions_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
@@ -1704,7 +904,7 @@ func RegisterBridgeServiceHandlerServer(ctx context.Context, mux *runtime.ServeM
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/bridge.v1.BridgeService/GetAllTransactions", runtime.WithHTTPPathPattern("/priapi/v1/ob/bridge/all/{destAddr}"))
+		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/bridge.v1.BridgeService/GetAllTransactions", runtime.WithHTTPPathPattern("/all/{destAddr}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1721,31 +921,6 @@ func RegisterBridgeServiceHandlerServer(ctx context.Context, mux *runtime.ServeM
 
 	})
 
-	mux.Handle("GET", pattern_BridgeService_GetAllTransactions_1, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
-		ctx, cancel := context.WithCancel(req.Context())
-		defer cancel()
-		var stream runtime.ServerTransportStream
-		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
-		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		var err error
-		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/bridge.v1.BridgeService/GetAllTransactions", runtime.WithHTTPPathPattern("/all/{destAddr}"))
-		if err != nil {
-			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
-			return
-		}
-		resp, md, err := local_request_BridgeService_GetAllTransactions_1(annotatedContext, inboundMarshaler, server, req, pathParams)
-		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
-		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
-		if err != nil {
-			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
-			return
-		}
-
-		forward_BridgeService_GetAllTransactions_1(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
-
-	})
-
 	mux.Handle("GET", pattern_BridgeService_GetSmtProof_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
@@ -1754,7 +929,7 @@ func RegisterBridgeServiceHandlerServer(ctx context.Context, mux *runtime.ServeM
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/bridge.v1.BridgeService/GetSmtProof", runtime.WithHTTPPathPattern("/priapi/v1/ob/bridge/smt-proof"))
+		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/bridge.v1.BridgeService/GetSmtProof", runtime.WithHTTPPathPattern("/smt-proof"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1771,31 +946,6 @@ func RegisterBridgeServiceHandlerServer(ctx context.Context, mux *runtime.ServeM
 
 	})
 
-	mux.Handle("GET", pattern_BridgeService_GetSmtProof_1, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
-		ctx, cancel := context.WithCancel(req.Context())
-		defer cancel()
-		var stream runtime.ServerTransportStream
-		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
-		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		var err error
-		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/bridge.v1.BridgeService/GetSmtProof", runtime.WithHTTPPathPattern("/smt-proof"))
-		if err != nil {
-			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
-			return
-		}
-		resp, md, err := local_request_BridgeService_GetSmtProof_1(annotatedContext, inboundMarshaler, server, req, pathParams)
-		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
-		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
-		if err != nil {
-			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
-			return
-		}
-
-		forward_BridgeService_GetSmtProof_1(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
-
-	})
-
 	mux.Handle("GET", pattern_BridgeService_GetNotReadyTransactions_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
@@ -1804,7 +954,7 @@ func RegisterBridgeServiceHandlerServer(ctx context.Context, mux *runtime.ServeM
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/bridge.v1.BridgeService/GetNotReadyTransactions", runtime.WithHTTPPathPattern("/priapi/v1/ob/bridge/not-ready"))
+		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/bridge.v1.BridgeService/GetNotReadyTransactions", runtime.WithHTTPPathPattern("/not-ready"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1821,31 +971,6 @@ func RegisterBridgeServiceHandlerServer(ctx context.Context, mux *runtime.ServeM
 
 	})
 
-	mux.Handle("GET", pattern_BridgeService_GetNotReadyTransactions_1, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
-		ctx, cancel := context.WithCancel(req.Context())
-		defer cancel()
-		var stream runtime.ServerTransportStream
-		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
-		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		var err error
-		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/bridge.v1.BridgeService/GetNotReadyTransactions", runtime.WithHTTPPathPattern("/not-ready"))
-		if err != nil {
-			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
-			return
-		}
-		resp, md, err := local_request_BridgeService_GetNotReadyTransactions_1(annotatedContext, inboundMarshaler, server, req, pathParams)
-		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
-		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
-		if err != nil {
-			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
-			return
-		}
-
-		forward_BridgeService_GetNotReadyTransactions_1(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
-
-	})
-
 	mux.Handle("GET", pattern_BridgeService_GetMonitoredTxsByStatus_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
@@ -1854,7 +979,7 @@ func RegisterBridgeServiceHandlerServer(ctx context.Context, mux *runtime.ServeM
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/bridge.v1.BridgeService/GetMonitoredTxsByStatus", runtime.WithHTTPPathPattern("/priapi/v1/ob/bridge/monitored-txs/status/{status}"))
+		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/bridge.v1.BridgeService/GetMonitoredTxsByStatus", runtime.WithHTTPPathPattern("/monitored-txs/status/{status}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1868,31 +993,6 @@ func RegisterBridgeServiceHandlerServer(ctx context.Context, mux *runtime.ServeM
 		}
 
 		forward_BridgeService_GetMonitoredTxsByStatus_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
-
-	})
-
-	mux.Handle("GET", pattern_BridgeService_GetMonitoredTxsByStatus_1, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
-		ctx, cancel := context.WithCancel(req.Context())
-		defer cancel()
-		var stream runtime.ServerTransportStream
-		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
-		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		var err error
-		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/bridge.v1.BridgeService/GetMonitoredTxsByStatus", runtime.WithHTTPPathPattern("/monitored-txs/status/{status}"))
-		if err != nil {
-			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
-			return
-		}
-		resp, md, err := local_request_BridgeService_GetMonitoredTxsByStatus_1(annotatedContext, inboundMarshaler, server, req, pathParams)
-		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
-		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
-		if err != nil {
-			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
-			return
-		}
-
-		forward_BridgeService_GetMonitoredTxsByStatus_1(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 
 	})
 
@@ -1943,7 +1043,7 @@ func RegisterBridgeServiceHandlerClient(ctx context.Context, mux *runtime.ServeM
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/bridge.v1.BridgeService/CheckAPI", runtime.WithHTTPPathPattern("/priapi/v1/ob/bridge/api"))
+		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/bridge.v1.BridgeService/CheckAPI", runtime.WithHTTPPathPattern("/api"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1959,35 +1059,13 @@ func RegisterBridgeServiceHandlerClient(ctx context.Context, mux *runtime.ServeM
 
 	})
 
-	mux.Handle("GET", pattern_BridgeService_CheckAPI_1, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
-		ctx, cancel := context.WithCancel(req.Context())
-		defer cancel()
-		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		var err error
-		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/bridge.v1.BridgeService/CheckAPI", runtime.WithHTTPPathPattern("/api"))
-		if err != nil {
-			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
-			return
-		}
-		resp, md, err := request_BridgeService_CheckAPI_1(annotatedContext, inboundMarshaler, client, req, pathParams)
-		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
-		if err != nil {
-			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
-			return
-		}
-
-		forward_BridgeService_CheckAPI_1(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
-
-	})
-
 	mux.Handle("GET", pattern_BridgeService_GetBridges_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/bridge.v1.BridgeService/GetBridges", runtime.WithHTTPPathPattern("/priapi/v1/ob/bridge/bridges/{dest_addr}"))
+		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/bridge.v1.BridgeService/GetBridges", runtime.WithHTTPPathPattern("/bridges/{dest_addr}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2003,35 +1081,13 @@ func RegisterBridgeServiceHandlerClient(ctx context.Context, mux *runtime.ServeM
 
 	})
 
-	mux.Handle("GET", pattern_BridgeService_GetBridges_1, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
-		ctx, cancel := context.WithCancel(req.Context())
-		defer cancel()
-		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		var err error
-		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/bridge.v1.BridgeService/GetBridges", runtime.WithHTTPPathPattern("/bridges/{dest_addr}"))
-		if err != nil {
-			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
-			return
-		}
-		resp, md, err := request_BridgeService_GetBridges_1(annotatedContext, inboundMarshaler, client, req, pathParams)
-		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
-		if err != nil {
-			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
-			return
-		}
-
-		forward_BridgeService_GetBridges_1(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
-
-	})
-
 	mux.Handle("GET", pattern_BridgeService_GetProof_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/bridge.v1.BridgeService/GetProof", runtime.WithHTTPPathPattern("/priapi/v1/ob/bridge/merkle-proof"))
+		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/bridge.v1.BridgeService/GetProof", runtime.WithHTTPPathPattern("/merkle-proof"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2047,35 +1103,13 @@ func RegisterBridgeServiceHandlerClient(ctx context.Context, mux *runtime.ServeM
 
 	})
 
-	mux.Handle("GET", pattern_BridgeService_GetProof_1, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
-		ctx, cancel := context.WithCancel(req.Context())
-		defer cancel()
-		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		var err error
-		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/bridge.v1.BridgeService/GetProof", runtime.WithHTTPPathPattern("/merkle-proof"))
-		if err != nil {
-			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
-			return
-		}
-		resp, md, err := request_BridgeService_GetProof_1(annotatedContext, inboundMarshaler, client, req, pathParams)
-		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
-		if err != nil {
-			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
-			return
-		}
-
-		forward_BridgeService_GetProof_1(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
-
-	})
-
 	mux.Handle("GET", pattern_BridgeService_GetBridge_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/bridge.v1.BridgeService/GetBridge", runtime.WithHTTPPathPattern("/priapi/v1/ob/bridge/bridge"))
+		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/bridge.v1.BridgeService/GetBridge", runtime.WithHTTPPathPattern("/bridge"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2091,35 +1125,13 @@ func RegisterBridgeServiceHandlerClient(ctx context.Context, mux *runtime.ServeM
 
 	})
 
-	mux.Handle("GET", pattern_BridgeService_GetBridge_1, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
-		ctx, cancel := context.WithCancel(req.Context())
-		defer cancel()
-		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		var err error
-		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/bridge.v1.BridgeService/GetBridge", runtime.WithHTTPPathPattern("/bridge"))
-		if err != nil {
-			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
-			return
-		}
-		resp, md, err := request_BridgeService_GetBridge_1(annotatedContext, inboundMarshaler, client, req, pathParams)
-		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
-		if err != nil {
-			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
-			return
-		}
-
-		forward_BridgeService_GetBridge_1(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
-
-	})
-
 	mux.Handle("GET", pattern_BridgeService_GetClaims_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/bridge.v1.BridgeService/GetClaims", runtime.WithHTTPPathPattern("/priapi/v1/ob/bridge/claims/{dest_addr}"))
+		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/bridge.v1.BridgeService/GetClaims", runtime.WithHTTPPathPattern("/claims/{dest_addr}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2135,35 +1147,13 @@ func RegisterBridgeServiceHandlerClient(ctx context.Context, mux *runtime.ServeM
 
 	})
 
-	mux.Handle("GET", pattern_BridgeService_GetClaims_1, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
-		ctx, cancel := context.WithCancel(req.Context())
-		defer cancel()
-		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		var err error
-		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/bridge.v1.BridgeService/GetClaims", runtime.WithHTTPPathPattern("/claims/{dest_addr}"))
-		if err != nil {
-			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
-			return
-		}
-		resp, md, err := request_BridgeService_GetClaims_1(annotatedContext, inboundMarshaler, client, req, pathParams)
-		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
-		if err != nil {
-			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
-			return
-		}
-
-		forward_BridgeService_GetClaims_1(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
-
-	})
-
 	mux.Handle("GET", pattern_BridgeService_GetTokenWrapped_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/bridge.v1.BridgeService/GetTokenWrapped", runtime.WithHTTPPathPattern("/priapi/v1/ob/bridge/tokenwrapped"))
+		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/bridge.v1.BridgeService/GetTokenWrapped", runtime.WithHTTPPathPattern("/bridge/tokenwrapped"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2176,28 +1166,6 @@ func RegisterBridgeServiceHandlerClient(ctx context.Context, mux *runtime.ServeM
 		}
 
 		forward_BridgeService_GetTokenWrapped_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
-
-	})
-
-	mux.Handle("GET", pattern_BridgeService_GetTokenWrapped_1, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
-		ctx, cancel := context.WithCancel(req.Context())
-		defer cancel()
-		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		var err error
-		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/bridge.v1.BridgeService/GetTokenWrapped", runtime.WithHTTPPathPattern("/tokenwrapped"))
-		if err != nil {
-			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
-			return
-		}
-		resp, md, err := request_BridgeService_GetTokenWrapped_1(annotatedContext, inboundMarshaler, client, req, pathParams)
-		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
-		if err != nil {
-			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
-			return
-		}
-
-		forward_BridgeService_GetTokenWrapped_1(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 
 	})
 
@@ -2229,7 +1197,7 @@ func RegisterBridgeServiceHandlerClient(ctx context.Context, mux *runtime.ServeM
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/bridge.v1.BridgeService/GetMainCoins", runtime.WithHTTPPathPattern("/priapi/v1/ob/bridge/main-coins/{networkId}"))
+		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/bridge.v1.BridgeService/GetMainCoins", runtime.WithHTTPPathPattern("/main-coins/{networkId}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2245,35 +1213,13 @@ func RegisterBridgeServiceHandlerClient(ctx context.Context, mux *runtime.ServeM
 
 	})
 
-	mux.Handle("GET", pattern_BridgeService_GetMainCoins_1, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
-		ctx, cancel := context.WithCancel(req.Context())
-		defer cancel()
-		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		var err error
-		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/bridge.v1.BridgeService/GetMainCoins", runtime.WithHTTPPathPattern("/main-coins/{networkId}"))
-		if err != nil {
-			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
-			return
-		}
-		resp, md, err := request_BridgeService_GetMainCoins_1(annotatedContext, inboundMarshaler, client, req, pathParams)
-		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
-		if err != nil {
-			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
-			return
-		}
-
-		forward_BridgeService_GetMainCoins_1(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
-
-	})
-
 	mux.Handle("GET", pattern_BridgeService_GetPendingTransactions_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/bridge.v1.BridgeService/GetPendingTransactions", runtime.WithHTTPPathPattern("/priapi/v1/ob/bridge/pending/{destAddr}"))
+		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/bridge.v1.BridgeService/GetPendingTransactions", runtime.WithHTTPPathPattern("/pending/{destAddr}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2289,35 +1235,13 @@ func RegisterBridgeServiceHandlerClient(ctx context.Context, mux *runtime.ServeM
 
 	})
 
-	mux.Handle("GET", pattern_BridgeService_GetPendingTransactions_1, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
-		ctx, cancel := context.WithCancel(req.Context())
-		defer cancel()
-		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		var err error
-		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/bridge.v1.BridgeService/GetPendingTransactions", runtime.WithHTTPPathPattern("/pending/{destAddr}"))
-		if err != nil {
-			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
-			return
-		}
-		resp, md, err := request_BridgeService_GetPendingTransactions_1(annotatedContext, inboundMarshaler, client, req, pathParams)
-		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
-		if err != nil {
-			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
-			return
-		}
-
-		forward_BridgeService_GetPendingTransactions_1(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
-
-	})
-
 	mux.Handle("GET", pattern_BridgeService_GetAllTransactions_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/bridge.v1.BridgeService/GetAllTransactions", runtime.WithHTTPPathPattern("/priapi/v1/ob/bridge/all/{destAddr}"))
+		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/bridge.v1.BridgeService/GetAllTransactions", runtime.WithHTTPPathPattern("/all/{destAddr}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2333,35 +1257,13 @@ func RegisterBridgeServiceHandlerClient(ctx context.Context, mux *runtime.ServeM
 
 	})
 
-	mux.Handle("GET", pattern_BridgeService_GetAllTransactions_1, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
-		ctx, cancel := context.WithCancel(req.Context())
-		defer cancel()
-		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		var err error
-		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/bridge.v1.BridgeService/GetAllTransactions", runtime.WithHTTPPathPattern("/all/{destAddr}"))
-		if err != nil {
-			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
-			return
-		}
-		resp, md, err := request_BridgeService_GetAllTransactions_1(annotatedContext, inboundMarshaler, client, req, pathParams)
-		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
-		if err != nil {
-			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
-			return
-		}
-
-		forward_BridgeService_GetAllTransactions_1(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
-
-	})
-
 	mux.Handle("GET", pattern_BridgeService_GetSmtProof_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/bridge.v1.BridgeService/GetSmtProof", runtime.WithHTTPPathPattern("/priapi/v1/ob/bridge/smt-proof"))
+		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/bridge.v1.BridgeService/GetSmtProof", runtime.WithHTTPPathPattern("/smt-proof"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2377,35 +1279,13 @@ func RegisterBridgeServiceHandlerClient(ctx context.Context, mux *runtime.ServeM
 
 	})
 
-	mux.Handle("GET", pattern_BridgeService_GetSmtProof_1, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
-		ctx, cancel := context.WithCancel(req.Context())
-		defer cancel()
-		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		var err error
-		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/bridge.v1.BridgeService/GetSmtProof", runtime.WithHTTPPathPattern("/smt-proof"))
-		if err != nil {
-			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
-			return
-		}
-		resp, md, err := request_BridgeService_GetSmtProof_1(annotatedContext, inboundMarshaler, client, req, pathParams)
-		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
-		if err != nil {
-			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
-			return
-		}
-
-		forward_BridgeService_GetSmtProof_1(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
-
-	})
-
 	mux.Handle("GET", pattern_BridgeService_GetNotReadyTransactions_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/bridge.v1.BridgeService/GetNotReadyTransactions", runtime.WithHTTPPathPattern("/priapi/v1/ob/bridge/not-ready"))
+		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/bridge.v1.BridgeService/GetNotReadyTransactions", runtime.WithHTTPPathPattern("/not-ready"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2421,35 +1301,13 @@ func RegisterBridgeServiceHandlerClient(ctx context.Context, mux *runtime.ServeM
 
 	})
 
-	mux.Handle("GET", pattern_BridgeService_GetNotReadyTransactions_1, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
-		ctx, cancel := context.WithCancel(req.Context())
-		defer cancel()
-		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		var err error
-		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/bridge.v1.BridgeService/GetNotReadyTransactions", runtime.WithHTTPPathPattern("/not-ready"))
-		if err != nil {
-			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
-			return
-		}
-		resp, md, err := request_BridgeService_GetNotReadyTransactions_1(annotatedContext, inboundMarshaler, client, req, pathParams)
-		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
-		if err != nil {
-			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
-			return
-		}
-
-		forward_BridgeService_GetNotReadyTransactions_1(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
-
-	})
-
 	mux.Handle("GET", pattern_BridgeService_GetMonitoredTxsByStatus_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/bridge.v1.BridgeService/GetMonitoredTxsByStatus", runtime.WithHTTPPathPattern("/priapi/v1/ob/bridge/monitored-txs/status/{status}"))
+		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/bridge.v1.BridgeService/GetMonitoredTxsByStatus", runtime.WithHTTPPathPattern("/monitored-txs/status/{status}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2465,131 +1323,61 @@ func RegisterBridgeServiceHandlerClient(ctx context.Context, mux *runtime.ServeM
 
 	})
 
-	mux.Handle("GET", pattern_BridgeService_GetMonitoredTxsByStatus_1, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
-		ctx, cancel := context.WithCancel(req.Context())
-		defer cancel()
-		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		var err error
-		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/bridge.v1.BridgeService/GetMonitoredTxsByStatus", runtime.WithHTTPPathPattern("/monitored-txs/status/{status}"))
-		if err != nil {
-			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
-			return
-		}
-		resp, md, err := request_BridgeService_GetMonitoredTxsByStatus_1(annotatedContext, inboundMarshaler, client, req, pathParams)
-		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
-		if err != nil {
-			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
-			return
-		}
-
-		forward_BridgeService_GetMonitoredTxsByStatus_1(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
-
-	})
-
 	return nil
 }
 
 var (
-	pattern_BridgeService_CheckAPI_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"priapi", "v1", "ob", "bridge", "api"}, ""))
+	pattern_BridgeService_CheckAPI_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0}, []string{"api"}, ""))
 
-	pattern_BridgeService_CheckAPI_1 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0}, []string{"api"}, ""))
+	pattern_BridgeService_GetBridges_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 1, 0, 4, 1, 5, 1}, []string{"bridges", "dest_addr"}, ""))
 
-	pattern_BridgeService_GetBridges_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 1, 0, 4, 1, 5, 5}, []string{"priapi", "v1", "ob", "bridge", "bridges", "dest_addr"}, ""))
+	pattern_BridgeService_GetProof_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0}, []string{"merkle-proof"}, ""))
 
-	pattern_BridgeService_GetBridges_1 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 1, 0, 4, 1, 5, 1}, []string{"bridges", "dest_addr"}, ""))
+	pattern_BridgeService_GetBridge_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0}, []string{"bridge"}, ""))
 
-	pattern_BridgeService_GetProof_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"priapi", "v1", "ob", "bridge", "merkle-proof"}, ""))
+	pattern_BridgeService_GetClaims_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 1, 0, 4, 1, 5, 1}, []string{"claims", "dest_addr"}, ""))
 
-	pattern_BridgeService_GetProof_1 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0}, []string{"merkle-proof"}, ""))
-
-	pattern_BridgeService_GetBridge_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 3}, []string{"priapi", "v1", "ob", "bridge"}, ""))
-
-	pattern_BridgeService_GetBridge_1 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0}, []string{"bridge"}, ""))
-
-	pattern_BridgeService_GetClaims_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 1, 0, 4, 1, 5, 5}, []string{"priapi", "v1", "ob", "bridge", "claims", "dest_addr"}, ""))
-
-	pattern_BridgeService_GetClaims_1 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 1, 0, 4, 1, 5, 1}, []string{"claims", "dest_addr"}, ""))
-
-	pattern_BridgeService_GetTokenWrapped_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"priapi", "v1", "ob", "bridge", "tokenwrapped"}, ""))
-
-	pattern_BridgeService_GetTokenWrapped_1 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0}, []string{"tokenwrapped"}, ""))
+	pattern_BridgeService_GetTokenWrapped_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1}, []string{"bridge", "tokenwrapped"}, ""))
 
 	pattern_BridgeService_GetCoinPrice_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0}, []string{"coin-price"}, ""))
 
-	pattern_BridgeService_GetMainCoins_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 1, 0, 4, 1, 5, 5}, []string{"priapi", "v1", "ob", "bridge", "main-coins", "networkId"}, ""))
+	pattern_BridgeService_GetMainCoins_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 1, 0, 4, 1, 5, 1}, []string{"main-coins", "networkId"}, ""))
 
-	pattern_BridgeService_GetMainCoins_1 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 1, 0, 4, 1, 5, 1}, []string{"main-coins", "networkId"}, ""))
+	pattern_BridgeService_GetPendingTransactions_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 1, 0, 4, 1, 5, 1}, []string{"pending", "destAddr"}, ""))
 
-	pattern_BridgeService_GetPendingTransactions_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 1, 0, 4, 1, 5, 5}, []string{"priapi", "v1", "ob", "bridge", "pending", "destAddr"}, ""))
+	pattern_BridgeService_GetAllTransactions_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 1, 0, 4, 1, 5, 1}, []string{"all", "destAddr"}, ""))
 
-	pattern_BridgeService_GetPendingTransactions_1 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 1, 0, 4, 1, 5, 1}, []string{"pending", "destAddr"}, ""))
+	pattern_BridgeService_GetSmtProof_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0}, []string{"smt-proof"}, ""))
 
-	pattern_BridgeService_GetAllTransactions_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 1, 0, 4, 1, 5, 5}, []string{"priapi", "v1", "ob", "bridge", "all", "destAddr"}, ""))
+	pattern_BridgeService_GetNotReadyTransactions_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0}, []string{"not-ready"}, ""))
 
-	pattern_BridgeService_GetAllTransactions_1 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 1, 0, 4, 1, 5, 1}, []string{"all", "destAddr"}, ""))
-
-	pattern_BridgeService_GetSmtProof_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"priapi", "v1", "ob", "bridge", "smt-proof"}, ""))
-
-	pattern_BridgeService_GetSmtProof_1 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0}, []string{"smt-proof"}, ""))
-
-	pattern_BridgeService_GetNotReadyTransactions_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"priapi", "v1", "ob", "bridge", "not-ready"}, ""))
-
-	pattern_BridgeService_GetNotReadyTransactions_1 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0}, []string{"not-ready"}, ""))
-
-	pattern_BridgeService_GetMonitoredTxsByStatus_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 2, 5, 1, 0, 4, 1, 5, 5}, []string{"priapi", "v1", "ob", "bridge", "monitored-txs", "status"}, ""))
-
-	pattern_BridgeService_GetMonitoredTxsByStatus_1 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 1}, []string{"monitored-txs", "status"}, ""))
+	pattern_BridgeService_GetMonitoredTxsByStatus_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 1}, []string{"monitored-txs", "status"}, ""))
 )
 
 var (
 	forward_BridgeService_CheckAPI_0 = runtime.ForwardResponseMessage
 
-	forward_BridgeService_CheckAPI_1 = runtime.ForwardResponseMessage
-
 	forward_BridgeService_GetBridges_0 = runtime.ForwardResponseMessage
-
-	forward_BridgeService_GetBridges_1 = runtime.ForwardResponseMessage
 
 	forward_BridgeService_GetProof_0 = runtime.ForwardResponseMessage
 
-	forward_BridgeService_GetProof_1 = runtime.ForwardResponseMessage
-
 	forward_BridgeService_GetBridge_0 = runtime.ForwardResponseMessage
-
-	forward_BridgeService_GetBridge_1 = runtime.ForwardResponseMessage
 
 	forward_BridgeService_GetClaims_0 = runtime.ForwardResponseMessage
 
-	forward_BridgeService_GetClaims_1 = runtime.ForwardResponseMessage
-
 	forward_BridgeService_GetTokenWrapped_0 = runtime.ForwardResponseMessage
-
-	forward_BridgeService_GetTokenWrapped_1 = runtime.ForwardResponseMessage
 
 	forward_BridgeService_GetCoinPrice_0 = runtime.ForwardResponseMessage
 
 	forward_BridgeService_GetMainCoins_0 = runtime.ForwardResponseMessage
 
-	forward_BridgeService_GetMainCoins_1 = runtime.ForwardResponseMessage
-
 	forward_BridgeService_GetPendingTransactions_0 = runtime.ForwardResponseMessage
-
-	forward_BridgeService_GetPendingTransactions_1 = runtime.ForwardResponseMessage
 
 	forward_BridgeService_GetAllTransactions_0 = runtime.ForwardResponseMessage
 
-	forward_BridgeService_GetAllTransactions_1 = runtime.ForwardResponseMessage
-
 	forward_BridgeService_GetSmtProof_0 = runtime.ForwardResponseMessage
-
-	forward_BridgeService_GetSmtProof_1 = runtime.ForwardResponseMessage
 
 	forward_BridgeService_GetNotReadyTransactions_0 = runtime.ForwardResponseMessage
 
-	forward_BridgeService_GetNotReadyTransactions_1 = runtime.ForwardResponseMessage
-
 	forward_BridgeService_GetMonitoredTxsByStatus_0 = runtime.ForwardResponseMessage
-
-	forward_BridgeService_GetMonitoredTxsByStatus_1 = runtime.ForwardResponseMessage
 )
