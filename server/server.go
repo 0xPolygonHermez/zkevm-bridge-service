@@ -21,6 +21,10 @@ import (
 	"google.golang.org/grpc/health/grpc_health_v1"
 )
 
+const (
+	bridgeEndpointPath = "/priapi/v1/ob/bridge"
+)
+
 func RegisterNacos(cfg nacos.Config) {
 	log.Info(fmt.Sprintf("nacos config NacosUrls %s NamespaceId %s ApplicationName %s ExternalListenAddr %s", cfg.NacosUrls, cfg.NamespaceId, cfg.ApplicationName, cfg.ExternalListenAddr))
 	if cfg.NacosUrls != "" {
@@ -150,7 +154,7 @@ func runRestServer(ctx context.Context, grpcPort, httpPort string) error {
 	mux := runtime.NewServeMux(muxJSONOpt, muxHealthOpt)
 
 	httpMux := http.NewServeMux()
-	httpMux.Handle("/priapi/v1/ob/bridge/", mux)
+	httpMux.Handle(bridgeEndpointPath, http.StripPrefix(bridgeEndpointPath, mux))
 
 	if err := pb.RegisterBridgeServiceHandler(ctx, mux, conn); err != nil {
 		return err
