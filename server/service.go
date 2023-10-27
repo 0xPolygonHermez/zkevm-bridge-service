@@ -622,7 +622,7 @@ func (s *bridgeService) GetMonitoredTxsByStatus(ctx context.Context, req *pb.Get
 		limit = s.maxPageLimit
 	}
 
-	mTxs, err := s.storage.GetClaimTxsByStatus(ctx, []ctmtypes.MonitoredTxStatus{ctmtypes.MonitoredTxStatusFailed}, uint(limit+1), uint(req.Offset), nil)
+	mTxs, err := s.storage.GetClaimTxsByStatus(ctx, []ctmtypes.MonitoredTxStatus{ctmtypes.MonitoredTxStatus(req.Status)}, uint(limit+1), uint(req.Offset), nil)
 	if err != nil {
 		return &pb.CommonMonitoredTxsResponse{
 			Code: defaultErrorCode,
