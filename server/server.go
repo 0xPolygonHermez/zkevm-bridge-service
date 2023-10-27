@@ -3,13 +3,14 @@ package server
 import (
 	"context"
 	"fmt"
-	"github.com/0xPolygonHermez/zkevm-bridge-service/nacos"
-	"google.golang.org/protobuf/encoding/protojson"
 	"net"
 	"net/http"
 	"os"
 	"os/signal"
 	"time"
+
+	"github.com/0xPolygonHermez/zkevm-bridge-service/nacos"
+	"google.golang.org/protobuf/encoding/protojson"
 
 	"github.com/0xPolygonHermez/zkevm-bridge-service/bridgectrl/pb"
 	"github.com/0xPolygonHermez/zkevm-node/log"
@@ -148,6 +149,9 @@ func runRestServer(ctx context.Context, grpcPort, httpPort string) error {
 	})
 	mux := runtime.NewServeMux(muxJSONOpt, muxHealthOpt)
 
+	httpMux := http.NewServeMux()
+	httpMux.Handle("/priapi/v1/ob/bridge/", mux)
+
 	if err := pb.RegisterBridgeServiceHandler(ctx, mux, conn); err != nil {
 		return err
 	}
@@ -155,7 +159,7 @@ func runRestServer(ctx context.Context, grpcPort, httpPort string) error {
 	srv := &http.Server{
 		ReadTimeout: 1 * time.Second, //nolint:gomnd
 		Addr:        ":" + httpPort,
-		Handler:     allowCORS(mux),
+		Handler:     allowCORS(httpMux),
 	}
 
 	c := make(chan os.Signal, 1)
