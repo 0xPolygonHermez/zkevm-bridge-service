@@ -3,13 +3,14 @@ package server
 import (
 	"context"
 	"fmt"
-	"github.com/0xPolygonHermez/zkevm-bridge-service/nacos"
-	"google.golang.org/protobuf/encoding/protojson"
 	"net"
 	"net/http"
 	"os"
 	"os/signal"
 	"time"
+
+	"github.com/0xPolygonHermez/zkevm-bridge-service/nacos"
+	"google.golang.org/protobuf/encoding/protojson"
 
 	"github.com/0xPolygonHermez/zkevm-bridge-service/bridgectrl/pb"
 	"github.com/0xPolygonHermez/zkevm-node/log"
@@ -83,7 +84,10 @@ func runGRPCServer(ctx context.Context, bridgeServer pb.BridgeServiceServer, por
 		return err
 	}
 
-	server := grpc.NewServer(grpc.UnaryInterceptor(sentinelGrpc.NewUnaryServerInterceptor()))
+	server := grpc.NewServer(
+		grpc.UnaryInterceptor(sentinelGrpc.NewUnaryServerInterceptor()),
+		grpc.UnaryInterceptor(NewRequestLogInterceptor()),
+	)
 	pb.RegisterBridgeServiceServer(server, bridgeServer)
 
 	healthService := newHealthChecker()
