@@ -21,7 +21,7 @@ func NewRequestLogInterceptor() grpc.UnaryServerInterceptor {
 		duration := time.Now().Sub(startTime)
 		reqJson, _ := protojson.Marshal(req.(proto.Message))
 		respJson, _ := protojson.Marshal(resp.(proto.Message))
-		log.Infof("method[%v] req[%v] resp[%v] err[%v] processTime[%v]", methodName, reqJson, respJson, err, duration)
+		log.Infof("method[%v] req[%v] resp[%v] err[%v] processTime[%v]", methodName, string(reqJson), string(respJson), err, duration)
 		return resp, err
 	}
 }
