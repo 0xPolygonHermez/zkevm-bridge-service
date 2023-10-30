@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/0xPolygonHermez/zkevm-bridge-service/nacos"
+	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	"google.golang.org/protobuf/encoding/protojson"
 
 	"github.com/0xPolygonHermez/zkevm-bridge-service/bridgectrl/pb"
@@ -84,10 +85,9 @@ func runGRPCServer(ctx context.Context, bridgeServer pb.BridgeServiceServer, por
 		return err
 	}
 
-	server := grpc.NewServer(
-		grpc.UnaryInterceptor(sentinelGrpc.NewUnaryServerInterceptor()),
-		grpc.UnaryInterceptor(NewRequestLogInterceptor()),
-	)
+	server := grpc.NewServer(grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(
+		sentinelGrpc.NewUnaryServerInterceptor(),
+		NewRequestLogInterceptor())))
 	pb.RegisterBridgeServiceServer(server, bridgeServer)
 
 	healthService := newHealthChecker()
