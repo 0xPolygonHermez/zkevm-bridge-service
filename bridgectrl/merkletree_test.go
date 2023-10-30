@@ -274,3 +274,24 @@ func TestUpdateMT(t *testing.T) {
 		require.Equal(t, testVector.NewRoot[2:], hex.EncodeToString(newRoot[:]))
 	}
 }
+
+func TestGetLeaves(t *testing.T) {
+	data, err := os.ReadFile("test/vectors/src/mt-bridge/fullmt-vector.sql")
+	require.NoError(t, err)
+	dbCfg := pgstorage.NewConfigFromEnv()
+	ctx := context.Background()
+	err = pgstorage.InitOrReset(dbCfg)
+	require.NoError(t, err)
+
+	store, err := pgstorage.NewPostgresStorage(dbCfg)
+	require.NoError(t, err)
+	_, err = store.Exec(ctx, string(data))
+	require.NoError(t, err)
+
+	mt, err := NewMerkleTree(ctx, store, uint8(32), 0)
+	require.NoError(t, err)
+	leaves, err := mt.getLeaves(ctx, 0, nil)
+	require.NoError(t, err)
+	require.Equal(t, 26, len(leaves))
+	log.Debug("leaves: %+v", leaves)
+}

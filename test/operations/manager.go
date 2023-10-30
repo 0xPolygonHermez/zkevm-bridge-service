@@ -339,7 +339,7 @@ func (m *Manager) AddFunds(ctx context.Context) error {
 	// Create pol polTokenSC sc instance
 	log.Infof("Loading pol token SC instance")
 	polAddr := common.HexToAddress(PolTokenAddress)
-	PolTokenSC, err := operations.NewToken(polAddr, client)
+	polTokenSC, err := operations.NewToken(polAddr, client)
 	if err != nil {
 		return err
 	}

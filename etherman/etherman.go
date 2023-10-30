@@ -99,6 +99,7 @@ type Client struct {
 	OldPolygonBridge           *oldpolygonzkevmbridge.Oldpolygonzkevmbridge
 	PolygonZkEVMGlobalExitRoot *polygonzkevmglobalexitroot.Polygonzkevmglobalexitroot
 	PolygonRollupManager       *polygonrollupmanager.Polygonrollupmanager
+	RollupID                   uint32
 	SCAddresses                []common.Address
 }
 
@@ -127,10 +128,23 @@ func NewClient(cfg Config, polygonBridgeAddr, polygonZkEVMGlobalExitRootAddress,
 	if err != nil {
 		return nil, err
 	}
+	// Get RollupID
+	rollupID, err := polygonRollupManager.RollupAddressToID(&bind.CallOpts{Pending: false}, polygonRollupManagerAddress)
+	if err != nil {
+		return nil, err
+	}
+	log.Debug("rollupID: ", rollupID)
 	var scAddresses []common.Address
 	scAddresses = append(scAddresses, polygonZkEVMGlobalExitRootAddress, polygonBridgeAddr, polygonRollupManagerAddress)
 
-	return &Client{EtherClient: ethClient, PolygonBridge: polygonBridge, OldPolygonBridge: oldpolygonBridge, PolygonZkEVMGlobalExitRoot: polygonZkEVMGlobalExitRoot, PolygonRollupManager: polygonRollupManager, SCAddresses: scAddresses}, nil
+	return &Client{
+		EtherClient: ethClient,
+		PolygonBridge: polygonBridge,
+		OldPolygonBridge: oldpolygonBridge,
+		PolygonZkEVMGlobalExitRoot: polygonZkEVMGlobalExitRoot,
+		PolygonRollupManager: polygonRollupManager,
+		RollupID: rollupID,
+		SCAddresses: scAddresses}, nil
 }
 
 // NewL2Client creates a new etherman for L2.
@@ -547,4 +561,8 @@ func (etherMan *Client) verifyBatches(ctx context.Context, vLog types.Log, block
 	}
 	(*blocksOrder)[(*blocks)[len(*blocks)-1].BlockHash] = append((*blocksOrder)[(*blocks)[len(*blocks)-1].BlockHash], or)
 	return nil
+}
+
+func (etherMan *Client) GetRollupID() uint {
+	return uint(etherMan.RollupID)
 }

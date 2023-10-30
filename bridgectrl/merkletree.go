@@ -222,3 +222,40 @@ func (mt *MerkleTree) updateLeaf(ctx context.Context, depositID uint64, leaves [
 	mt.count = initLeavesCount
 	return nil
 }
+
+func (mt *MerkleTree) getLeaves(ctx context.Context, depositID uint64, dbTx pgx.Tx) ([][KeyLen]byte, error) {
+	root, err := mt.getRoot(ctx, dbTx)
+	if err != nil {
+		return nil, err
+	}
+	cur := [][]byte{root}
+	// It starts in height-1 because 0 is the level of the leafs
+	for h := int(mt.height - 1); h >= 0; h-- {
+		var levelLeaves [][]byte
+		for _, c := range cur {
+			leaves, err := mt.store.Get(ctx, c, dbTx)
+			if err != nil {
+				var isZero bool
+				curHash := common.BytesToHash(c)
+				for _, h := range zeroHashes  {
+					if common.BytesToHash(h[:]) == curHash {
+						isZero = true
+					}
+				}
+				if !isZero {
+					return nil, fmt.Errorf("height: %d, cur: %v, error: %v", h, cur, err)
+				}
+			}
+			levelLeaves = append(levelLeaves, leaves...)
+		}
+		cur = levelLeaves
+	}
+	var result [][KeyLen]byte
+	for _, l := range cur {
+		var aux [KeyLen]byte
+		copy(aux[:], l)
+		result = append(result, aux)
+
+	}
+	return result, nil
+}
