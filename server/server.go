@@ -154,6 +154,7 @@ func runRestServer(ctx context.Context, grpcPort, httpPort string) error {
 
 	httpMux := http.NewServeMux()
 	httpMux.Handle(bridgeEndpointPath+"/", http.StripPrefix(bridgeEndpointPath, mux))
+	httpMux.Handle("/", mux)
 
 	if err := pb.RegisterBridgeServiceHandler(ctx, mux, conn); err != nil {
 		return err
