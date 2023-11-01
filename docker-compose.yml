@@ -151,18 +151,8 @@ services:
       - ./test/test.keystore.claimtx:/pk/keystore.claimtxmanager
       - ./config/config.local.toml:/app/config.toml
       - ./sentinel/config.json:/app/sentinel_config.json
-    command:
-      - "/bin/sh"
-      - "-c"
-      - "/app/xgon-bridge run --cfg /app/config.toml"
-
-  xgon-bridge-kafka-consumer:
-    container_name: xgon-bridge-kafka-consumer
-    image: xgon-bridge-service
-    volumes:
-      - ./config/config.local.toml:/app/config.toml
       - ./coinmiddleware/root-ca-cert:/app/root-ca-cert
     command:
       - "/bin/sh"
       - "-c"
-      - "/app/xgon-bridge runKafkaConsumer --cfg /app/config.toml"
+      - "/app/xgon-bridge run --cfg /app/config.toml"
