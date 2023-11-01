@@ -32,7 +32,7 @@ func newTestingEnv() (ethman *Client, ethBackend *backends.SimulatedBackend, aut
 	if err != nil {
 		log.Fatal(err)
 	}
-	ethman, ethBackend, maticAddr, bridge, err = NewSimulatedEtherman(Config{}, auth)
+	ethman, ethBackend, maticAddr, bridge, _, err = NewSimulatedEtherman(Config{}, auth)
 	if err != nil {
 		log.Fatal(err)
 	}

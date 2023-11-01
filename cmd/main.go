@@ -51,13 +51,6 @@ func main() {
 			Action:  startServer,
 			Flags:   flags,
 		},
-		{
-			Name:    "runKafkaConsumer",
-			Aliases: []string{},
-			Usage:   "Run the coin middleware kafka consumer",
-			Action:  startKafkaConsumer,
-			Flags:   flags,
-		},
 	}
 
 	err := app.Run(os.Args)

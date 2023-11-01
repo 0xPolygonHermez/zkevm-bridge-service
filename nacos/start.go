@@ -7,11 +7,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/0xPolygonHermez/zkevm-node/log"
 	"github.com/nacos-group/nacos-sdk-go/clients"
 	"github.com/nacos-group/nacos-sdk-go/common/constant"
 	"github.com/nacos-group/nacos-sdk-go/vo"
-
-	"github.com/0xPolygonHermez/zkevm-node/log"
 )
 
 // StartNacosClient start nacos client and register rest service in nacos
@@ -27,11 +26,13 @@ func StartNacosClient(urls string, namespace string, name string, externalAddr s
 		log.Error(fmt.Sprintf("failed to resolve nacos server url %s: %s", urls, err.Error()))
 		return
 	}
+	const timeoutMs = 5000
+	const listenInterval = 10000
 	client, err := clients.CreateNamingClient(map[string]interface{}{
 		"serverConfigs": serverConfigs,
 		"clientConfig": constant.ClientConfig{
-			TimeoutMs:           5000,
-			ListenInterval:      10000,
+			TimeoutMs:           timeoutMs,
+			ListenInterval:      listenInterval,
 			NotLoadCacheAtStart: true,
 			NamespaceId:         namespace,
 			LogDir:              "/dev/null",
@@ -43,11 +44,12 @@ func StartNacosClient(urls string, namespace string, name string, externalAddr s
 		return
 	}
 
+	const weight = 10
 	_, err = client.RegisterInstance(vo.RegisterInstanceParam{
 		Ip:          ip,
 		Port:        uint64(port),
 		ServiceName: name,
-		Weight:      10,
+		Weight:      weight,
 		ClusterName: "DEFAULT",
 		Enable:      true,
 		Healthy:     true,
@@ -68,7 +70,8 @@ func ResolveIPAndPort(addr string) (string, int, error) {
 	laddr := strings.Split(addr, ":")
 	ip := laddr[0]
 	if ip == "127.0.0.1" {
-		return GetLocalIP(), 26659, nil
+		const port = 26659
+		return GetLocalIP(), port, nil
 	}
 	port, err := strconv.Atoi(laddr[1])
 	if err != nil {

@@ -9,17 +9,16 @@ import (
 	"os/signal"
 	"time"
 
-	"github.com/0xPolygonHermez/zkevm-bridge-service/nacos"
-	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
-	"google.golang.org/protobuf/encoding/protojson"
-
 	"github.com/0xPolygonHermez/zkevm-bridge-service/bridgectrl/pb"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/nacos"
 	"github.com/0xPolygonHermez/zkevm-node/log"
 	sentinelGrpc "github.com/alibaba/sentinel-golang/pkg/adapters/grpc"
+	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/health/grpc_health_v1"
+	"google.golang.org/protobuf/encoding/protojson"
 )
 
 func RegisterNacos(cfg nacos.Config) {

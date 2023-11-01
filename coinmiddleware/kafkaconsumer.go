@@ -4,16 +4,17 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
+	"os"
+
 	"github.com/0xPolygonHermez/zkevm-bridge-service/redisstorage"
 	"github.com/0xPolygonHermez/zkevm-node/log"
 	"github.com/IBM/sarama"
 	"github.com/pkg/errors"
-	"os"
 )
 
 // KafkaConsumer provides the interface to consume from coin middleware kafka
 type KafkaConsumer interface {
-	Start(ctx context.Context) error
+	Start(ctx context.Context)
 	Close() error
 }
 
@@ -45,7 +46,7 @@ func NewKafkaConsumer(cfg Config, redisStorage redisstorage.RedisStorage) (Kafka
 		}
 
 		config.Net.TLS.Enable = true
-		config.Net.TLS.Config = &tls.Config{RootCAs: caCertPool, InsecureSkipVerify: true}
+		config.Net.TLS.Config = &tls.Config{RootCAs: caCertPool, InsecureSkipVerify: true} // #nosec
 	}
 
 	client, err := sarama.NewConsumerGroup(cfg.Brokers, cfg.ConsumerGroupID, config)
@@ -60,7 +61,7 @@ func NewKafkaConsumer(cfg Config, redisStorage redisstorage.RedisStorage) (Kafka
 	}, nil
 }
 
-func (c *kafkaConsumerImpl) Start(ctx context.Context) error {
+func (c *kafkaConsumerImpl) Start(ctx context.Context) {
 	log.Debug("starting kafka consumer")
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
@@ -70,14 +71,18 @@ func (c *kafkaConsumerImpl) Start(ctx context.Context) error {
 		err := c.client.Consume(ctx, c.topics, c.handler)
 		if err != nil {
 			log.Errorf("kafka consumer error: %v", err)
-			if errors.Is(err, sarama.ErrClosedConsumerGroup) {
-				err = nil
-			}
-			return errors.Wrap(err, "kafka consumer error")
+			//if errors.Is(err, sarama.ErrClosedConsumerGroup) {
+			//	err = nil
+			//}
+			//err = errors.Wrap(err, "kafka consumer error")
+			//panic(err)
+			return
 		}
 		if err = ctx.Err(); err != nil {
 			log.Errorf("kafka consumer ctx error: %v", err)
-			return errors.Wrap(err, "kafka consumer ctx error")
+			//err = errors.Wrap(err, "kafka consumer ctx error")
+			//panic(err)
+			return
 		}
 	}
 }

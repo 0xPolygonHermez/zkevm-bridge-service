@@ -4,10 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/0xPolygonHermez/zkevm-bridge-service/bridgectrl/pb"
 	"math/big"
 	"time"
 
+	"github.com/0xPolygonHermez/zkevm-bridge-service/bridgectrl/pb"
 	ctmtypes "github.com/0xPolygonHermez/zkevm-bridge-service/claimtxman/types"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/utils/gerror"

@@ -17,11 +17,12 @@ func GetOneInstance(urls string, nameSpace string, param vo.SelectOneHealthInsta
 		return nil, fmt.Errorf("failed to resolve nacos server url %s: %s", urls, err.Error())
 	}
 
+	const timeoutMs = 5000
 	namingClient, err := clients.CreateNamingClient(map[string]interface{}{
 		"serverConfigs": serverConfigs,
 		"clientConfig": constant.ClientConfig{
 			NamespaceId:         nameSpace,
-			TimeoutMs:           5000,
+			TimeoutMs:           timeoutMs,
 			NotLoadCacheAtStart: true,
 			LogDir:              "/dev/null",
 		},

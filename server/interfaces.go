@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+
 	ctmtypes "github.com/0xPolygonHermez/zkevm-bridge-service/claimtxman/types"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman"
 	"github.com/ethereum/go-ethereum/common"

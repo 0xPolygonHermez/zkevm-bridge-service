@@ -15,8 +15,8 @@ const (
 	l1AccHexPrivateKey = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
 
 	l1NetworkURL           = "http://localhost:8545"
-	polygonZkEVMAddressHex = "0x610178dA211FEF7D417bC0e6FeD39F05609AD788"
-	maticTokenAddressHex   = "0x5FbDB2315678afecb367f032d93F642f64180aa3" //nolint:gosec
+	polygonZkEVMAddressHex = "0x0D9088C72Cd4F08e9dDe474D8F5394147f64b22C"
+	maticTokenAddressHex   = "0xcFE6D77a653b988203BfAc9C6a69eA9D583bdC2b" //nolint:gosec
 )
 
 func main() {
@@ -44,7 +44,7 @@ func main() {
 	if err != nil {
 		log.Fatal("Error approving matics: ", err)
 	}
-	tx, err := polygonZkEVM.SequenceBatches(auth, nil, auth.From)
+	tx, err := polygonZkEVM.SequenceBatches(auth, nil, auth.From, nil)
 	if err != nil {
 		log.Fatal("Error sending the batch: ", err)
 	}

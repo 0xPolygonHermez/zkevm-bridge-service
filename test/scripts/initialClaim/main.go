@@ -20,14 +20,16 @@ import (
 )
 
 const (
-	l2BridgeAddr = "0xff0EE8ea08cEf5cb4322777F5CC3E8A584B8A4A0"
-	zkevmAddr    = "0x610178dA211FEF7D417bC0e6FeD39F05609AD788"
+	l2BridgeAddr = "0x10B65c586f795aF3eCCEe594fE4E38E1F059F780"
+	zkevmAddr    = "0x0D9088C72Cd4F08e9dDe474D8F5394147f64b22C"
 
 	accHexAddress    = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
 	accHexPrivateKey = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
 	l1NetworkURL     = "http://localhost:8545"
 	l2NetworkURL     = "http://localhost:8123"
 	bridgeURL        = "http://localhost:8080"
+
+	forkID = 4
 
 	l2GasLimit = 1000000
 
@@ -112,7 +114,7 @@ func main() {
 	}
 	encoded := hex.EncodeToHex(b)
 	log.Info("tx encoded: ", encoded)
-	byt, err := state.EncodeTransaction(*tx)
+	byt, err := state.EncodeTransaction(*tx, state.MaxEffectivePercentage, forkID)
 	if err != nil {
 		log.Fatal("error: ", err)
 	}
