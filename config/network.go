@@ -41,9 +41,9 @@ var (
 		},
 		"local": {
 			GenBlockNumber:                    1,
-			PolygonBridgeAddress:              common.HexToAddress("0xff0EE8ea08cEf5cb4322777F5CC3E8A584B8A4A0"),
-			PolygonZkEVMGlobalExitRootAddress: common.HexToAddress("0x2279B7A0a67DB372996a5FaB50D91eAA73d2eBe6"),
-			L2PolygonBridgeAddresses:          []common.Address{common.HexToAddress("0xff0EE8ea08cEf5cb4322777F5CC3E8A584B8A4A0")},
+			PolygonBridgeAddress:              common.HexToAddress("0x10B65c586f795aF3eCCEe594fE4E38E1F059F780"),
+			PolygonZkEVMGlobalExitRootAddress: common.HexToAddress("0xEd236da21Ff62bC7B62608AdB818da49E8549fa7"),
+			L2PolygonBridgeAddresses:          []common.Address{common.HexToAddress("0x10B65c586f795aF3eCCEe594fE4E38E1F059F780")},
 		},
 	}
 )

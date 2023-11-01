@@ -2,15 +2,16 @@ package redisstorage
 
 import (
 	"context"
+	"math/rand"
+	"strconv"
+	"strings"
+	"time"
+
 	"github.com/0xPolygonHermez/zkevm-bridge-service/bridgectrl/pb"
 	"github.com/0xPolygonHermez/zkevm-node/log"
 	"github.com/pkg/errors"
 	"github.com/redis/go-redis/v9"
 	"google.golang.org/protobuf/encoding/protojson"
-	"math/rand"
-	"strconv"
-	"strings"
-	"time"
 )
 
 const (
@@ -67,7 +68,7 @@ func (s *redisStorageImpl) SetCoinPrice(ctx context.Context, prices []*pb.Symbol
 		}
 		valueList = append(valueList, priceKey, priceVal)
 	}
-	if len(valueList) < 2 {
+	if len(valueList) < 2 { // nolint:gomnd
 		return nil
 	}
 	err = s.client.HSet(ctx, coinPriceHashKey, valueList...).Err()
@@ -131,7 +132,7 @@ func (s *redisStorageImpl) GetCoinPrice(ctx context.Context, symbols []*pb.Symbo
 
 	if s.mockPrice {
 		for _, price := range priceList {
-			price.Price = rand.Float64()
+			price.Price = rand.Float64() // #nosec
 			price.Time = uint64(time.Now().UnixMilli())
 		}
 	}

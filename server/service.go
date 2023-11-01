@@ -5,18 +5,17 @@ import (
 	"encoding/hex"
 	"fmt"
 
-	ctmtypes "github.com/0xPolygonHermez/zkevm-bridge-service/claimtxman/types"
-	"github.com/0xPolygonHermez/zkevm-bridge-service/localcache"
-	"github.com/0xPolygonHermez/zkevm-bridge-service/redisstorage"
-	"github.com/pkg/errors"
-
 	"github.com/0xPolygonHermez/zkevm-bridge-service/bridgectrl"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/bridgectrl/pb"
+	ctmtypes "github.com/0xPolygonHermez/zkevm-bridge-service/claimtxman/types"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/localcache"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/redisstorage"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/utils/gerror"
 	"github.com/ethereum/go-ethereum/common"
 	lru "github.com/hashicorp/golang-lru/v2"
 	"github.com/jackc/pgx/v4"
+	"github.com/pkg/errors"
 )
 
 const (
@@ -622,7 +621,7 @@ func (s *bridgeService) GetMonitoredTxsByStatus(ctx context.Context, req *pb.Get
 		limit = s.maxPageLimit
 	}
 
-	mTxs, err := s.storage.GetClaimTxsByStatus(ctx, []ctmtypes.MonitoredTxStatus{ctmtypes.MonitoredTxStatus(req.Status)}, uint(limit+1), uint(req.Offset), nil)
+	mTxs, err := s.storage.GetClaimTxsByStatusWithLimit(ctx, []ctmtypes.MonitoredTxStatus{ctmtypes.MonitoredTxStatus(req.Status)}, uint(limit+1), uint(req.Offset), nil)
 	if err != nil {
 		return &pb.CommonMonitoredTxsResponse{
 			Code: defaultErrorCode,

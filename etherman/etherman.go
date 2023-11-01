@@ -194,6 +194,7 @@ func (etherMan *Client) updateGlobalExitRootEvent(ctx context.Context, vLog type
 	gExitRoot.ExitRoots = append(gExitRoot.ExitRoots, common.BytesToHash(globalExitRoot.RollupExitRoot[:]))
 	gExitRoot.GlobalExitRoot = hash(globalExitRoot.MainnetExitRoot, globalExitRoot.RollupExitRoot)
 	gExitRoot.BlockNumber = vLog.BlockNumber
+	log.Debugf("UpdateGlobalExitRoot event[%+v] blockNumber[%v]", gExitRoot, vLog.BlockNumber)
 
 	if len(*blocks) == 0 || ((*blocks)[len(*blocks)-1].BlockHash != vLog.BlockHash || (*blocks)[len(*blocks)-1].BlockNumber != vLog.BlockNumber) {
 		t := time.Unix(int64(fullBlock.Time()), 0)
@@ -231,6 +232,7 @@ func (etherMan *Client) depositEvent(ctx context.Context, vLog types.Log, blocks
 	deposit.TxHash = vLog.TxHash
 	deposit.Metadata = d.Metadata
 	deposit.LeafType = d.LeafType
+	log.Debugf("Deposit event[%+v] blockNumber[%v]", deposit, vLog.BlockNumber)
 
 	if len(*blocks) == 0 || ((*blocks)[len(*blocks)-1].BlockHash != vLog.BlockHash || (*blocks)[len(*blocks)-1].BlockNumber != vLog.BlockNumber) {
 		fullBlock, err := etherMan.EtherClient.BlockByHash(ctx, vLog.BlockHash)
@@ -268,6 +270,7 @@ func (etherMan *Client) claimEvent(ctx context.Context, vLog types.Log, blocks *
 	claim.OriginalAddress = c.OriginAddress
 	claim.BlockNumber = vLog.BlockNumber
 	claim.TxHash = vLog.TxHash
+	log.Debugf("Claim event[%+v] blockNumber[%v]", claim, vLog.BlockNumber)
 
 	if len(*blocks) == 0 || ((*blocks)[len(*blocks)-1].BlockHash != vLog.BlockHash || (*blocks)[len(*blocks)-1].BlockNumber != vLog.BlockNumber) {
 		fullBlock, err := etherMan.EtherClient.BlockByHash(ctx, vLog.BlockHash)
@@ -302,6 +305,7 @@ func (etherMan *Client) tokenWrappedEvent(ctx context.Context, vLog types.Log, b
 	tokenWrapped.OriginalTokenAddress = tw.OriginTokenAddress
 	tokenWrapped.WrappedTokenAddress = tw.WrappedTokenAddress
 	tokenWrapped.BlockNumber = vLog.BlockNumber
+	log.Debugf("TokenWrapped event[%+v] blockNumber[%v]", tokenWrapped, vLog.BlockNumber)
 
 	if len(*blocks) == 0 || ((*blocks)[len(*blocks)-1].BlockHash != vLog.BlockHash || (*blocks)[len(*blocks)-1].BlockNumber != vLog.BlockNumber) {
 		fullBlock, err := etherMan.EtherClient.BlockByHash(ctx, vLog.BlockHash)

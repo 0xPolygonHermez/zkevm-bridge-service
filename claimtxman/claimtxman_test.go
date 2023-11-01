@@ -93,11 +93,11 @@ func TestMonitoredTxStorage(t *testing.T) {
 	err = pg.AddClaimTx(ctx, mTx, tx)
 	require.NoError(t, err)
 
-	mTxs, err := pg.GetClaimTxsByStatus(ctx, []ctmtypes.MonitoredTxStatus{ctmtypes.MonitoredTxStatusCreated}, 10, 0, tx)
+	mTxs, err := pg.GetClaimTxsByStatus(ctx, []ctmtypes.MonitoredTxStatus{ctmtypes.MonitoredTxStatusCreated}, tx)
 	require.NoError(t, err)
 	require.Len(t, mTxs, 1)
 
-	mTxs, err = pg.GetClaimTxsByStatus(ctx, []ctmtypes.MonitoredTxStatus{ctmtypes.MonitoredTxStatusCreated, ctmtypes.MonitoredTxStatusConfirmed}, 10, 0, tx)
+	mTxs, err = pg.GetClaimTxsByStatus(ctx, []ctmtypes.MonitoredTxStatus{ctmtypes.MonitoredTxStatusCreated, ctmtypes.MonitoredTxStatusConfirmed}, tx)
 	require.NoError(t, err)
 	require.Len(t, mTxs, 2)
 

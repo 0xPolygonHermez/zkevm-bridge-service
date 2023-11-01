@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/0xPolygonHermez/zkevm-bridge-service/bridgectrl/pb"
-
 	ctmtypes "github.com/0xPolygonHermez/zkevm-bridge-service/claimtxman/types"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/utils/gerror"
@@ -607,7 +606,38 @@ func (p *PostgresStorage) UpdateClaimTx(ctx context.Context, mTx ctmtypes.Monito
 }
 
 // GetClaimTxsByStatus gets the monitored transactions by status.
-func (p *PostgresStorage) GetClaimTxsByStatus(ctx context.Context, statuses []ctmtypes.MonitoredTxStatus, limit uint, offset uint, dbTx pgx.Tx) ([]ctmtypes.MonitoredTx, error) {
+func (p *PostgresStorage) GetClaimTxsByStatus(ctx context.Context, statuses []ctmtypes.MonitoredTxStatus, dbTx pgx.Tx) ([]ctmtypes.MonitoredTx, error) {
+	getMonitoredTxsSQL := fmt.Sprintf("SELECT * FROM sync.monitored_txs%[1]v WHERE status = ANY($1) ORDER BY created_at ASC", p.tableSuffix)
+	rows, err := p.getExecQuerier(dbTx).Query(ctx, getMonitoredTxsSQL, pq.Array(statuses))
+	if errors.Is(err, pgx.ErrNoRows) {
+		return []ctmtypes.MonitoredTx{}, nil
+	} else if err != nil {
+		return nil, err
+	}
+
+	mTxs := make([]ctmtypes.MonitoredTx, 0, len(rows.RawValues()))
+	for rows.Next() {
+		var (
+			value   string
+			history [][]byte
+		)
+		mTx := ctmtypes.MonitoredTx{}
+		err = rows.Scan(&mTx.ID, &mTx.BlockID, &mTx.From, &mTx.To, &mTx.Nonce, &value, &mTx.Data, &mTx.Gas, &mTx.Status, pq.Array(&history), &mTx.CreatedAt, &mTx.UpdatedAt)
+		if err != nil {
+			return mTxs, err
+		}
+		mTx.Value, _ = new(big.Int).SetString(value, 10) //nolint:gomnd
+		mTx.History = make(map[common.Hash]bool)
+		for _, h := range history {
+			mTx.History[common.BytesToHash(h)] = true
+		}
+		mTxs = append(mTxs, mTx)
+	}
+
+	return mTxs, nil
+}
+
+func (p *PostgresStorage) GetClaimTxsByStatusWithLimit(ctx context.Context, statuses []ctmtypes.MonitoredTxStatus, limit uint, offset uint, dbTx pgx.Tx) ([]ctmtypes.MonitoredTx, error) {
 	getMonitoredTxsSQL := fmt.Sprintf("SELECT * FROM sync.monitored_txs%[1]v WHERE status = ANY($1) ORDER BY created_at ASC LIMIT $2 OFFSET $3", p.tableSuffix)
 	rows, err := p.getExecQuerier(dbTx).Query(ctx, getMonitoredTxsSQL, pq.Array(statuses), limit, offset)
 	if errors.Is(err, pgx.ErrNoRows) {
