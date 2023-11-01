@@ -1,5 +1,123 @@
-version: '3.5'
+version: "3.5"
+networks:
+  default:
+    name: xgon
+    
 services:
+  xgon-sequencer:
+    container_name: xgon-sequencer
+    image: okexchain/xgon-node:e2e_v0.1.0_20231030
+    ports:
+      - 9092:9091 # needed if metrics enabled
+      - 6060:6060
+    environment:
+      - ZKEVM_NODE_STATEDB_HOST=xgon-state-db
+      - ZKEVM_NODE_POOL_DB_HOST=xgon-pool-db
+    volumes:
+      - ./test/config/node/test.node.config.toml:/app/config.toml
+      - ./test/config/node/test.genesis.config.json:/app/genesis.json
+    command:
+      - "/bin/sh"
+      - "-c"
+      - "/app/xgon-node run --network custom --custom-network-file /app/genesis.json --cfg /app/config.toml --components sequencer"
+
+  xgon-sequence-sender:
+    container_name: xgon-sequence-sender
+    image: okexchain/xgon-node:e2e_v0.1.0_20231030
+    environment:
+      - ZKEVM_NODE_STATEDB_HOST=xgon-state-db
+      - ZKEVM_NODE_POOL_DB_HOST=xgon-pool-db
+      - ZKEVM_NODE_SEQUENCER_SENDER_ADDRESS=0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266
+    volumes:
+      - ./test/test.keystore.sequencer:/pk/sequencer.keystore
+      - ./test/config/node/test.node.config.toml:/app/config.toml
+      - ./test/config/node/test.genesis.config.json:/app/genesis.json
+    command:
+      - "/bin/sh"
+      - "-c"
+      - "/app/xgon-node run --network custom --custom-network-file /app/genesis.json --cfg /app/config.toml --components sequence-sender"
+
+  xgon-json-rpc:
+    container_name: xgon-json-rpc
+    image: okexchain/xgon-node:e2e_v0.1.0_20231030
+    ports:
+      - 8123:8123
+      - 8133:8133 # needed if WebSockets enabled
+      - 9091:9091 # needed if metrics enabled
+    environment:
+      - ZKEVM_NODE_STATEDB_HOST=xgon-state-db
+      - ZKEVM_NODE_POOL_DB_HOST=xgon-pool-db
+    volumes:
+      - ./test/config/node/test.node.config.toml:/app/config.toml
+      - ./test/config/node/test.genesis.config.json:/app/genesis.json
+    command:
+      - "/bin/sh"
+      - "-c"
+      - "/app/xgon-node run --network custom --custom-network-file /app/genesis.json --cfg /app/config.toml --components rpc"
+
+  xgon-aggregator:
+    container_name: xgon-aggregator
+    image: okexchain/xgon-node:e2e_v0.1.0_20231030
+    ports:
+      - 50081:50081
+      - 9093:9091 # needed if metrics enabled
+    environment:
+      - ZKEVM_NODE_STATEDB_HOST=xgon-state-db
+      - ZKEVM_NODE_AGGREGATOR_SENDER_ADDRESS=0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266
+    volumes:
+      - ./test/config/node/test.node.config.toml:/app/config.toml
+      - ./test/config/node/test.genesis.config.json:/app/genesis.json
+    command:
+      - "/bin/sh"
+      - "-c"
+      - "/app/xgon-node run --network custom --custom-network-file /app/genesis.json --cfg /app/config.toml --components aggregator"
+
+  xgon-sync:
+    container_name: xgon-sync
+    image: okexchain/xgon-node:e2e_v0.1.0_20231030
+    ports:
+      - 9095:9091 # needed if metrics enabled
+    environment:
+      - ZKEVM_NODE_STATEDB_HOST=xgon-state-db
+    volumes:
+      - ./test/config/node/test.node.config.toml:/app/config.toml
+      - ./test/config/node/test.genesis.config.json:/app/genesis.json
+    command:
+      - "/bin/sh"
+      - "-c"
+      - "/app/xgon-node run --network custom --custom-network-file /app/genesis.json --cfg /app/config.toml --components synchronizer"
+
+  xgon-eth-tx-manager:
+    container_name: xgon-eth-tx-manager
+    image: okexchain/xgon-node:e2e_v0.1.0_20231030
+    ports:
+      - 9094:9091 # needed if metrics enabled
+    environment:
+      - ZKEVM_NODE_STATEDB_HOST=xgon-state-db
+    volumes:
+      - ./test/test.keystore.sequencer:/pk/sequencer.keystore
+      - ./test/test.keystore.aggregator:/pk/aggregator.keystore
+      - ./test/config/node/test.node.config.toml:/app/config.toml
+      - ./test/config/node/test.genesis.config.json:/app/genesis.json
+    command:
+      - "/bin/sh"
+      - "-c"
+      - "/app/xgon-node run --network custom --custom-network-file /app/genesis.json --cfg /app/config.toml --components eth-tx-manager"
+
+  xgon-l2gaspricer:
+    container_name: xgon-l2gaspricer
+    image: okexchain/xgon-node:e2e_v0.1.0_20231030
+    environment:
+      - ZKEVM_NODE_POOL_DB_HOST=xgon-pool-db
+    volumes:
+      - ./test/test.keystore.sequencer:/pk/keystore
+      - ./test/config/node/test.node.config.toml:/app/config.toml
+      - ./test/config/node/test.genesis.config.json:/app/genesis.json
+    command:
+      - "/bin/sh"
+      - "-c"
+      - "/app/xgon-node run --network custom --custom-network-file /app/genesis.json --cfg /app/config.toml --components l2gaspricer"
+
   xgon-state-db:
     container_name: xgon-state-db
     image: postgres
@@ -12,12 +130,15 @@ services:
     ports:
       - 5432:5432
     volumes:
-      - ./test/config/prover/initproverdb.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./test/config/prover/init_prover_db.sql:/docker-entrypoint-initdb.d/init.sql
     environment:
       - POSTGRES_USER=state_user
       - POSTGRES_PASSWORD=state_password
       - POSTGRES_DB=state_db
-    command: ["postgres", "-N", "500"]
+    command:
+      - "postgres"
+      - "-N"
+      - "500"
 
   xgon-pool-db:
     container_name: xgon-pool-db
@@ -34,7 +155,116 @@ services:
       - POSTGRES_USER=pool_user
       - POSTGRES_PASSWORD=pool_password
       - POSTGRES_DB=pool_db
-    command: ["postgres", "-N", "500"]
+    command:
+      - "postgres"
+      - "-N"
+      - "500"
+
+  xgon-event-db:
+    container_name: xgon-event-db
+    image: postgres
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+        reservations:
+          memory: 1G
+    ports:
+      - 5436:5432
+    volumes:
+      - ./test/config/node/init_event_db.sql:/docker-entrypoint-initdb.d/init.sql
+    environment:
+      - POSTGRES_USER=event_user
+      - POSTGRES_PASSWORD=event_password
+      - POSTGRES_DB=event_db
+    command:
+      - "postgres"
+      - "-N"
+      - "500"
+
+  xgon-mock-l1-network:
+    container_name: xgon-mock-l1-network
+    image: okexchain/xgon-geth:e2e_v0.1.0_20231030
+    ports:
+      - 8545:8545
+      - 8546:8546
+    command:
+      - "--http"
+      - "--http.api"
+      - "admin,eth,debug,miner,net,txpool,personal,web3"
+      - "--http.addr"
+      - "0.0.0.0"
+      - "--http.corsdomain"
+      - "*"
+      - "--http.vhosts"
+      - "*"
+      - "--ws"
+      - "--ws.origins"
+      - "*"
+      - "--ws.addr"
+      - "0.0.0.0"
+      - "--dev"
+      - "--dev.period"
+      - "1"
+      - "--datadir"
+      - "/geth_data"
+      - "--syncmode"
+      - "full"
+      - "--rpc.allow-unprotected-txs"
+
+  xgon-prover:
+    container_name: xgon-prover
+    image: hermeznetwork/zkevm-prover:v2.2.0
+    ports:
+      # - 50051:50051 # Prover
+      - 50052:50052 # Mock prover
+      - 50061:50061 # MT
+      - 50071:50071 # Executor
+    volumes:
+      - ./test/config/prover/test.prover.config.json:/usr/src/app/config.json
+    command: >
+      zkProver -c /usr/src/app/config.json
+
+  xgon-approve:
+    container_name: xgon-approve
+    image: okexchain/xgon-node:e2e_v0.1.0_20231030
+    environment:
+      - ZKEVM_NODE_STATEDB_HOST=xgon-state-db
+    volumes:
+      - ./test/test.keystore.sequencer:/pk/keystore
+      - ./test/config/node/test.node.config.toml:/app/config.toml
+      - ./test/config/node/test.genesis.config.json:/app/genesis.json
+    command:
+      - "/bin/sh"
+      - "-c"
+      - "/app/xgon-node approve --network custom --custom-network-file /app/genesis.json --key-store-path /pk/keystore --pw testonly --am 115792089237316195423570985008687907853269984665640564039457584007913129639935 -y --cfg /app/config.toml"
+
+  xgon-data-availability:
+    container_name: xgon-data-availability
+    image: okexchain/xgon-data-availability:e2e_v0.1.0_20231030
+    ports:
+      - 8444:8444
+    volumes:
+      - ./test/config/node/test.da.toml:/app/config.toml
+      - ./test/test.keystore.da:/pk/test-member.keystore
+    command:
+      - "/bin/sh"
+      - "-c"
+      - "/app/xgon-data-availability run --cfg /app/config.toml"
+
+  xgon-data-availability-db:
+    container_name: xgon-data-availability-db
+    image: postgres
+    ports:
+      - 5438:5432
+    environment:
+      - POSTGRES_USER=committee_user
+      - POSTGRES_PASSWORD=committee_password
+      - POSTGRES_DB=committee_db
+    command:
+      - "postgres"
+      - "-N"
+      - "500"
 
   xgon-bridge-db:
     container_name: xgon-bridge-db
@@ -93,47 +323,6 @@ services:
       KAFKA_INTER_BROKER_LISTENER_NAME: INSIDE
       KAFKA_ZOOKEEPER_CONNECT: kafka-zookeeper:2181
       KAFKA_CREATE_TOPICS: "explorer_chainAddressPrice_push:1:1"
-
-  zkevm-node:
-    container_name: zkevm-node
-    image: hermeznetwork/zkevm-node:v0.0.7
-    ports:
-      - 8123:8123
-      - 61090:61090
-    environment:
-      - ZKEVM_NODE_STATEDB_HOST=zkevm-state-db
-      - ZKEVM_NODE_POOL_HOST=zkevm-pool-db
-      - ZKEVM_NODE_RPC_DB_HOST=zkevm-rpc-db
-      - ZKEVM_NODE_ETHERMAN_PRIVATEKEYPATH=/pk/keystore
-    volumes:
-      - ./test/test.keystore.sequencer:/pk/keystore.sequencer
-      - ./test/test.keystore.aggregator:/pk/keystore.aggregator
-      - ./test/config/node/config.zkevm.node.toml:/app/config.toml
-      - ./test/config/node/genesis.local.json:/app/genesis.json
-    command: 
-      - "/bin/sh"
-      - "-c"
-      - "/app/zkevm-node approve --am 115792089237316195423570985008687907853269984665640564039457584007913129639935 -y --cfg /app/config.toml --key-store-path /pk/keystore.sequencer --password testonly &&
-         /app/zkevm-node run --genesis /app/genesis.json --cfg /app/config.toml --components \"synchronizer,rpc,sequencer,aggregator,eth-tx-manager,l2gaspricer\""
-
-  zkevm-mock-l1-network:
-    container_name: zkevm-local-l1-network
-    image: hermeznetwork/geth-zkevm-contracts:v1.1.0-fork.4
-    ports:
-      - 8545:8545
-
-  zkevm-prover:
-    container_name: zkevm-prover
-    image: hermeznetwork/zkevm-prover:c231382
-    ports:
-      - 50051:50051 # Prover
-      - 50052:50052 # MockProver
-      - 50061:50061 # MT
-      - 50071:50071 # Executor
-    volumes:
-      - ./test/config/prover/config.prover.json:/usr/src/app/config.json
-    command: >
-      zkProver -c /usr/src/app/config.json
 
   xgon-bridge-service:
     container_name: xgon-bridge-service

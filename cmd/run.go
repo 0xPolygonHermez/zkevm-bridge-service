@@ -4,16 +4,15 @@ import (
 	"os"
 	"os/signal"
 
-	"github.com/0xPolygonHermez/zkevm-bridge-service/coinmiddleware"
-	"github.com/0xPolygonHermez/zkevm-bridge-service/localcache"
-	"github.com/0xPolygonHermez/zkevm-bridge-service/redisstorage"
-	"github.com/0xPolygonHermez/zkevm-bridge-service/sentinel"
-
 	"github.com/0xPolygonHermez/zkevm-bridge-service/bridgectrl"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/claimtxman"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/coinmiddleware"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/config"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/db"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/localcache"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/redisstorage"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/sentinel"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/server"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/synchronizer"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/utils/gerror"
@@ -145,42 +144,6 @@ func startServer(ctx *cli.Context) error {
 				}
 			}
 		}()
-	}
-
-	// Start the coin middleware kafka consumer
-	log.Debugf("start initializing kafka consumer...")
-	coinKafkaConsumer, err := coinmiddleware.NewKafkaConsumer(c.CoinKafkaConsumer, redisStorage)
-	if err != nil {
-		log.Error(err)
-		return err
-	}
-	log.Debugf("finish initializing kafka consumer")
-	go coinKafkaConsumer.Start(ctx.Context)
-	defer func() {
-		err := coinKafkaConsumer.Close()
-		if err != nil {
-			log.Errorf("close kafka consumer error: %v", err)
-		}
-	}()
-
-	// Wait for an in interrupt.
-	ch := make(chan os.Signal, 1)
-	signal.Notify(ch, os.Interrupt)
-	<-ch
-
-	return nil
-}
-
-func startKafkaConsumer(ctx *cli.Context) error {
-	c, err := initCommon(ctx)
-	if err != nil {
-		return err
-	}
-
-	redisStorage, err := redisstorage.NewRedisStorage(c.BridgeServer.Redis)
-	if err != nil {
-		log.Error(err)
-		return err
 	}
 
 	// Start the coin middleware kafka consumer

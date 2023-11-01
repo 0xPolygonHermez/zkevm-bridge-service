@@ -6,11 +6,13 @@ import (
 	"math/big"
 
 	mockbridge "github.com/0xPolygonHermez/zkevm-bridge-service/test/mocksmartcontracts/polygonzkevmbridge"
+	"github.com/0xPolygonHermez/zkevm-node/etherman/smartcontracts/datacommittee"
 	"github.com/0xPolygonHermez/zkevm-node/etherman/smartcontracts/matic"
 	"github.com/0xPolygonHermez/zkevm-node/etherman/smartcontracts/mockverifier"
 	"github.com/0xPolygonHermez/zkevm-node/etherman/smartcontracts/polygonzkevm"
 	"github.com/0xPolygonHermez/zkevm-node/etherman/smartcontracts/polygonzkevmbridge"
 	"github.com/0xPolygonHermez/zkevm-node/etherman/smartcontracts/polygonzkevmglobalexitroot"
+	"github.com/0xPolygonHermez/zkevm-node/log"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
 	"github.com/ethereum/go-ethereum/common"
@@ -20,7 +22,7 @@ import (
 
 // NewSimulatedEtherman creates an etherman that uses a simulated blockchain. It's important to notice that the ChainID of the auth
 // must be 1337. The address that holds the auth will have an initial balance of 10 ETH
-func NewSimulatedEtherman(cfg Config, auth *bind.TransactOpts) (etherman *Client, ethBackend *backends.SimulatedBackend, maticAddr common.Address, mockBridge *mockbridge.Polygonzkevmbridge, err error) {
+func NewSimulatedEtherman(cfg Config, auth *bind.TransactOpts) (etherman *Client, ethBackend *backends.SimulatedBackend, maticAddr common.Address, mockBridge *mockbridge.Polygonzkevmbridge, da *datacommittee.Datacommittee, err error) {
 	// 10000000 ETH in wei
 	balance, _ := new(big.Int).SetString("10000000000000000000000000", 10) //nolint:gomnd
 	address := auth.From
@@ -32,20 +34,37 @@ func NewSimulatedEtherman(cfg Config, auth *bind.TransactOpts) (etherman *Client
 	blockGasLimit := uint64(999999999999999999) //nolint:gomnd
 	client := backends.NewSimulatedBackend(genesisAlloc, blockGasLimit)
 
+	// DAC Setup
+	dataCommitteeAddr, _, da, err := datacommittee.DeployDatacommittee(auth, client)
+	if err != nil {
+		log.Errorf("DeployDatacommittee error, %v", err)
+		return nil, nil, common.Address{}, nil, nil, err
+	}
+	_, err = da.Initialize(auth)
+	if err != nil {
+		return nil, nil, common.Address{}, nil, nil, err
+	}
+	_, err = da.SetupCommittee(auth, big.NewInt(0), []string{}, []byte{})
+	if err != nil {
+		return nil, nil, common.Address{}, nil, nil, err
+	}
+
 	// Deploy contracts
 	const maticDecimalPlaces = 18
 	totalSupply, _ := new(big.Int).SetString("10000000000000000000000000000", 10) //nolint:gomnd
 	maticAddr, _, maticContract, err := matic.DeployMatic(auth, client, "Matic Token", "MATIC", maticDecimalPlaces, totalSupply)
 	if err != nil {
-		return nil, nil, common.Address{}, nil, err
+		log.Errorf("DeployMatic error", err)
+		return nil, nil, common.Address{}, nil, nil, err
 	}
 	rollupVerifierAddr, _, _, err := mockverifier.DeployMockverifier(auth, client)
 	if err != nil {
-		return nil, nil, common.Address{}, nil, err
+		log.Errorf("DeployMockverifier error", err)
+		return nil, nil, common.Address{}, nil, nil, err
 	}
 	nonce, err := client.PendingNonceAt(context.TODO(), auth.From)
 	if err != nil {
-		return nil, nil, common.Address{}, nil, err
+		return nil, nil, common.Address{}, nil, nil, err
 	}
 	const posBridge = 1
 	calculatedBridgeAddr := crypto.CreateAddress(auth.From, nonce+posBridge)
@@ -54,23 +73,25 @@ func NewSimulatedEtherman(cfg Config, auth *bind.TransactOpts) (etherman *Client
 	genesis := common.HexToHash("0xfd3434cd8f67e59d73488a2b8da242dd1f02849ea5dd99f0ca22c836c3d5b4a9") // Random value. Needs to be different to 0x0
 	exitManagerAddr, _, globalExitRoot, err := polygonzkevmglobalexitroot.DeployPolygonzkevmglobalexitroot(auth, client, calculatedPolygonZkEVMAddress, calculatedBridgeAddr)
 	if err != nil {
-		return nil, nil, common.Address{}, nil, err
+		return nil, nil, common.Address{}, nil, nil, err
 	}
 	bridgeAddr, _, mockbr, err := mockbridge.DeployPolygonzkevmbridge(auth, client)
 	if err != nil {
-		return nil, nil, common.Address{}, nil, err
+		log.Errorf("DeployPolygonzkevmbridge error", err)
+		return nil, nil, common.Address{}, nil, nil, err
 	}
-	polygonZkEVMAddress, _, polygonZkEVMContract, err := polygonzkevm.DeployPolygonzkevm(auth, client, exitManagerAddr, maticAddr, rollupVerifierAddr, bridgeAddr, bridgeAddr, 1000, 1) //nolint
+	polygonZkEVMAddress, _, polygonZkEVMContract, err := polygonzkevm.DeployPolygonzkevm(auth, client, exitManagerAddr, maticAddr, rollupVerifierAddr, bridgeAddr, dataCommitteeAddr, 1000, 1) //nolint
 	if err != nil {
-		return nil, nil, common.Address{}, nil, err
+		log.Errorf("DeployPolygonzkevm error", err)
+		return nil, nil, common.Address{}, nil, nil, err
 	}
 	_, err = mockbr.Initialize(auth, 0, exitManagerAddr, polygonZkEVMAddress)
 	if err != nil {
-		return nil, nil, common.Address{}, nil, err
+		return nil, nil, common.Address{}, nil, nil, err
 	}
 	br, err := polygonzkevmbridge.NewPolygonzkevmbridge(bridgeAddr, client)
 	if err != nil {
-		return nil, nil, common.Address{}, nil, err
+		return nil, nil, common.Address{}, nil, nil, err
 	}
 	polygonZkEVMParams := polygonzkevm.PolygonZkEVMInitializePackedParameters{
 		Admin:                    auth.From,
@@ -81,15 +102,15 @@ func NewSimulatedEtherman(cfg Config, auth *bind.TransactOpts) (etherman *Client
 	}
 	_, err = polygonZkEVMContract.Initialize(auth, polygonZkEVMParams, genesis, "http://localhost", "L2", "v1") //nolint:gomnd
 	if err != nil {
-		return nil, nil, common.Address{}, nil, err
+		return nil, nil, common.Address{}, nil, nil, err
 	}
 
 	if calculatedBridgeAddr != bridgeAddr {
-		return nil, nil, common.Address{}, nil, fmt.Errorf("bridgeAddr (%s) is different from the expected contract address (%s)",
+		return nil, nil, common.Address{}, nil, nil, fmt.Errorf("bridgeAddr (%s) is different from the expected contract address (%s)",
 			bridgeAddr.String(), calculatedBridgeAddr.String())
 	}
 	if calculatedPolygonZkEVMAddress != polygonZkEVMAddress {
-		return nil, nil, common.Address{}, nil, fmt.Errorf("polygonZkEVMAddress (%s) is different from the expected contract address (%s)",
+		return nil, nil, common.Address{}, nil, nil, fmt.Errorf("polygonZkEVMAddress (%s) is different from the expected contract address (%s)",
 			polygonZkEVMAddress.String(), calculatedPolygonZkEVMAddress.String())
 	}
 
@@ -97,17 +118,17 @@ func NewSimulatedEtherman(cfg Config, auth *bind.TransactOpts) (etherman *Client
 	approvedAmount, _ := new(big.Int).SetString("10000000000000000000000", 10) //nolint:gomnd
 	_, err = maticContract.Approve(auth, bridgeAddr, approvedAmount)
 	if err != nil {
-		return nil, nil, common.Address{}, nil, err
+		return nil, nil, common.Address{}, nil, nil, err
 	}
 	_, err = maticContract.Approve(auth, polygonZkEVMAddress, approvedAmount)
 	if err != nil {
-		return nil, nil, common.Address{}, nil, err
+		return nil, nil, common.Address{}, nil, nil, err
 	}
 	_, err = polygonZkEVMContract.ActivateForceBatches(auth)
 	if err != nil {
-		return nil, nil, common.Address{}, nil, err
+		return nil, nil, common.Address{}, nil, nil, err
 	}
 
 	client.Commit()
-	return &Client{EtherClient: client, PolygonBridge: br, PolygonZkEVMGlobalExitRoot: globalExitRoot, SCAddresses: []common.Address{exitManagerAddr, bridgeAddr}}, client, maticAddr, mockbr, nil
+	return &Client{EtherClient: client, PolygonBridge: br, PolygonZkEVMGlobalExitRoot: globalExitRoot, SCAddresses: []common.Address{exitManagerAddr, bridgeAddr}}, client, maticAddr, mockbr, nil, nil
 }

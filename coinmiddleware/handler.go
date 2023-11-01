@@ -3,12 +3,13 @@ package coinmiddleware
 import (
 	"context"
 	"encoding/json"
+	"time"
+
 	"github.com/0xPolygonHermez/zkevm-bridge-service/bridgectrl/pb"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/redisstorage"
 	"github.com/0xPolygonHermez/zkevm-node/log"
 	"github.com/IBM/sarama"
 	"github.com/pkg/errors"
-	"time"
 )
 
 const (

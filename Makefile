@@ -2,19 +2,46 @@ include version.mk
 
 DOCKER_COMPOSE := docker-compose -f docker-compose.yml
 DOCKER_COMPOSE_STATE_DB := xgon-state-db
+DOCKER_COMPOSE_EVENT_DB := xgon-event-db
 DOCKER_COMPOSE_POOL_DB := xgon-pool-db
 DOCKER_COMPOSE_RPC_DB := xgon-rpc-db
 DOCKER_COMPOSE_BRIDGE_DB := xgon-bridge-db
+DOCKER_COMPOSE_DAC_DB := xgon-data-availability-db
+DOCKER_COMPOSE_REDIS := xgon-bridge-redis
 DOCKER_COMPOSE_ZKEVM_NODE := xgon-node
+
+DOCKER_COMPOSE_SEQ := xgon-sequencer
+DOCKER_COMPOSE_SEQ_SENDER := xgon-sequence-sender
+DOCKER_COMPOSE_L2_GASP := xgon-l2gaspricer
+DOCKER_COMPOSE_AGG := xgon-aggregator
+DOCKER_COMPOSE_RPC := xgon-json-rpc
+DOCKER_COMPOSE_SYNC := xgon-sync
+DOCKER_COMPOSE_ETH_TX_MANAGER := xgon-eth-tx-manager
+
 DOCKER_COMPOSE_L1_NETWORK := xgon-mock-l1-network
 DOCKER_COMPOSE_ZKPROVER := xgon-prover
 DOCKER_COMPOSE_BRIDGE := xgon-bridge-service
+DOCKER_COMPOSE_DA_NODE := xgon-data-availability
+DOCKER_COMPOSE_COIN_KAFKA_NODE := xgon-bridge-coin-kafka
+DOCKER_COMPOSE_ZOOKEEPER := kafka-zookeeper
 
 RUN_STATE_DB := $(DOCKER_COMPOSE) up -d $(DOCKER_COMPOSE_STATE_DB)
+RUN_EVENT_DB := $(DOCKER_COMPOSE) up -d $(DOCKER_COMPOSE_EVENT_DB)
 RUN_POOL_DB := $(DOCKER_COMPOSE) up -d $(DOCKER_COMPOSE_POOL_DB)
 RUN_BRIDGE_DB := $(DOCKER_COMPOSE) up -d $(DOCKER_COMPOSE_BRIDGE_DB)
-RUN_DBS := ${RUN_BRIDGE_DB} && ${RUN_STATE_DB} && ${RUN_POOL_DB}
-RUN_NODE := $(DOCKER_COMPOSE) up -d $(DOCKER_COMPOSE_ZKEVM_NODE)
+RUN_DAC_DB := $(DOCKER_COMPOSE) up -d $(DOCKER_COMPOSE_DAC_DB)
+RUN_REDIS := $(DOCKER_COMPOSE) up -d $(DOCKER_COMPOSE_REDIS)
+RUN_DBS := ${RUN_BRIDGE_DB} && ${RUN_STATE_DB} && ${RUN_EVENT_DB} && ${RUN_POOL_DB} && ${RUN_DAC_DB}
+RUN_DA := $(DOCKER_COMPOSE) up -d $(DOCKER_COMPOSE_DA_NODE)
+RUN_COIN_KAFKA := $(DOCKER_COMPOSE) up -d $(DOCKER_COMPOSE_COIN_KAFKA_NODE)
+RUN_ZOOKEEPER := $(DOCKER_COMPOSE) up -d $(DOCKER_COMPOSE_ZOOKEEPER)
+RUN_SEQUENCER := $(DOCKER_COMPOSE) up -d $(DOCKER_COMPOSE_SEQ)
+RUN_SEQUENCE_SENDER := $(DOCKER_COMPOSE) up -d $(DOCKER_COMPOSE_SEQ_SENDER)
+RUN_L2_GAS_PRICER := $(DOCKER_COMPOSE) up -d $(DOCKER_COMPOSE_L2_GASP)
+RUN_AGGREGATOR := $(DOCKER_COMPOSE) up -d $(DOCKER_COMPOSE_AGG)
+RUN_JSON_RPC := $(DOCKER_COMPOSE) up -d $(DOCKER_COMPOSE_RPC)
+RUN_SYNC := $(DOCKER_COMPOSE) up -d $(DOCKER_COMPOSE_SYNC)
+RUN_ETH_TX_MANAGER := $(DOCKER_COMPOSE) up -d $(DOCKER_COMPOSE_ETH_TX_MANAGER)
 RUN_L1_NETWORK := $(DOCKER_COMPOSE) up -d $(DOCKER_COMPOSE_L1_NETWORK)
 RUN_ZKPROVER := $(DOCKER_COMPOSE) up -d $(DOCKER_COMPOSE_ZKPROVER)
 RUN_BRIDGE := $(DOCKER_COMPOSE) up -d $(DOCKER_COMPOSE_BRIDGE)
@@ -22,7 +49,13 @@ RUN_BRIDGE := $(DOCKER_COMPOSE) up -d $(DOCKER_COMPOSE_BRIDGE)
 STOP_NODE_DB := $(DOCKER_COMPOSE) stop $(DOCKER_COMPOSE_NODE_DB) && $(DOCKER_COMPOSE) rm -f $(DOCKER_COMPOSE_NODE_DB)
 STOP_BRIDGE_DB := $(DOCKER_COMPOSE) stop $(DOCKER_COMPOSE_BRIDGE_DB) && $(DOCKER_COMPOSE) rm -f $(DOCKER_COMPOSE_BRIDGE_DB)
 STOP_DBS := ${STOP_NODE_DB} && ${STOP_BRIDGE_DB}
-STOP_NODE := $(DOCKER_COMPOSE) stop $(DOCKER_COMPOSE_ZKEVM_NODE) && $(DOCKER_COMPOSE) rm -f $(DOCKER_COMPOSE_ZKEVM_NODE)
+STOP_SEQUENCER := $(DOCKER_COMPOSE) stop $(DOCKER_COMPOSE_SEQ) && $(DOCKER_COMPOSE) rm -f $(DOCKER_COMPOSE_SEQ)
+STOP_SEQUENCE_SENDER := $(DOCKER_COMPOSE) stop $(DOCKER_COMPOSE_SEQ_SENDER) && $(DOCKER_COMPOSE) rm -f $(DOCKER_COMPOSE_SEQ_SENDER)
+STOP_L2_GAS_PRICER := $(DOCKER_COMPOSE) stop $(DOCKER_COMPOSE_L2_GASP) && $(DOCKER_COMPOSE) rm -f $(DOCKER_COMPOSE_L2_GASP)
+STOP_AGGREGATOR := $(DOCKER_COMPOSE) stop $(DOCKER_COMPOSE_AGG) && $(DOCKER_COMPOSE) rm -f $(DOCKER_COMPOSE_AGG)
+STOP_JSON_RPC := $(DOCKER_COMPOSE) stop $(DOCKER_COMPOSE_RPC) && $(DOCKER_COMPOSE) rm -f $(DOCKER_COMPOSE_RPC)
+STOP_SYNC := $(DOCKER_COMPOSE) stop $(DOCKER_COMPOSE_SYNC) && $(DOCKER_COMPOSE) rm -f $(DOCKER_COMPOSE_SYNC)
+STOP_ETH_TX_MANAGER := $(DOCKER_COMPOSE) stop $(DOCKER_COMPOSE_ETH_TX_MANAGER) && $(DOCKER_COMPOSE) rm -f $(DOCKER_COMPOSE_ETH_TX_MANAGER)
 STOP_NETWORK := $(DOCKER_COMPOSE) stop $(DOCKER_COMPOSE_L1_NETWORK) && $(DOCKER_COMPOSE) rm -f $(DOCKER_COMPOSE_L1_NETWORK)
 STOP_ZKPROVER := $(DOCKER_COMPOSE) stop $(DOCKER_COMPOSE_ZKPROVER) && $(DOCKER_COMPOSE) rm -f $(DOCKER_COMPOSE_ZKPROVER)
 STOP_BRIDGE := $(DOCKER_COMPOSE) stop $(DOCKER_COMPOSE_BRIDGE) && $(DOCKER_COMPOSE) rm -f $(DOCKER_COMPOSE_BRIDGE)
@@ -94,11 +127,24 @@ stop-dbs: ## Stops the node database
 
 .PHONY: run-node
 run-node: ## Runs the node
-	$(RUN_NODE)
+	$(RUN_ETH_TX_MANAGER)
+	$(RUN_SYNC)
+	sleep 2
+	$(RUN_SEQUENCER)
+	$(RUN_SEQUENCE_SENDER)
+	$(RUN_L2_GAS_PRICER)
+	$(RUN_AGGREGATOR)
+	$(RUN_JSON_RPC)
 
 .PHONY: stop-node
 stop-node: ## Stops the node
-	$(STOP_NODE)
+	$(STOP_SEQUENCER)
+	$(STOP_SEQUENCE_SENDER)
+	$(STOP_JSON_RPC)
+	$(STOP_L2_GAS_PRICER)
+	$(STOP_AGGREGATOR)
+	$(STOP_SYNC)
+	$(STOP_ETH_TX_MANAGER)
 
 .PHONY: run-network
 run-network: ## Runs the l1 network
@@ -134,11 +180,24 @@ restart: stop run ## Executes `make stop` and `make run` commands
 .PHONY: run
 run: stop ## runs all services
 	$(RUN_DBS)
+	$(RUN_REDIS)
+	$(RUN_ZOOKEEPER)
+	sleep 3
+	$(RUN_COIN_KAFKA)
 	$(RUN_L1_NETWORK)
 	sleep 5
 	$(RUN_ZKPROVER)
 	sleep 3
-	$(RUN_NODE)
+	$(RUN_DA)
+	sleep 3
+	$(RUN_SYNC)
+	sleep 2
+	$(RUN_ETH_TX_MANAGER)
+	$(RUN_SEQUENCER)
+	$(RUN_SEQUENCE_SENDER)
+	$(RUN_L2_GAS_PRICER)
+	$(RUN_AGGREGATOR)
+	$(RUN_JSON_RPC)
 	sleep 7
 	$(RUN_BRIDGE)
 
@@ -172,12 +231,12 @@ bench-full: ## benchmark full test
 .PHONY: test-full
 test-full: build-docker stop run ## Runs all tests checking race conditions
 	sleep 3
-	trap '$(STOP)' EXIT; MallocNanoZone=0 go test -race -p 1 -timeout 2400s ./test/e2e/... -count 1 -tags='e2e'
+	trap 'docker logs $(DOCKER_COMPOSE_BRIDGE); $(STOP)' EXIT; MallocNanoZone=0 go test -race -p 1 -timeout 2400s ./test/e2e/... -count 1 -tags='e2e'
 
 .PHONY: test-edge
 test-edge: build-docker stop run ## Runs all tests checking race conditions
 	sleep 3
-	trap '$(STOP)' EXIT; MallocNanoZone=0 go test -race -p 1 -timeout 2400s ./test/e2e/... -count 1 -tags='edge'
+	trap 'docker logs $(DOCKER_COMPOSE_BRIDGE); $(STOP)' EXIT; MallocNanoZone=0 go test -race -p 1 -timeout 2400s ./test/e2e/... -count 1 -tags='edge'
 
 .PHONY: validate
 validate: lint build test-full ## Validates the whole integrity of the code base

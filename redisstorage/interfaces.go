@@ -2,6 +2,7 @@ package redisstorage
 
 import (
 	"context"
+
 	"github.com/0xPolygonHermez/zkevm-bridge-service/bridgectrl/pb"
 )
 

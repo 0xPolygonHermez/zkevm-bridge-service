@@ -1,5 +1,5 @@
 -- +migrate Down
-DROP SCHEMA IF EXISTS common;
+DROP SCHEMA IF EXISTS common CASCADE;
 
 -- +migrate Up
 CREATE SCHEMA IF NOT EXISTS common;
