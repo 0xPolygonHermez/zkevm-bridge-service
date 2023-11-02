@@ -294,7 +294,7 @@ func TestBSStorage(t *testing.T) {
 	require.NoError(t, err)
 
 	claim := &etherman.Claim{
-		GlobalIndex:        1,
+		Index:              1,
 		OriginalNetwork:    0,
 		OriginalAddress:    common.HexToAddress("0x6B175474E89094C44Da98b954EedeAC495271d0F"),
 		Amount:             big.NewInt(1000000),
@@ -303,6 +303,8 @@ func TestBSStorage(t *testing.T) {
 		BlockNumber:        2,
 		NetworkID:          0,
 		TxHash:             common.HexToHash("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9f2"),
+		RollupIndex:        1,
+		MainnetFlag:        true,
 	}
 	err = pg.AddClaim(ctx, claim, tx)
 	require.NoError(t, err)
@@ -335,7 +337,9 @@ func TestBSStorage(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, rClaim.DestinationAddress, claim.DestinationAddress)
 	require.Equal(t, rClaim.NetworkID, claim.NetworkID)
-	require.Equal(t, rClaim.GlobalIndex, claim.GlobalIndex)
+	require.Equal(t, rClaim.Index, claim.Index)
+	require.Equal(t, rClaim.RollupIndex, claim.RollupIndex)
+	require.Equal(t, rClaim.MainnetFlag, claim.MainnetFlag)
 
 	rClaims, err := pg.GetClaims(ctx, claim.DestinationAddress.String(), 10, 0, tx)
 	require.NoError(t, err)

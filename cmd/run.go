@@ -65,7 +65,7 @@ func start(ctx *cli.Context) error {
 	var bridgeController *bridgectrl.BridgeController
 
 	if c.BridgeController.Store == "postgres" {
-		bridgeController, err = bridgectrl.NewBridgeController(c.BridgeController, networkIDs, storage)
+		bridgeController, err = bridgectrl.NewBridgeController(ctx.Context, c.BridgeController, networkIDs, storage)
 		if err != nil {
 			log.Error(err)
 			return err

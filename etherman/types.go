@@ -50,7 +50,9 @@ type Deposit struct {
 
 // Claim struct
 type Claim struct {
-	GlobalIndex              uint64
+	MainnetFlag        bool
+	RollupIndex        uint64
+	Index              uint
 	OriginalNetwork    uint
 	OriginalAddress    common.Address
 	Amount             *big.Int
