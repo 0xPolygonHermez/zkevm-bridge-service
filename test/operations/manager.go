@@ -106,7 +106,7 @@ func NewManager(ctx context.Context, cfg *Config) (*Manager, error) {
 	if err != nil {
 		return nil, err
 	}
-	bt, err := bridgectrl.NewBridgeController(cfg.BT, []uint{0, 1}, pgst)
+	bt, err := bridgectrl.NewBridgeController(ctx, cfg.BT, []uint{0, 1}, pgst)
 	if err != nil {
 		return nil, err
 	}

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/utils/gerror"
 	"github.com/0xPolygonHermez/zkevm-node/log"
 	"github.com/ethereum/go-ethereum/common"
@@ -258,4 +259,89 @@ func (mt *MerkleTree) getLeaves(ctx context.Context, depositID uint64, dbTx pgx.
 
 	}
 	return result, nil
+}
+
+func (mt *MerkleTree) buildMTRoot(leaves [][KeyLen]byte) (common.Hash, error) {
+	var (
+		nodes [][][][]byte
+		ns [][][]byte
+	)
+	if len(leaves) == 0 {
+		leaves = append(leaves, zeroHashes[0])
+	}
+
+	for h := uint8(0); h < mt.height; h++ {
+		if len(leaves)%2 == 1 {
+			leaves = append(leaves, zeroHashes[h])
+		}
+		ns, leaves = buildIntermediate(leaves)
+		nodes = append(nodes, ns)
+	}
+	if len(ns) != 1 {
+		return common.Hash{}, fmt.Errorf("error: more than one root detected: %+v", nodes)
+	}
+	log.Debug("Root calculated: ", common.Bytes2Hex(ns[0][0]))
+	
+	return common.BytesToHash(ns[0][0]), nil
+}
+
+func (mt MerkleTree) storeLeaves(ctx context.Context, leaves [][KeyLen]byte, blockNumber uint64, dbTx pgx.Tx) error {
+	root, err := mt.buildMTRoot(leaves)
+	if err != nil {
+		return err
+	}
+	var inserts [][]interface{}
+	for i := range leaves {
+		inserts = append(inserts, []interface{}{leaves[i][:], i+1, root.Bytes(), blockNumber})
+	}
+	if err := mt.store.AddRollupExitLeaves(ctx, inserts, dbTx); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (mt MerkleTree) getLatestRollupExitLeaves(ctx context.Context, dbTx pgx.Tx) ([]etherman.RollupExitLeaf, error){
+	return mt.store.GetLatestRollupExitLeaves(ctx, dbTx)
+}
+
+func (mt MerkleTree) addRollupExitLeaf(ctx context.Context, rollupLeaf etherman.RollupExitLeaf, dbTx pgx.Tx) error {
+	storedRollupLeaves, err := mt.store.GetLatestRollupExitLeaves(ctx, dbTx)
+	if err != nil {
+		log.Error("error getting latest rollup exit leaves. Error: ", err)
+		return err
+	}
+	// If rollupLeaf.RollupId is lower or equal than len(storedRollupLeaves), we can add it in the proper position of the array
+	// if rollupLeaf.RollupId <= uint64(len(storedRollupLeaves)) {
+	// 	if storedRollupLeaves[rollupLeaf.RollupId-1].RollupId == rollupLeaf.RollupId {
+	// 		storedRollupLeaves[rollupLeaf.RollupId-1] = rollupLeaf
+	// 	} else {
+	// 		return fmt.Errorf("error: RollupId doesn't match")
+	// 	}
+	// } else {
+
+	// If rollupLeaf.RollupId is higher than len(storedRollupLeaves), We have to add empty rollups until the new rollupID
+	for i := len(storedRollupLeaves); i < int(rollupLeaf.RollupId); i++ {
+		storedRollupLeaves = append(storedRollupLeaves, etherman.RollupExitLeaf{
+			BlockNumber: rollupLeaf.BlockNumber,
+			RollupId: uint64(i+1),
+		})
+	}
+	if storedRollupLeaves[rollupLeaf.RollupId-1].RollupId == rollupLeaf.RollupId {
+		storedRollupLeaves[rollupLeaf.RollupId-1] = rollupLeaf
+	} else {
+		return fmt.Errorf("error: RollupId doesn't match")
+	}
+	// }
+	var leaves [][KeyLen]byte
+	for _, l := range storedRollupLeaves {
+		var aux [KeyLen]byte
+		copy(aux[:], l.Leaf[:])
+		leaves = append(leaves, aux)
+	}
+	err = mt.storeLeaves(ctx, leaves, rollupLeaf.BlockNumber, dbTx)
+	if err != nil {
+		log.Error("error storing leaves. Error: ", err)
+		return err
+	}
+	return nil
 }

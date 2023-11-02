@@ -319,6 +319,20 @@ func (p *PostgresStorage) GetDepositCountByRoot(ctx context.Context, root []byte
 	return depositCount, nil
 }
 
+// CheckIfRootExists checks that the root exists on the db.
+func (p *PostgresStorage) CheckIfRootExists(ctx context.Context, root []byte, network uint8, dbTx pgx.Tx) (bool, error) {
+	var count uint
+	const getDepositCountByRootSQL = "SELECT count(*) FROM mt.root WHERE root = $1 AND network = $2"
+	err := p.getExecQuerier(dbTx).QueryRow(ctx, getDepositCountByRootSQL, root, network).Scan(&count)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return false, gerror.ErrStorageNotFound
+	}
+	if count == 0 {
+		return false, nil
+	}
+	return true, nil
+}
+
 // GetRoot gets root by the deposit count from the merkle tree.
 func (p *PostgresStorage) GetRoot(ctx context.Context, depositCnt uint, network uint, dbTx pgx.Tx) ([]byte, error) {
 	var root []byte
@@ -361,6 +375,60 @@ func (p *PostgresStorage) Set(ctx context.Context, key []byte, value [][]byte, d
 func (p *PostgresStorage) BulkSet(ctx context.Context, rows [][]interface{}, dbTx pgx.Tx) error {
 	_, err := p.getExecQuerier(dbTx).CopyFrom(ctx, pgx.Identifier{"mt", "rht"}, []string{"key", "value", "deposit_id"}, pgx.CopyFromRows(rows))
 	return err
+}
+
+// AddRollupExitLeaves iinserts multiple entries into the db.
+func (p *PostgresStorage) AddRollupExitLeaves(ctx context.Context, rows [][]interface{}, dbTx pgx.Tx) error {
+	_, err := p.getExecQuerier(dbTx).CopyFrom(ctx, pgx.Identifier{"mt", "rollup_exit"}, []string{"leaf", "rollup_id", "root", "block_num"}, pgx.CopyFromRows(rows))
+	return err
+}
+
+// GetRollupExitLeavesByRoot gets the leaves of the rollupExitTree given a root
+func (p *PostgresStorage) GetRollupExitLeavesByRoot(ctx context.Context, root common.Hash, dbTx pgx.Tx) ([]etherman.RollupExitLeaf, error) {
+	const getLeavesSQL = "SELECT id, leaf, rollup_id, root, block_num FROM mt.rollup_exit WHERE root = $1 ORDER BY rollup_id ASC"
+	rows, err := p.getExecQuerier(dbTx).Query(ctx, getLeavesSQL, root)
+	if err != nil {
+		return nil, err
+	}
+	leaves := make([]etherman.RollupExitLeaf, 0, len(rows.RawValues()))
+
+	for rows.Next() {
+		var leaf  etherman.RollupExitLeaf
+		err = rows.Scan(&leaf.ID, &leaf.Leaf, &leaf.RollupId, &leaf.Root, &leaf.BlockNumber)
+		if err != nil {
+			return nil, err
+		}
+		leaves = append(leaves, leaf)
+	}
+	return leaves, nil
+}
+
+// GetLatestRollupExitLeaves gets the latest leaves of the rollupExitTree
+func (p *PostgresStorage) GetLatestRollupExitLeaves(ctx context.Context, dbTx pgx.Tx) ([]etherman.RollupExitLeaf, error) {
+	const getLeavesSQL = `SELECT distinct re.id, re.leaf, re.rollup_id, re.root, re.block_num
+		FROM mt.rollup_exit re
+		INNER JOIN
+			(SELECT distinct rollup_id, MAX(id) AS maxid
+			FROM mt.rollup_exit
+			GROUP BY rollup_id) groupedre
+		ON re.id = groupedre.maxid
+		ORDER BY rollup_id asc;
+	`
+	rows, err := p.getExecQuerier(dbTx).Query(ctx, getLeavesSQL)
+	if err != nil {
+		return nil, err
+	}
+	leaves := make([]etherman.RollupExitLeaf, 0, len(rows.RawValues()))
+
+	for rows.Next() {
+		var leaf  etherman.RollupExitLeaf
+		err = rows.Scan(&leaf.ID, &leaf.Leaf, &leaf.RollupId, &leaf.Root, &leaf.BlockNumber)
+		if err != nil {
+			return nil, err
+		}
+		leaves = append(leaves, leaf)
+	}
+	return leaves, nil
 }
 
 // GetLastDepositCount gets the last deposit count from the merkle tree.

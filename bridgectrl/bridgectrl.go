@@ -23,7 +23,7 @@ type BridgeController struct {
 }
 
 // NewBridgeController creates new BridgeController.
-func NewBridgeController(cfg Config, networks []uint, mtStore interface{}) (*BridgeController, error) {
+func NewBridgeController(ctx context.Context, cfg Config, networks []uint, mtStore interface{}) (*BridgeController, error) {
 	var (
 		networkIDs = make(map[uint]uint8)
 		exitTrees  []*MerkleTree
@@ -31,13 +31,13 @@ func NewBridgeController(cfg Config, networks []uint, mtStore interface{}) (*Bri
 
 	for i, network := range networks {
 		networkIDs[network] = uint8(i)
-		mt, err := NewMerkleTree(context.TODO(), mtStore.(merkleTreeStore), cfg.Height, network)
+		mt, err := NewMerkleTree(ctx, mtStore.(merkleTreeStore), cfg.Height, network)
 		if err != nil {
 			return nil, err
 		}
 		exitTrees = append(exitTrees, mt)
 	}
-	rollupsTree, err := NewMerkleTree(context.TODO(), mtStore.(merkleTreeStore), cfg.Height, math.MaxInt32)
+	rollupsTree, err := NewMerkleTree(ctx, mtStore.(merkleTreeStore), cfg.Height, math.MaxInt32)
 	if err != nil {
 		log.Error("error creating rollupsTree. Error: ", err)
 		return nil, err
@@ -50,7 +50,7 @@ func NewBridgeController(cfg Config, networks []uint, mtStore interface{}) (*Bri
 	}, nil
 }
 
-func (bt *BridgeController) getNetworkID(networkID uint) (uint8, error) {
+func (bt *BridgeController) GetNetworkID(networkID uint) (uint8, error) {
 	tID, found := bt.networkIDs[networkID]
 	if !found {
 		return 0, gerror.ErrNetworkNotRegister
@@ -59,26 +59,35 @@ func (bt *BridgeController) getNetworkID(networkID uint) (uint8, error) {
 }
 
 // AddDeposit adds deposit information to the bridge tree.
-func (bt *BridgeController) AddDeposit(deposit *etherman.Deposit, depositID uint64, dbTx pgx.Tx) error {
+func (bt *BridgeController) AddDeposit(ctx context.Context, deposit *etherman.Deposit, depositID uint64, dbTx pgx.Tx) error {
 	leaf := hashDeposit(deposit)
-	tID, err := bt.getNetworkID(deposit.NetworkID)
+	tID, err := bt.GetNetworkID(deposit.NetworkID)
 	if err != nil {
 		return err
 	}
-	return bt.exitTrees[tID].addLeaf(context.TODO(), depositID, leaf, deposit.DepositCount, dbTx)
+	return bt.exitTrees[tID].addLeaf(ctx, depositID, leaf, deposit.DepositCount, dbTx)
 }
 
 // ReorgMT reorg the specific merkle tree.
-func (bt *BridgeController) ReorgMT(depositCount uint, networkID uint, dbTx pgx.Tx) error {
-	tID, err := bt.getNetworkID(networkID)
+func (bt *BridgeController) ReorgMT(ctx context.Context, depositCount uint, networkID uint, dbTx pgx.Tx) error {
+	tID, err := bt.GetNetworkID(networkID)
 	if err != nil {
 		return err
 	}
-	return bt.exitTrees[tID].resetLeaf(context.TODO(), depositCount, dbTx)
+	return bt.exitTrees[tID].resetLeaf(ctx, depositCount, dbTx)
 }
 
 // GetExitRoot returns the dedicated merkle tree's root.
 // only use for the test purpose
-func (bt *BridgeController) GetExitRoot(networkID int, dbTx pgx.Tx) ([]byte, error) {
-	return bt.exitTrees[networkID].getRoot(context.TODO(), dbTx)
+func (bt *BridgeController) GetExitRoot(ctx context.Context, networkID int, dbTx pgx.Tx) ([]byte, error) {
+	return bt.exitTrees[networkID].getRoot(ctx, dbTx)
+}
+
+func (bt *BridgeController) AddRollupExitLeaf(ctx context.Context, rollupLeaf etherman.RollupExitLeaf, dbTx pgx.Tx) error {
+	err := bt.rollupsTree.addRollupExitLeaf(ctx, rollupLeaf, dbTx)
+	if err != nil {
+		log.Error("error adding rollupleaf. Error: %v", err)
+		return err
+	}
+	return nil
 }

@@ -46,6 +46,9 @@ func (m migrationTest0007) RunAssertsAfterMigrationUp(t *testing.T, db *sql.DB) 
 	row := db.QueryRow(queryDepositCount)
 	var depositCnt int
 	assert.Error(t, row.Scan(&depositCnt))
+	insertRollupLeaf := "INSERT INTO mt.rollup_exit (leaf, root, rollup_id, block_num) VALUES(decode('16C571C7A60CF3694BA81AFF143E8A8C9A393D351213DBFD4D539F39F1C4648C','hex'), decode('16C571C7A60CF3694BA81AFF143E8A8C9A393D351213DBFD4D539F39F1C4648C','hex'), 1, 2);"
+	_, err := db.Exec(insertRollupLeaf)
+	assert.NoError(t, err)
 }
 
 func (m migrationTest0007) RunAssertsAfterMigrationDown(t *testing.T, db *sql.DB) {
@@ -56,6 +59,9 @@ func (m migrationTest0007) RunAssertsAfterMigrationDown(t *testing.T, db *sql.DB
 		assert.NoError(t, row.Scan(&depositCnt))
 		assert.Equal(t, i, depositCnt)
 	}
+	insertRollupLeaf := "INSERT INTO mt.rollup_exit (leaf, root, rollup_id, block_num) VALUES(decode('16C571C7A60CF3694BA81AFF143E8A8C9A393D351213DBFD4D539F39F1C4648C','hex'), decode('16C571C7A60CF3694BA81AFF143E8A8C9A393D351213DBFD4D539F39F1C4648C','hex'), 1, 2);"
+	_, err := db.Exec(insertRollupLeaf)
+	assert.Error(t, err)
 }
 
 func TestMigration0007(t *testing.T) {

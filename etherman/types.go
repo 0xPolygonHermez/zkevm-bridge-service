@@ -88,3 +88,12 @@ type VerifiedBatch struct {
 	StateRoot common.Hash
 	Aggregator common.Address
 }
+
+// RollupExitLeaf struct
+type RollupExitLeaf struct {
+	ID          uint64
+	BlockNumber uint64
+	Leaf        common.Hash
+	RollupId    uint64
+	Root        common.Hash
+}

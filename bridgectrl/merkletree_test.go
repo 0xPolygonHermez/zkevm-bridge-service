@@ -295,3 +295,58 @@ func TestGetLeaves(t *testing.T) {
 	require.Equal(t, 26, len(leaves))
 	log.Debug("leaves: %+v", leaves)
 }
+
+func TestBuildMTRootAndStore(t *testing.T) {
+	data, err := os.ReadFile("test/vectors/src/mt-bridge/root-vectors.json")
+	require.NoError(t, err)
+
+	var mtTestVectors []vectors.MTRootVectorRaw
+	err = json.Unmarshal(data, &mtTestVectors)
+	require.NoError(t, err)
+	for _, testVector := range mtTestVectors {
+		input := testVector.ExistingLeaves
+		log.Debug("input: ", input)
+		dbCfg := pgstorage.NewConfigFromEnv()
+		ctx := context.Background()
+		err := pgstorage.InitOrReset(dbCfg)
+		require.NoError(t, err)
+
+		store, err := pgstorage.NewPostgresStorage(dbCfg)
+		require.NoError(t, err)
+
+		mt, err := NewMerkleTree(ctx, store, uint8(32), 0)
+		require.NoError(t, err)
+
+		var leaves [][KeyLen]byte
+		for _, v := range input {
+			var res [KeyLen]byte
+			copy(res[:], common.Hex2Bytes(v[2:]))
+			leaves = append(leaves, res)
+		}
+
+		if len(leaves) != 0 {
+			root, err := mt.buildMTRoot(leaves)
+			require.NoError(t, err)
+			require.Equal(t, testVector.CurrentRoot, root.String())	
+		}
+		
+		var res [KeyLen]byte
+		copy(res[:], common.Hex2Bytes(testVector.NewLeaf.CurrentHash[2:]))
+		leaves = append(leaves, res)
+		newRoot, err := mt.buildMTRoot(leaves)
+		require.NoError(t, err)
+		require.Equal(t, testVector.NewRoot, newRoot.String())
+
+		// Insert values into db
+		var blockNumber uint64
+		err = mt.storeLeaves(ctx, leaves, blockNumber, nil)
+		require.NoError(t, err)
+		result, err := mt.store.GetRollupExitLeavesByRoot(ctx, newRoot, nil)
+		for i := range leaves {
+			require.Equal(t, len(leaves), len(result))
+			require.Equal(t, leaves[i][:], result[i].Leaf.Bytes())
+			require.Equal(t, newRoot, result[i].Root)
+			require.Equal(t, uint64(i+1), result[i].RollupId)
+		}
+	}
+}

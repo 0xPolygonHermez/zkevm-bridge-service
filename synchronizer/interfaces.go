@@ -35,11 +35,14 @@ type storageInterface interface {
 	GetNumberDeposits(ctx context.Context, origNetworkID uint, blockNumber uint64, dbTx pgx.Tx) (uint64, error)
 	AddTrustedGlobalExitRoot(ctx context.Context, trustedExitRoot *etherman.GlobalExitRoot, dbTx pgx.Tx) (bool, error)
 	GetLatestL1SyncedExitRoot(ctx context.Context, dbTx pgx.Tx) (*etherman.GlobalExitRoot, error)
+	CheckIfRootExists(ctx context.Context, root []byte, network uint8, dbTx pgx.Tx) (bool, error)
 }
 
 type bridgectrlInterface interface {
-	AddDeposit(deposit *etherman.Deposit, depositID uint64, dbTx pgx.Tx) error
-	ReorgMT(depositCount, networkID uint, dbTx pgx.Tx) error
+	AddDeposit(ctx context.Context, deposit *etherman.Deposit, depositID uint64, dbTx pgx.Tx) error
+	ReorgMT(ctx context.Context, depositCount, networkID uint, dbTx pgx.Tx) error
+	GetNetworkID(networkID uint) (uint8, error)
+	AddRollupExitLeaf(ctx context.Context, rollupLeaf etherman.RollupExitLeaf, dbTx pgx.Tx) error
 }
 
 type zkEVMClientInterface interface {
