@@ -83,3 +83,33 @@ func TestGetLeaves(t *testing.T) {
 	assert.Equal(t, uint64(4), leaves[3].RollupId)
 	assert.Equal(t, "0x42d3339fe8eb57770953423f20a029e778a707e8d58aaf110b40d5eb4dd25722", leaves[3].Root.String())
 }
+
+func TestIsLxLyActivated(t *testing.T) {
+	data := `INSERT INTO sync.block
+	(id, block_num, block_hash, parent_hash, network_id, received_at)
+	VALUES(1, 1, decode('5C7831','hex'), decode('5C7830','hex'), 0, '1970-01-01 01:00:00.000');
+	
+	INSERT INTO mt.rollup_exit
+	(leaf, rollup_id, root, block_num)
+	VALUES(decode('A4BFA0908DC7B06D98DA4309F859023D6947561BC19BC00D77F763DEA1A0B9F5','hex'), 1, decode('42D3339FE8EB57770953423F20A029E778A707E8D58AAF110B40D5EB4DD25721','hex'), 1);
+	`
+	dbCfg := NewConfigFromEnv()
+	ctx := context.Background()
+	err := InitOrReset(dbCfg)
+	require.NoError(t, err)
+
+	store, err := NewPostgresStorage(dbCfg)
+	require.NoError(t, err)
+
+	isActivated, err := store.IsLxLyActivated(ctx, nil)
+	require.NoError(t, err)
+	assert.Equal(t, false, isActivated)
+
+	_, err = store.Exec(ctx, data)
+	require.NoError(t, err)
+
+	isActivated, err = store.IsLxLyActivated(ctx, nil)
+	require.NoError(t, err)
+
+	assert.Equal(t, true, isActivated)
+}

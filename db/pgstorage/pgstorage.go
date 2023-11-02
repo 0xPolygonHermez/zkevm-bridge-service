@@ -387,7 +387,9 @@ func (p *PostgresStorage) AddRollupExitLeaves(ctx context.Context, rows [][]inte
 func (p *PostgresStorage) GetRollupExitLeavesByRoot(ctx context.Context, root common.Hash, dbTx pgx.Tx) ([]etherman.RollupExitLeaf, error) {
 	const getLeavesSQL = "SELECT id, leaf, rollup_id, root, block_num FROM mt.rollup_exit WHERE root = $1 ORDER BY rollup_id ASC"
 	rows, err := p.getExecQuerier(dbTx).Query(ctx, getLeavesSQL, root)
-	if err != nil {
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, gerror.ErrStorageNotFound
+	} else if err != nil {
 		return nil, err
 	}
 	leaves := make([]etherman.RollupExitLeaf, 0, len(rows.RawValues()))
@@ -401,6 +403,22 @@ func (p *PostgresStorage) GetRollupExitLeavesByRoot(ctx context.Context, root co
 		leaves = append(leaves, leaf)
 	}
 	return leaves, nil
+}
+
+// IsLxLyActivated checks in db if LxLy is activated
+func (p *PostgresStorage) IsLxLyActivated(ctx context.Context, dbTx pgx.Tx) (bool, error) {
+	const getLeavesSQL = "SELECT count(*) FROM mt.rollup_exit LIMIT 1"
+	var count int
+	err := p.getExecQuerier(dbTx).QueryRow(ctx, getLeavesSQL).Scan(&count)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return false, gerror.ErrStorageNotFound
+	} else if err != nil {
+		return false, err
+	}
+	if count == 1 {
+		return true, nil
+	}
+	return false, nil
 }
 
 // GetLatestRollupExitLeaves gets the latest leaves of the rollupExitTree

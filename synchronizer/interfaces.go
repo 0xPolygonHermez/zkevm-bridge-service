@@ -36,6 +36,7 @@ type storageInterface interface {
 	AddTrustedGlobalExitRoot(ctx context.Context, trustedExitRoot *etherman.GlobalExitRoot, dbTx pgx.Tx) (bool, error)
 	GetLatestL1SyncedExitRoot(ctx context.Context, dbTx pgx.Tx) (*etherman.GlobalExitRoot, error)
 	CheckIfRootExists(ctx context.Context, root []byte, network uint8, dbTx pgx.Tx) (bool, error)
+	IsLxLyActivated(ctx context.Context, dbTx pgx.Tx) (bool, error)
 }
 
 type bridgectrlInterface interface {
