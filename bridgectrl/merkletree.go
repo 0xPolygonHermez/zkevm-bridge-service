@@ -224,7 +224,7 @@ func (mt *MerkleTree) updateLeaf(ctx context.Context, depositID uint64, leaves [
 	return nil
 }
 
-func (mt *MerkleTree) getLeaves(ctx context.Context, depositID uint64, dbTx pgx.Tx) ([][KeyLen]byte, error) {
+func (mt *MerkleTree) getLeaves(ctx context.Context,dbTx pgx.Tx) ([][KeyLen]byte, error) {
 	root, err := mt.getRoot(ctx, dbTx)
 	if err != nil {
 		return nil, err
@@ -344,4 +344,45 @@ func (mt MerkleTree) addRollupExitLeaf(ctx context.Context, rollupLeaf etherman.
 		return err
 	}
 	return nil
+}
+
+func ComputeSiblings(rollupIndex uint, leaves [][KeyLen]byte, height uint8) ([][KeyLen]byte, common.Hash, error) {
+	var ns [][][]byte
+	if len(leaves) == 0 {
+		leaves = append(leaves, zeroHashes[0])
+	}
+	var siblings [][KeyLen]byte
+	index := rollupIndex
+	for h := uint8(0); h < height; h++ {
+		if len(leaves)%2 == 1 {
+			leaves = append(leaves, zeroHashes[h])
+		}
+		if index%2 == 1 { //If it is odd
+			siblings = append(siblings, leaves[index-1])
+		} else { // It is even
+			if len(leaves) > 1 {
+				siblings = append(siblings, leaves[index+1])
+			}
+		}
+		var (
+			nsi [][][]byte
+			hashes [][KeyLen]byte
+		)
+		for i := 0; i < len(leaves); i += 2 {
+			var left, right int = i, i + 1
+			hash := Hash(leaves[left], leaves[right])
+			nsi = append(nsi, [][]byte{hash[:], leaves[left][:], leaves[right][:]})
+			hashes = append(hashes, hash)
+			// Find the index of the leave in the next level of the tree.
+			// Divide the index by 2 to find the position in the upper level
+			index = uint(float64(index)/2)
+		}
+		ns = nsi
+		leaves = hashes
+	}
+	if len(ns) != 1 {
+		return nil, common.Hash{}, fmt.Errorf("error: more than one root detected: %+v", ns)
+	}
+
+	return siblings, common.BytesToHash(ns[0][0]), nil
 }

@@ -46,8 +46,6 @@ github.com/0xPolygonHermez/zkevm-data-streamer v0.1.0 h1:fYsPST5nwgE+IAQMa53kk1j
 github.com/0xPolygonHermez/zkevm-data-streamer v0.1.0/go.mod h1:853hkExOKPpMqbyEGqF8cuobSlbVd2OLVEZoRFTGRzo=
 github.com/0xPolygonHermez/zkevm-node v0.2.0-RC1.0.20231023094346-617bec6334d8 h1:bPEYb9hD43n7Wovv1aoeImHbMCqoMRUgic5kd6aSpWQ=
 github.com/0xPolygonHermez/zkevm-node v0.2.0-RC1.0.20231023094346-617bec6334d8/go.mod h1:kpsNW2yBoBLtivpnSDd6w2Km7IzhGmtWy7oEbLUWtFg=
-github.com/0xPolygonHermez/zkevm-node v0.3.2 h1:8nc5y3xnuZZQEqYg0mjIhsRIJ4wlXaYdMONG5ur4fAY=
-github.com/0xPolygonHermez/zkevm-node v0.3.2/go.mod h1:TcUWTsTGOC7Q6ZyPycJa19kuwSPCZy2DFP/hfoYiLgg=
 github.com/AndreasBriese/bbloom v0.0.0-20190306092124-e2d15f34fcf9/go.mod h1:bOvUY6CB00SOBii9/FifXqc0awNKxLFCL/+pkDPuyl8=
 github.com/Azure/go-ansiterm v0.0.0-20170929234023-d6e3b3328b78 h1:w+iIsaOQNcT7OZ575w+acHgRric5iCyQh+xv+KJ4HB8=
 github.com/Azure/go-ansiterm v0.0.0-20170929234023-d6e3b3328b78/go.mod h1:LmzpDX56iTiv29bbRTIsUNlaFfuhWRQBWjQdVyAevI8=

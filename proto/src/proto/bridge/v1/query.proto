@@ -84,7 +84,7 @@ message Deposit {
 
 // Claim message
 message Claim {
-    uint64 global_index = 1;
+    uint64 index = 1;
     uint32 orig_net = 2;
     string orig_addr = 3;
     string amount = 4;
@@ -92,6 +92,8 @@ message Claim {
     string dest_addr = 6;
     uint64 block_num = 7;
     string tx_hash = 8;
+    uint64 rollup_index = 9;
+    bool   mainnet_flag = 10;
 }
 
 // Merkle Proof message

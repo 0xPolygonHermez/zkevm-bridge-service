@@ -50,7 +50,7 @@ func local_request_BridgeService_CheckAPI_0(ctx context.Context, marshaler runti
 }
 
 var (
-	filter_BridgeService_GetBridges_0 = &utilities.DoubleArray{Encoding: map[string]int{"dest_addr": 0}, Base: []int{1, 1, 0}, Check: []int{0, 1, 2}}
+	filter_BridgeService_GetBridges_0 = &utilities.DoubleArray{Encoding: map[string]int{"dest_addr": 0, "destAddr": 1}, Base: []int{1, 1, 2, 0, 0}, Check: []int{0, 1, 1, 2, 3}}
 )
 
 func request_BridgeService_GetBridges_0(ctx context.Context, marshaler runtime.Marshaler, client BridgeServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
@@ -192,7 +192,7 @@ func local_request_BridgeService_GetBridge_0(ctx context.Context, marshaler runt
 }
 
 var (
-	filter_BridgeService_GetClaims_0 = &utilities.DoubleArray{Encoding: map[string]int{"dest_addr": 0}, Base: []int{1, 1, 0}, Check: []int{0, 1, 2}}
+	filter_BridgeService_GetClaims_0 = &utilities.DoubleArray{Encoding: map[string]int{"dest_addr": 0, "destAddr": 1}, Base: []int{1, 1, 2, 0, 0}, Check: []int{0, 1, 1, 2, 3}}
 )
 
 func request_BridgeService_GetClaims_0(ctx context.Context, marshaler runtime.Marshaler, client BridgeServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
@@ -459,7 +459,7 @@ func RegisterBridgeServiceHandlerServer(ctx context.Context, mux *runtime.ServeM
 // RegisterBridgeServiceHandlerFromEndpoint is same as RegisterBridgeServiceHandler but
 // automatically dials to "endpoint" and closes the connection when "ctx" gets done.
 func RegisterBridgeServiceHandlerFromEndpoint(ctx context.Context, mux *runtime.ServeMux, endpoint string, opts []grpc.DialOption) (err error) {
-	conn, err := grpc.Dial(endpoint, opts...)
+	conn, err := grpc.DialContext(ctx, endpoint, opts...)
 	if err != nil {
 		return err
 	}
