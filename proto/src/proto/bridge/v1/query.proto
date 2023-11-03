@@ -99,8 +99,9 @@ message Claim {
 // Merkle Proof message
 message Proof {
     repeated string merkle_proof = 1;
-    string main_exit_root = 2;
-    string rollup_exit_root = 3;
+    repeated string rollup_merkle_proof = 2;
+    string main_exit_root = 3;
+    string rollup_exit_root = 4;
 }
 
 // Get requests

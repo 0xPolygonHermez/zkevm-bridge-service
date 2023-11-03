@@ -122,13 +122,13 @@ func (s *bridgeService) getProof(index uint, root [bridgectrl.KeyLen]byte, dbTx 
 }
 
 // getRollupExitProof returns the merkle proof for the zkevm leaf.
-func (s *bridgeService) getRollupExitProof(rollupIndex uint, root common.Hash, dbTx pgx.Tx) ([][bridgectrl.KeyLen]byte, error) {
+func (s *bridgeService) getRollupExitProof(rollupIndex uint, root common.Hash, dbTx pgx.Tx) ([][bridgectrl.KeyLen]byte, common.Hash, error) {
 	ctx := context.Background()
 
 	// Get leaves given the root
 	leaves, err := s.storage.GetRollupExitLeavesByRoot(ctx, root, dbTx)
 	if err != nil {
-		return nil, err
+		return nil, common.Hash{}, err
 	}
 	// Compute Siblings
 	var ls [][bridgectrl.KeyLen]byte
@@ -139,187 +139,69 @@ func (s *bridgeService) getRollupExitProof(rollupIndex uint, root common.Hash, d
 	}
 	siblings, r, err := bridgectrl.ComputeSiblings(rollupIndex, ls, s.height)
 	if err != nil {
-		return nil, err
+		return nil, common.Hash{}, err
 	} else if root != r {
-		return nil, fmt.Errorf("error checking calculated root: %s, %s", root.String(), r.String())
+		return nil, common.Hash{}, fmt.Errorf("error checking calculated root: %s, %s", root.String(), r.String())
 	}
-	return siblings, nil
+	return siblings, ls[rollupIndex], nil
 }
-
-// func (s *bridgeService) computeSiblings(rollupIndex uint, leaves [][bridgectrl.KeyLen]byte) ([][bridgectrl.KeyLen]byte, common.Hash, error) {
-// 	var ns [][][]byte
-// 	if len(leaves) == 0 {
-// 		leaves = append(leaves, zeroHashes[0])
-// 	}
-// 	var siblings [][bridgectrl.KeyLen]byte
-// 	index := rollupIndex
-// 	for h := uint8(0); h < s.height; h++ {
-// 		if index%2 == 1 { //If it is odd
-// 			siblings = append(siblings, leaves[index-1])
-// 		} else { // It is even
-// 			siblings = append(siblings, leaves[index+1])
-// 		}
-// 		if len(leaves)%2 == 1 {
-// 			leaves = append(leaves, zeroHashes[h])
-// 		}
-// 		var (
-// 			nsi [][][]byte
-// 			hashes [][bridgectrl.KeyLen]byte
-// 		)
-// 		for i := 0; i < len(leaves); i += 2 {
-// 			var left, right int = i, i + 1
-// 			hash := bridgectrl.Hash(leaves[left], leaves[right])
-// 			nsi = append(nsi, [][]byte{hash[:], leaves[left][:], leaves[right][:]})
-// 			hashes = append(hashes, hash)
-// 			// Necesito sacar el index de la hoja nueva en la que estoy
-// 			// Dividir el index entre dos truncando a entero => posicion nivel superior
-// 			index = uint(float64(index)/2)
-// 		}
-// 		ns = nsi
-// 		leaves = hashes
-// 	}
-// 	if len(ns) != 1 {
-// 		return nil, common.Hash{}, fmt.Errorf("error: more than one root detected: %+v", ns)
-// 	}
-
-// 	return siblings, common.BytesToHash(ns[0][0]), nil
-// }
-
-/*
-func (s *bridgeService) computeRollupExitSiblings(rollupIndex uint, leaves [][bridgectrl.KeyLen]byte, root common.Hash) ([][bridgectrl.KeyLen]byte, error) {
-	var (
-		nodes = make(map[[32]byte][2][32]byte)
-		ns    [][][]byte
-	)
-	if len(leaves) == 0 {
-		leaves = append(leaves, zeroHashes[0])
-	}
-
-	for h := uint8(0); h < s.height; h++ {
-		if len(leaves)%2 == 1 {
-			leaves = append(leaves, zeroHashes[h])
-		}
-		// ns, leaves = buildIntermediate(&nodes, leaves)
-		var (
-			nsi     [][][]byte
-			hashes [][bridgectrl.KeyLen]byte
-		)
-		for i := 0; i < len(leaves); i += 2 {
-			var left, right int = i, i + 1
-			hash := bridgectrl.Hash(leaves[left], leaves[right])
-			nodes[hash] = [2][32]byte{leaves[left], leaves[right]}
-			nsi = append(ns, [][]byte{hash[:], leaves[left][:], leaves[right][:]})
-			hashes = append(hashes, hash)
-		}
-		ns = nsi
-		leaves = hashes
-	}
-	if len(ns) != 1 {
-		return nil, fmt.Errorf("error: more than one root detected: %+v", nodes)
-	}
-
-	if root != common.BytesToHash(ns[0][0]) {
-		return nil, fmt.Errorf("mismatch in the calculated root: %s. Computed root: %s", root.String(), common.BytesToHash(ns[0][0]).String())
-	}
-	// Compute siblings
-	var r [bridgectrl.KeyLen]byte
-	copy(r[:], ns[0][0])
-	var siblings [][bridgectrl.KeyLen]byte
-
-	cur := r
-	// It starts in height-1 because 0 is the level of the leafs
-	for h := int(s.height - 1); h >= 0; h-- {
-		// n := nodes[cur]
-		left := nodes[cur][0]
-		right := nodes[cur][1]
-		if (left == common.Hash{}) && (right == common.Hash{}) {
-			return nil, fmt.Errorf("error detected. Empty node: ", common.BytesToHash(cur[:]))
-		}
-		/*
-		*        Root                (level h=3 => height=4)
-		*      /     \
-		*	 O5       O6             (level h=2)
-		*	/ \      / \
-		*  O1  O2   O3  O4           (level h=1)
-		*  /\   /\   /\ /\
-		* 0  1 2  3 4 5 6 7 Leafs    (level h=0)
-		* Example 1:
-		* Choose rollupIndex = 3 => 011 binary
-		* Assuming we are in level 1 => h=1; 1<<h = 010 binary
-		* Now, let's do AND operation => 011&010=010 which is higher than 0 so we need the left sibling (O1)
-		* Example 2:
-		* Choose rollupIndex = 4 => 100 binary
-		* Assuming we are in level 1 => h=1; 1<<h = 010 binary
-		* Now, let's do AND operation => 100&010=000 which is not higher than 0 so we need the right sibling (O4)
-		* Example 3:
-		* Choose rollupIndex = 4 => 100 binary
-		* Assuming we are in level 2 => h=2; 1<<h = 100 binary
-		* Now, let's do AND operation => 100&100=100 which is higher than 0 so we need the left sibling (O5)
-		*
-
-		if rollupIndex&(1<<h) > 0 {
-			siblings = append(siblings, left)
-			cur = right
-		} else {
-			siblings = append(siblings, right)
-			cur = left
-		}
-	}
-
-	// We need to invert the siblings to go from leafs to the top
-	for st, en := 0, len(siblings)-1; st < en; st, en = st+1, en-1 {
-		siblings[st], siblings[en] = siblings[en], siblings[st]
-	}
-
-	return siblings, nil
-}
-
-// func buildIntermediate(nodes *map[[32]byte][2][32]byte, leaves [][bridgectrl.KeyLen]byte) ([][][]byte, [][32]byte) {
-// 	var (
-// 		ns     [][][]byte
-// 		hashes [][bridgectrl.KeyLen]byte
-// 	)
-// 	for i := 0; i < len(leaves); i += 2 {
-// 		var left, right int = i, i + 1
-// 		hash := bridgectrl.Hash(leaves[left], leaves[right])
-// 		(*nodes)[hash] = [2][32]byte{leaves[left], leaves[right]}
-// 		ns = append(ns, [][]byte{hash[:], leaves[left][:], leaves[right][:]})
-// 		hashes = append(hashes, hash)
-// 	}
-// 	return ns, hashes
-// }*/
 
 // GetClaimProof returns the merkle proof to claim the given deposit.
-func (s *bridgeService) GetClaimProof(depositCnt, networkID uint, dbTx pgx.Tx) (*etherman.GlobalExitRoot, [][bridgectrl.KeyLen]byte, error) {
+func (s *bridgeService) GetClaimProof(depositCnt, networkID uint, dbTx pgx.Tx) (*etherman.GlobalExitRoot, [][bridgectrl.KeyLen]byte, [][bridgectrl.KeyLen]byte, error) {
 	ctx := context.Background()
 
 	if dbTx == nil { // if the call comes from the rest API
 		deposit, err := s.storage.GetDeposit(ctx, depositCnt, networkID, nil)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 
 		if !deposit.ReadyForClaim {
-			return nil, nil, gerror.ErrDepositNotSynced
+			return nil, nil, nil, gerror.ErrDepositNotSynced
 		}
 	}
 
 	tID, err := s.getNetworkID(networkID)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	globalExitRoot, err := s.storage.GetLatestExitRoot(ctx, tID != 0, dbTx)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
-	merkleProof, err := s.getProof(depositCnt, globalExitRoot.ExitRoots[tID], dbTx)
-	if err != nil {
-		return nil, nil, fmt.Errorf("getting the proof failed, error: %v, network: %d", err, networkID)
+	var (
+		merkleProof [][bridgectrl.KeyLen]byte
+		rollupMerkleProof [][bridgectrl.KeyLen]byte
+		rollupLeaf common.Hash
+	)
+	if networkID == 0 { // Mainnet
+		merkleProof, err = s.getProof(depositCnt, globalExitRoot.ExitRoots[tID], dbTx)
+		if err != nil {
+			return nil, nil, nil, fmt.Errorf("getting the proof failed, error: %v, network: %d", err, networkID)
+		}
+		rollupMerkleProof = emptyProof()
+	} else { // Rollup
+		rollupMerkleProof, rollupLeaf, err = s.getRollupExitProof(depositCnt, globalExitRoot.ExitRoots[tID], dbTx)
+		if err != nil {
+			return nil, nil, nil, fmt.Errorf("getting the rollup proof failed, error: %v, network: %d", err, networkID)
+		}
+		merkleProof, err = s.getProof(depositCnt, rollupLeaf, dbTx)
+		if err != nil {
+			return nil, nil, nil, fmt.Errorf("getting the proof failed, error: %v, network: %d", err, networkID)
+		}
 	}
 
-	return globalExitRoot, merkleProof, nil
+	return globalExitRoot, merkleProof, rollupMerkleProof, nil
+}
+
+func emptyProof() [][bridgectrl.KeyLen]byte {
+	var proof [][bridgectrl.KeyLen]byte
+	for i := 0; i < 32; i++ {
+		proof = append(proof, common.Hash{})
+	}
+	return proof
 }
 
 // GetDepositStatus returns deposit with ready_for_claim status.
@@ -441,20 +323,28 @@ func (s *bridgeService) GetClaims(ctx context.Context, req *pb.GetClaimsRequest)
 // GetProof returns the merkle proof for the given deposit.
 // Bridge rest API endpoint
 func (s *bridgeService) GetProof(ctx context.Context, req *pb.GetProofRequest) (*pb.GetProofResponse, error) {
-	globalExitRoot, merkleProof, err := s.GetClaimProof(uint(req.DepositCnt), uint(req.NetId), nil)
+	globalExitRoot, merkleProof, rollupMerkleProof, err := s.GetClaimProof(uint(req.DepositCnt), uint(req.NetId), nil)
 	if err != nil {
 		return nil, err
 	}
-	var proof []string
+	var (
+		proof       []string
+		rollupProof []string
+	)
+	if len(proof) != len(rollupProof) {
+		return nil, fmt.Errorf("proofs have different lengths. MerkleProof: %d. RollupMerkleProof: %d", len(merkleProof), len(rollupMerkleProof))
+	}
 	for i := 0; i < len(merkleProof); i++ {
 		proof = append(proof, "0x"+hex.EncodeToString(merkleProof[i][:]))
+		rollupProof = append(rollupProof, "0x"+hex.EncodeToString(rollupMerkleProof[i][:]))
 	}
 
 	return &pb.GetProofResponse{
 		Proof: &pb.Proof{
-			MerkleProof:    proof,
-			MainExitRoot:   globalExitRoot.ExitRoots[0].Hex(),
-			RollupExitRoot: globalExitRoot.ExitRoots[1].Hex(),
+			RollupMerkleProof: rollupProof,
+			MerkleProof:       proof,
+			MainExitRoot:      globalExitRoot.ExitRoots[0].Hex(),
+			RollupExitRoot:    globalExitRoot.ExitRoots[1].Hex(),
 		},
 	}, nil
 }
