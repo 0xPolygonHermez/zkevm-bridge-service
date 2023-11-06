@@ -400,19 +400,6 @@ func (etherMan *Client) newClaimEvent(ctx context.Context, vLog types.Log, block
 	return etherMan.claimEvent(ctx, vLog, blocks, blocksOrder, c.Amount, c.DestinationAddress, c.OriginAddress, uint(localExitRootIndex), uint(c.OriginNetwork), rollupIndex, mainnetFlag)
 }
 
-
-func decodeGlobalIndex(globalIndex *big.Int) (bool, uint64, uint64, error) {
-	var buf [32]byte
-	gIBytes := globalIndex.FillBytes(buf[:])
-	if len(gIBytes) != 32 {
-		return false, 0, 0, fmt.Errorf("invalid globaIndex length. Should be 32. Current length: %d", len(gIBytes))
-	}
-	mainnetFlag := big.NewInt(0).SetBytes([]byte{gIBytes[23]}).Uint64() == 1
-	rollupIndex := big.NewInt(0).SetBytes(gIBytes[24:28])
-	localRootIndex := big.NewInt(0).SetBytes(gIBytes[29:32])
-	return mainnetFlag, rollupIndex.Uint64(), localRootIndex.Uint64(), nil
-}
-
 func (etherMan *Client) claimEvent(ctx context.Context, vLog types.Log, blocks *[]Block, blocksOrder *map[common.Hash][]Order, amount *big.Int, destinationAddress, originAddress common.Address, Index uint, originNetwork uint, rollupIndex uint64, mainnetFlag bool) error {
 	var claim Claim
 	claim.Amount = amount
@@ -581,4 +568,35 @@ func (etherMan *Client) verifyBatches(ctx context.Context, vLog types.Log, block
 
 func (etherMan *Client) GetRollupID() uint {
 	return uint(etherMan.RollupID)
+}
+
+func decodeGlobalIndex(globalIndex *big.Int) (bool, uint64, uint64, error) {
+	var buf [32]byte
+	gIBytes := globalIndex.FillBytes(buf[:])
+	if len(gIBytes) != 32 {
+		return false, 0, 0, fmt.Errorf("invalid globaIndex length. Should be 32. Current length: %d", len(gIBytes))
+	}
+	mainnetFlag := big.NewInt(0).SetBytes([]byte{gIBytes[23]}).Uint64() == 1
+	rollupIndex := big.NewInt(0).SetBytes(gIBytes[24:28])
+	localRootIndex := big.NewInt(0).SetBytes(gIBytes[29:32])
+	return mainnetFlag, rollupIndex.Uint64(), localRootIndex.Uint64(), nil
+}
+
+func GenerateGlobalIndex(mainnetFlag bool, rollupIndex uint, localExitRootIndex uint) *big.Int {
+	var (
+		globalIndexBytes []byte
+		buf [4]byte
+	)
+	if mainnetFlag {
+		globalIndexBytes = append(globalIndexBytes, big.NewInt(1).Bytes()...)
+		ri := big.NewInt(0).FillBytes(buf[:])
+		globalIndexBytes = append(globalIndexBytes, ri...)
+	} else {
+		ri := big.NewInt(0).SetUint64(uint64(rollupIndex)).FillBytes(buf[:])
+		globalIndexBytes = append(globalIndexBytes, ri...)
+		log.Debug("ri: ", ri)
+	}
+	leri := big.NewInt(0).SetUint64(uint64(localExitRootIndex)).FillBytes(buf[:])
+	globalIndexBytes = append(globalIndexBytes, leri...)
+	return big.NewInt(0).SetBytes(globalIndexBytes)
 }

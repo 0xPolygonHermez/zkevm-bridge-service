@@ -139,7 +139,7 @@ func TestDecodeGlobalIndex(t *testing.T) {
 
 	var buf [32]byte
 	gi := globalIndex.FillBytes(buf[:])
-	for _, n := range(gi) {
+	for _, n := range gi {
         t.Logf("%08b ", n)
     }
 	mainnetFlag, rollupIndex, localExitRootIndex, err := decodeGlobalIndex(globalIndex)
@@ -151,7 +151,7 @@ func TestDecodeGlobalIndex(t *testing.T) {
 	globalIndex, _ = big.NewInt(0).SetString("8589934604", 0)
 
 	gi = globalIndex.FillBytes(buf[:])
-	for _, n := range(gi) {
+	for _, n := range gi {
         t.Logf("%08b ", n)
     }
 	mainnetFlag, rollupIndex, localExitRootIndex, err = decodeGlobalIndex(globalIndex)
@@ -163,7 +163,7 @@ func TestDecodeGlobalIndex(t *testing.T) {
 	globalIndex, _ = big.NewInt(0).SetString("18446744073709551627", 0)
 
 	gi = globalIndex.FillBytes(buf[:])
-	for _, n := range(gi) {
+	for _, n := range gi {
         t.Logf("%08b ", n)
     }
 	mainnetFlag, rollupIndex, localExitRootIndex, err = decodeGlobalIndex(globalIndex)
@@ -217,4 +217,33 @@ func TestVerifyBatchEvent(t *testing.T) {
 	assert.Equal(t, VerifyBatchOrder, order[blocks[0].BlockHash][1].Name)
 	assert.Equal(t, 0, order[blocks[0].BlockHash][0].Pos)
 	assert.Equal(t, 0, order[blocks[0].BlockHash][1].Pos)
+}
+
+func TestGenerateGlobalIndex(t *testing.T) {
+	globalIndex, _ := big.NewInt(0).SetString("4294967307", 0)
+	mainnetFlag, rollupIndex, localExitRootIndex := false, uint(1), uint(11)
+	globalIndexGenerated := GenerateGlobalIndex(mainnetFlag, rollupIndex, localExitRootIndex)
+	t.Log("First test number:")
+	for _, n := range globalIndexGenerated.Bytes() {
+        t.Logf("%08b ", n)
+    }
+	assert.Equal(t, globalIndex, globalIndexGenerated)
+	
+	globalIndex, _ = big.NewInt(0).SetString("8589934604", 0)
+	mainnetFlag, rollupIndex, localExitRootIndex = false, uint(2), uint(12)
+	globalIndexGenerated = GenerateGlobalIndex(mainnetFlag, rollupIndex, localExitRootIndex)
+	t.Log("Second test number:")
+	for _, n := range globalIndexGenerated.Bytes() {
+        t.Logf("%08b ", n)
+    }
+	assert.Equal(t, globalIndex, globalIndexGenerated)
+
+	globalIndex, _ = big.NewInt(0).SetString("18446744073709551627", 0)
+	mainnetFlag, rollupIndex, localExitRootIndex = true, uint(0), uint(11)
+	globalIndexGenerated = GenerateGlobalIndex(mainnetFlag, rollupIndex, localExitRootIndex)
+	t.Log("Third test number:")
+	for _, n := range globalIndexGenerated.Bytes() {
+        t.Logf("%08b ", n)
+    }
+	assert.Equal(t, globalIndex, globalIndexGenerated)
 }
