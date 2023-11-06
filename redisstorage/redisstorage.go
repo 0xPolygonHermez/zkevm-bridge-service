@@ -20,20 +20,29 @@ const (
 
 // redisStorageImpl implements RedisStorage interface
 type redisStorageImpl struct {
-	client    *redis.Client
+	client    RedisClient
 	mockPrice bool
 }
 
 func NewRedisStorage(cfg Config) (RedisStorage, error) {
-	if cfg.Addr == "" {
+	if len(cfg.Addrs) == 0 {
 		return nil, errors.New("redis address is empty")
 	}
-	client := redis.NewClient(&redis.Options{
-		Addr:     cfg.Addr,
-		Username: cfg.Username,
-		Password: cfg.Password,
-		DB:       cfg.DB,
-	})
+	var client RedisClient
+	if cfg.IsClusterMode {
+		client = redis.NewClusterClient(&redis.ClusterOptions{
+			Addrs:    cfg.Addrs,
+			Username: cfg.Username,
+			Password: cfg.Password,
+		})
+	} else {
+		client = redis.NewClient(&redis.Options{
+			Addr:     cfg.Addrs[0],
+			Username: cfg.Username,
+			Password: cfg.Password,
+			DB:       cfg.DB,
+		})
+	}
 	res, err := client.Ping(context.Background()).Result()
 	if err != nil {
 		return nil, errors.Wrap(err, "cannot connect to redis server")

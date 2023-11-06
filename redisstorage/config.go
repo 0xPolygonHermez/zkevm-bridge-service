@@ -2,8 +2,11 @@ package redisstorage
 
 // Config stores the redis connection configs
 type Config struct {
+	// If this is true, will use ClusterClient
+	IsClusterMode bool `mapstructure:"IsClusterMode"`
+
 	// Host:Port address
-	Addr string `mapstructure:"Addr"`
+	Addrs []string `mapstructure:"Addrs"`
 
 	// Username for ACL
 	Username string `mapstructure:"Username"`

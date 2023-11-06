@@ -52,7 +52,8 @@ SentinelConfigFilePath = "/app/sentinel_config.json"
     MaxConns = 20
     TableSuffix = ""
     [BridgeServer.Redis]
-    Addr = "xgon-bridge-redis:6379"
+    IsClusterMode = false
+    Addrs = ["xgon-bridge-redis:6379"]
     Username = ""
     Password = ""
     DB = 0
