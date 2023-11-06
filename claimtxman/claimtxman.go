@@ -507,7 +507,7 @@ func (tm *ClaimTxManager) ReviewMonitoredTx(ctx context.Context, mTx *ctmtypes.M
 		// check nonce
 		nonce, err := tm.getNextNonce(mTx.From)
 		if err != nil {
-			err := fmt.Errorf("failed to get nonce: %w", err)
+			err := fmt.Errorf("failed to get nonce: %v", err)
 			mTxLog.Errorf(err.Error())
 			return err
 		}

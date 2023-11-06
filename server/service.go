@@ -9,6 +9,7 @@ import (
 	"github.com/0xPolygonHermez/zkevm-bridge-service/bridgectrl/pb"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/utils/gerror"
+	"github.com/0xPolygonHermez/zkevm-node/log"
 	"github.com/ethereum/go-ethereum/common"
 	lru "github.com/hashicorp/golang-lru/v2"
 	"github.com/jackc/pgx/v4"
@@ -63,7 +64,7 @@ func (s *bridgeService) getNode(ctx context.Context, parentHash [bridgectrl.KeyL
 		var err error
 		value, err = s.storage.Get(ctx, parentHash[:], dbTx)
 		if err != nil {
-			return left, right, fmt.Errorf("parentHash: %v, error: %w", parentHash, err)
+			return left, right, fmt.Errorf("parentHash: %s, error: %v", common.BytesToHash(parentHash[:]).String(), err)
 		}
 		s.cache.Add(string(parentHash[:]), value)
 	}
@@ -82,7 +83,7 @@ func (s *bridgeService) getProof(index uint, root [bridgectrl.KeyLen]byte, dbTx 
 	for h := int(s.height - 1); h >= 0; h-- {
 		left, right, err := s.getNode(ctx, cur, dbTx)
 		if err != nil {
-			return nil, fmt.Errorf("height: %d, cur: %v, error: %w", h, cur, err)
+			return nil, fmt.Errorf("height: %d, cur: %s, error: %v", h, common.BytesToHash(cur[:]).String(), err)
 		}
 		/*
 					*        Root                (level h=3 => height=4)
@@ -181,16 +182,19 @@ func (s *bridgeService) GetClaimProof(depositCnt, networkID uint, dbTx pgx.Tx) (
 	if networkID == 0 { // Mainnet
 		merkleProof, err = s.getProof(depositCnt, globalExitRoot.ExitRoots[tID], dbTx)
 		if err != nil {
+			log.Error("error getting merkleProof. Error: ", err)
 			return nil, nil, nil, fmt.Errorf("getting the proof failed, error: %v, network: %d", err, networkID)
 		}
 		rollupMerkleProof = emptyProof()
 	} else { // Rollup
 		rollupMerkleProof, rollupLeaf, err = s.getRollupExitProof(depositCnt, globalExitRoot.ExitRoots[tID], dbTx)
 		if err != nil {
+			log.Error("error getting rollupProof. Error: ", err)
 			return nil, nil, nil, fmt.Errorf("getting the rollup proof failed, error: %v, network: %d", err, networkID)
 		}
 		merkleProof, err = s.getProof(depositCnt, rollupLeaf, dbTx)
 		if err != nil {
+			log.Error("error getting merkleProof. Error: ", err)
 			return nil, nil, nil, fmt.Errorf("getting the proof failed, error: %v, network: %d", err, networkID)
 		}
 	}

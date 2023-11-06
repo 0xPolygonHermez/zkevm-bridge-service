@@ -5,8 +5,8 @@ Typically this action is used to include the claim tx to fill the bridge autocla
 ## Parameters
 At the beginning of the script there are the next constant variables that need to be reviewed.
 ```
-    l2BridgeAddr = "0xff0EE8ea08cEf5cb4322777F5CC3E8A584B8A4A0"
-	zkevmAddr      = "0x610178dA211FEF7D417bC0e6FeD39F05609AD788"
+    l2BridgeAddr = "0x40E0576c0A7dff9dc460B29ba73e79aBf73dD2a9"
+	zkevmAddr    = "0x8dAF17A20c9DBA35f005b6324F493785D239719d"
 
 	accHexAddress    = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
 	accHexPrivateKey = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"

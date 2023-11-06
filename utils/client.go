@@ -218,7 +218,7 @@ func (c *Client) BuildSendClaim(ctx context.Context, deposit *etherman.Deposit, 
 			txHash = tx.Hash().String()
 		}
 		log.Error("Error: ", err, ". Tx Hash: ", txHash)
-		return nil, fmt.Errorf("failed to build SendClaim tx, err: %w", err)
+		return nil, fmt.Errorf("failed to build SendClaim tx, err: %v", err)
 	}
 
 	return tx, nil

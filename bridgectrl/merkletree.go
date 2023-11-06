@@ -88,7 +88,7 @@ func (mt *MerkleTree) initSiblings(ctx context.Context, dbTx pgx.Tx) ([][KeyLen]
 	for h := int(mt.height - 1); h >= 0; h-- {
 		value, err := mt.store.Get(ctx, cur, dbTx)
 		if err != nil {
-			return nil, fmt.Errorf("height: %d, cur: %v, error: %w", h, cur, err)
+			return nil, fmt.Errorf("height: %d, cur: %v, error: %v", h, cur, err)
 		}
 
 		copy(left[:], value[0])
@@ -292,7 +292,6 @@ func (mt MerkleTree) storeLeaves(ctx context.Context, leaves [][KeyLen]byte, blo
 	}
 	var inserts [][]interface{}
 	for i := range leaves {
-		inserts = append(inserts, []interface{}{leaves[i][:], i+1, root.Bytes(), blockNumber})
 		inserts = append(inserts, []interface{}{leaves[i][:], i+1, root.Bytes(), blockID})
 	}
 	if err := mt.store.AddRollupExitLeaves(ctx, inserts, dbTx); err != nil {

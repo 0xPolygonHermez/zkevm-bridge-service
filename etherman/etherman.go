@@ -313,7 +313,7 @@ func (etherMan *Client) updateGlobalExitRootEvent(ctx context.Context, vLog type
 	}
 	fullBlock, err := etherMan.EtherClient.BlockByHash(ctx, vLog.BlockHash)
 	if err != nil {
-		return fmt.Errorf("error getting hashParent. BlockNumber: %d. Error: %w", vLog.BlockNumber, err)
+		return fmt.Errorf("error getting hashParent. BlockNumber: %d. Error: %v", vLog.BlockNumber, err)
 	}
 	var gExitRoot GlobalExitRoot
 	gExitRoot.ExitRoots = make([]common.Hash, 0)
@@ -362,7 +362,7 @@ func (etherMan *Client) depositEvent(ctx context.Context, vLog types.Log, blocks
 	if len(*blocks) == 0 || ((*blocks)[len(*blocks)-1].BlockHash != vLog.BlockHash || (*blocks)[len(*blocks)-1].BlockNumber != vLog.BlockNumber) {
 		fullBlock, err := etherMan.EtherClient.BlockByHash(ctx, vLog.BlockHash)
 		if err != nil {
-			return fmt.Errorf("error getting hashParent. BlockNumber: %d. Error: %w", vLog.BlockNumber, err)
+			return fmt.Errorf("error getting hashParent. BlockNumber: %d. Error: %v", vLog.BlockNumber, err)
 		}
 		block := prepareBlock(vLog, time.Unix(int64(fullBlock.Time()), 0), fullBlock)
 		block.Deposits = append(block.Deposits, deposit)
@@ -415,7 +415,7 @@ func (etherMan *Client) claimEvent(ctx context.Context, vLog types.Log, blocks *
 	if len(*blocks) == 0 || ((*blocks)[len(*blocks)-1].BlockHash != vLog.BlockHash || (*blocks)[len(*blocks)-1].BlockNumber != vLog.BlockNumber) {
 		fullBlock, err := etherMan.EtherClient.BlockByHash(ctx, vLog.BlockHash)
 		if err != nil {
-			return fmt.Errorf("error getting hashParent. BlockNumber: %d. Error: %w", vLog.BlockNumber, err)
+			return fmt.Errorf("error getting hashParent. BlockNumber: %d. Error: %v", vLog.BlockNumber, err)
 		}
 		block := prepareBlock(vLog, time.Unix(int64(fullBlock.Time()), 0), fullBlock)
 		block.Claims = append(block.Claims, claim)
@@ -449,7 +449,7 @@ func (etherMan *Client) tokenWrappedEvent(ctx context.Context, vLog types.Log, b
 	if len(*blocks) == 0 || ((*blocks)[len(*blocks)-1].BlockHash != vLog.BlockHash || (*blocks)[len(*blocks)-1].BlockNumber != vLog.BlockNumber) {
 		fullBlock, err := etherMan.EtherClient.BlockByHash(ctx, vLog.BlockHash)
 		if err != nil {
-			return fmt.Errorf("error getting hashParent. BlockNumber: %d. Error: %w", vLog.BlockNumber, err)
+			return fmt.Errorf("error getting hashParent. BlockNumber: %d. Error: %v", vLog.BlockNumber, err)
 		}
 		block := prepareBlock(vLog, time.Unix(int64(fullBlock.Time()), 0), fullBlock)
 		block.Tokens = append(block.Tokens, tokenWrapped)
@@ -547,7 +547,7 @@ func (etherMan *Client) verifyBatches(ctx context.Context, vLog types.Log, block
 	if len(*blocks) == 0 || ((*blocks)[len(*blocks)-1].BlockHash != vLog.BlockHash || (*blocks)[len(*blocks)-1].BlockNumber != vLog.BlockNumber) {
 		fullBlock, err := etherMan.EtherClient.BlockByHash(ctx, vLog.BlockHash)
 		if err != nil {
-			return fmt.Errorf("error getting hashParent. BlockNumber: %d. Error: %w", vLog.BlockNumber, err)
+			return fmt.Errorf("error getting hashParent. BlockNumber: %d. Error: %v", vLog.BlockNumber, err)
 		}
 		block := prepareBlock(vLog, time.Unix(int64(fullBlock.Time()), 0), fullBlock)
 		block.VerifiedBatches = append(block.VerifiedBatches, verifyBatch)
