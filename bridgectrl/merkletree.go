@@ -285,7 +285,7 @@ func (mt *MerkleTree) buildMTRoot(leaves [][KeyLen]byte) (common.Hash, error) {
 	return common.BytesToHash(ns[0][0]), nil
 }
 
-func (mt MerkleTree) storeLeaves(ctx context.Context, leaves [][KeyLen]byte, blockNumber uint64, dbTx pgx.Tx) error {
+func (mt MerkleTree) storeLeaves(ctx context.Context, leaves [][KeyLen]byte, blockID uint64, dbTx pgx.Tx) error {
 	root, err := mt.buildMTRoot(leaves)
 	if err != nil {
 		return err
@@ -293,6 +293,7 @@ func (mt MerkleTree) storeLeaves(ctx context.Context, leaves [][KeyLen]byte, blo
 	var inserts [][]interface{}
 	for i := range leaves {
 		inserts = append(inserts, []interface{}{leaves[i][:], i+1, root.Bytes(), blockNumber})
+		inserts = append(inserts, []interface{}{leaves[i][:], i+1, root.Bytes(), blockID})
 	}
 	if err := mt.store.AddRollupExitLeaves(ctx, inserts, dbTx); err != nil {
 		return err
@@ -322,7 +323,7 @@ func (mt MerkleTree) addRollupExitLeaf(ctx context.Context, rollupLeaf etherman.
 	// If rollupLeaf.RollupId is higher than len(storedRollupLeaves), We have to add empty rollups until the new rollupID
 	for i := len(storedRollupLeaves); i < int(rollupLeaf.RollupId); i++ {
 		storedRollupLeaves = append(storedRollupLeaves, etherman.RollupExitLeaf{
-			BlockNumber: rollupLeaf.BlockNumber,
+			BlockID:  rollupLeaf.BlockID,
 			RollupId: uint64(i+1),
 		})
 	}
@@ -338,7 +339,7 @@ func (mt MerkleTree) addRollupExitLeaf(ctx context.Context, rollupLeaf etherman.
 		copy(aux[:], l.Leaf[:])
 		leaves = append(leaves, aux)
 	}
-	err = mt.storeLeaves(ctx, leaves, rollupLeaf.BlockNumber, dbTx)
+	err = mt.storeLeaves(ctx, leaves, rollupLeaf.BlockID, dbTx)
 	if err != nil {
 		log.Error("error storing leaves. Error: ", err)
 		return err

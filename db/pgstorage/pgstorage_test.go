@@ -61,25 +61,25 @@ func TestGetLeaves(t *testing.T) {
 	}
 	assert.Equal(t, "0xa4bfa0908dc7b06d98da4309f859023d6947561bc19bc00d77f763dea1a0b9f6", leaves[0].Leaf.String())
 	assert.Equal(t, uint64(5), leaves[0].ID)
-	assert.Equal(t, uint64(2), leaves[0].BlockNumber)
+	assert.Equal(t, uint64(2), leaves[0].BlockID)
 	assert.Equal(t, uint64(1), leaves[0].RollupId)
 	assert.Equal(t, "0x42d3339fe8eb57770953423f20a029e778a707e8d58aaf110b40d5eb4dd25722", leaves[0].Root.String())
 
 	assert.Equal(t, "0x315fee1aa202bf4a6bd0fde560c89be90b6e6e2aaf92dc5e8d118209abc34110", leaves[1].Leaf.String())
 	assert.Equal(t, uint64(8), leaves[1].ID)
-	assert.Equal(t, uint64(1), leaves[1].BlockNumber)
+	assert.Equal(t, uint64(1), leaves[1].BlockID)
 	assert.Equal(t, uint64(2), leaves[1].RollupId)
 	assert.Equal(t, "0x42d3339fe8eb57770953423f20a029e778a707e8d58aaf110b40d5eb4dd25722", leaves[1].Root.String())
 
 	assert.Equal(t, "0xb598ce65aa15c08dda126a2985ba54f0559eaac562bb43ba430c7344261fbc5e", leaves[2].Leaf.String())
 	assert.Equal(t, uint64(7), leaves[2].ID)
-	assert.Equal(t, uint64(2), leaves[2].BlockNumber)
+	assert.Equal(t, uint64(2), leaves[2].BlockID)
 	assert.Equal(t, uint64(3), leaves[2].RollupId)
 	assert.Equal(t, "0x42d3339fe8eb57770953423f20a029e778a707e8d58aaf110b40d5eb4dd25722", leaves[2].Root.String())
 
 	assert.Equal(t, "0xe6585bdf74b6a46b9ede8b1b877e1232fb79ee93106c4db8ffd49cf1685bf243", leaves[3].Leaf.String())
 	assert.Equal(t, uint64(6), leaves[3].ID)
-	assert.Equal(t, uint64(2), leaves[3].BlockNumber)
+	assert.Equal(t, uint64(2), leaves[3].BlockID)
 	assert.Equal(t, uint64(4), leaves[3].RollupId)
 	assert.Equal(t, "0x42d3339fe8eb57770953423f20a029e778a707e8d58aaf110b40d5eb4dd25722", leaves[3].Root.String())
 }

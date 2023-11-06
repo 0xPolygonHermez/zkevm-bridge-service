@@ -51,7 +51,7 @@ func (m migrationTest0007) RunAssertsAfterMigrationUp(t *testing.T, db *sql.DB) 
 	row := db.QueryRow(queryDepositCount)
 	var depositCnt int
 	assert.Error(t, row.Scan(&depositCnt))
-	insertRollupLeaf := "INSERT INTO mt.rollup_exit (leaf, root, rollup_id, block_num) VALUES(decode('16C571C7A60CF3694BA81AFF143E8A8C9A393D351213DBFD4D539F39F1C4648C','hex'), decode('16C571C7A60CF3694BA81AFF143E8A8C9A393D351213DBFD4D539F39F1C4648C','hex'), 1, 2);"
+	insertRollupLeaf := "INSERT INTO mt.rollup_exit (leaf, root, rollup_id, block_id) VALUES(decode('16C571C7A60CF3694BA81AFF143E8A8C9A393D351213DBFD4D539F39F1C4648C','hex'), decode('16C571C7A60CF3694BA81AFF143E8A8C9A393D351213DBFD4D539F39F1C4648C','hex'), 1, 2);"
 	_, err := db.Exec(insertRollupLeaf)
 	assert.NoError(t, err)
 
@@ -83,7 +83,7 @@ func (m migrationTest0007) RunAssertsAfterMigrationDown(t *testing.T, db *sql.DB
 		assert.NoError(t, row.Scan(&depositCnt))
 		assert.Equal(t, i, depositCnt)
 	}
-	insertRollupLeaf := "INSERT INTO mt.rollup_exit (leaf, root, rollup_id, block_num) VALUES(decode('16C571C7A60CF3694BA81AFF143E8A8C9A393D351213DBFD4D539F39F1C4648C','hex'), decode('16C571C7A60CF3694BA81AFF143E8A8C9A393D351213DBFD4D539F39F1C4648C','hex'), 1, 2);"
+	insertRollupLeaf := "INSERT INTO mt.rollup_exit (leaf, root, rollup_id, block_id) VALUES(decode('16C571C7A60CF3694BA81AFF143E8A8C9A393D351213DBFD4D539F39F1C4648C','hex'), decode('16C571C7A60CF3694BA81AFF143E8A8C9A393D351213DBFD4D539F39F1C4648C','hex'), 1, 2);"
 	_, err := db.Exec(insertRollupLeaf)
 	assert.Error(t, err)
 	insertClaim := "INSERT INTO sync.Claim (network_id, index, orig_net, orig_addr, amount, dest_addr, block_id, tx_hash, rollup_index, mainnet_flag) VALUES(1, 5, 0, decode('0000000000000000000000000000000000000000','hex'), '300000000000000000', decode('14567C0DCF79C20FE1A21E36EC975D1775A1905C','hex'), 2, decode('A9505DB7D7EDD08947F12F2B1F7898148FFB43D80BCB977B78161EF14173D575','hex'), 37, true);"

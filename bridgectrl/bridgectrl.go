@@ -86,7 +86,7 @@ func (bt *BridgeController) GetExitRoot(ctx context.Context, networkID int, dbTx
 func (bt *BridgeController) AddRollupExitLeaf(ctx context.Context, rollupLeaf etherman.RollupExitLeaf, dbTx pgx.Tx) error {
 	err := bt.rollupsTree.addRollupExitLeaf(ctx, rollupLeaf, dbTx)
 	if err != nil {
-		log.Error("error adding rollupleaf. Error: %v", err)
+		log.Error("error adding rollupleaf. Error: ", err)
 		return err
 	}
 	return nil

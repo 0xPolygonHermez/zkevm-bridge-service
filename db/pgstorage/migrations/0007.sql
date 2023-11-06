@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS mt.rollup_exit
     leaf      BYTEA,
     rollup_id BIGINT,
 	root      BYTEA,
-	block_num BIGINT NOT NULL REFERENCES sync.block (id) ON DELETE CASCADE
+	block_id BIGINT NOT NULL REFERENCES sync.block (id) ON DELETE CASCADE
 );
 
 ALTER TABLE sync.claim

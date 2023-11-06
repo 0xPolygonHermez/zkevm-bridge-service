@@ -379,13 +379,13 @@ func (p *PostgresStorage) BulkSet(ctx context.Context, rows [][]interface{}, dbT
 
 // AddRollupExitLeaves iinserts multiple entries into the db.
 func (p *PostgresStorage) AddRollupExitLeaves(ctx context.Context, rows [][]interface{}, dbTx pgx.Tx) error {
-	_, err := p.getExecQuerier(dbTx).CopyFrom(ctx, pgx.Identifier{"mt", "rollup_exit"}, []string{"leaf", "rollup_id", "root", "block_num"}, pgx.CopyFromRows(rows))
+	_, err := p.getExecQuerier(dbTx).CopyFrom(ctx, pgx.Identifier{"mt", "rollup_exit"}, []string{"leaf", "rollup_id", "root", "block_id"}, pgx.CopyFromRows(rows))
 	return err
 }
 
 // GetRollupExitLeavesByRoot gets the leaves of the rollupExitTree given a root
 func (p *PostgresStorage) GetRollupExitLeavesByRoot(ctx context.Context, root common.Hash, dbTx pgx.Tx) ([]etherman.RollupExitLeaf, error) {
-	const getLeavesSQL = "SELECT id, leaf, rollup_id, root, block_num FROM mt.rollup_exit WHERE root = $1 ORDER BY rollup_id ASC"
+	const getLeavesSQL = "SELECT id, leaf, rollup_id, root, block_id FROM mt.rollup_exit WHERE root = $1 ORDER BY rollup_id ASC"
 	rows, err := p.getExecQuerier(dbTx).Query(ctx, getLeavesSQL, root)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, gerror.ErrStorageNotFound
@@ -396,7 +396,7 @@ func (p *PostgresStorage) GetRollupExitLeavesByRoot(ctx context.Context, root co
 
 	for rows.Next() {
 		var leaf  etherman.RollupExitLeaf
-		err = rows.Scan(&leaf.ID, &leaf.Leaf, &leaf.RollupId, &leaf.Root, &leaf.BlockNumber)
+		err = rows.Scan(&leaf.ID, &leaf.Leaf, &leaf.RollupId, &leaf.Root, &leaf.BlockID)
 		if err != nil {
 			return nil, err
 		}
@@ -423,7 +423,7 @@ func (p *PostgresStorage) IsLxLyActivated(ctx context.Context, dbTx pgx.Tx) (boo
 
 // GetLatestRollupExitLeaves gets the latest leaves of the rollupExitTree
 func (p *PostgresStorage) GetLatestRollupExitLeaves(ctx context.Context, dbTx pgx.Tx) ([]etherman.RollupExitLeaf, error) {
-	const getLeavesSQL = `SELECT distinct re.id, re.leaf, re.rollup_id, re.root, re.block_num
+	const getLeavesSQL = `SELECT distinct re.id, re.leaf, re.rollup_id, re.root, re.block_id
 		FROM mt.rollup_exit re
 		INNER JOIN
 			(SELECT distinct rollup_id, MAX(id) AS maxid
@@ -440,7 +440,7 @@ func (p *PostgresStorage) GetLatestRollupExitLeaves(ctx context.Context, dbTx pg
 
 	for rows.Next() {
 		var leaf  etherman.RollupExitLeaf
-		err = rows.Scan(&leaf.ID, &leaf.Leaf, &leaf.RollupId, &leaf.Root, &leaf.BlockNumber)
+		err = rows.Scan(&leaf.ID, &leaf.Leaf, &leaf.RollupId, &leaf.Root, &leaf.BlockID)
 		if err != nil {
 			return nil, err
 		}

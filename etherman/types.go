@@ -94,7 +94,7 @@ type VerifiedBatch struct {
 // RollupExitLeaf struct
 type RollupExitLeaf struct {
 	ID          uint64
-	BlockNumber uint64
+	BlockID     uint64
 	Leaf        common.Hash
 	RollupId    uint64
 	Root        common.Hash

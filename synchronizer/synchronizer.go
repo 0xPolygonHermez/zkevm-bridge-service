@@ -129,7 +129,7 @@ func (s *ClientSynchronizer) Sync() error {
 			log.Debugf("NetworkID: %d, syncing...", s.networkID)
 			//Sync L1Blocks
 			if lastBlockSynced, err = s.syncBlocks(lastBlockSynced); err != nil {
-				log.Warnf("networkID: %d, error syncing blocks: ", s.networkID, err)
+				log.Warnf("networkID: %d, error syncing blocks: %v", s.networkID, err)
 				lastBlockSynced, err = s.storage.GetLastBlock(s.ctx, s.networkID, nil)
 				if err != nil {
 					log.Fatalf("networkID: %d, error getting lastBlockSynced to resume the synchronization... Error: ", s.networkID, err)
@@ -528,7 +528,7 @@ func (s *ClientSynchronizer) processVerifyBatch(verifyBatch etherman.VerifiedBat
 		}
 	}
 	rollupLeaf := etherman.RollupExitLeaf {
-		BlockNumber: verifyBatch.BlockNumber,
+		BlockID: blockID,
 		Leaf: verifyBatch.LocalExitRoot,
 		RollupId: uint64(verifyBatch.RollupID),
 	}
