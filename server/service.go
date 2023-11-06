@@ -15,6 +15,7 @@ import (
 )
 
 type bridgeService struct {
+	rollupID         uint
 	storage          bridgeServiceStorage
 	networkIDs       map[uint]uint8
 	height           uint8
@@ -26,7 +27,7 @@ type bridgeService struct {
 }
 
 // NewBridgeService creates new bridge service.
-func NewBridgeService(cfg Config, height uint8, networks []uint, storage interface{}) *bridgeService {
+func NewBridgeService(cfg Config, height uint8, networks []uint, storage interface{}, rollupID uint) *bridgeService {
 	var networkIDs = make(map[uint]uint8)
 	for i, network := range networks {
 		networkIDs[network] = uint8(i)
@@ -36,6 +37,7 @@ func NewBridgeService(cfg Config, height uint8, networks []uint, storage interfa
 		panic(err)
 	}
 	return &bridgeService{
+		rollupID:         rollupID,
 		storage:          storage.(bridgeServiceStorage),
 		height:           height,
 		networkIDs:       networkIDs,
@@ -254,6 +256,9 @@ func (s *bridgeService) GetBridges(ctx context.Context, req *pb.GetBridgesReques
 		if err != nil {
 			return nil, err
 		}
+		mainnetFlag := deposit.NetworkID == 0
+		rollupIndex := s.rollupID - 1
+		localExitRootIndex := deposit.DepositCount
 		pbDeposits = append(
 			pbDeposits, &pb.Deposit{
 				LeafType:      uint32(deposit.LeafType),
@@ -269,6 +274,7 @@ func (s *bridgeService) GetBridges(ctx context.Context, req *pb.GetBridgesReques
 				ClaimTxHash:   claimTxHash,
 				Metadata:      "0x" + hex.EncodeToString(deposit.Metadata),
 				ReadyForClaim: deposit.ReadyForClaim,
+				GlobalIndex:   etherman.GenerateGlobalIndex(mainnetFlag, rollupIndex, localExitRootIndex).String(),
 			},
 		)
 	}

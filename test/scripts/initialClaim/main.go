@@ -74,10 +74,12 @@ func main() {
 	log.Debug("mainnetExitRoot: ", proof.MainExitRoot)
 	log.Debug("rollupExitRoot: ", proof.RollupExitRoot)
 
-	var smt [mtHeight][32]byte
+	var smtProof, smtRollupProof [mtHeight][32]byte
 	for i := 0; i < len(proof.MerkleProof); i++ {
-		log.Debug("smt: ", proof.MerkleProof[i])
-		smt[i] = common.HexToHash(proof.MerkleProof[i])
+		log.Debug("smtProof: ", proof.MerkleProof[i])
+		smtProof[i] = common.HexToHash(proof.MerkleProof[i])
+		log.Debug("smtRollupProof: ", proof.MerkleProof[i])
+		smtRollupProof[i] = common.HexToHash(proof.RollupMerkleProof[i])
 	}
 	globalExitRoot := &etherman.GlobalExitRoot{
 		ExitRoots: []common.Hash{common.HexToHash(proof.MainExitRoot), common.HexToHash(proof.RollupExitRoot)},
@@ -102,7 +104,22 @@ func main() {
 		Metadata:           metadata,
 		ReadyForClaim:      bridgeData.ReadyForClaim,
 	}
-	tx, err := c.BuildSendClaim(ctx, &e, smt, globalExitRoot, 0, 0, l2GasLimit, auth)
+	// Connect to ethereum node
+	ethClient, err := ethclient.Dial(l1NetworkURL)
+	if err != nil {
+		log.Fatalf("error connecting to %s: %+v", l1NetworkURL, err)
+	}
+	polygonRollupManagerAddress := common.HexToAddress(rollupManagerAddr)
+	polygonRollupManager, err := polygonrollupmanager.NewPolygonrollupmanager(polygonRollupManagerAddress, ethClient)
+	if err != nil {
+		log.Fatal("Error: ", err)
+	}
+	// Get RollupID
+	rollupID, err := polygonRollupManager.RollupAddressToID(&bind.CallOpts{Pending: false}, polygonRollupManagerAddress)
+	if err != nil {
+		log.Fatal("Error: ", err)
+	}
+	tx, err := c.BuildSendClaim(ctx, &e, smtProof, smtRollupProof, globalExitRoot, 0, 0, l2GasLimit, uint(rollupID), auth)
 	if err != nil {
 		log.Fatal("error: ", err)
 	}
@@ -124,11 +141,6 @@ func main() {
 
 	log.Info("Using address: ", auth.From)
 
-	// Connect to ethereum node
-	ethClient, err := ethclient.Dial(l1NetworkURL)
-	if err != nil {
-		log.Fatalf("error connecting to %s: %+v", l1NetworkURL, err)
-	}
 	chainID, err := ethClient.ChainID(ctx)
 	if err != nil {
 		log.Fatal("error getting l1 chainID: ", err)
@@ -142,11 +154,6 @@ func main() {
 	zkevm, err := polygonzkevm.NewPolygonzkevm(zkevmAddress, ethClient)
 	if err != nil {
 		log.Fatal("error: ", err)
-	}
-	polygonRollupManagerAddress := common.HexToAddress(rollupManagerAddr)
-	polygonRollupManager, err := polygonrollupmanager.NewPolygonrollupmanager(polygonRollupManagerAddress, ethClient)
-	if err != nil {
-		log.Fatal("Error: ", err)
 	}
 	num, err := zkevm.LastForceBatch(&bind.CallOpts{Pending: false})
 	if err != nil {

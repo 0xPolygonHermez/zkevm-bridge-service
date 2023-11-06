@@ -598,6 +598,10 @@ func (s *ClientSynchronizer) processDeposit(deposit etherman.Deposit, blockID ui
 }
 
 func (s *ClientSynchronizer) processClaim(claim etherman.Claim, blockID uint64, dbTx pgx.Tx) error {
+	if claim.RollupIndex != uint64(s.etherMan.GetRollupID()) - 1 {
+		log.Debugf("Claim for different Rollup (RollupID: %d, RollupIndex: %d). Ignoring...",s.etherMan.GetRollupID(), claim.RollupIndex)
+		return nil
+	}
 	claim.BlockID = blockID
 	claim.NetworkID = s.networkID
 	err := s.storage.AddClaim(s.ctx, &claim, dbTx)

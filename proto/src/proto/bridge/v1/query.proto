@@ -80,6 +80,7 @@ message Deposit {
     string claim_tx_hash = 11;
     string metadata = 12;
     bool   ready_for_claim = 13;
+    string global_index = 14;
 }
 
 // Claim message

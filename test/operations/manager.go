@@ -55,6 +55,7 @@ const (
 	cmdDir  = "../.."
 
 	mtHeight = 32
+	rollupID = 1
 )
 
 var (
@@ -118,7 +119,7 @@ func NewManager(ctx context.Context, cfg *Config) (*Manager, error) {
 	if err != nil {
 		return nil, err
 	}
-	bService := server.NewBridgeService(cfg.BS, cfg.BT.Height, []uint{0, 1}, pgst)
+	bService := server.NewBridgeService(cfg.BS, cfg.BT.Height, []uint{0, 1}, pgst, rollupID)
 	opsman.storage = st.(StorageInterface)
 	opsman.bridgetree = bt
 	opsman.bridgeService = bService
@@ -505,21 +506,25 @@ func (m *Manager) CheckAccountTokenBalance(ctx context.Context, network NetworkS
 }
 
 // GetClaimData gets the claim data
-func (m *Manager) GetClaimData(ctx context.Context, networkID, depositCount uint) ([mtHeight][bridgectrl.KeyLen]byte, *etherman.GlobalExitRoot, error) {
+func (m *Manager) GetClaimData(ctx context.Context, networkID, depositCount uint) ([mtHeight][bridgectrl.KeyLen]byte, [mtHeight][bridgectrl.KeyLen]byte, *etherman.GlobalExitRoot, error) {
 	res, err := m.bridgeService.GetProof(context.Background(), &pb.GetProofRequest{
 		NetId:      uint32(networkID),
 		DepositCnt: uint64(depositCount),
 	})
 	if err != nil {
-		return [mtHeight][32]byte{}, nil, err
+		return [mtHeight][32]byte{}, [mtHeight][32]byte{}, nil, err
 	}
-	proves := [mtHeight][bridgectrl.KeyLen]byte{}
+	merkleproof := [mtHeight][bridgectrl.KeyLen]byte{}
+	rollupMerkleProof := [mtHeight][bridgectrl.KeyLen]byte{}
 	for i, p := range res.Proof.MerkleProof {
 		var proof [bridgectrl.KeyLen]byte
 		copy(proof[:], common.FromHex(p))
-		proves[i] = proof
+		merkleproof[i] = proof
+		var rollupProof [bridgectrl.KeyLen]byte
+		copy(rollupProof[:], common.FromHex(res.Proof.RollupMerkleProof[i]))
+		rollupMerkleProof[i] = rollupProof
 	}
-	return proves, &etherman.GlobalExitRoot{
+	return merkleproof, rollupMerkleProof, &etherman.GlobalExitRoot{
 		ExitRoots: []common.Hash{
 			common.HexToHash(res.Proof.MainExitRoot),
 			common.HexToHash(res.Proof.RollupExitRoot),
@@ -547,25 +552,25 @@ func (m *Manager) GetBridgeInfoByDestAddr(ctx context.Context, addr *common.Addr
 }
 
 // SendL1Claim send an L1 claim
-func (m *Manager) SendL1Claim(ctx context.Context, deposit *pb.Deposit, smtProof [mtHeight][32]byte, globalExitRoot *etherman.GlobalExitRoot) error {
+func (m *Manager) SendL1Claim(ctx context.Context, deposit *pb.Deposit, smtProof, smtRollupProof [mtHeight][32]byte, globalExitRoot *etherman.GlobalExitRoot) error {
 	client := m.clients[L1]
 	auth, err := client.GetSigner(ctx, accHexPrivateKeys[L1])
 	if err != nil {
 		return err
 	}
 
-	return client.SendClaim(ctx, deposit, smtProof, globalExitRoot, auth)
+	return client.SendClaim(ctx, deposit, smtProof, smtRollupProof, globalExitRoot, auth)
 }
 
 // SendL2Claim send an L2 claim
-func (m *Manager) SendL2Claim(ctx context.Context, deposit *pb.Deposit, smtProof [mtHeight][32]byte, globalExitRoot *etherman.GlobalExitRoot) error {
+func (m *Manager) SendL2Claim(ctx context.Context, deposit *pb.Deposit, smtProof, smtRollupProof [mtHeight][32]byte, globalExitRoot *etherman.GlobalExitRoot) error {
 	client := m.clients[L2]
 	auth, err := client.GetSigner(ctx, accHexPrivateKeys[L2])
 	if err != nil {
 		return err
 	}
 
-	err = client.SendClaim(ctx, deposit, smtProof, globalExitRoot, auth)
+	err = client.SendClaim(ctx, deposit, smtProof, smtRollupProof, globalExitRoot, auth)
 	return err
 }
 
