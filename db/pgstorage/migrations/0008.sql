@@ -12,4 +12,4 @@ CREATE UNIQUE INDEX IF NOT EXISTS deposit_test_uidx ON sync.deposit_test (networ
 CREATE INDEX IF NOT EXISTS deposit_dest_addr_idx ON sync.deposit (dest_addr);
 CREATE INDEX IF NOT EXISTS deposit_test_dest_addr_idx ON sync.deposit_test (dest_addr);
 CREATE INDEX IF NOT EXISTS claim_dest_addr_idx ON sync.claim (dest_addr);
-CREATE INDEX IF NOT EXISTS claim_test_dest_addr_idx ON sync.claim (dest_addr);
+CREATE INDEX IF NOT EXISTS claim_test_dest_addr_idx ON sync.claim_test (dest_addr);
