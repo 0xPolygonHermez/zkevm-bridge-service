@@ -108,7 +108,7 @@ func (s *ClientSynchronizer) Sync() error {
 	lastBlockSynced, err := s.storage.GetLastBlock(s.ctx, s.networkID, nil)
 	if err != nil {
 		if err == gerror.ErrStorageNotFound {
-			log.Warnf("networkID: %d, error getting the latest ethereum block. No data stored. Setting genesis block. Error: %w", s.networkID, err)
+			log.Warnf("networkID: %d, error getting the latest ethereum block. No data stored. Setting genesis block. Error: %v", s.networkID, err)
 			lastBlockSynced = &etherman.Block{
 				BlockNumber: s.genBlockNumber,
 				NetworkID:   s.networkID,
@@ -186,7 +186,7 @@ func (s *ClientSynchronizer) Stop() {
 func (s *ClientSynchronizer) syncTrustedState() error {
 	lastBatchNumber, err := s.zkEVMClient.BatchNumber(s.ctx)
 	if err != nil {
-		log.Errorf("networkID: %d, error getting latest batch number from rpc. Error: %w", s.networkID, err)
+		log.Errorf("networkID: %d, error getting latest batch number from rpc. Error: %v", s.networkID, err)
 		return err
 	}
 	lastBatch, err := s.zkEVMClient.BatchByNumber(s.ctx, big.NewInt(0).SetUint64(lastBatchNumber))
@@ -203,7 +203,7 @@ func (s *ClientSynchronizer) syncTrustedState() error {
 	}
 	isUpdated, err := s.storage.AddTrustedGlobalExitRoot(s.ctx, ger, nil)
 	if err != nil {
-		log.Error("networkID: %d, error storing latest trusted globalExitRoot. Error: %w", s.networkID, err)
+		log.Error("networkID: %d, error storing latest trusted globalExitRoot. Error: %v", s.networkID, err)
 		return err
 	}
 	if isUpdated {
