@@ -9,6 +9,7 @@ require (
 	github.com/alibaba/sentinel-golang/pkg/adapters/grpc v0.0.0-20230626085943-08071855bc67
 	github.com/ethereum/go-ethereum v1.12.1
 	github.com/gobuffalo/packr/v2 v2.8.3
+	github.com/grpc-ecosystem/go-grpc-middleware v1.4.0
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.16.0
 	github.com/hashicorp/golang-lru/v2 v2.0.4
 	github.com/iden3/go-iden3-crypto v0.0.15

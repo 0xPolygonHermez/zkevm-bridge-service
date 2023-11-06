@@ -51,7 +51,8 @@ BridgeVersion = "v1"
     MaxConns = 20
     TableSuffix = ""
     [BridgeServer.Redis]
-    Addr = "localhost:6379"
+    IsClusterMode = false
+    Addrs = ["localhost:6379"]
     Username = ""
     Password = ""
     DB = 0
