@@ -493,6 +493,37 @@ func (p *PostgresStorage) GetPendingTransactions(ctx context.Context, destAddr s
 	return deposits, nil
 }
 
+// GetNotReadyTransactions returns all the deposit transactions with ready_for_claim = false
+func (p *PostgresStorage) GetNotReadyTransactions(ctx context.Context, limit uint, offset uint, dbTx pgx.Tx) ([]*etherman.Deposit, error) {
+	getDepositsSQL := fmt.Sprintf(`SELECT d.id, leaf_type, orig_net, orig_addr, amount, dest_net, dest_addr, deposit_cnt, block_id, b.block_num, d.network_id, tx_hash, metadata, ready_for_claim, b.received_at
+		FROM sync.deposit%[1]v as d INNER JOIN sync.block%[1]v as b ON d.network_id = b.network_id AND d.block_id = b.id
+		WHERE ready_for_claim = false
+		ORDER BY d.block_id DESC, d.deposit_cnt DESC LIMIT $1 OFFSET $2`, p.tableSuffix)
+
+	rows, err := p.getExecQuerier(dbTx).Query(ctx, getDepositsSQL, limit, offset)
+	if err != nil {
+		return nil, err
+	}
+
+	deposits := make([]*etherman.Deposit, 0, len(rows.RawValues()))
+
+	for rows.Next() {
+		var (
+			deposit etherman.Deposit
+			amount  string
+		)
+		err = rows.Scan(&deposit.Id, &deposit.LeafType, &deposit.OriginalNetwork, &deposit.OriginalAddress, &amount, &deposit.DestinationNetwork, &deposit.DestinationAddress,
+			&deposit.DepositCount, &deposit.BlockID, &deposit.BlockNumber, &deposit.NetworkID, &deposit.TxHash, &deposit.Metadata, &deposit.ReadyForClaim, &deposit.Time)
+		if err != nil {
+			return nil, err
+		}
+		deposit.Amount, _ = new(big.Int).SetString(amount, 10) //nolint:gomnd
+		deposits = append(deposits, &deposit)
+	}
+
+	return deposits, nil
+}
+
 // GetDepositCount gets the deposit count for the destination address.
 func (p *PostgresStorage) GetDepositCount(ctx context.Context, destAddr string, dbTx pgx.Tx) (uint64, error) {
 	getDepositCountSQL := fmt.Sprintf("SELECT COUNT(*) FROM sync.deposit%[1]v WHERE dest_addr = $1", p.tableSuffix)
@@ -578,6 +609,37 @@ func (p *PostgresStorage) UpdateClaimTx(ctx context.Context, mTx ctmtypes.Monito
 func (p *PostgresStorage) GetClaimTxsByStatus(ctx context.Context, statuses []ctmtypes.MonitoredTxStatus, dbTx pgx.Tx) ([]ctmtypes.MonitoredTx, error) {
 	getMonitoredTxsSQL := fmt.Sprintf("SELECT * FROM sync.monitored_txs%[1]v WHERE status = ANY($1) ORDER BY created_at ASC", p.tableSuffix)
 	rows, err := p.getExecQuerier(dbTx).Query(ctx, getMonitoredTxsSQL, pq.Array(statuses))
+	if errors.Is(err, pgx.ErrNoRows) {
+		return []ctmtypes.MonitoredTx{}, nil
+	} else if err != nil {
+		return nil, err
+	}
+
+	mTxs := make([]ctmtypes.MonitoredTx, 0, len(rows.RawValues()))
+	for rows.Next() {
+		var (
+			value   string
+			history [][]byte
+		)
+		mTx := ctmtypes.MonitoredTx{}
+		err = rows.Scan(&mTx.ID, &mTx.BlockID, &mTx.From, &mTx.To, &mTx.Nonce, &value, &mTx.Data, &mTx.Gas, &mTx.Status, pq.Array(&history), &mTx.CreatedAt, &mTx.UpdatedAt)
+		if err != nil {
+			return mTxs, err
+		}
+		mTx.Value, _ = new(big.Int).SetString(value, 10) //nolint:gomnd
+		mTx.History = make(map[common.Hash]bool)
+		for _, h := range history {
+			mTx.History[common.BytesToHash(h)] = true
+		}
+		mTxs = append(mTxs, mTx)
+	}
+
+	return mTxs, nil
+}
+
+func (p *PostgresStorage) GetClaimTxsByStatusWithLimit(ctx context.Context, statuses []ctmtypes.MonitoredTxStatus, limit uint, offset uint, dbTx pgx.Tx) ([]ctmtypes.MonitoredTx, error) {
+	getMonitoredTxsSQL := fmt.Sprintf("SELECT * FROM sync.monitored_txs%[1]v WHERE status = ANY($1) ORDER BY created_at DESC LIMIT $2 OFFSET $3", p.tableSuffix)
+	rows, err := p.getExecQuerier(dbTx).Query(ctx, getMonitoredTxsSQL, pq.Array(statuses), limit, offset)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return []ctmtypes.MonitoredTx{}, nil
 	} else if err != nil {

@@ -21,6 +21,10 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 )
 
+const (
+	bridgeEndpointPath = "/priapi/v1/ob/bridge"
+)
+
 func RegisterNacos(cfg nacos.Config) {
 	log.Info(fmt.Sprintf("nacos config NacosUrls %s NamespaceId %s ApplicationName %s ExternalListenAddr %s", cfg.NacosUrls, cfg.NamespaceId, cfg.ApplicationName, cfg.ExternalListenAddr))
 	if cfg.NacosUrls != "" {
@@ -151,6 +155,10 @@ func runRestServer(ctx context.Context, grpcPort, httpPort string) error {
 	})
 	mux := runtime.NewServeMux(muxJSONOpt, muxHealthOpt)
 
+	httpMux := http.NewServeMux()
+	httpMux.Handle(bridgeEndpointPath+"/", http.StripPrefix(bridgeEndpointPath, mux))
+	httpMux.Handle("/", mux)
+
 	if err := pb.RegisterBridgeServiceHandler(ctx, mux, conn); err != nil {
 		return err
 	}
@@ -158,7 +166,7 @@ func runRestServer(ctx context.Context, grpcPort, httpPort string) error {
 	srv := &http.Server{
 		ReadTimeout: 1 * time.Second, //nolint:gomnd
 		Addr:        ":" + httpPort,
-		Handler:     allowCORS(mux),
+		Handler:     allowCORS(httpMux),
 	}
 
 	c := make(chan os.Signal, 1)
