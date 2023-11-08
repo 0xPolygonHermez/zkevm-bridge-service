@@ -386,3 +386,19 @@ func ComputeSiblings(rollupIndex uint, leaves [][KeyLen]byte, height uint8) ([][
 
 	return siblings, common.BytesToHash(ns[0][0]), nil
 }
+
+func calculateRoot(leafHash common.Hash, smtProof [][KeyLen]byte, index uint, height uint8) common.Hash {
+	var node [KeyLen]byte
+	copy(node[:], leafHash[:])
+
+	// Check merkle proof
+	var h uint8
+	for h = 0; h < height; h++ {
+		if ((index >> h) & 1) == 1 {
+			node = Hash(smtProof[h], node);
+		} else {
+			node = Hash(node, smtProof[h]);
+		}
+	}
+	return common.BytesToHash(node[:]);
+}

@@ -171,6 +171,18 @@ func TestDecodeGlobalIndex(t *testing.T) {
 	assert.Equal(t, true, mainnetFlag)
 	assert.Equal(t, uint64(0), rollupIndex)
 	assert.Equal(t, uint64(11), localExitRootIndex)
+
+	globalIndex, _ = big.NewInt(0).SetString("18446744073709551616", 0)
+
+	gi = globalIndex.FillBytes(buf[:])
+	for _, n := range gi {
+        t.Logf("%08b ", n)
+    }
+	mainnetFlag, rollupIndex, localExitRootIndex, err = decodeGlobalIndex(globalIndex)
+	require.NoError(t, err)
+	assert.Equal(t, true, mainnetFlag)
+	assert.Equal(t, uint64(0), rollupIndex)
+	assert.Equal(t, uint64(0), localExitRootIndex)
 }
 
 func TestVerifyBatchEvent(t *testing.T) {
