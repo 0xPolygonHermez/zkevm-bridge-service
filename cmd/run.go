@@ -116,16 +116,17 @@ func startServer(ctx *cli.Context) error {
 	log.Debug("trusted sequencer URL ", c.Etherman.L2URLs[0])
 	zkEVMClient := client.NewClient(c.Etherman.L2URLs[0])
 	chExitRootEvent := make(chan *etherman.GlobalExitRoot)
-	go runSynchronizer(c.NetworkConfig.GenBlockNumber, bridgeController, l1Etherman, c.Synchronizer, storage, zkEVMClient, chExitRootEvent)
+	chSynced := make(chan uint)
+	go runSynchronizer(c.NetworkConfig.GenBlockNumber, bridgeController, l1Etherman, c.Synchronizer, storage, zkEVMClient, chExitRootEvent, chSynced)
 	for _, client := range l2Ethermans {
-		go runSynchronizer(0, bridgeController, client, c.Synchronizer, storage, zkEVMClient, chExitRootEvent)
+		go runSynchronizer(0, bridgeController, client, c.Synchronizer, storage, zkEVMClient, chExitRootEvent, chSynced)
 	}
 
 	if c.ClaimTxManager.Enabled {
 		for i := 0; i < len(c.Etherman.L2URLs); i++ {
 			// we should match the orders of L2URLs between etherman and claimtxman
 			// since we are using the networkIDs in the same order
-			claimTxManager, err := claimtxman.NewClaimTxManager(c.ClaimTxManager, chExitRootEvent, c.Etherman.L2URLs[i], networkIDs[i+1], c.NetworkConfig.L2PolygonBridgeAddresses[i], bridgeService, storage)
+			claimTxManager, err := claimtxman.NewClaimTxManager(c.ClaimTxManager, chExitRootEvent, chSynced, c.Etherman.L2URLs[i], networkIDs[i+1], c.NetworkConfig.L2PolygonBridgeAddresses[i], bridgeService, storage)
 			if err != nil {
 				log.Fatalf("error creating claim tx manager for L2 %s. Error: %v", c.Etherman.L2URLs[i], err)
 			}
@@ -138,6 +139,8 @@ func startServer(ctx *cli.Context) error {
 				select {
 				case <-chExitRootEvent:
 					log.Debug("New GER received")
+				case netID := <-chSynced:
+					log.Debug("NetworkID synced: ", netID)
 				case <-ctx.Context.Done():
 					log.Debug("Stopping goroutine that listen new GER updates")
 					return
@@ -205,8 +208,8 @@ func newEthermans(c *config.Config) (*etherman.Client, []*etherman.Client, error
 	return l1Etherman, l2Ethermans, nil
 }
 
-func runSynchronizer(genBlockNumber uint64, brdigeCtrl *bridgectrl.BridgeController, etherman *etherman.Client, cfg synchronizer.Config, storage db.Storage, zkEVMClient *client.Client, chExitRootEvent chan *etherman.GlobalExitRoot) {
-	sy, err := synchronizer.NewSynchronizer(storage, brdigeCtrl, etherman, zkEVMClient, genBlockNumber, chExitRootEvent, cfg)
+func runSynchronizer(genBlockNumber uint64, brdigeCtrl *bridgectrl.BridgeController, etherman *etherman.Client, cfg synchronizer.Config, storage db.Storage, zkEVMClient *client.Client, chExitRootEvent chan *etherman.GlobalExitRoot, chSynced chan uint) {
+	sy, err := synchronizer.NewSynchronizer(storage, brdigeCtrl, etherman, zkEVMClient, genBlockNumber, chExitRootEvent, chSynced, cfg)
 	if err != nil {
 		log.Fatal(err)
 	}
