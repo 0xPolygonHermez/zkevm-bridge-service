@@ -111,6 +111,14 @@ func (tm *ClaimTxManager) Start() {
 }
 
 func (tm *ClaimTxManager) updateDepositsStatus(ger *etherman.GlobalExitRoot) error {
+	if tm.cfg.OptClaim {
+		if ger.BlockID != 0 {
+			return tm.processDepositStatusL2(ger)
+		} else {
+			return tm.processDepositStatusL1(ger)
+		}
+	}
+
 	dbTx, err := tm.storage.BeginDBTransaction(tm.ctx)
 	if err != nil {
 		return err
@@ -135,6 +143,139 @@ func (tm *ClaimTxManager) updateDepositsStatus(ger *etherman.GlobalExitRoot) err
 		log.Fatalf("AddClaimTx committing dbTx, err: %s", err.Error())
 	}
 	return nil
+}
+
+func (tm *ClaimTxManager) processDepositStatusL2(ger *etherman.GlobalExitRoot) error {
+	dbTx, err := tm.storage.BeginDBTransaction(tm.ctx)
+	if err != nil {
+		return err
+	}
+	log.Infof("Rollup exitroot %v is updated", ger.ExitRoots[1])
+	if err := tm.storage.UpdateL2DepositsStatus(tm.ctx, ger.ExitRoots[1][:], tm.l2NetworkID, dbTx); err != nil {
+		log.Errorf("error updating L2DepositsStatus. Error: %v", err)
+		rollbackErr := tm.storage.Rollback(tm.ctx, dbTx)
+		if rollbackErr != nil {
+			log.Errorf("claimtxman error rolling back state. RollbackErr: %v, err: %s", rollbackErr, err.Error())
+			return rollbackErr
+		}
+		return err
+	}
+	err = tm.storage.Commit(tm.ctx, dbTx)
+	if err != nil {
+		log.Errorf("AddClaimTx committing dbTx. Err: %v", err)
+		rollbackErr := tm.storage.Rollback(tm.ctx, dbTx)
+		if rollbackErr != nil {
+			log.Fatalf("claimtxman error rolling back state. RollbackErr: %s, err: %s", rollbackErr.Error(), err.Error())
+		}
+		log.Fatalf("AddClaimTx committing dbTx, err: %s", err.Error())
+	}
+	return nil
+}
+
+func (tm *ClaimTxManager) getDeposits(ger *etherman.GlobalExitRoot) ([]*etherman.Deposit, error) {
+	dbTx, err := tm.storage.BeginDBTransaction(tm.ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	log.Infof("Mainnet exitroot %v is updated", ger.ExitRoots[0])
+	deposits, err := tm.storage.UpdateL1DepositsStatus(tm.ctx, ger.ExitRoots[0][:], dbTx)
+	if err != nil {
+		log.Errorf("error getting and updating L1DepositsStatus. Error: %v", err)
+		return nil, err
+	}
+	if err != nil {
+		log.Errorf("error processing ger. Error: %v", err)
+		rollbackErr := tm.storage.Rollback(tm.ctx, dbTx)
+		if rollbackErr != nil {
+			log.Errorf("claimtxman error rolling back state. RollbackErr: %v, err: %s", rollbackErr, err.Error())
+			return nil, rollbackErr
+		}
+		return nil, err
+	}
+	err = tm.storage.Commit(tm.ctx, dbTx)
+	if err != nil {
+		log.Errorf("AddClaimTx committing dbTx. Err: %v", err)
+		rollbackErr := tm.storage.Rollback(tm.ctx, dbTx)
+		if rollbackErr != nil {
+			log.Fatalf("claimtxman error rolling back state. RollbackErr: %s, err: %s", rollbackErr.Error(), err.Error())
+		}
+		log.Fatalf("AddClaimTx committing dbTx, err: %s", err.Error())
+	}
+	return deposits, nil
+}
+
+func (tm *ClaimTxManager) processDepositStatusL1(ger *etherman.GlobalExitRoot) error {
+	deposits, err := tm.getDeposits(ger)
+	if err != nil {
+		return err
+	}
+
+	log.Debug("createClaimTx deposits-num:", len(deposits))
+	for _, deposit := range deposits {
+		dbTx, err := tm.storage.BeginDBTransaction(tm.ctx)
+		if err != nil {
+			return err
+		}
+		claimHash, err := tm.bridgeService.GetDepositStatus(tm.ctx, deposit.DepositCount, deposit.DestinationNetwork)
+		if err != nil {
+			log.Errorf("error getting deposit status for deposit %d. Error: %v", deposit.DepositCount, err)
+			tm.rollbackStore(dbTx)
+			return err
+		}
+		if len(claimHash) > 0 || deposit.LeafType == LeafTypeMessage && !tm.isDepositMessageAllowed(deposit) {
+			log.Infof("Ignoring deposit: %d, leafType: %d, claimHash: %s, deposit.OriginalAddress: %s", deposit.DepositCount, deposit.LeafType, claimHash, deposit.OriginalAddress.String())
+			continue
+		}
+		log.Infof("create the claim tx for the deposit %d", deposit.DepositCount)
+		ger, proves, err := tm.bridgeService.GetClaimProof(deposit.DepositCount, deposit.NetworkID, dbTx)
+		if err != nil {
+			log.Errorf("error getting Claim Proof for deposit %d. Error: %v", deposit.DepositCount, err)
+			tm.rollbackStore(dbTx)
+			return err
+		}
+		var mtProves [mtHeight][keyLen]byte
+		for i := 0; i < mtHeight; i++ {
+			mtProves[i] = proves[i]
+		}
+		tx, err := tm.l2Node.BuildSendClaim(tm.ctx, deposit, mtProves,
+			&etherman.GlobalExitRoot{
+				ExitRoots: []common.Hash{
+					ger.ExitRoots[0],
+					ger.ExitRoots[1],
+				}}, 1, 1, 1,
+			tm.auth)
+		if err != nil {
+			log.Errorf("error BuildSendClaim tx for deposit %d. Error: %v", deposit.DepositCount, err)
+			tm.rollbackStore(dbTx)
+			return err
+		}
+		if err = tm.addClaimTx(deposit.DepositCount, tm.auth.From, tx.To(), nil, tx.Data(), dbTx); err != nil {
+			log.Errorf("error adding claim tx for deposit %d. Error: %v", deposit.DepositCount, err)
+			tm.rollbackStore(dbTx)
+			return err
+		}
+
+		err = tm.storage.Commit(tm.ctx, dbTx)
+		if err != nil {
+			log.Errorf("AddClaimTx committing dbTx. Err: %v", err)
+			rollbackErr := tm.storage.Rollback(tm.ctx, dbTx)
+			if rollbackErr != nil {
+				log.Fatalf("claimtxman error rolling back state. RollbackErr: %s, err: %s", rollbackErr.Error(), err.Error())
+				return rollbackErr
+			}
+			log.Fatalf("AddClaimTx committing dbTx, err: %s", err.Error())
+			return err
+		}
+	}
+	return nil
+}
+
+func (tm *ClaimTxManager) rollbackStore(dbTx pgx.Tx) {
+	rollbackErr := tm.storage.Rollback(tm.ctx, dbTx)
+	if rollbackErr != nil {
+		log.Errorf("claimtxman error rolling back state. RollbackErr: %v", rollbackErr)
+	}
 }
 
 func (tm *ClaimTxManager) processDepositStatus(ger *etherman.GlobalExitRoot, dbTx pgx.Tx) error {
@@ -505,7 +646,7 @@ func (tm *ClaimTxManager) ReviewMonitoredTx(ctx context.Context, mTx *ctmtypes.M
 			mTxLog.Errorf(err.Error())
 			return err
 		}
-		if nonce > mTx.Nonce {
+		if nonce != mTx.Nonce {
 			mTxLog.Infof("monitored tx nonce updated from %v to %v", mTx.Nonce, nonce)
 			mTx.Nonce = nonce
 		}
