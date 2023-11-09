@@ -2,10 +2,8 @@ package redisstorage
 
 import (
 	"context"
-	"math/rand"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/0xPolygonHermez/zkevm-bridge-service/bridgectrl/pb"
 	"github.com/0xPolygonHermez/zkevm-node/log"
@@ -139,10 +137,11 @@ func (s *redisStorageImpl) GetCoinPrice(ctx context.Context, symbols []*pb.Symbo
 		return nil, err
 	}
 
+	// If enable mock price, always return no price to the front end
 	if s.mockPrice {
 		for _, price := range priceList {
-			price.Price = rand.Float64() // #nosec
-			price.Time = uint64(time.Now().UnixMilli())
+			price.Price = 0
+			price.Time = 0
 		}
 	}
 	return priceList, nil
