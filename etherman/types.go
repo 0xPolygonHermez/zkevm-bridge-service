@@ -27,6 +27,7 @@ type GlobalExitRoot struct {
 	BlockNumber    uint64
 	ExitRoots      []common.Hash
 	GlobalExitRoot common.Hash
+	Time           time.Time
 }
 
 // Deposit struct
@@ -47,6 +48,7 @@ type Deposit struct {
 	ReadyForClaim bool
 	Time          time.Time
 	Id            uint64
+	ReadyTime     time.Time
 }
 
 // Claim struct

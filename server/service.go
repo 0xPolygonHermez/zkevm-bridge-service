@@ -8,6 +8,7 @@ import (
 	"github.com/0xPolygonHermez/zkevm-bridge-service/bridgectrl"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/bridgectrl/pb"
 	ctmtypes "github.com/0xPolygonHermez/zkevm-bridge-service/claimtxman/types"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/estimatetime"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/localcache"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/redisstorage"
@@ -19,28 +20,27 @@ import (
 )
 
 const (
-	defaultL2TxEstimateTime = 60
-	defaultL1TxEstimateTime = 15
-	defaultErrorCode        = 1
-	defaultSuccessCode      = 0
+	defaultErrorCode   = 1
+	defaultSuccessCode = 0
 )
 
 type bridgeService struct {
-	storage          BridgeServiceStorage
-	redisStorage     redisstorage.RedisStorage
-	mainCoinsCache   localcache.MainCoinsCache
-	networkIDs       map[uint]uint8
-	chainIDs         map[uint]uint32
-	height           uint8
-	defaultPageLimit uint32
-	maxPageLimit     uint32
-	version          string
-	cache            *lru.Cache[string, [][]byte]
+	storage           BridgeServiceStorage
+	redisStorage      redisstorage.RedisStorage
+	mainCoinsCache    localcache.MainCoinsCache
+	networkIDs        map[uint]uint8
+	chainIDs          map[uint]uint32
+	height            uint8
+	defaultPageLimit  uint32
+	maxPageLimit      uint32
+	version           string
+	cache             *lru.Cache[string, [][]byte]
+	estTimeCalculator estimatetime.Calculator
 	pb.UnimplementedBridgeServiceServer
 }
 
 // NewBridgeService creates new bridge service.
-func NewBridgeService(cfg Config, height uint8, networks []uint, chainIds []uint, storage interface{}, redisStorage redisstorage.RedisStorage, mainCoinsCache localcache.MainCoinsCache) *bridgeService {
+func NewBridgeService(cfg Config, height uint8, networks []uint, chainIds []uint, storage interface{}, redisStorage redisstorage.RedisStorage, mainCoinsCache localcache.MainCoinsCache, estTimeCalc estimatetime.Calculator) *bridgeService {
 	var networkIDs = make(map[uint]uint8)
 	var chainIDs = make(map[uint]uint32)
 	for i, network := range networks {
@@ -52,16 +52,17 @@ func NewBridgeService(cfg Config, height uint8, networks []uint, chainIds []uint
 		panic(err)
 	}
 	return &bridgeService{
-		storage:          storage.(BridgeServiceStorage),
-		redisStorage:     redisStorage,
-		mainCoinsCache:   mainCoinsCache,
-		height:           height,
-		networkIDs:       networkIDs,
-		chainIDs:         chainIDs,
-		defaultPageLimit: cfg.DefaultPageLimit,
-		maxPageLimit:     cfg.MaxPageLimit,
-		version:          cfg.BridgeVersion,
-		cache:            cache,
+		storage:           storage.(BridgeServiceStorage),
+		redisStorage:      redisStorage,
+		mainCoinsCache:    mainCoinsCache,
+		estTimeCalculator: estTimeCalc,
+		height:            height,
+		networkIDs:        networkIDs,
+		chainIDs:          chainIDs,
+		defaultPageLimit:  cfg.DefaultPageLimit,
+		maxPageLimit:      cfg.MaxPageLimit,
+		version:           cfg.BridgeVersion,
+		cache:             cache,
 	}
 }
 
@@ -441,16 +442,12 @@ func (s *bridgeService) GetPendingTransactions(ctx context.Context, req *pb.GetP
 
 	var pbTransactions []*pb.Transaction
 	for _, deposit := range deposits {
-		defaultTxEstimateTime := defaultL1TxEstimateTime
-		if deposit.NetworkID == 1 {
-			defaultTxEstimateTime = defaultL2TxEstimateTime
-		}
 		transaction := &pb.Transaction{
 			FromChain:    uint32(deposit.NetworkID),
 			ToChain:      uint32(deposit.DestinationNetwork),
 			BridgeToken:  deposit.OriginalAddress.Hex(),
 			TokenAmount:  deposit.Amount.String(),
-			EstimateTime: uint32(defaultTxEstimateTime),
+			EstimateTime: s.estTimeCalculator.Get(deposit.NetworkID),
 			Time:         uint64(deposit.Time.UnixMilli()),
 			TxHash:       deposit.TxHash.String(),
 			FromChainId:  s.chainIDs[deposit.NetworkID],
@@ -505,16 +502,12 @@ func (s *bridgeService) GetAllTransactions(ctx context.Context, req *pb.GetAllTr
 
 	var pbTransactions []*pb.Transaction
 	for _, deposit := range deposits {
-		defaultTxEstimateTime := defaultL1TxEstimateTime
-		if deposit.NetworkID == 1 {
-			defaultTxEstimateTime = defaultL2TxEstimateTime
-		}
 		transaction := &pb.Transaction{
 			FromChain:    uint32(deposit.NetworkID),
 			ToChain:      uint32(deposit.DestinationNetwork),
 			BridgeToken:  deposit.OriginalAddress.Hex(),
 			TokenAmount:  deposit.Amount.String(),
-			EstimateTime: uint32(defaultTxEstimateTime),
+			EstimateTime: s.estTimeCalculator.Get(deposit.NetworkID),
 			Time:         uint64(deposit.Time.UnixMilli()),
 			TxHash:       deposit.TxHash.String(),
 			FromChainId:  uint32(s.chainIDs[deposit.NetworkID]),
@@ -583,16 +576,12 @@ func (s *bridgeService) GetNotReadyTransactions(ctx context.Context, req *pb.Get
 
 	var pbTransactions []*pb.Transaction
 	for _, deposit := range deposits {
-		defaultTxEstimateTime := defaultL1TxEstimateTime
-		if deposit.NetworkID == 1 {
-			defaultTxEstimateTime = defaultL2TxEstimateTime
-		}
 		transaction := &pb.Transaction{
 			FromChain:    uint32(deposit.NetworkID),
 			ToChain:      uint32(deposit.DestinationNetwork),
 			BridgeToken:  deposit.OriginalAddress.Hex(),
 			TokenAmount:  deposit.Amount.String(),
-			EstimateTime: uint32(defaultTxEstimateTime),
+			EstimateTime: s.estTimeCalculator.Get(deposit.NetworkID),
 			Status:       0,
 			Time:         uint64(deposit.Time.UnixMilli()),
 			TxHash:       deposit.TxHash.String(),
