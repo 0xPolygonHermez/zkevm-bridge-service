@@ -87,7 +87,16 @@ func (c *calculatorImpl) refresh(ctx context.Context, networkID uint) error {
 	for _, m := range fMinutes {
 		sum += m
 	}
-	c.estimateTime[networkID] = uint32(math.Ceil(sum / float64(len(fMinutes))))
+	newTime := uint32(math.Ceil(sum / float64(len(fMinutes))))
+	log.Debugf("Re-calculate estimate time, networkID[%v], fMinutes[%v], newTime[%v]", networkID, fMinutes, newTime)
+	defaultTime := uint32(defaultL1EstimateTime)
+	if networkID != 0 {
+		defaultTime = defaultL2EstimateTime
+	}
+	if newTime > defaultTime {
+		newTime = defaultTime
+	}
+	c.estimateTime[networkID] = newTime
 	return nil
 }
 
