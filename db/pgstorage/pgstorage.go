@@ -573,7 +573,7 @@ func (p *PostgresStorage) UpdateL2DepositsStatus(ctx context.Context, exitRoot [
 	updateDepositsStatusSQL := fmt.Sprintf(`UPDATE sync.deposit%[1]v SET ready_for_claim = true, ready_time = $1
 		WHERE deposit_cnt <=
 			(SELECT deposit_cnt FROM mt.root%[1]v WHERE root = $2 AND network = $3)
-			AND network_id = $2 AND ready_for_claim = false;`, p.tableSuffix)
+			AND network_id = $3 AND ready_for_claim = false;`, p.tableSuffix)
 	_, err := p.getExecQuerier(dbTx).Exec(ctx, updateDepositsStatusSQL, eventTime, exitRoot, networkID)
 	return err
 }
