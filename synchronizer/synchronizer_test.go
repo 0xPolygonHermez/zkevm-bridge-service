@@ -148,6 +148,7 @@ func TestSyncGer(t *testing.T) {
 				rpcResponse.MainnetExitRoot,
 				rpcResponse.RollupExitRoot,
 			},
+			Time: time.Unix(int64(rpcResponse.Timestamp), 0),
 		}
 
 		m.Storage.
