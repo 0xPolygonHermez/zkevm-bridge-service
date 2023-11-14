@@ -6,12 +6,12 @@
 
 This documentation will help you running the following components:
 
-- Xgon Node Databases
-- Xgon Bridge Database
+- X1 Node Databases
+- X1 Bridge Database
 - L1 Network
 - Prover
-- Xgon Node
-- Xgon Bridge Service
+- X1 Node
+- X1 Bridge Service
 
 ## Requirements
 
@@ -21,8 +21,8 @@ The current version of the environment requires `go`, `docker` and `docker-compo
 - <https://www.docker.com/get-started>
 - <https://docs.docker.com/compose/install/>
 
-The `xgon-bridge-service` docker image must be built at least once and every time a change is made to the code.
-If you haven't build the `xgon-bridge-service` image yet, you must run:
+The `x1-bridge-service` docker image must be built at least once and every time a change is made to the code.
+If you haven't build the `x1-bridge-service` image yet, you must run:
 
 ```bash
 make build-docker
@@ -53,7 +53,7 @@ make test-edge
 
 ## Accessing the environment
 
-- Xgon Bridge Database 
+- X1 Bridge Database 
   - `Type:` Postgres DB
   - `User:` test_user
   - `Password:` test_password
@@ -61,7 +61,7 @@ make test-edge
   - `Host:` localhost
   - `Port:` 5435
   - `Url:` <postgres://test_user:test_password@localhost:5435/test_db>
-- Xgon Bridge Service
+- X1 Bridge Service
   - `Type:` Web
   - `Host:` localhost
   - `Port:` 8080
