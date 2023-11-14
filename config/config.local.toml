@@ -7,7 +7,7 @@ Database = "postgres"
 User = "test_user"
 Password = "test_password"
 Name = "test_db"
-Host = "x1-bridge-db"
+Host = "xgon-bridge-db"
 Port = "5432"
 MaxConns = 20
 TableSuffix = ""
@@ -21,8 +21,8 @@ RetryNumber = 10
 FreeGas = true
 
 [Etherman]
-L1URL = "http://x1-mock-l1-network:8545"
-L2URLs = ["http://x1-json-rpc:8123"]
+L1URL = "http://xgon-mock-l1-network:8545"
+L2URLs = ["http://xgon-json-rpc:8123"]
 L1ChainId = 5
 L2ChainIds = [1001]
 
@@ -47,22 +47,22 @@ SentinelConfigFilePath = "/app/sentinel_config.json"
     User = "test_user"
     Password = "test_password"
     Name = "test_db"
-    Host = "x1-bridge-db"
+    Host = "xgon-bridge-db"
     Port = "5432"
     MaxConns = 20
     TableSuffix = ""
     [BridgeServer.Redis]
     IsClusterMode = false
-    Addrs = ["x1-bridge-redis:6379"]
+    Addrs = ["xgon-bridge-redis:6379"]
     Username = ""
     Password = ""
     DB = 0
     MockPrice = true
 
 [CoinKafkaConsumer]
-Brokers = ["x1-bridge-coin-kafka:9092"]
+Brokers = ["xgon-bridge-coin-kafka:9092"]
 Topics = ["explorer_chainAddressPrice_push"]
-ConsumerGroupID = "x1-bridge-service"
+ConsumerGroupID = "xgon-bridge-service"
 InitialOffset = -1
 Username = ""
 Password = ""

@@ -15,7 +15,7 @@ const (
 
 const (
 	// App name
-	appName = "x1-bridge"
+	appName = "xgon-bridge"
 )
 
 func main() {

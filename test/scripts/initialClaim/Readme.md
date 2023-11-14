@@ -15,7 +15,7 @@ At the beginning of the script there are the next constant variables that need t
 	bridgeURL          = "http://localhost:8080"
 ```
 `l2BridgeAddr` is the bridge address smart contract in L2
-`zkevmAddr` is the zkevmZkEvm address in L1
+`zkevmAddr` is the xgonZkEvm address in L1
 `accHexAddress` is the wallet address used to send the claim in L2 and to send the forcedBatch in L1
 `accHexPrivateKey` is the wallet private key used to send the claim in L2 and to send the forcedBatch in L1
 `l1NetworkURL` is the url of the L1 rpc

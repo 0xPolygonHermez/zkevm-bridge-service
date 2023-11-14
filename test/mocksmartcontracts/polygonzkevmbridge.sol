@@ -13,7 +13,7 @@ import "./lib/EmergencyManager.sol";
 import "./lib/GlobalExitRootLib.sol";
 
 /**
- * PolygonZkEVMBridge that will be deployed on both networks Ethereum and X1
+ * PolygonZkEVMBridge that will be deployed on both networks Ethereum and Xgon
  * Contract responsible to manage the token interactions with other networks
  */
 contract PolygonZkEVMBridge is
@@ -407,7 +407,7 @@ contract PolygonZkEVMBridge is
 
     /**
      * @notice Function to activate the emergency state
-     " Only can be called by the X1 in extreme situations
+     " Only can be called by the Xgon in extreme situations
      */
     function activateEmergencyState() external onlyPolygonZkEVM {
         _activateEmergencyState();
@@ -415,7 +415,7 @@ contract PolygonZkEVMBridge is
 
     /**
      * @notice Function to deactivate the emergency state
-     " Only can be called by the X1
+     " Only can be called by the Xgon
      */
     function deactivateEmergencyState() external onlyPolygonZkEVM {
         _deactivateEmergencyState();
