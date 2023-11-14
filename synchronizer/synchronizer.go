@@ -302,6 +302,7 @@ func (s *ClientSynchronizer) syncBlocks(lastBlockSynced *etherman.Block) (*ether
 
 func (s *ClientSynchronizer) processBlockRange(blocks []etherman.Block, order map[common.Hash][]etherman.Order) error {
 	// New info has to be included into the db using the state
+	var isNewGer bool
 	for i := range blocks {
 		// Begin db transaction
 		dbTx, err := s.storage.BeginDBTransaction(s.ctx)
@@ -327,6 +328,7 @@ func (s *ClientSynchronizer) processBlockRange(blocks []etherman.Block, order ma
 		for _, element := range order[blocks[i].BlockHash] {
 			switch element.Name {
 			case etherman.GlobalExitRootsOrder:
+				isNewGer = true
 				err = s.processGlobalExitRoot(blocks[i].GlobalExitRoots[element.Pos], blockID, dbTx)
 				if err != nil {
 					return err
@@ -364,6 +366,19 @@ func (s *ClientSynchronizer) processBlockRange(blocks []etherman.Block, order ma
 				return rollbackErr
 			}
 			return err
+		}
+	}
+	if isNewGer {
+		// Send latest GER stored to claimTxManager
+		ger, err := s.storage.GetLatestL1SyncedExitRoot(s.ctx, nil)
+		if err != nil {
+			log.Errorf("networkID: %d, error getting latest GER stored on database. Error: %v", s.networkID, err)
+			return err
+		}
+		if s.l1RollupExitRoot != ger.ExitRoots[1] {
+			log.Debugf("Updating ger: %+v", ger)
+			s.l1RollupExitRoot = ger.ExitRoots[1]
+			s.chExitRootEvent <- ger
 		}
 	}
 	return nil
@@ -502,7 +517,7 @@ func (s *ClientSynchronizer) processVerifyBatch(verifyBatch etherman.VerifiedBat
 	if !s.isLxLy { // this is activated when the bridge detects the first VerifyBatch from the rollupManager
 		s.isLxLy = true
 	}
-	if verifyBatch.RollupID == s.etherMan.GetRollupID() {
+	if verifyBatch.RollupID == s.etherMan.GetRollupID() - 1 {
 		// Just check that the calculated RollupExitRoot is fine
 		network, err := s.bridgeCtrl.GetNetworkID(s.networkID)
 		ok, err := s.storage.CheckIfRootExists(s.ctx, verifyBatch.LocalExitRoot.Bytes(), network, dbTx)
@@ -530,7 +545,7 @@ func (s *ClientSynchronizer) processVerifyBatch(verifyBatch etherman.VerifiedBat
 	rollupLeaf := etherman.RollupExitLeaf {
 		BlockID: blockID,
 		Leaf: verifyBatch.LocalExitRoot,
-		RollupId: uint64(verifyBatch.RollupID),
+		RollupId: verifyBatch.RollupID,
 	}
 	// Update rollupExitRoot
 	err := s.bridgeCtrl.AddRollupExitLeaf(s.ctx, rollupLeaf, dbTx)
@@ -544,6 +559,23 @@ func (s *ClientSynchronizer) processVerifyBatch(verifyBatch etherman.VerifiedBat
 		}
 		return err
 	}
+	// // Read latest GER stored
+	// ger, err := s.storage.GetLatestL1SyncedExitRoot(s.ctx, dbTx)
+	// if err != nil {
+	// 	log.Errorf("networkID: %d, error getting latest GER stored on database. Error: %v", s.networkID, err)
+	// 	rollbackErr := s.storage.Rollback(s.ctx, dbTx)
+	// 	if rollbackErr != nil {
+	// 		log.Errorf("networkID: %d, error rolling back state. BlockNumber: %d, rollbackErr: %v, error : %s",
+	// 			s.networkID, verifyBatch.BlockNumber, rollbackErr, err.Error())
+	// 		return rollbackErr
+	// 	}
+	// 	return err
+	// }
+	// if s.l1RollupExitRoot != ger.ExitRoots[1] {
+	// 	log.Debug("Updating ger[1]: ", ger.ExitRoots[1])
+	// 	s.l1RollupExitRoot = ger.ExitRoots[1]
+	// 	s.chExitRootEvent <- ger
+	// }
 	return nil
 }
 
@@ -561,10 +593,10 @@ func (s *ClientSynchronizer) processGlobalExitRoot(globalExitRoot etherman.Globa
 		}
 		return err
 	}
-	if s.l1RollupExitRoot != globalExitRoot.ExitRoots[1] {
-		s.l1RollupExitRoot = globalExitRoot.ExitRoots[1]
-		s.chExitRootEvent <- &globalExitRoot
-	}
+	// if s.l1RollupExitRoot != globalExitRoot.ExitRoots[1] {
+	// 	s.l1RollupExitRoot = globalExitRoot.ExitRoots[1]
+	// 	s.chExitRootEvent <- &globalExitRoot
+	// }
 	return nil
 }
 
@@ -598,7 +630,7 @@ func (s *ClientSynchronizer) processDeposit(deposit etherman.Deposit, blockID ui
 }
 
 func (s *ClientSynchronizer) processClaim(claim etherman.Claim, blockID uint64, dbTx pgx.Tx) error {
-	if claim.RollupIndex != uint64(s.etherMan.GetRollupID()) - 1 {
+	if claim.RollupIndex != uint64(s.etherMan.GetRollupID()) && claim.RollupIndex != 0 {
 		log.Debugf("Claim for different Rollup (RollupID: %d, RollupIndex: %d). Ignoring...",s.etherMan.GetRollupID(), claim.RollupIndex)
 		return nil
 	}

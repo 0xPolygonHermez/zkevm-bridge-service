@@ -290,12 +290,19 @@ func (mt MerkleTree) storeLeaves(ctx context.Context, leaves [][KeyLen]byte, blo
 	if err != nil {
 		return err
 	}
-	var inserts [][]interface{}
-	for i := range leaves {
-		inserts = append(inserts, []interface{}{leaves[i][:], i+1, root.Bytes(), blockID})
-	}
-	if err := mt.store.AddRollupExitLeaves(ctx, inserts, dbTx); err != nil {
+	// Check if root is already stored. If so, don't save the leaves because they are already stored on the db.
+	exist, err := mt.store.IsRollupExitRoot(ctx, root, dbTx)
+	if err != nil {
 		return err
+	}
+	if !exist {
+		var inserts [][]interface{}
+		for i := range leaves {
+			inserts = append(inserts, []interface{}{leaves[i][:], i+1, root.Bytes(), blockID})
+		}
+		if err := mt.store.AddRollupExitLeaves(ctx, inserts, dbTx); err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -323,7 +330,7 @@ func (mt MerkleTree) addRollupExitLeaf(ctx context.Context, rollupLeaf etherman.
 	for i := len(storedRollupLeaves); i < int(rollupLeaf.RollupId); i++ {
 		storedRollupLeaves = append(storedRollupLeaves, etherman.RollupExitLeaf{
 			BlockID:  rollupLeaf.BlockID,
-			RollupId: uint64(i+1),
+			RollupId: uint(i+1),
 		})
 	}
 	if storedRollupLeaves[rollupLeaf.RollupId-1].RollupId == rollupLeaf.RollupId {

@@ -71,8 +71,8 @@ make test-edge
 
 | Address | Description |
 |---|---|
-| 0x40E0576c0A7dff9dc460B29ba73e79aBf73dD2a9 | L1 Bridge |
-| 0x40E0576c0A7dff9dc460B29ba73e79aBf73dD2a9 | L2 Bridge |
+| 0x8C73b4D232fEd53eF6C576E9f1257535d8c87be6 | L1 Bridge |
+| 0x8C73b4D232fEd53eF6C576E9f1257535d8c87be6 | L2 Bridge |
 | 0x5FbDB2315678afecb367f032d93F642f64180aa3 | Pol token |
 | 0x8A791620dd6260079BF849Dc5567aDC3F2FdC318 | GlobalExitRootManager |
 | 0xB7f8BC63BbcaD18155201308C8f3540b07f84F5e | RollupManager |

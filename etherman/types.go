@@ -96,6 +96,6 @@ type RollupExitLeaf struct {
 	ID          uint64
 	BlockID     uint64
 	Leaf        common.Hash
-	RollupId    uint64
+	RollupId    uint
 	Root        common.Hash
 }

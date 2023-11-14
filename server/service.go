@@ -187,7 +187,7 @@ func (s *bridgeService) GetClaimProof(depositCnt, networkID uint, dbTx pgx.Tx) (
 		}
 		rollupMerkleProof = emptyProof()
 	} else { // Rollup
-		rollupMerkleProof, rollupLeaf, err = s.getRollupExitProof(depositCnt, globalExitRoot.ExitRoots[tID], dbTx)
+		rollupMerkleProof, rollupLeaf, err = s.getRollupExitProof(s.rollupID-1, globalExitRoot.ExitRoots[tID], dbTx)
 		if err != nil {
 			log.Error("error getting rollupProof. Error: ", err)
 			return nil, nil, nil, fmt.Errorf("getting the rollup proof failed, error: %v, network: %d", err, networkID)

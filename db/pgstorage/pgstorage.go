@@ -405,9 +405,25 @@ func (p *PostgresStorage) GetRollupExitLeavesByRoot(ctx context.Context, root co
 	return leaves, nil
 }
 
+// IsRollupExitRoot checks if db contains the root
+func (p *PostgresStorage) IsRollupExitRoot(ctx context.Context, root common.Hash, dbTx pgx.Tx) (bool, error) {
+	const getLeavesSQL = "SELECT count(*) FROM mt.rollup_exit WHERE root = $1"
+	var count int
+	err := p.getExecQuerier(dbTx).QueryRow(ctx, getLeavesSQL, root).Scan(&count)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return false, gerror.ErrStorageNotFound
+	} else if err != nil {
+		return false, err
+	}
+	if count > 0 {
+		return true, nil
+	}
+	return false, nil
+}
+
 // IsLxLyActivated checks in db if LxLy is activated
 func (p *PostgresStorage) IsLxLyActivated(ctx context.Context, dbTx pgx.Tx) (bool, error) {
-	const getLeavesSQL = "SELECT count(*) FROM mt.rollup_exit LIMIT 1"
+	const getLeavesSQL = "SELECT count(*) FROM mt.rollup_exit"
 	var count int
 	err := p.getExecQuerier(dbTx).QueryRow(ctx, getLeavesSQL).Scan(&count)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -415,7 +431,7 @@ func (p *PostgresStorage) IsLxLyActivated(ctx context.Context, dbTx pgx.Tx) (boo
 	} else if err != nil {
 		return false, err
 	}
-	if count == 1 {
+	if count > 0 {
 		return true, nil
 	}
 	return false, nil
@@ -568,12 +584,12 @@ func (p *PostgresStorage) UpdateL1DepositsStatus(ctx context.Context, exitRoot [
 }
 
 // UpdateL2DepositsStatus updates the ready_for_claim status of L2 deposits.
-func (p *PostgresStorage) UpdateL2DepositsStatus(ctx context.Context, exitRoot []byte, networkID uint, dbTx pgx.Tx) error {
+func (p *PostgresStorage) UpdateL2DepositsStatus(ctx context.Context, exitRoot []byte, rollupID, networkID uint, dbTx pgx.Tx) error {
 	const updateDepositsStatusSQL = `UPDATE sync.deposit SET ready_for_claim = true
 		WHERE deposit_cnt <=
-			(SELECT sync.deposit.deposit_cnt FROM mt.root INNER JOIN sync.deposit ON sync.deposit.id = mt.root.deposit_id WHERE mt.root.root = $1 AND mt.root.network = $2)
-			AND network_id = $2 AND ready_for_claim = false;`
-	_, err := p.getExecQuerier(dbTx).Exec(ctx, updateDepositsStatusSQL, exitRoot, networkID)
+		(SELECT sync.deposit.deposit_cnt FROM mt.root INNER JOIN sync.deposit ON sync.deposit.id = mt.root.deposit_id WHERE mt.root.root = (select leaf from mt.rollup_exit where root = $1 and rollup_id = $2) AND mt.root.network = $3)
+			AND network_id = $3 AND ready_for_claim = false;`
+	_, err := p.getExecQuerier(dbTx).Exec(ctx, updateDepositsStatusSQL, exitRoot, rollupID, networkID)
 	return err
 }
 

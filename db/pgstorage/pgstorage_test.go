@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/0xPolygonHermez/zkevm-node/log"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -90,7 +91,7 @@ func TestIsLxLyActivated(t *testing.T) {
 	VALUES(1, 1, decode('5C7831','hex'), decode('5C7830','hex'), 0, '1970-01-01 01:00:00.000');
 	
 	INSERT INTO mt.rollup_exit
-	(leaf, rollup_id, root, block_num)
+	(leaf, rollup_id, root, block_id)
 	VALUES(decode('A4BFA0908DC7B06D98DA4309F859023D6947561BC19BC00D77F763DEA1A0B9F5','hex'), 1, decode('42D3339FE8EB57770953423F20A029E778A707E8D58AAF110B40D5EB4DD25721','hex'), 1);
 	`
 	dbCfg := NewConfigFromEnv()
@@ -112,4 +113,35 @@ func TestIsLxLyActivated(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t, true, isActivated)
+}
+
+func TestIsRollupExitRoot(t *testing.T) {
+	data := `INSERT INTO sync.block
+	(id, block_num, block_hash, parent_hash, network_id, received_at)
+	VALUES(1, 1, decode('5C7831','hex'), decode('5C7830','hex'), 0, '1970-01-01 01:00:00.000');
+	
+	INSERT INTO mt.rollup_exit
+	(leaf, rollup_id, root, block_id)
+	VALUES(decode('A4BFA0908DC7B06D98DA4309F859023D6947561BC19BC00D77F763DEA1A0B9F5','hex'), 1, decode('42D3339FE8EB57770953423F20A029E778A707E8D58AAF110B40D5EB4DD25721','hex'), 1);
+	`
+	root := common.HexToHash("0x42D3339FE8EB57770953423F20A029E778A707E8D58AAF110B40D5EB4DD25721")
+	dbCfg := NewConfigFromEnv()
+	ctx := context.Background()
+	err := InitOrReset(dbCfg)
+	require.NoError(t, err)
+
+	store, err := NewPostgresStorage(dbCfg)
+	require.NoError(t, err)
+
+	exist, err := store.IsRollupExitRoot(ctx, root, nil)
+	require.NoError(t, err)
+	assert.Equal(t, false, exist)
+
+	_, err = store.Exec(ctx, data)
+	require.NoError(t, err)
+
+	exist, err = store.IsRollupExitRoot(ctx, root, nil)
+	require.NoError(t, err)
+
+	assert.Equal(t, true, exist)
 }

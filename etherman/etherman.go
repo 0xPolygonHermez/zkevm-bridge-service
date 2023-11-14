@@ -104,7 +104,7 @@ type Client struct {
 }
 
 // NewClient creates a new etherman.
-func NewClient(cfg Config, polygonBridgeAddr, polygonZkEVMGlobalExitRootAddress, polygonRollupManagerAddress common.Address) (*Client, error) {
+func NewClient(cfg Config, polygonBridgeAddr, polygonZkEVMGlobalExitRootAddress, polygonRollupManagerAddress, polygonZkEvmAddress common.Address) (*Client, error) {
 	// Connect to ethereum node
 	ethClient, err := ethclient.Dial(cfg.L1URL)
 	if err != nil {
@@ -129,7 +129,7 @@ func NewClient(cfg Config, polygonBridgeAddr, polygonZkEVMGlobalExitRootAddress,
 		return nil, err
 	}
 	// Get RollupID
-	rollupID, err := polygonRollupManager.RollupAddressToID(&bind.CallOpts{Pending: false}, polygonRollupManagerAddress)
+	rollupID, err := polygonRollupManager.RollupAddressToID(&bind.CallOpts{Pending: false}, polygonZkEvmAddress)
 	if err != nil {
 		return nil, err
 	}
@@ -594,7 +594,6 @@ func GenerateGlobalIndex(mainnetFlag bool, rollupIndex uint, localExitRootIndex 
 	} else {
 		ri := big.NewInt(0).SetUint64(uint64(rollupIndex)).FillBytes(buf[:])
 		globalIndexBytes = append(globalIndexBytes, ri...)
-		log.Debug("ri: ", ri)
 	}
 	leri := big.NewInt(0).SetUint64(uint64(localExitRootIndex)).FillBytes(buf[:])
 	globalIndexBytes = append(globalIndexBytes, leri...)
