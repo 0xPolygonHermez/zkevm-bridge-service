@@ -517,9 +517,19 @@ func (s *ClientSynchronizer) processVerifyBatch(verifyBatch etherman.VerifiedBat
 	if !s.isLxLy { // this is activated when the bridge detects the first VerifyBatch from the rollupManager
 		s.isLxLy = true
 	}
-	if verifyBatch.RollupID == s.etherMan.GetRollupID() - 1 {
+	if verifyBatch.RollupID == s.etherMan.GetRollupID()-1 {
 		// Just check that the calculated RollupExitRoot is fine
 		network, err := s.bridgeCtrl.GetNetworkID(s.networkID)
+		if err != nil {
+			log.Errorf("networkID: %d, error getting NetworkID. Error: %v", s.networkID, err)
+			rollbackErr := s.storage.Rollback(s.ctx, dbTx)
+			if rollbackErr != nil {
+				log.Errorf("networkID: %d, error rolling back state. BlockNumber: %d, rollbackErr: %v, error : %s",
+					s.networkID, verifyBatch.BlockNumber, rollbackErr, err.Error())
+				return rollbackErr
+			}
+			return err
+		}
 		ok, err := s.storage.CheckIfRootExists(s.ctx, verifyBatch.LocalExitRoot.Bytes(), network, dbTx)
 		if err != nil {
 			log.Errorf("networkID: %d, error Checking if root exists. Error: %v", s.networkID, err)
@@ -542,9 +552,9 @@ func (s *ClientSynchronizer) processVerifyBatch(verifyBatch etherman.VerifiedBat
 			return fmt.Errorf("networkID: %d, Root: %s doesn't exist!", s.networkID, verifyBatch.LocalExitRoot.String())
 		}
 	}
-	rollupLeaf := etherman.RollupExitLeaf {
-		BlockID: blockID,
-		Leaf: verifyBatch.LocalExitRoot,
+	rollupLeaf := etherman.RollupExitLeaf{
+		BlockID:  blockID,
+		Leaf:     verifyBatch.LocalExitRoot,
 		RollupId: verifyBatch.RollupID,
 	}
 	// Update rollupExitRoot
@@ -631,7 +641,7 @@ func (s *ClientSynchronizer) processDeposit(deposit etherman.Deposit, blockID ui
 
 func (s *ClientSynchronizer) processClaim(claim etherman.Claim, blockID uint64, dbTx pgx.Tx) error {
 	if claim.RollupIndex != uint64(s.etherMan.GetRollupID()) && claim.RollupIndex != 0 {
-		log.Debugf("Claim for different Rollup (RollupID: %d, RollupIndex: %d). Ignoring...",s.etherMan.GetRollupID(), claim.RollupIndex)
+		log.Debugf("Claim for different Rollup (RollupID: %d, RollupIndex: %d). Ignoring...", s.etherMan.GetRollupID(), claim.RollupIndex)
 		return nil
 	}
 	claim.BlockID = blockID

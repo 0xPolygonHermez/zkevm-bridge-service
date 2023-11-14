@@ -175,9 +175,9 @@ func (s *bridgeService) GetClaimProof(depositCnt, networkID uint, dbTx pgx.Tx) (
 	}
 
 	var (
-		merkleProof [][bridgectrl.KeyLen]byte
+		merkleProof       [][bridgectrl.KeyLen]byte
 		rollupMerkleProof [][bridgectrl.KeyLen]byte
-		rollupLeaf common.Hash
+		rollupLeaf        common.Hash
 	)
 	if networkID == 0 { // Mainnet
 		merkleProof, err = s.getProof(depositCnt, globalExitRoot.ExitRoots[tID], dbTx)

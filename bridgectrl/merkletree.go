@@ -174,7 +174,7 @@ func (mt *MerkleTree) getRoot(ctx context.Context, dbTx pgx.Tx) ([]byte, error) 
 
 func buildIntermediate(leaves [][KeyLen]byte) ([][][]byte, [][32]byte) {
 	var (
-		nodes [][][]byte
+		nodes  [][][]byte
 		hashes [][KeyLen]byte
 	)
 	for i := 0; i < len(leaves); i += 2 {
@@ -189,7 +189,7 @@ func buildIntermediate(leaves [][KeyLen]byte) ([][][]byte, [][32]byte) {
 func (mt *MerkleTree) updateLeaf(ctx context.Context, depositID uint64, leaves [][KeyLen]byte, dbTx pgx.Tx) error {
 	var (
 		nodes [][][][]byte
-		ns [][][]byte
+		ns    [][][]byte
 	)
 	initLeavesCount := uint(len(leaves))
 	if len(leaves) == 0 {
@@ -224,7 +224,7 @@ func (mt *MerkleTree) updateLeaf(ctx context.Context, depositID uint64, leaves [
 	return nil
 }
 
-func (mt *MerkleTree) getLeaves(ctx context.Context,dbTx pgx.Tx) ([][KeyLen]byte, error) {
+func (mt *MerkleTree) getLeaves(ctx context.Context, dbTx pgx.Tx) ([][KeyLen]byte, error) {
 	root, err := mt.getRoot(ctx, dbTx)
 	if err != nil {
 		return nil, err
@@ -238,7 +238,7 @@ func (mt *MerkleTree) getLeaves(ctx context.Context,dbTx pgx.Tx) ([][KeyLen]byte
 			if err != nil {
 				var isZero bool
 				curHash := common.BytesToHash(c)
-				for _, h := range zeroHashes  {
+				for _, h := range zeroHashes {
 					if common.BytesToHash(h[:]) == curHash {
 						isZero = true
 					}
@@ -256,7 +256,6 @@ func (mt *MerkleTree) getLeaves(ctx context.Context,dbTx pgx.Tx) ([][KeyLen]byte
 		var aux [KeyLen]byte
 		copy(aux[:], l)
 		result = append(result, aux)
-
 	}
 	return result, nil
 }
@@ -264,7 +263,7 @@ func (mt *MerkleTree) getLeaves(ctx context.Context,dbTx pgx.Tx) ([][KeyLen]byte
 func (mt *MerkleTree) buildMTRoot(leaves [][KeyLen]byte) (common.Hash, error) {
 	var (
 		nodes [][][][]byte
-		ns [][][]byte
+		ns    [][][]byte
 	)
 	if len(leaves) == 0 {
 		leaves = append(leaves, zeroHashes[0])
@@ -281,7 +280,7 @@ func (mt *MerkleTree) buildMTRoot(leaves [][KeyLen]byte) (common.Hash, error) {
 		return common.Hash{}, fmt.Errorf("error: more than one root detected: %+v", nodes)
 	}
 	log.Debug("Root calculated: ", common.Bytes2Hex(ns[0][0]))
-	
+
 	return common.BytesToHash(ns[0][0]), nil
 }
 
@@ -298,7 +297,7 @@ func (mt MerkleTree) storeLeaves(ctx context.Context, leaves [][KeyLen]byte, blo
 	if !exist {
 		var inserts [][]interface{}
 		for i := range leaves {
-			inserts = append(inserts, []interface{}{leaves[i][:], i+1, root.Bytes(), blockID})
+			inserts = append(inserts, []interface{}{leaves[i][:], i + 1, root.Bytes(), blockID})
 		}
 		if err := mt.store.AddRollupExitLeaves(ctx, inserts, dbTx); err != nil {
 			return err
@@ -307,9 +306,9 @@ func (mt MerkleTree) storeLeaves(ctx context.Context, leaves [][KeyLen]byte, blo
 	return nil
 }
 
-func (mt MerkleTree) getLatestRollupExitLeaves(ctx context.Context, dbTx pgx.Tx) ([]etherman.RollupExitLeaf, error){
-	return mt.store.GetLatestRollupExitLeaves(ctx, dbTx)
-}
+// func (mt MerkleTree) getLatestRollupExitLeaves(ctx context.Context, dbTx pgx.Tx) ([]etherman.RollupExitLeaf, error) {
+// 	return mt.store.GetLatestRollupExitLeaves(ctx, dbTx)
+// }
 
 func (mt MerkleTree) addRollupExitLeaf(ctx context.Context, rollupLeaf etherman.RollupExitLeaf, dbTx pgx.Tx) error {
 	storedRollupLeaves, err := mt.store.GetLatestRollupExitLeaves(ctx, dbTx)
@@ -330,7 +329,7 @@ func (mt MerkleTree) addRollupExitLeaf(ctx context.Context, rollupLeaf etherman.
 	for i := len(storedRollupLeaves); i < int(rollupLeaf.RollupId); i++ {
 		storedRollupLeaves = append(storedRollupLeaves, etherman.RollupExitLeaf{
 			BlockID:  rollupLeaf.BlockID,
-			RollupId: uint(i+1),
+			RollupId: uint(i + 1),
 		})
 	}
 	if storedRollupLeaves[rollupLeaf.RollupId-1].RollupId == rollupLeaf.RollupId {
@@ -372,7 +371,7 @@ func ComputeSiblings(rollupIndex uint, leaves [][KeyLen]byte, height uint8) ([][
 			}
 		}
 		var (
-			nsi [][][]byte
+			nsi    [][][]byte
 			hashes [][KeyLen]byte
 		)
 		for i := 0; i < len(leaves); i += 2 {
@@ -382,7 +381,7 @@ func ComputeSiblings(rollupIndex uint, leaves [][KeyLen]byte, height uint8) ([][
 			hashes = append(hashes, hash)
 			// Find the index of the leave in the next level of the tree.
 			// Divide the index by 2 to find the position in the upper level
-			index = uint(float64(index)/2)
+			index = uint(float64(index) / 2) //nolint:gomnd
 		}
 		ns = nsi
 		leaves = hashes
@@ -402,10 +401,10 @@ func calculateRoot(leafHash common.Hash, smtProof [][KeyLen]byte, index uint, he
 	var h uint8
 	for h = 0; h < height; h++ {
 		if ((index >> h) & 1) == 1 {
-			node = Hash(smtProof[h], node);
+			node = Hash(smtProof[h], node)
 		} else {
-			node = Hash(node, smtProof[h]);
+			node = Hash(node, smtProof[h])
 		}
 	}
-	return common.BytesToHash(node[:]);
+	return common.BytesToHash(node[:])
 }

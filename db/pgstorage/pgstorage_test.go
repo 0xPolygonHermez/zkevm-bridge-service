@@ -58,7 +58,7 @@ func TestGetLeaves(t *testing.T) {
 	require.NoError(t, err)
 
 	for _, l := range leaves {
-		log.Debugf("leaves: %+v", l)	
+		log.Debugf("leaves: %+v", l)
 	}
 	assert.Equal(t, "0xa4bfa0908dc7b06d98da4309f859023d6947561bc19bc00d77f763dea1a0b9f6", leaves[0].Leaf.String())
 	assert.Equal(t, uint64(5), leaves[0].ID)

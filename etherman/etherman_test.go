@@ -4,7 +4,6 @@ import (
 	"context"
 	"math/big"
 	"testing"
-	// "encoding/binary"
 
 	mockbridge "github.com/0xPolygonHermez/zkevm-bridge-service/test/mocksmartcontracts/polygonzkevmbridge"
 	"github.com/0xPolygonHermez/zkevm-node/etherman/smartcontracts/polygonzkevm"
@@ -100,10 +99,9 @@ func TestBridgeEvents(t *testing.T) {
 
 	//Claim funds
 	var (
-		network  uint32
+		network                                       uint32
 		smtProofLocalExitRoot, smtProofRollupExitRoot [32][32]byte
-		globalIndex, _ = big.NewInt(0).SetString("18446744073709551650", 0)
-
+		globalIndex, _                                = big.NewInt(0).SetString("18446744073709551650", 0)
 	)
 	mainnetExitRoot := block[0].GlobalExitRoots[0].ExitRoots[0]
 	rollupExitRoot := block[0].GlobalExitRoots[0].ExitRoots[1]
@@ -140,8 +138,8 @@ func TestDecodeGlobalIndex(t *testing.T) {
 	var buf [32]byte
 	gi := globalIndex.FillBytes(buf[:])
 	for _, n := range gi {
-        t.Logf("%08b ", n)
-    }
+		t.Logf("%08b ", n)
+	}
 	mainnetFlag, rollupIndex, localExitRootIndex, err := decodeGlobalIndex(globalIndex)
 	require.NoError(t, err)
 	assert.Equal(t, false, mainnetFlag)
@@ -152,8 +150,8 @@ func TestDecodeGlobalIndex(t *testing.T) {
 
 	gi = globalIndex.FillBytes(buf[:])
 	for _, n := range gi {
-        t.Logf("%08b ", n)
-    }
+		t.Logf("%08b ", n)
+	}
 	mainnetFlag, rollupIndex, localExitRootIndex, err = decodeGlobalIndex(globalIndex)
 	require.NoError(t, err)
 	assert.Equal(t, false, mainnetFlag)
@@ -164,8 +162,8 @@ func TestDecodeGlobalIndex(t *testing.T) {
 
 	gi = globalIndex.FillBytes(buf[:])
 	for _, n := range gi {
-        t.Logf("%08b ", n)
-    }
+		t.Logf("%08b ", n)
+	}
 	mainnetFlag, rollupIndex, localExitRootIndex, err = decodeGlobalIndex(globalIndex)
 	require.NoError(t, err)
 	assert.Equal(t, true, mainnetFlag)
@@ -176,8 +174,8 @@ func TestDecodeGlobalIndex(t *testing.T) {
 
 	gi = globalIndex.FillBytes(buf[:])
 	for _, n := range gi {
-        t.Logf("%08b ", n)
-    }
+		t.Logf("%08b ", n)
+	}
 	mainnetFlag, rollupIndex, localExitRootIndex, err = decodeGlobalIndex(globalIndex)
 	require.NoError(t, err)
 	assert.Equal(t, true, mainnetFlag)
@@ -237,17 +235,17 @@ func TestGenerateGlobalIndex(t *testing.T) {
 	globalIndexGenerated := GenerateGlobalIndex(mainnetFlag, rollupIndex, localExitRootIndex)
 	t.Log("First test number:")
 	for _, n := range globalIndexGenerated.Bytes() {
-        t.Logf("%08b ", n)
-    }
+		t.Logf("%08b ", n)
+	}
 	assert.Equal(t, globalIndex, globalIndexGenerated)
-	
+
 	globalIndex, _ = big.NewInt(0).SetString("8589934604", 0)
 	mainnetFlag, rollupIndex, localExitRootIndex = false, uint(2), uint(12)
 	globalIndexGenerated = GenerateGlobalIndex(mainnetFlag, rollupIndex, localExitRootIndex)
 	t.Log("Second test number:")
 	for _, n := range globalIndexGenerated.Bytes() {
-        t.Logf("%08b ", n)
-    }
+		t.Logf("%08b ", n)
+	}
 	assert.Equal(t, globalIndex, globalIndexGenerated)
 
 	globalIndex, _ = big.NewInt(0).SetString("18446744073709551627", 0)
@@ -255,7 +253,7 @@ func TestGenerateGlobalIndex(t *testing.T) {
 	globalIndexGenerated = GenerateGlobalIndex(mainnetFlag, rollupIndex, localExitRootIndex)
 	t.Log("Third test number:")
 	for _, n := range globalIndexGenerated.Bytes() {
-        t.Logf("%08b ", n)
-    }
+		t.Logf("%08b ", n)
+	}
 	assert.Equal(t, globalIndex, globalIndexGenerated)
 }

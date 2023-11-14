@@ -44,9 +44,9 @@ func NewBridgeController(ctx context.Context, cfg Config, networks []uint, mtSto
 	}
 
 	return &BridgeController{
-		exitTrees:  exitTrees,
+		exitTrees:   exitTrees,
 		rollupsTree: rollupsTree,
-		networkIDs: networkIDs,
+		networkIDs:  networkIDs,
 	}, nil
 }
 

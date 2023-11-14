@@ -115,7 +115,7 @@ func initServer(b *testing.B, bench benchmark) *bridgectrl.BridgeController {
 		}
 		require.NoError(b, err)
 		err = store.AddClaim(context.TODO(), &etherman.Claim{
-			Index:        		deposit.DepositCount,
+			Index:              deposit.DepositCount,
 			OriginalNetwork:    deposit.OriginalNetwork,
 			Amount:             deposit.Amount,
 			NetworkID:          deposit.DestinationNetwork,

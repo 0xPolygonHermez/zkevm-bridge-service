@@ -56,11 +56,11 @@ func (m migrationTest0007) RunAssertsAfterMigrationUp(t *testing.T, db *sql.DB) 
 	assert.NoError(t, err)
 
 	var (
-		claim etherman.Claim
+		claim  etherman.Claim
 		amount string
 	)
 	getClaimSQL := "SELECT index, orig_net, orig_addr, amount, dest_addr, block_id, network_id, tx_hash, rollup_index, mainnet_flag FROM sync.claim WHERE index = $1 AND network_id = $2"
-	err = db.QueryRow(getClaimSQL, 3, 1).Scan(&claim.Index, &claim.OriginalNetwork, &claim.OriginalAddress, &amount, &claim.DestinationAddress, &claim.BlockID, &claim.NetworkID, &claim.TxHash, &claim.RollupIndex, &claim.MainnetFlag)
+	_ = db.QueryRow(getClaimSQL, 3, 1).Scan(&claim.Index, &claim.OriginalNetwork, &claim.OriginalAddress, &amount, &claim.DestinationAddress, &claim.BlockID, &claim.NetworkID, &claim.TxHash, &claim.RollupIndex, &claim.MainnetFlag)
 	assert.Equal(t, uint64(0), claim.RollupIndex)
 	assert.Equal(t, false, claim.MainnetFlag)
 
@@ -69,7 +69,7 @@ func (m migrationTest0007) RunAssertsAfterMigrationUp(t *testing.T, db *sql.DB) 
 	assert.NoError(t, err)
 
 	getClaimSQL = "SELECT index, orig_net, orig_addr, amount, dest_addr, block_id, network_id, tx_hash, rollup_index, mainnet_flag FROM sync.claim WHERE index = $1 AND network_id = $2"
-	err = db.QueryRow(getClaimSQL, 4, 1).Scan(&claim.Index, &claim.OriginalNetwork, &claim.OriginalAddress, &amount, &claim.DestinationAddress, &claim.BlockID, &claim.NetworkID, &claim.TxHash, &claim.RollupIndex, &claim.MainnetFlag)
+	_ = db.QueryRow(getClaimSQL, 4, 1).Scan(&claim.Index, &claim.OriginalNetwork, &claim.OriginalAddress, &amount, &claim.DestinationAddress, &claim.BlockID, &claim.NetworkID, &claim.TxHash, &claim.RollupIndex, &claim.MainnetFlag)
 	assert.NoError(t, err)
 	assert.Equal(t, uint64(37), claim.RollupIndex)
 	assert.Equal(t, true, claim.MainnetFlag)
@@ -93,7 +93,7 @@ func (m migrationTest0007) RunAssertsAfterMigrationDown(t *testing.T, db *sql.DB
 	_, err = db.Exec(insertClaim)
 	assert.NoError(t, err)
 	var (
-		claim etherman.Claim
+		claim  etherman.Claim
 		amount string
 	)
 	getClaimSQL := "SELECT index, orig_net, orig_addr, amount, dest_addr, block_id, network_id, tx_hash, rollup_index, mainnet_flag FROM sync.claim WHERE index = $1 AND network_id = $2"

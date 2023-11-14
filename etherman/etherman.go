@@ -7,10 +7,10 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/0xPolygonHermez/zkevm-node/etherman/smartcontracts/polygonzkevmbridge"
 	"github.com/0xPolygonHermez/zkevm-node/etherman/smartcontracts/oldpolygonzkevmbridge"
-	"github.com/0xPolygonHermez/zkevm-node/etherman/smartcontracts/polygonzkevmglobalexitroot"
 	"github.com/0xPolygonHermez/zkevm-node/etherman/smartcontracts/polygonrollupmanager"
+	"github.com/0xPolygonHermez/zkevm-node/etherman/smartcontracts/polygonzkevmbridge"
+	"github.com/0xPolygonHermez/zkevm-node/etherman/smartcontracts/polygonzkevmglobalexitroot"
 	"github.com/0xPolygonHermez/zkevm-node/log"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -28,16 +28,16 @@ var (
 	// New Bridge events
 	depositEventSignatureHash         = crypto.Keccak256Hash([]byte("BridgeEvent(uint8,uint32,address,uint32,address,uint256,bytes,uint32)")) // Used in oldBridge as well
 	claimEventSignatureHash           = crypto.Keccak256Hash([]byte("ClaimEvent(uint256,uint32,address,address,uint256)"))
-	newWrappedTokenEventSignatureHash = crypto.Keccak256Hash([]byte("NewWrappedToken(uint32,address,address,bytes)"))  // Used in oldBridge as well
+	newWrappedTokenEventSignatureHash = crypto.Keccak256Hash([]byte("NewWrappedToken(uint32,address,address,bytes)")) // Used in oldBridge as well
 
 	// Old Bridge events
-	oldClaimEventSignatureHash           = crypto.Keccak256Hash([]byte("ClaimEvent(uint32,uint32,address,address,uint256)"))
+	oldClaimEventSignatureHash = crypto.Keccak256Hash([]byte("ClaimEvent(uint32,uint32,address,address,uint256)"))
 
 	// Proxy events
-	initializedProxySignatureHash    = crypto.Keccak256Hash([]byte("Initialized(uint8)"))
-	adminChangedSignatureHash   = crypto.Keccak256Hash([]byte("AdminChanged(address,address)"))
-	beaconUpgradedSignatureHash = crypto.Keccak256Hash([]byte("BeaconUpgraded(address)"))
-	upgradedSignatureHash       = crypto.Keccak256Hash([]byte("Upgraded(address)"))
+	initializedProxySignatureHash = crypto.Keccak256Hash([]byte("Initialized(uint8)"))
+	adminChangedSignatureHash     = crypto.Keccak256Hash([]byte("AdminChanged(address,address)"))
+	beaconUpgradedSignatureHash   = crypto.Keccak256Hash([]byte("BeaconUpgraded(address)"))
+	upgradedSignatureHash         = crypto.Keccak256Hash([]byte("Upgraded(address)"))
 
 	// Events RollupManager
 	setBatchFeeSignatureHash                       = crypto.Keccak256Hash([]byte("SetBatchFee(uint256)"))
@@ -65,7 +65,7 @@ var (
 	roleRevokedSignatureHash               = crypto.Keccak256Hash([]byte("RoleRevoked(bytes32,address,address)"))      // IAccessControlUpgradeable
 	emergencyStateActivatedSignatureHash   = crypto.Keccak256Hash([]byte("EmergencyStateActivated()"))                 // EmergencyManager. Used in oldZkEvm as well
 	emergencyStateDeactivatedSignatureHash = crypto.Keccak256Hash([]byte("EmergencyStateDeactivated()"))               // EmergencyManager. Used in oldZkEvm as well
-	
+
 	// ErrNotFound is used when the object is not found
 	ErrNotFound = errors.New("Not found")
 )
@@ -138,13 +138,13 @@ func NewClient(cfg Config, polygonBridgeAddr, polygonZkEVMGlobalExitRootAddress,
 	scAddresses = append(scAddresses, polygonZkEVMGlobalExitRootAddress, polygonBridgeAddr, polygonRollupManagerAddress)
 
 	return &Client{
-		EtherClient: ethClient,
-		PolygonBridge: polygonBridge,
-		OldPolygonBridge: oldpolygonBridge,
+		EtherClient:                ethClient,
+		PolygonBridge:              polygonBridge,
+		OldPolygonBridge:           oldpolygonBridge,
 		PolygonZkEVMGlobalExitRoot: polygonZkEVMGlobalExitRoot,
-		PolygonRollupManager: polygonRollupManager,
-		RollupID: rollupID,
-		SCAddresses: scAddresses}, nil
+		PolygonRollupManager:       polygonRollupManager,
+		RollupID:                   rollupID,
+		SCAddresses:                scAddresses}, nil
 }
 
 // NewL2Client creates a new etherman for L2.
@@ -397,6 +397,9 @@ func (etherMan *Client) newClaimEvent(ctx context.Context, vLog types.Log, block
 		return err
 	}
 	mainnetFlag, rollupIndex, localExitRootIndex, err := decodeGlobalIndex(c.GlobalIndex)
+	if err != nil {
+		return err
+	}
 	return etherMan.claimEvent(ctx, vLog, blocks, blocksOrder, c.Amount, c.DestinationAddress, c.OriginAddress, uint(localExitRootIndex), uint(c.OriginNetwork), rollupIndex, mainnetFlag)
 }
 
@@ -571,9 +574,10 @@ func (etherMan *Client) GetRollupID() uint {
 }
 
 func decodeGlobalIndex(globalIndex *big.Int) (bool, uint64, uint64, error) {
+	const lengthGlobalIndexInBytes = 32
 	var buf [32]byte
 	gIBytes := globalIndex.FillBytes(buf[:])
-	if len(gIBytes) != 32 {
+	if len(gIBytes) != lengthGlobalIndexInBytes {
 		return false, 0, 0, fmt.Errorf("invalid globaIndex length. Should be 32. Current length: %d", len(gIBytes))
 	}
 	mainnetFlag := big.NewInt(0).SetBytes([]byte{gIBytes[23]}).Uint64() == 1
@@ -585,7 +589,7 @@ func decodeGlobalIndex(globalIndex *big.Int) (bool, uint64, uint64, error) {
 func GenerateGlobalIndex(mainnetFlag bool, rollupIndex uint, localExitRootIndex uint) *big.Int {
 	var (
 		globalIndexBytes []byte
-		buf [4]byte
+		buf              [4]byte
 	)
 	if mainnetFlag {
 		globalIndexBytes = append(globalIndexBytes, big.NewInt(1).Bytes()...)

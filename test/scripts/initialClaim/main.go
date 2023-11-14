@@ -8,8 +8,8 @@ import (
 	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman"
 	clientUtils "github.com/0xPolygonHermez/zkevm-bridge-service/test/client"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/utils"
-	"github.com/0xPolygonHermez/zkevm-node/etherman/smartcontracts/polygonzkevm"
 	"github.com/0xPolygonHermez/zkevm-node/etherman/smartcontracts/polygonrollupmanager"
+	"github.com/0xPolygonHermez/zkevm-node/etherman/smartcontracts/polygonzkevm"
 	"github.com/0xPolygonHermez/zkevm-node/hex"
 	"github.com/0xPolygonHermez/zkevm-node/log"
 	"github.com/0xPolygonHermez/zkevm-node/state"
@@ -21,8 +21,8 @@ import (
 )
 
 const (
-	l2BridgeAddr = "0x8C73b4D232fEd53eF6C576E9f1257535d8c87be6"
-	zkevmAddr    = "0x8dAF17A20c9DBA35f005b6324F493785D239719d"
+	l2BridgeAddr      = "0x8C73b4D232fEd53eF6C576E9f1257535d8c87be6"
+	zkevmAddr         = "0x8dAF17A20c9DBA35f005b6324F493785D239719d"
 	rollupManagerAddr = "0xB7f8BC63BbcaD18155201308C8f3540b07f84F5e"
 
 	accHexAddress    = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"

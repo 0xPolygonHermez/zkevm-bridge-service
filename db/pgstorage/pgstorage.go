@@ -395,7 +395,7 @@ func (p *PostgresStorage) GetRollupExitLeavesByRoot(ctx context.Context, root co
 	leaves := make([]etherman.RollupExitLeaf, 0, len(rows.RawValues()))
 
 	for rows.Next() {
-		var leaf  etherman.RollupExitLeaf
+		var leaf etherman.RollupExitLeaf
 		err = rows.Scan(&leaf.ID, &leaf.Leaf, &leaf.RollupId, &leaf.Root, &leaf.BlockID)
 		if err != nil {
 			return nil, err
@@ -455,7 +455,7 @@ func (p *PostgresStorage) GetLatestRollupExitLeaves(ctx context.Context, dbTx pg
 	leaves := make([]etherman.RollupExitLeaf, 0, len(rows.RawValues()))
 
 	for rows.Next() {
-		var leaf  etherman.RollupExitLeaf
+		var leaf etherman.RollupExitLeaf
 		err = rows.Scan(&leaf.ID, &leaf.Leaf, &leaf.RollupId, &leaf.Root, &leaf.BlockID)
 		if err != nil {
 			return nil, err

@@ -82,20 +82,20 @@ type TokenMetadata struct {
 }
 
 type VerifiedBatch struct {
-	BlockNumber uint64
-	BatchNumber uint64
-	RollupID uint
+	BlockNumber   uint64
+	BatchNumber   uint64
+	RollupID      uint
 	LocalExitRoot common.Hash
-	TxHash common.Hash
-	StateRoot common.Hash
-	Aggregator common.Address
+	TxHash        common.Hash
+	StateRoot     common.Hash
+	Aggregator    common.Address
 }
 
 // RollupExitLeaf struct
 type RollupExitLeaf struct {
-	ID          uint64
-	BlockID     uint64
-	Leaf        common.Hash
-	RollupId    uint
-	Root        common.Hash
+	ID       uint64
+	BlockID  uint64
+	Leaf     common.Hash
+	RollupId uint
+	Root     common.Hash
 }

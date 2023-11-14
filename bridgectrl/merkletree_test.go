@@ -10,6 +10,7 @@ import (
 	"path"
 	"runtime"
 	"testing"
+	"time"
 
 	"github.com/0xPolygonHermez/zkevm-bridge-service/db/pgstorage"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman"
@@ -259,9 +260,9 @@ func TestUpdateMT(t *testing.T) {
 			// Check root
 			newRoot, err := mt.getRoot(ctx, nil)
 			require.NoError(t, err)
-			require.Equal(t, testVector.CurrentRoot[2:], hex.EncodeToString(newRoot[:]))	
+			require.Equal(t, testVector.CurrentRoot[2:], hex.EncodeToString(newRoot[:]))
 		}
-		
+
 		var res [KeyLen]byte
 		copy(res[:], common.Hex2Bytes(testVector.NewLeaf.CurrentHash[2:]))
 		leaves = append(leaves, res)
@@ -327,9 +328,9 @@ func TestBuildMTRootAndStore(t *testing.T) {
 		if len(leaves) != 0 {
 			root, err := mt.buildMTRoot(leaves)
 			require.NoError(t, err)
-			require.Equal(t, testVector.CurrentRoot, root.String())	
+			require.Equal(t, testVector.CurrentRoot, root.String())
 		}
-		
+
 		var res [KeyLen]byte
 		copy(res[:], common.Hex2Bytes(testVector.NewLeaf.CurrentHash[2:]))
 		leaves = append(leaves, res)
@@ -342,6 +343,7 @@ func TestBuildMTRootAndStore(t *testing.T) {
 		err = mt.storeLeaves(ctx, leaves, blockNumber, nil)
 		require.NoError(t, err)
 		result, err := mt.store.GetRollupExitLeavesByRoot(ctx, newRoot, nil)
+		require.NoError(t, err)
 		for i := range leaves {
 			require.Equal(t, len(leaves), len(result))
 			require.Equal(t, leaves[i][:], result[i].Leaf.Bytes())
@@ -430,4 +432,27 @@ func TestCheckMerkleProof(t *testing.T) {
 	}
 	root := calculateRoot(leafHash, smtProof, index, height)
 	assert.Equal(t, expectedRoot, root)
+}
+
+func TestPerformanceComputeRoot(t *testing.T) {
+	ctx := context.Background()
+	dbCfg := pgstorage.NewConfigFromEnv()
+	err := pgstorage.InitOrReset(dbCfg)
+	require.NoError(t, err)
+	store, err := pgstorage.NewPostgresStorage(dbCfg)
+	require.NoError(t, err)
+	mt, err := NewMerkleTree(ctx, store, uint8(32), 0)
+	require.NoError(t, err)
+	var leaves [][KeyLen]byte
+	initTime := time.Now().Unix()
+	log.Debug("Init creating leaves: ", initTime)
+	for i := 0; i < 10000000; i++ {
+		leaves = append(leaves, common.Hash{})
+	}
+	log.Debug("End creating leaves: ", time.Now().Unix()-initTime)
+	initTime = time.Now().Unix()
+	log.Debug("Init computing root: ", initTime)
+	_, err = mt.buildMTRoot(leaves)
+	require.NoError(t, err)
+	log.Debug("End creating leaves: ", time.Now().Unix()-initTime)
 }
