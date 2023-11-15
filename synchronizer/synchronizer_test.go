@@ -33,10 +33,11 @@ func TestSyncGer(t *testing.T) {
 		}
 		ctx := mock.MatchedBy(func(ctx context.Context) bool { return ctx != nil })
 		m.Etherman.On("GetNetworkID", ctx).Return(uint(0), nil)
-		m.Storage.On("GetLatestL1SyncedExitRoot", context.Background(), nil).Return(&etherman.GlobalExitRoot{}, gerror.ErrStorageNotFound)
+		m.Storage.On("GetLatestL1SyncedExitRoot", ctx, nil).Return(&etherman.GlobalExitRoot{}, gerror.ErrStorageNotFound).Once()
+		m.Storage.On("IsLxLyActivated", ctx, nil).Return(true, nil).Once()
 		chEvent := make(chan *etherman.GlobalExitRoot)
 		chSynced := make(chan uint)
-		sync, err := NewSynchronizer(m.Storage, m.BridgeCtrl, m.Etherman, m.ZkEVMClient, genBlockNumber, chEvent, chSynced, cfg)
+		sync, err := NewSynchronizer(context.Background(), m.Storage, m.BridgeCtrl, m.Etherman, m.ZkEVMClient, genBlockNumber, chEvent, chSynced, cfg)
 		require.NoError(t, err)
 
 		go func() {
@@ -60,8 +61,7 @@ func TestSyncGer(t *testing.T) {
 
 		m.Storage.
 			On("GetLastBlock", ctx, networkID, nil).
-			Return(lastBlock, nil).
-			Once()
+			Return(lastBlock, nil)
 
 		m.Etherman.
 			On("EthBlockByNumber", ctx, lastBlock.BlockNumber).
@@ -125,6 +125,11 @@ func TestSyncGer(t *testing.T) {
 			On("Commit", ctx, m.DbTx).
 			Run(func(args mock.Arguments) { sync.Stop() }).
 			Return(nil).
+			Once()
+
+		m.Storage.
+			On("GetLatestL1SyncedExitRoot", ctx, nil).
+			Return(&blocks[0].GlobalExitRoots[0], nil).
 			Once()
 
 		rpcResponse := &rpcTypes.Batch{

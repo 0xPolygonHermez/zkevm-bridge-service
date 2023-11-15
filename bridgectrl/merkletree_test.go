@@ -348,7 +348,7 @@ func TestBuildMTRootAndStore(t *testing.T) {
 			require.Equal(t, len(leaves), len(result))
 			require.Equal(t, leaves[i][:], result[i].Leaf.Bytes())
 			require.Equal(t, newRoot, result[i].Root)
-			require.Equal(t, uint64(i+1), result[i].RollupId)
+			require.Equal(t, uint(i+1), result[i].RollupId)
 		}
 	}
 }

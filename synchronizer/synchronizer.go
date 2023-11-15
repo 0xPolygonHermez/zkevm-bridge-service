@@ -40,6 +40,7 @@ type ClientSynchronizer struct {
 
 // NewSynchronizer creates and initializes an instance of Synchronizer
 func NewSynchronizer(
+	ctx context.Context,
 	storage interface{},
 	bridge bridgectrlInterface,
 	ethMan ethermanInterface,
@@ -48,7 +49,7 @@ func NewSynchronizer(
 	chExitRootEvent chan *etherman.GlobalExitRoot,
 	chSynced chan uint,
 	cfg Config) (Synchronizer, error) {
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(ctx)
 	networkID, err := ethMan.GetNetworkID(ctx)
 	if err != nil {
 		log.Fatal("error getting networkID. Error: ", err)
@@ -569,23 +570,6 @@ func (s *ClientSynchronizer) processVerifyBatch(verifyBatch etherman.VerifiedBat
 		}
 		return err
 	}
-	// // Read latest GER stored
-	// ger, err := s.storage.GetLatestL1SyncedExitRoot(s.ctx, dbTx)
-	// if err != nil {
-	// 	log.Errorf("networkID: %d, error getting latest GER stored on database. Error: %v", s.networkID, err)
-	// 	rollbackErr := s.storage.Rollback(s.ctx, dbTx)
-	// 	if rollbackErr != nil {
-	// 		log.Errorf("networkID: %d, error rolling back state. BlockNumber: %d, rollbackErr: %v, error : %s",
-	// 			s.networkID, verifyBatch.BlockNumber, rollbackErr, err.Error())
-	// 		return rollbackErr
-	// 	}
-	// 	return err
-	// }
-	// if s.l1RollupExitRoot != ger.ExitRoots[1] {
-	// 	log.Debug("Updating ger[1]: ", ger.ExitRoots[1])
-	// 	s.l1RollupExitRoot = ger.ExitRoots[1]
-	// 	s.chExitRootEvent <- ger
-	// }
 	return nil
 }
 
@@ -603,10 +587,6 @@ func (s *ClientSynchronizer) processGlobalExitRoot(globalExitRoot etherman.Globa
 		}
 		return err
 	}
-	// if s.l1RollupExitRoot != globalExitRoot.ExitRoots[1] {
-	// 	s.l1RollupExitRoot = globalExitRoot.ExitRoots[1]
-	// 	s.chExitRootEvent <- &globalExitRoot
-	// }
 	return nil
 }
 
