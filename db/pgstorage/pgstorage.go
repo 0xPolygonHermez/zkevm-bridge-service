@@ -730,7 +730,7 @@ func (p *PostgresStorage) GetLatestReadyDeposits(ctx context.Context, networkID 
 	getDepositsSQL := fmt.Sprintf(`
 		SELECT d.id, leaf_type, orig_net, orig_addr, amount, dest_net, dest_addr, deposit_cnt, block_id, b.block_num, d.network_id, tx_hash, metadata, ready_for_claim, b.received_at, ready_time
 		FROM sync.deposit%[1]v as d INNER JOIN sync.block%[1]v as b ON d.network_id = b.network_id AND d.block_id = b.id
-		WHERE d.network_id = $1 AND ready_for_claim = true
+		WHERE d.network_id = $1 AND ready_for_claim = true AND ready_time IS NOT NULL
 		ORDER BY d.deposit_cnt DESC LIMIT $2`, p.tableSuffix)
 
 	rows, err := p.getExecQuerier(dbTx).Query(ctx, getDepositsSQL, networkID, limit)
