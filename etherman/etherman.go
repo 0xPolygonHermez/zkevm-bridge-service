@@ -188,16 +188,17 @@ func (etherMan *Client) updateGlobalExitRootEvent(ctx context.Context, vLog type
 	if err != nil {
 		return fmt.Errorf("error getting hashParent. BlockNumber: %d. Error: %w", vLog.BlockNumber, err)
 	}
+	t := time.Unix(int64(fullBlock.Time()), 0)
 	var gExitRoot GlobalExitRoot
 	gExitRoot.ExitRoots = make([]common.Hash, 0)
 	gExitRoot.ExitRoots = append(gExitRoot.ExitRoots, common.BytesToHash(globalExitRoot.MainnetExitRoot[:]))
 	gExitRoot.ExitRoots = append(gExitRoot.ExitRoots, common.BytesToHash(globalExitRoot.RollupExitRoot[:]))
 	gExitRoot.GlobalExitRoot = hash(globalExitRoot.MainnetExitRoot, globalExitRoot.RollupExitRoot)
 	gExitRoot.BlockNumber = vLog.BlockNumber
+	gExitRoot.Time = t
 	log.Debugf("UpdateGlobalExitRoot event[%+v] blockNumber[%v]", gExitRoot, vLog.BlockNumber)
 
 	if len(*blocks) == 0 || ((*blocks)[len(*blocks)-1].BlockHash != vLog.BlockHash || (*blocks)[len(*blocks)-1].BlockNumber != vLog.BlockNumber) {
-		t := time.Unix(int64(fullBlock.Time()), 0)
 		block := prepareBlock(vLog, t, fullBlock)
 		block.GlobalExitRoots = append(block.GlobalExitRoots, gExitRoot)
 		*blocks = append(*blocks, block)

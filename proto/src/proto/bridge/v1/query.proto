@@ -101,6 +101,13 @@ service BridgeService {
             get: "/monitored-txs/status/{status}",
         };
     }
+
+    /// Return the estimated deposit wait time for L1 and L2
+    rpc GetEstimateTime(GetEstimateTimeRequest) returns (CommonEstimateTimeResponse) {
+        option (google.api.http) = {
+            get: "/estimate-time",
+        };
+    }
 }
 
 // TokenWrapped message
@@ -273,6 +280,8 @@ message GetMonitoredTxsByStatusRequest {
     uint32 limit = 3;
 }
 
+message GetEstimateTimeRequest {}
+
 // Get responses
 
 message CheckAPIResponse {
@@ -381,4 +390,13 @@ message CommonMonitoredTxsResponse {
 message MonitoredTxsDetail {
     bool hasNext = 1;
     repeated MonitoredTx transactions = 2;
+}
+
+message CommonEstimateTimeResponse {
+    uint32 code = 1;
+    string msg = 2;
+    string error_code = 3;
+    string error_message = 4;
+    string detailMsg = 5;
+    repeated uint32 data = 6; // Has 2 numbers which are the estimate time of L1 and L2
 }

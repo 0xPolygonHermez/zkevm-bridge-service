@@ -193,6 +193,7 @@ func (s *ClientSynchronizer) syncTrustedState() error {
 			lastBatch.MainnetExitRoot,
 			lastBatch.RollupExitRoot,
 		},
+		Time: time.Unix(int64(lastBatch.Timestamp), 0),
 	}
 	isUpdated, err := s.storage.AddTrustedGlobalExitRoot(s.ctx, ger, nil)
 	if err != nil {

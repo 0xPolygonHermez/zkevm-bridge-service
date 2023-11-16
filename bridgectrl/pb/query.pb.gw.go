@@ -665,6 +665,24 @@ func local_request_BridgeService_GetMonitoredTxsByStatus_0(ctx context.Context, 
 
 }
 
+func request_BridgeService_GetEstimateTime_0(ctx context.Context, marshaler runtime.Marshaler, client BridgeServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var protoReq GetEstimateTimeRequest
+	var metadata runtime.ServerMetadata
+
+	msg, err := client.GetEstimateTime(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
+	return msg, metadata, err
+
+}
+
+func local_request_BridgeService_GetEstimateTime_0(ctx context.Context, marshaler runtime.Marshaler, server BridgeServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var protoReq GetEstimateTimeRequest
+	var metadata runtime.ServerMetadata
+
+	msg, err := server.GetEstimateTime(ctx, &protoReq)
+	return msg, metadata, err
+
+}
+
 // RegisterBridgeServiceHandlerServer registers the http handlers for service BridgeService to "mux".
 // UnaryRPC     :call BridgeServiceServer directly.
 // StreamingRPC :currently unsupported pending https://github.com/grpc/grpc-go/issues/906.
@@ -996,6 +1014,31 @@ func RegisterBridgeServiceHandlerServer(ctx context.Context, mux *runtime.ServeM
 
 	})
 
+	mux.Handle("GET", pattern_BridgeService_GetEstimateTime_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		var stream runtime.ServerTransportStream
+		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		var err error
+		var annotatedContext context.Context
+		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/bridge.v1.BridgeService/GetEstimateTime", runtime.WithHTTPPathPattern("/estimate-time"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := local_request_BridgeService_GetEstimateTime_0(annotatedContext, inboundMarshaler, server, req, pathParams)
+		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+
+		forward_BridgeService_GetEstimateTime_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+
+	})
+
 	return nil
 }
 
@@ -1323,6 +1366,28 @@ func RegisterBridgeServiceHandlerClient(ctx context.Context, mux *runtime.ServeM
 
 	})
 
+	mux.Handle("GET", pattern_BridgeService_GetEstimateTime_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		var err error
+		var annotatedContext context.Context
+		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/bridge.v1.BridgeService/GetEstimateTime", runtime.WithHTTPPathPattern("/estimate-time"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := request_BridgeService_GetEstimateTime_0(annotatedContext, inboundMarshaler, client, req, pathParams)
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+
+		forward_BridgeService_GetEstimateTime_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+
+	})
+
 	return nil
 }
 
@@ -1352,6 +1417,8 @@ var (
 	pattern_BridgeService_GetNotReadyTransactions_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0}, []string{"not-ready"}, ""))
 
 	pattern_BridgeService_GetMonitoredTxsByStatus_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 1}, []string{"monitored-txs", "status"}, ""))
+
+	pattern_BridgeService_GetEstimateTime_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0}, []string{"estimate-time"}, ""))
 )
 
 var (
@@ -1380,4 +1447,6 @@ var (
 	forward_BridgeService_GetNotReadyTransactions_0 = runtime.ForwardResponseMessage
 
 	forward_BridgeService_GetMonitoredTxsByStatus_0 = runtime.ForwardResponseMessage
+
+	forward_BridgeService_GetEstimateTime_0 = runtime.ForwardResponseMessage
 )
