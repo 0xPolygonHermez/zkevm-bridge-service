@@ -650,3 +650,11 @@ func (s *bridgeService) GetMonitoredTxsByStatus(ctx context.Context, req *pb.Get
 		Data: &pb.MonitoredTxsDetail{HasNext: hasNext, Transactions: pbTransactions},
 	}, nil
 }
+
+// GetEstimateTime returns the estimated deposit waiting time for L1 and L2
+func (s *bridgeService) GetEstimateTime(ctx context.Context, req *pb.GetEstimateTimeRequest) (*pb.CommonEstimateTimeResponse, error) {
+	return &pb.CommonEstimateTimeResponse{
+		Code: defaultSuccessCode,
+		Data: []uint32{s.estTimeCalculator.Get(0), s.estTimeCalculator.Get(1)},
+	}, nil
+}
