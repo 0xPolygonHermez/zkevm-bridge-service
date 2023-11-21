@@ -1,7 +1,7 @@
 -- +migrate Up
 ALTER TABLE mt.rht ADD primary key(key, deposit_id);
 ALTER TABLE mt.root ADD primary key(deposit_id);
-ALTER TABLE sync.token_wrapped ADD primary key(block_id);
+ALTER TABLE sync.token_wrapped ADD primary key(network_id,orig_net,orig_token_addr);
 DROP TABLE IF EXISTS mt.rht_temp;
 
 CREATE INDEX IF NOT EXISTS claim_block_id ON sync.claim USING btree (block_id);
