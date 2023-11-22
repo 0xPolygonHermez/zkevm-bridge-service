@@ -14,7 +14,7 @@ const (
 	// Number of deposits to get from DB to predict the estimate time
 	sampleLimit           = 10
 	refreshInterval       = 5 * time.Minute
-	defaultL1EstimateTime = 8
+	defaultL1EstimateTime = 15
 	defaultL2EstimateTime = 60
 )
 
