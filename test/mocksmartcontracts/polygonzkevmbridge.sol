@@ -81,6 +81,9 @@ contract PolygonZkEVMBridgeV2 is
     // Native address
     uint32 public gasTokenNetwork;
 
+    // Gas token metadata
+    bytes public gasTokenMetadata;
+
     // WETH address
     TokenWrapped public WETHToken;
 
@@ -98,23 +101,27 @@ contract PolygonZkEVMBridgeV2 is
         address _gasTokenAddress,
         uint32 _gasTokenNetwork,
         IBasePolygonZkEVMGlobalExitRoot _globalExitRootManager,
-        address _polygonRollupManager
+        address _polygonRollupManager,
+        bytes memory _gasTokenMetadata
     ) external virtual initializer {
         networkID = _networkID;
         globalExitRootManager = _globalExitRootManager;
         polygonRollupManager = _polygonRollupManager;
 
         // Set gas token
-        if (gasTokenAddress == address(0)) {
-            // gas token will be ether
-            if (gasTokenNetwork != 0) {
+        if (_gasTokenAddress == address(0)) {
+            // Gas token will be ether
+            if (_gasTokenNetwork != 0) {
                 revert GasTokenNetworkMustBeZeroOnEther();
             }
-            //WETHToken, gasTokenAddress and gasTokenNetwork will be 0
+            // WETHToken, gasTokenAddress and gasTokenNetwork will be 0
+            // gasTokenMetadata will be empty
         } else {
             // Gas token will be an erc20
             gasTokenAddress = _gasTokenAddress;
             gasTokenNetwork = _gasTokenNetwork;
+            gasTokenMetadata = _gasTokenMetadata;
+
             WETHToken = (new TokenWrapped){salt: bytes32(0)}(
                 "Wrapped Ether",
                 "WETH",

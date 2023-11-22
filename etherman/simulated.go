@@ -82,7 +82,7 @@ func NewSimulatedEtherman(cfg Config, auth *bind.TransactOpts) (*Client, *backen
 		log.Error("error: ", err)
 		return nil, nil, common.Address{}, nil, nil, err
 	}
-	_, err = mockbr.Initialize(auth, 0, common.Address{}, 0, exitManagerAddr, mockRollupManagerAddr)
+	_, err = mockbr.Initialize(auth, 0, common.Address{}, 0, exitManagerAddr, mockRollupManagerAddr, []byte{})
 	if err != nil {
 		log.Error("error: ", err)
 		return nil, nil, common.Address{}, nil, nil, err
@@ -111,7 +111,7 @@ func NewSimulatedEtherman(cfg Config, auth *bind.TransactOpts) (*Client, *backen
 		return nil, nil, common.Address{}, nil, nil, err
 	}
 	var zkevmChainID uint64 = 100
-	_, err = mockRollupManager.CreateNewRollup(auth, rollUpTypeID, zkevmChainID, auth.From, auth.From, common.Address{}, 0, "http://localhost", "PolygonZkEvm Rollup")
+	_, err = mockRollupManager.CreateNewRollup(auth, rollUpTypeID, zkevmChainID, auth.From, auth.From, common.Address{}, "http://localhost", "PolygonZkEvm Rollup")
 	if err != nil {
 		log.Error("error: ", err)
 		return nil, nil, common.Address{}, nil, nil, err
