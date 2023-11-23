@@ -44,8 +44,8 @@ const (
 
 	// PolTokenAddress token address
 	PolTokenAddress = "0x5FbDB2315678afecb367f032d93F642f64180aa3" //nolint:gosec
-	l1BridgeAddr    = "0x8C73b4D232fEd53eF6C576E9f1257535d8c87be6"
-	l2BridgeAddr    = "0x8C73b4D232fEd53eF6C576E9f1257535d8c87be6"
+	l1BridgeAddr    = "0xaAE872C70944D40001755C3EAaE53bC4E1A78bD0"
+	l2BridgeAddr    = "0xaAE872C70944D40001755C3EAaE53bC4E1A78bD0"
 
 	l1AccHexAddress = "0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC"
 
