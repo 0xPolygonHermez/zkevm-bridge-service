@@ -45,6 +45,7 @@ type ClaimTxManager struct {
 	auth            *bind.TransactOpts
 	nonceCache      *lru.Cache[string, uint64]
 	synced          bool
+	isDone          bool
 }
 
 // NewClaimTxManager creates a new claim transaction manager.
@@ -79,7 +80,7 @@ func NewClaimTxManager(cfg Config, chExitRootEvent chan *etherman.GlobalExitRoot
 // send then to the blockchain and keep monitoring them until they
 // get mined
 func (tm *ClaimTxManager) Start() {
-	ticker := time.NewTicker(tm.cfg.FrequencyToMonitorTxs.Duration)
+	go tm.startMonitorTxs()
 	for {
 		select {
 		case <-tm.ctx.Done():
@@ -101,11 +102,19 @@ func (tm *ClaimTxManager) Start() {
 			} else {
 				log.Infof("Waiting for networkID %d to be synced before processing deposits", tm.l2NetworkID)
 			}
-		case <-ticker.C:
-			err := tm.monitorTxs(tm.ctx)
-			if err != nil {
-				log.Errorf("failed to monitor txs: %v", err)
-			}
+		}
+	}
+}
+
+func (tm *ClaimTxManager) startMonitorTxs() {
+	ticker := time.NewTicker(tm.cfg.FrequencyToMonitorTxs.Duration)
+	for range ticker.C {
+		if tm.isDone {
+			return
+		}
+		err := tm.monitorTxs(tm.ctx)
+		if err != nil {
+			log.Errorf("failed to monitor txs: %v", err)
 		}
 	}
 }
