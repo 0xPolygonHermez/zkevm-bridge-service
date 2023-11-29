@@ -379,10 +379,10 @@ func ComputeSiblings(rollupIndex uint, leaves [][KeyLen]byte, height uint8) ([][
 			hash := Hash(leaves[left], leaves[right])
 			nsi = append(nsi, [][]byte{hash[:], leaves[left][:], leaves[right][:]})
 			hashes = append(hashes, hash)
-			// Find the index of the leave in the next level of the tree.
-			// Divide the index by 2 to find the position in the upper level
-			index = uint(float64(index) / 2) //nolint:gomnd
 		}
+		// Find the index of the leave in the next level of the tree.
+		// Divide the index by 2 to find the position in the upper level
+		index = uint(float64(index) / 2) //nolint:gomnd
 		ns = nsi
 		leaves = hashes
 	}
