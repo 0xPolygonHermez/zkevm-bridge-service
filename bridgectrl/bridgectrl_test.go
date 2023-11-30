@@ -49,11 +49,10 @@ func TestBridgeTree(t *testing.T) {
 
 	store, err := pgstorage.NewPostgresStorage(dbCfg)
 	require.NoError(t, err)
-
-	bt, err := NewBridgeController(cfg, []uint{0, 1000}, store)
+	ctx := context.Background()
+	bt, err := NewBridgeController(ctx, cfg, []uint{0, 1000}, store)
 	require.NoError(t, err)
 
-	ctx := context.TODO()
 	t.Run("Test adding deposit for the bridge tree", func(t *testing.T) {
 		for i, testVector := range testVectors {
 			block := &etherman.Block{
@@ -79,21 +78,21 @@ func TestBridgeTree(t *testing.T) {
 			assert.Equal(t, testVector.ExpectedHash, hex.EncodeToString(leafHash[:]))
 			depositID, err := store.AddDeposit(ctx, deposit, nil)
 			require.NoError(t, err)
-			err = bt.AddDeposit(deposit, depositID, nil)
+			err = bt.AddDeposit(ctx, deposit, depositID, nil)
 			require.NoError(t, err)
 
 			// test reorg
 			orgRoot, err := bt.exitTrees[0].store.GetRoot(ctx, uint(i), 0, nil)
 			require.NoError(t, err)
 			require.NoError(t, store.Reset(ctx, uint64(i), deposit.NetworkID, nil))
-			err = bt.ReorgMT(uint(i), testVectors[i].OriginalNetwork, nil)
+			err = bt.ReorgMT(ctx, uint(i), testVectors[i].OriginalNetwork, nil)
 			require.NoError(t, err)
 			blockID, err = store.AddBlock(context.TODO(), block, nil)
 			require.NoError(t, err)
 			deposit.BlockID = blockID
 			depositID, err = store.AddDeposit(ctx, deposit, nil)
 			require.NoError(t, err)
-			err = bt.AddDeposit(deposit, depositID, nil)
+			err = bt.AddDeposit(ctx, deposit, depositID, nil)
 			require.NoError(t, err)
 			newRoot, err := bt.exitTrees[0].store.GetRoot(ctx, uint(i), 0, nil)
 			require.NoError(t, err)

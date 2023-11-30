@@ -23,6 +23,28 @@ func RunMigrationsDown(cfg Config) error {
 	return runMigrations(cfg, migrate.Down)
 }
 
+// ResetDB.
+func ResetDB(cfg Config) error {
+	c, err := pgx.ParseConfig("postgres://" + cfg.User + ":" + cfg.Password + "@" + cfg.Host + ":" + cfg.Port + "/" + cfg.Name)
+	if err != nil {
+		return err
+	}
+	db := stdlib.OpenDB(*c)
+	_, err = db.Exec("DROP SCHEMA IF EXISTS mt CASCADE;")
+	if err != nil {
+		return err
+	}
+	_, err = db.Exec("DROP SCHEMA IF EXISTS sync CASCADE;")
+	if err != nil {
+		return err
+	}
+	_, err = db.Exec("DROP TABLE IF EXISTS public.gorp_migrations;")
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 // runMigrations will execute pending migrations if needed to keep
 // the database updated with the latest changes in either direction of up or down.
 func runMigrations(cfg Config, direction migrate.MigrationDirection) error {
@@ -52,7 +74,7 @@ func InitOrReset(cfg Config) error {
 	}
 
 	// run migrations
-	if err := RunMigrationsDown(cfg); err != nil {
+	if err := ResetDB(cfg); err != nil {
 		return err
 	}
 	return RunMigrationsUp(cfg)

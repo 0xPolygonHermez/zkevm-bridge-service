@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	l2BridgeAddr = "0xff0EE8ea08cEf5cb4322777F5CC3E8A584B8A4A0"
+	l2BridgeAddr = "0xaAE872C70944D40001755C3EAaE53bC4E1A78bD0"
 
 	l2AccHexAddress    = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
 	l2AccHexPrivateKey = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
@@ -56,16 +56,18 @@ func main() {
 	log.Debug("mainnetExitRoot: ", proof.MainExitRoot)
 	log.Debug("rollupExitRoot: ", proof.RollupExitRoot)
 
-	var smt [mtHeight][32]byte
+	var smtProof, smtRollupProof [mtHeight][32]byte
 	for i := 0; i < len(proof.MerkleProof); i++ {
-		log.Debug("smt: ", proof.MerkleProof[i])
-		smt[i] = common.HexToHash(proof.MerkleProof[i])
+		log.Debug("smtProof: ", proof.MerkleProof[i])
+		smtProof[i] = common.HexToHash(proof.MerkleProof[i])
+		log.Debug("smtRollupProof: ", proof.MerkleProof[i])
+		smtRollupProof[i] = common.HexToHash(proof.RollupMerkleProof[i])
 	}
 	globalExitRoot := &etherman.GlobalExitRoot{
 		ExitRoots: []common.Hash{common.HexToHash(proof.MainExitRoot), common.HexToHash(proof.RollupExitRoot)},
 	}
 	log.Info("Sending claim tx...")
-	err = c.SendClaim(ctx, bridgeData, smt, globalExitRoot, auth)
+	err = c.SendClaim(ctx, bridgeData, smtProof, smtRollupProof, globalExitRoot, auth)
 	if err != nil {
 		log.Fatal("error: ", err)
 	}

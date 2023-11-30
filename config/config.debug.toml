@@ -49,6 +49,8 @@ BridgeVersion = "v1"
 
 [NetworkConfig]
 GenBlockNumber = 1
-PolygonBridgeAddress = "0xff0EE8ea08cEf5cb4322777F5CC3E8A584B8A4A0"
-PolygonZkEVMGlobalExitRootAddress = "0x2279B7A0a67DB372996a5FaB50D91eAA73d2eBe6"
-L2PolygonBridgeAddresses = ["0xff0EE8ea08cEf5cb4322777F5CC3E8A584B8A4A0"]
+PolygonBridgeAddress = "0xaAE872C70944D40001755C3EAaE53bC4E1A78bD0"
+PolygonZkEVMGlobalExitRootAddress = "0x8A791620dd6260079BF849Dc5567aDC3F2FdC318"
+PolygonRollupManagerAddress = "0xB7f8BC63BbcaD18155201308C8f3540b07f84F5e"
+PolygonZkEvmAddress = "0x8dAF17A20c9DBA35f005b6324F493785D239719d"
+L2PolygonBridgeAddresses = ["0xaAE872C70944D40001755C3EAaE53bC4E1A78bD0"]

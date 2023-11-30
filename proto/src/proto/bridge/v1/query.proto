@@ -80,6 +80,7 @@ message Deposit {
     string claim_tx_hash = 11;
     string metadata = 12;
     bool   ready_for_claim = 13;
+    string global_index = 14;
 }
 
 // Claim message
@@ -92,13 +93,16 @@ message Claim {
     string dest_addr = 6;
     uint64 block_num = 7;
     string tx_hash = 8;
+    uint64 rollup_index = 9;
+    bool   mainnet_flag = 10;
 }
 
 // Merkle Proof message
 message Proof {
     repeated string merkle_proof = 1;
-    string main_exit_root = 2;
-    string rollup_exit_root = 3;
+    repeated string rollup_merkle_proof = 2;
+    string main_exit_root = 3;
+    string rollup_exit_root = 4;
 }
 
 // Get requests

@@ -47,10 +47,10 @@ func depositFromL2(ctx context.Context, opsman *operations.Manager, t *testing.T
 	require.NoError(t, err)
 	// Check globalExitRoot
 	// Get the claim data
-	smtProof, globalExitRoot, err := opsman.GetClaimData(ctx, uint(deposits[0].NetworkId), uint(deposits[0].DepositCnt))
+	smtProof, smtRollupProof, globalExitRoot, err := opsman.GetClaimData(ctx, uint(deposits[0].NetworkId), uint(deposits[0].DepositCnt))
 	require.NoError(t, err)
 	// Claim funds in L1
-	err = opsman.SendL1Claim(ctx, deposits[0], smtProof, globalExitRoot)
+	err = opsman.SendL1Claim(ctx, deposits[0], smtProof, smtRollupProof, globalExitRoot)
 	require.NoError(t, err)
 }
 
