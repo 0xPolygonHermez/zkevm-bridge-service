@@ -312,7 +312,8 @@ func (etherMan *Client) processEvent(ctx context.Context, vLog types.Log, blocks
 
 func (etherMan *Client) updateGlobalExitRootEvent(ctx context.Context, vLog types.Log, blocks *[]Block, blocksOrder *map[common.Hash][]Order) error {
 	log.Debug("UpdateGlobalExitRoot event detected. Processing...")
-	return etherMan.processUpdateGlobalExitRootEvent(ctx, vLog.Topics[1], vLog.Topics[2], vLog, blocks, blocksOrder)}
+	return etherMan.processUpdateGlobalExitRootEvent(ctx, vLog.Topics[1], vLog.Topics[2], vLog, blocks, blocksOrder)
+}
 
 func (etherMan *Client) updateL1InfoTreeEvent(ctx context.Context, vLog types.Log, blocks *[]Block, blocksOrder *map[common.Hash][]Order) error {
 	log.Debug("UpdateL1InfoTree event detected")
