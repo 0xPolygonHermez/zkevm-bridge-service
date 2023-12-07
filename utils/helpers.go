@@ -21,3 +21,8 @@ func GenerateRandomHash() [sha256.Size]byte {
 	rs := generateRandomString(10) //nolint:gomnd
 	return sha256.Sum256([]byte(rs))
 }
+
+// GenerateTraceID generates a random trace ID.
+func GenerateTraceID() string {
+	return generateRandomString(traceIDLen)
+}

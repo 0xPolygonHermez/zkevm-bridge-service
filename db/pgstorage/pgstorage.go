@@ -27,9 +27,9 @@ type PostgresStorage struct {
 // getExecQuerier determines which execQuerier to use, dbTx or the main pgxpool
 func (p *PostgresStorage) getExecQuerier(dbTx pgx.Tx) execQuerier {
 	if dbTx != nil {
-		return dbTx
+		return &execQuerierWrapper{dbTx}
 	}
-	return p
+	return &execQuerierWrapper{p}
 }
 
 // NewPostgresStorage creates a new Storage DB
@@ -539,6 +539,33 @@ func (p *PostgresStorage) UpdateBlocksForTesting(ctx context.Context, networkID 
 	return err
 }
 
+// GetL1Deposits get the L1 deposits remain to be ready_for_claim
+func (p *PostgresStorage) GetL1Deposits(ctx context.Context, exitRoot []byte, dbTx pgx.Tx) ([]*etherman.Deposit, error) {
+	updateDepositsStatusSQL := fmt.Sprintf(`Select leaf_type, orig_net, orig_addr, amount, dest_net, dest_addr, deposit_cnt, block_id, network_id, tx_hash, metadata, ready_for_claim FROM sync.deposit%[1]v WHERE deposit_cnt <=
+			(SELECT deposit_cnt FROM mt.root%[1]v WHERE root = $1 AND network = 0) 
+			AND network_id = 0 AND ready_for_claim = false`, p.tableSuffix)
+	rows, err := p.getExecQuerier(dbTx).Query(ctx, updateDepositsStatusSQL, exitRoot)
+	if err != nil {
+		return nil, err
+	}
+
+	deposits := make([]*etherman.Deposit, 0, len(rows.RawValues()))
+	for rows.Next() {
+		var (
+			deposit etherman.Deposit
+			amount  string
+		)
+		err = rows.Scan(&deposit.LeafType, &deposit.OriginalNetwork, &deposit.OriginalAddress, &amount, &deposit.DestinationNetwork, &deposit.DestinationAddress,
+			&deposit.DepositCount, &deposit.BlockID, &deposit.NetworkID, &deposit.TxHash, &deposit.Metadata, &deposit.ReadyForClaim)
+		if err != nil {
+			return nil, err
+		}
+		deposit.Amount, _ = new(big.Int).SetString(amount, 10) //nolint:gomnd
+		deposits = append(deposits, &deposit)
+	}
+	return deposits, nil
+}
+
 // UpdateL1DepositsStatus updates the ready_for_claim status of L1 deposits.
 func (p *PostgresStorage) UpdateL1DepositsStatus(ctx context.Context, exitRoot []byte, eventTime time.Time, dbTx pgx.Tx) ([]*etherman.Deposit, error) {
 	updateDepositsStatusSQL := fmt.Sprintf(`UPDATE sync.deposit%[1]v SET ready_for_claim = true, ready_time = $1 
@@ -566,6 +593,13 @@ func (p *PostgresStorage) UpdateL1DepositsStatus(ctx context.Context, exitRoot [
 		deposits = append(deposits, &deposit)
 	}
 	return deposits, nil
+}
+
+func (p *PostgresStorage) UpdateL1DepositStatus(ctx context.Context, depositCount uint, eventTime time.Time, dbTx pgx.Tx) error {
+	updateDepositStatusSQL := fmt.Sprintf(`UPDATE sync.deposit%[1]v SET ready_for_claim = true, ready_time = $1 
+		WHERE deposit_cnt = $2 And network_id = 0`, p.tableSuffix)
+	_, err := p.getExecQuerier(dbTx).Exec(ctx, updateDepositStatusSQL, eventTime, depositCount)
+	return err
 }
 
 // UpdateL2DepositsStatus updates the ready_for_claim status of L2 deposits.

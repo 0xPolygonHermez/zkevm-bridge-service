@@ -17,4 +17,6 @@ type Config struct {
 	RetryNumber int `mapstructure:"RetryNumber"`
 	// FreeGas enabled whether gas price is 0
 	FreeGas bool `mapstructure:"FreeGas"`
+	//OptClaim enabled store claimTx into storage every deposit
+	OptClaim bool `mapstructure:"OptClaim"`
 }

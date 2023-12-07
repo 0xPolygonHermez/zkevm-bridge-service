@@ -115,7 +115,7 @@ func (mTx MonitoredTx) RemoveHistory(tx *types.Transaction) {
 func (mTx *MonitoredTx) HistoryHashSlice() [][]byte {
 	history := make([][]byte, 0, len(mTx.History))
 	for h := range mTx.History {
-		history = append(history, h[:])
+		history = append(history, h.Bytes())
 	}
 	return history
 }

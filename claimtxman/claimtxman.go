@@ -5,13 +5,14 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
-	"strings"
+	"sync"
 	"time"
 
 	ctmtypes "github.com/0xPolygonHermez/zkevm-bridge-service/claimtxman/types"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/utils"
 	"github.com/0xPolygonHermez/zkevm-node/log"
+	"github.com/0xPolygonHermez/zkevm-node/pool"
 	"github.com/0xPolygonHermez/zkevm-node/state/runtime"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -31,8 +32,10 @@ const (
 
 // ClaimTxManager is the claim transaction manager for L2.
 type ClaimTxManager struct {
-	ctx    context.Context
-	cancel context.CancelFunc
+	ctx                   context.Context
+	cancel                context.CancelFunc
+	updateDepositsL1Mutex sync.Mutex
+	updateDepositsL2Mutex sync.Mutex
 
 	// client is the ethereum client
 	l2Node          *utils.Client
@@ -45,6 +48,7 @@ type ClaimTxManager struct {
 	auth            *bind.TransactOpts
 	nonceCache      *lru.Cache[string, uint64]
 	synced          bool
+	isDone          bool
 }
 
 // NewClaimTxManager creates a new claim transaction manager.
@@ -79,10 +83,11 @@ func NewClaimTxManager(cfg Config, chExitRootEvent chan *etherman.GlobalExitRoot
 // send then to the blockchain and keep monitoring them until they
 // get mined
 func (tm *ClaimTxManager) Start() {
-	ticker := time.NewTicker(tm.cfg.FrequencyToMonitorTxs.Duration)
+	go tm.startMonitorTxs()
 	for {
 		select {
 		case <-tm.ctx.Done():
+			tm.isDone = true
 			return
 		case netID := <-tm.chSynced:
 			if netID == tm.l2NetworkID && !tm.synced {
@@ -101,16 +106,41 @@ func (tm *ClaimTxManager) Start() {
 			} else {
 				log.Infof("Waiting for networkID %d to be synced before processing deposits", tm.l2NetworkID)
 			}
-		case <-ticker.C:
-			err := tm.monitorTxs(tm.ctx)
-			if err != nil {
-				log.Errorf("failed to monitor txs: %v", err)
-			}
 		}
 	}
 }
 
+func (tm *ClaimTxManager) startMonitorTxs() {
+	ticker := time.NewTicker(tm.cfg.FrequencyToMonitorTxs.Duration)
+	for range ticker.C {
+		if tm.isDone {
+			return
+		}
+		traceID := utils.GenerateTraceID()
+		ctx := context.WithValue(tm.ctx, utils.CtxTraceID, traceID)
+		logger := log.WithFields(utils.TraceID, traceID)
+		logger.Infof("MonitorTxs begin %d", tm.l2NetworkID)
+		err := tm.monitorTxs(ctx)
+		if err != nil {
+			logger.Errorf("failed to monitor txs: %v", err)
+		}
+		logger.Infof("MonitorTxs end %d", tm.l2NetworkID)
+	}
+}
+
 func (tm *ClaimTxManager) updateDepositsStatus(ger *etherman.GlobalExitRoot) error {
+	if tm.cfg.OptClaim {
+		if ger.BlockID != 0 {
+			tm.updateDepositsL2Mutex.Lock()
+			defer tm.updateDepositsL2Mutex.Unlock()
+			return tm.processDepositStatusL2(ger)
+		} else {
+			tm.updateDepositsL1Mutex.Lock()
+			defer tm.updateDepositsL1Mutex.Unlock()
+			return tm.processDepositStatusL1(ger)
+		}
+	}
+
 	dbTx, err := tm.storage.BeginDBTransaction(tm.ctx)
 	if err != nil {
 		return err
@@ -134,7 +164,128 @@ func (tm *ClaimTxManager) updateDepositsStatus(ger *etherman.GlobalExitRoot) err
 		}
 		log.Fatalf("AddClaimTx committing dbTx, err: %s", err.Error())
 	}
+	log.Debugf("updateDepositsStatus done")
+
 	return nil
+}
+
+func (tm *ClaimTxManager) processDepositStatusL2(ger *etherman.GlobalExitRoot) error {
+	dbTx, err := tm.storage.BeginDBTransaction(tm.ctx)
+	if err != nil {
+		return err
+	}
+	log.Infof("Rollup exitroot %v is updated", ger.ExitRoots[1])
+	if err := tm.storage.UpdateL2DepositsStatus(tm.ctx, ger.ExitRoots[1][:], ger.Time, tm.l2NetworkID, dbTx); err != nil {
+		log.Errorf("error updating L2DepositsStatus. Error: %v", err)
+		rollbackErr := tm.storage.Rollback(tm.ctx, dbTx)
+		if rollbackErr != nil {
+			log.Errorf("claimtxman error rolling back state. RollbackErr: %v, err: %s", rollbackErr, err.Error())
+			return rollbackErr
+		}
+		return err
+	}
+	err = tm.storage.Commit(tm.ctx, dbTx)
+	if err != nil {
+		log.Errorf("AddClaimTx committing dbTx. Err: %v", err)
+		rollbackErr := tm.storage.Rollback(tm.ctx, dbTx)
+		if rollbackErr != nil {
+			log.Fatalf("claimtxman error rolling back state. RollbackErr: %s, err: %s", rollbackErr.Error(), err.Error())
+		}
+		log.Fatalf("AddClaimTx committing dbTx, err: %s", err.Error())
+	}
+	return nil
+}
+
+func (tm *ClaimTxManager) getDeposits(ger *etherman.GlobalExitRoot) ([]*etherman.Deposit, error) {
+	log.Infof("Mainnet exitroot %v is updated", ger.ExitRoots[0])
+	deposits, err := tm.storage.GetL1Deposits(tm.ctx, ger.ExitRoots[0][:], nil)
+	if err != nil {
+		log.Errorf("error processing ger. Error: %v", err)
+		return nil, err
+	}
+	return deposits, nil
+}
+
+func (tm *ClaimTxManager) processDepositStatusL1(ger *etherman.GlobalExitRoot) error {
+	deposits, err := tm.getDeposits(ger)
+	if err != nil {
+		return err
+	}
+
+	log.Debug("createClaimTx deposits-num:", len(deposits))
+	for _, deposit := range deposits {
+		dbTx, err := tm.storage.BeginDBTransaction(tm.ctx)
+		if err != nil {
+			return err
+		}
+		claimHash, err := tm.bridgeService.GetDepositStatus(tm.ctx, deposit.DepositCount, deposit.DestinationNetwork)
+		if err != nil {
+			log.Errorf("error getting deposit status for deposit %d. Error: %v", deposit.DepositCount, err)
+			tm.rollbackStore(dbTx)
+			return err
+		}
+		if len(claimHash) > 0 || deposit.LeafType == LeafTypeMessage {
+			log.Infof("Ignoring deposit: %d, leafType: %d, claimHash: %s", deposit.DepositCount, deposit.LeafType, claimHash)
+			continue
+		}
+		log.Infof("create the claim tx for the deposit %d", deposit.DepositCount)
+		ger, proves, err := tm.bridgeService.GetClaimProof(deposit.DepositCount, deposit.NetworkID, dbTx)
+		if err != nil {
+			log.Errorf("error getting Claim Proof for deposit %d. Error: %v", deposit.DepositCount, err)
+			tm.rollbackStore(dbTx)
+			return err
+		}
+		log.Infof("get the claim proof for the deposit %d successfully", deposit.DepositCount)
+		var mtProves [mtHeight][keyLen]byte
+		for i := 0; i < mtHeight; i++ {
+			mtProves[i] = proves[i]
+		}
+		tx, err := tm.l2Node.BuildSendClaim(tm.ctx, deposit, mtProves,
+			&etherman.GlobalExitRoot{
+				ExitRoots: []common.Hash{
+					ger.ExitRoots[0],
+					ger.ExitRoots[1],
+				}}, 1, 1, 1,
+			tm.auth)
+		if err != nil {
+			log.Errorf("error BuildSendClaim tx for deposit %d. Error: %v", deposit.DepositCount, err)
+			tm.rollbackStore(dbTx)
+			return err
+		}
+		if err = tm.addClaimTx(deposit.DepositCount, deposit.BlockID, tm.auth.From, tx.To(), nil, tx.Data(), dbTx); err != nil {
+			log.Errorf("error adding claim tx for deposit %d. Error: %v", deposit.DepositCount, err)
+			tm.rollbackStore(dbTx)
+			return err
+		}
+
+		err = tm.storage.UpdateL1DepositStatus(tm.ctx, deposit.DepositCount, ger.Time, dbTx)
+		if err != nil {
+			log.Errorf("error update deposit %d status. Error: %v", deposit.DepositCount, err)
+			tm.rollbackStore(dbTx)
+			return err
+		}
+
+		err = tm.storage.Commit(tm.ctx, dbTx)
+		if err != nil {
+			log.Errorf("AddClaimTx committing dbTx. Err: %v", err)
+			rollbackErr := tm.storage.Rollback(tm.ctx, dbTx)
+			if rollbackErr != nil {
+				log.Fatalf("claimtxman error rolling back state. RollbackErr: %s, err: %s", rollbackErr.Error(), err.Error())
+				return rollbackErr
+			}
+			log.Fatalf("AddClaimTx committing dbTx, err: %s", err.Error())
+			return err
+		}
+		log.Infof("add claim tx for the deposit %d blockID %d successfully", deposit.DepositCount, deposit.BlockID)
+	}
+	return nil
+}
+
+func (tm *ClaimTxManager) rollbackStore(dbTx pgx.Tx) {
+	rollbackErr := tm.storage.Rollback(tm.ctx, dbTx)
+	if rollbackErr != nil {
+		log.Errorf("claimtxman error rolling back state. RollbackErr: %v", rollbackErr)
+	}
 }
 
 func (tm *ClaimTxManager) processDepositStatus(ger *etherman.GlobalExitRoot, dbTx pgx.Tx) error {
@@ -151,6 +302,7 @@ func (tm *ClaimTxManager) processDepositStatus(ger *etherman.GlobalExitRoot, dbT
 			log.Errorf("error getting and updating L1DepositsStatus. Error: %v", err)
 			return err
 		}
+		log.Debugf("Mainnet deposits count %d", len(deposits))
 		for _, deposit := range deposits {
 			claimHash, err := tm.bridgeService.GetDepositStatus(tm.ctx, deposit.DepositCount, deposit.DestinationNetwork)
 			if err != nil {
@@ -167,6 +319,7 @@ func (tm *ClaimTxManager) processDepositStatus(ger *etherman.GlobalExitRoot, dbT
 				log.Errorf("error getting Claim Proof for deposit %d. Error: %v", deposit.DepositCount, err)
 				return err
 			}
+			log.Debugf("get claim proof done for the deposit %d", deposit.DepositCount)
 			var mtProves [mtHeight][keyLen]byte
 			for i := 0; i < mtHeight; i++ {
 				mtProves[i] = proves[i]
@@ -182,10 +335,12 @@ func (tm *ClaimTxManager) processDepositStatus(ger *etherman.GlobalExitRoot, dbT
 				log.Errorf("error BuildSendClaim tx for deposit %d. Error: %v", deposit.DepositCount, err)
 				return err
 			}
+			log.Debugf("claimTx for deposit %d build successfully %d", deposit.DepositCount)
 			if err = tm.addClaimTx(deposit.DepositCount, deposit.BlockID, tm.auth.From, tx.To(), nil, tx.Data(), dbTx); err != nil {
 				log.Errorf("error adding claim tx for deposit %d. Error: %v", deposit.DepositCount, err)
 				return err
 			}
+			log.Debugf("claimTx for deposit %d save successfully %d", deposit.DepositCount)
 		}
 	}
 	return nil
@@ -213,6 +368,7 @@ func (tm *ClaimTxManager) addClaimTx(depositCount uint, blockID uint64, from com
 		Value: value,
 		Data:  data,
 	}
+	log.Debugf("addClaimTx deposit: %d, blockID %d", depositCount, blockID)
 	gas, err := tm.l2Node.EstimateGas(tm.ctx, tx)
 	for i := 1; err != nil && err.Error() != runtime.ErrExecutionReverted.Error() && i < tm.cfg.RetryNumber; i++ {
 		log.Warnf("error while doing gas estimation. Retrying... Error: %v, Data: %s", err, common.Bytes2Hex(data))
@@ -245,34 +401,38 @@ func (tm *ClaimTxManager) addClaimTx(depositCount uint, blockID uint64, from com
 		log.Errorf("error adding claim tx to db. Error: %s", err.Error())
 		return err
 	}
+	log.Debugf("addClaimTx successfully depositCount: %d, blockID: %d", depositCount, blockID)
 
 	return nil
 }
 
 // monitorTxs process all pending monitored tx
 func (tm *ClaimTxManager) monitorTxs(ctx context.Context) error {
-	dbTx, err := tm.storage.BeginDBTransaction(tm.ctx)
+	mLog := log.WithFields(utils.TraceID, ctx.Value(utils.CtxTraceID))
+
+	dbTx, err := tm.storage.BeginDBTransaction(ctx)
 	if err != nil {
 		return err
 	}
+	mLog.Infof("monitorTxs begin")
 
 	statusesFilter := []ctmtypes.MonitoredTxStatus{ctmtypes.MonitoredTxStatusCreated}
 	mTxs, err := tm.storage.GetClaimTxsByStatus(ctx, statusesFilter, dbTx)
 	if err != nil {
-		log.Errorf("failed to get created monitored txs: %v", err)
+		mLog.Errorf("failed to get created monitored txs: %v", err)
 		rollbackErr := tm.storage.Rollback(tm.ctx, dbTx)
 		if rollbackErr != nil {
-			log.Errorf("claimtxman error rolling back state. RollbackErr: %s, err: %v", rollbackErr.Error(), err)
+			mLog.Errorf("claimtxman error rolling back state. RollbackErr: %s, err: %v", rollbackErr.Error(), err)
 			return rollbackErr
 		}
 		return fmt.Errorf("failed to get created monitored txs: %v", err)
 	}
+	mLog.Infof("found %v monitored tx to process", len(mTxs))
 
 	isResetNonce := false // it will reset the nonce in one cycle
-	log.Infof("found %v monitored tx to process", len(mTxs))
 	for _, mTx := range mTxs {
 		mTx := mTx // force variable shadowing to avoid pointer conflicts
-		mTxLog := log.WithFields("monitoredTx", mTx.ID)
+		mTxLog := mLog.WithFields("monitoredTx", mTx.ID)
 		mTxLog.Infof("processing tx with nonce %d", mTx.Nonce)
 
 		// check if any of the txs in the history was mined
@@ -421,7 +581,7 @@ func (tm *ClaimTxManager) monitorTxs(ctx context.Context) error {
 				if err != nil {
 					mTxLog.Errorf("failed to send tx %s to network: %v", signedTx.Hash().String(), err)
 					var reviewNonce bool
-					if strings.Contains(err.Error(), "nonce") {
+					if err.Error() == pool.ErrNonceTooLow.Error() {
 						mTxLog.Infof("nonce error detected, Nonce used: %d", signedTx.Nonce())
 						if !isResetNonce {
 							isResetNonce = true
@@ -450,17 +610,20 @@ func (tm *ClaimTxManager) monitorTxs(ctx context.Context) error {
 			mTxLog.Infof("signed tx %s added to the monitored tx history", signedTx.Hash().String())
 		}
 	}
+	mLog.Infof("monitorTxs end")
 
 	err = tm.storage.Commit(tm.ctx, dbTx)
 	if err != nil {
-		log.Errorf("UpdateClaimTx committing dbTx, err: %v", err)
+		mLog.Errorf("UpdateClaimTx committing dbTx, err: %v", err)
 		rollbackErr := tm.storage.Rollback(tm.ctx, dbTx)
 		if rollbackErr != nil {
-			log.Errorf("claimtxman error rolling back state. RollbackErr: %s, err: %v", rollbackErr.Error(), err)
+			mLog.Errorf("claimtxman error rolling back state. RollbackErr: %s, err: %v", rollbackErr.Error(), err)
 			return rollbackErr
 		}
 		return err
 	}
+
+	mLog.Infof("monitorTxs committed")
 	return nil
 }
 
@@ -503,7 +666,8 @@ func (tm *ClaimTxManager) ReviewMonitoredTx(ctx context.Context, mTx *ctmtypes.M
 			mTxLog.Errorf(err.Error())
 			return err
 		}
-		if nonce > mTx.Nonce {
+		mTxLog.Infof("monitored tx nonce from %v to %v", mTx.Nonce, nonce)
+		if nonce != mTx.Nonce {
 			mTxLog.Infof("monitored tx nonce updated from %v to %v", mTx.Nonce, nonce)
 			mTx.Nonce = nonce
 		}
