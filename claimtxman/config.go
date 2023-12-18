@@ -1,6 +1,9 @@
 package claimtxman
 
-import "github.com/0xPolygonHermez/zkevm-node/config/types"
+import (
+	"github.com/0xPolygonHermez/zkevm-node/config/types"
+	"github.com/ethereum/go-ethereum/common"
+)
 
 // Config is configuration for L2 claim transaction manager
 type Config struct {
@@ -19,4 +22,6 @@ type Config struct {
 	FreeGas bool `mapstructure:"FreeGas"`
 	//OptClaim enabled store claimTx into storage every deposit
 	OptClaim bool `mapstructure:"OptClaim"`
+	// AuthorizedClaimMessageAddresses are the allowed address to bridge message with autoClaim
+	AuthorizedClaimMessageAddresses []common.Address `mapstructure:"AuthorizedClaimMessageAddresses"`
 }

@@ -27,16 +27,6 @@ func TestMonitoredTxStorage(t *testing.T) {
 	tx, err := pg.BeginDBTransaction(ctx)
 	require.NoError(t, err)
 
-	block := &etherman.Block{
-		BlockNumber: 1,
-		BlockHash:   common.HexToHash("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9f1"),
-		ParentHash:  common.HexToHash("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9f2"),
-		NetworkID:   0,
-		ReceivedAt:  time.Now(),
-	}
-	blockID, err := pg.AddBlock(ctx, block, tx)
-	require.NoError(t, err)
-
 	deposit := &etherman.Deposit{
 		NetworkID:          0,
 		OriginalNetwork:    0,
@@ -45,7 +35,6 @@ func TestMonitoredTxStorage(t *testing.T) {
 		DestinationNetwork: 1,
 		DestinationAddress: common.HexToAddress("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"),
 		BlockNumber:        1,
-		BlockID:            blockID,
 		DepositCount:       1,
 		Metadata:           common.FromHex("0x0"),
 	}
@@ -54,16 +43,15 @@ func TestMonitoredTxStorage(t *testing.T) {
 
 	toAdr := common.HexToAddress("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266")
 	mTx := ctmtypes.MonitoredTx{
-		ID:      1,
-		BlockID: blockID,
-		From:    common.HexToAddress("0x6B175474E89094C44Da98b954EedeAC495271d0F"),
-		To:      &toAdr,
-		Nonce:   1,
-		Value:   big.NewInt(1000000),
-		Data:    common.FromHex("0x0"),
-		Gas:     1000000,
-		Status:  ctmtypes.MonitoredTxStatusCreated,
-		History: make(map[common.Hash]bool),
+		DepositID: 1,
+		From:      common.HexToAddress("0x6B175474E89094C44Da98b954EedeAC495271d0F"),
+		To:        &toAdr,
+		Nonce:     1,
+		Value:     big.NewInt(1000000),
+		Data:      common.FromHex("0x0"),
+		Gas:       1000000,
+		Status:    ctmtypes.MonitoredTxStatusCreated,
+		History:   make(map[common.Hash]bool),
 	}
 	err = pg.AddClaimTx(ctx, mTx, tx)
 	require.NoError(t, err)
@@ -79,16 +67,15 @@ func TestMonitoredTxStorage(t *testing.T) {
 	require.NoError(t, err)
 
 	mTx = ctmtypes.MonitoredTx{
-		ID:      2,
-		BlockID: blockID,
-		From:    common.HexToAddress("0x6B175474E89094C44Da98b954EedeAC495271d0F"),
-		To:      &toAdr,
-		Nonce:   1,
-		Value:   big.NewInt(1000000),
-		Data:    common.FromHex("0x0"),
-		Gas:     1000000,
-		Status:  ctmtypes.MonitoredTxStatusConfirmed,
-		History: make(map[common.Hash]bool),
+		DepositID: 2,
+		From:      common.HexToAddress("0x6B175474E89094C44Da98b954EedeAC495271d0F"),
+		To:        &toAdr,
+		Nonce:     1,
+		Value:     big.NewInt(1000000),
+		Data:      common.FromHex("0x0"),
+		Gas:       1000000,
+		Status:    ctmtypes.MonitoredTxStatusConfirmed,
+		History:   make(map[common.Hash]bool),
 	}
 	err = pg.AddClaimTx(ctx, mTx, tx)
 	require.NoError(t, err)

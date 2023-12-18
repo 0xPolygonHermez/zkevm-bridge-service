@@ -135,15 +135,22 @@ func addDeposit(b *testing.B, bench benchmark) {
 	r := rand.New(rand.NewSource(bench.seed)) //nolint: gosec
 	bt, store, err := operations.RunMockServer(bench.store, bench.mtHeight, networks)
 	require.NoError(b, err)
-	deposit := randDeposit(r, 0, 0, 0)
-	depositID, err := store.AddDeposit(context.TODO(), deposit, nil)
-	require.NoError(b, err)
+	var (
+		deposits   []*etherman.Deposit
+		depositIDs []uint64
+	)
+	for i := 0; i < bench.initSize; i++ {
+		deposit := randDeposit(r, uint(i), 0, 0)
+		depositID, err := store.AddDeposit(context.TODO(), deposit, nil)
+		require.NoError(b, err)
+		deposits = append(deposits, deposit)
+		depositIDs = append(depositIDs, depositID)
+	}
 	b.StartTimer()
 	for i := 0; i < bench.initSize; i++ {
 		dbTx, err := store.BeginDBTransaction(context.Background())
 		require.NoError(b, err)
-		deposit := randDeposit(r, uint(i), 0, 0)
-		require.NoError(b, bt.AddDeposit(deposit, depositID, dbTx))
+		require.NoError(b, bt.AddDeposit(deposits[i], depositIDs[i], dbTx))
 		require.NoError(b, store.Commit(context.TODO(), dbTx))
 	}
 }

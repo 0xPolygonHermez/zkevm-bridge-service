@@ -208,11 +208,17 @@ func (m *Manager) SendL2Deposit(ctx context.Context, tokenAddr common.Address, a
 }
 
 // SendL1BridgeMessage bridges a message from l1 to l2.
-func (m *Manager) SendL1BridgeMessage(ctx context.Context, destAddr common.Address, destNetwork uint32, amount *big.Int, metadata []byte) error {
+func (m *Manager) SendL1BridgeMessage(ctx context.Context, destAddr common.Address, destNetwork uint32, amount *big.Int, metadata []byte, privKey *string) error {
 	client := m.clients[L1]
 	auth, err := client.GetSigner(ctx, accHexPrivateKeys[L1])
 	if err != nil {
 		return err
+	}
+	if privKey != nil {
+		auth, err = client.GetSigner(ctx, *privKey)
+		if err != nil {
+			return err
+		}
 	}
 
 	orgExitRoot, err := m.storage.GetLatestExitRoot(ctx, true, nil)

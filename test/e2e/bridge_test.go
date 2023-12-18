@@ -524,7 +524,7 @@ func TestE2E(t *testing.T) {
 		destAddr, err := opsman.DeployBridgeMessageReceiver(ctx, operations.L1)
 		require.NoError(t, err)
 		log.Infof("first, destAddr:%v,amount:%v,destNetwork:%v", destAddr.String(), amount.String(), destNetwork)
-		err = opsman.SendL1BridgeMessage(ctx, destAddr, destNetwork, amount, []byte("metadata"))
+		err = opsman.SendL1BridgeMessage(ctx, destAddr, destNetwork, amount, []byte("metadata"), nil)
 		require.NoError(t, err)
 
 		// Get Bridge Info By DestAddr
@@ -540,7 +540,7 @@ func TestE2E(t *testing.T) {
 		// Send L1 message to L2' 0xc949254d682d8c9ad5682521675b8f43b102aec4
 		destAddr = common.HexToAddress("0xc949254d682d8c9ad5682521675b8f43b102aec4")
 		log.Infof("second, destAddr:%v,amount:%v,destNetwork:%v", destAddr.String(), amount.String(), destNetwork)
-		err = opsman.SendL1BridgeMessage(ctx, destAddr, destNetwork, amount, []byte("metadata"))
+		err = opsman.SendL1BridgeMessage(ctx, destAddr, destNetwork, amount, []byte("metadata"), nil)
 		require.NoError(t, err)
 
 		// Get Bridge Info By DestAddr
@@ -583,5 +583,74 @@ func TestE2E(t *testing.T) {
 		err = opsman.SendL1Claim(ctx, deposits[0], smtProof, globaExitRoot)
 		require.NoError(t, err)
 		log.Infof("TestE2E, Bridge Message Test end.")
+	})
+	t.Run("Bridge Message Authorized Account Test", func(t *testing.T) {
+		// Test L1 Bridge Message
+		// Send L1 bridge message
+		log.Infof("TestE2E, Bridge Message Test start.")
+		var destNetwork uint32 = 1
+		amount := new(big.Int).SetUint64(1000000000000000000)
+
+		destAddr, err := opsman.DeployBridgeMessageReceiver(ctx, operations.L1)
+		require.NoError(t, err)
+		log.Infof("first, destAddr:%v,amount:%v,destNetwork:%v", destAddr.String(), amount.String(), destNetwork)
+		pk := "0x7c852118294e51e653712a81e05800f419141751be58f605c371e15141b007a6" //0x90F79bf6EB2c4f870365E785982E1f101E93b906
+
+		err = opsman.SendL1BridgeMessage(ctx, destAddr, destNetwork, amount, []byte("metadata 3"), &pk)
+		require.NoError(t, err)
+
+		// Get Bridge Info By DestAddr
+		deposits, err := opsman.GetBridgeInfoByDestAddr(ctx, &destAddr)
+		require.NoError(t, err)
+
+		// Check the claim tx
+		err = opsman.CheckL2Claim(ctx, uint(deposits[0].DestNet), uint(deposits[0].DepositCnt))
+		require.NoError(t, err)
+
+		// Send L1 message to L2' 0xc949254d682d8c9ad5682521675b8f43b102aec4
+		destAddr = common.HexToAddress("0xc949254d682d8c9ad5682521675b8f43b102aec4")
+		log.Infof("second, destAddr:%v,amount:%v,destNetwork:%v", destAddr.String(), amount.String(), destNetwork)
+		err = opsman.SendL1BridgeMessage(ctx, destAddr, destNetwork, amount, []byte("metadata"), nil)
+		require.NoError(t, err)
+
+		// Get Bridge Info By DestAddr
+		deposits, err = opsman.GetBridgeInfoByDestAddr(ctx, &destAddr)
+		require.NoError(t, err)
+		// Get the claim data
+		smtProof, globaExitRoot, err := opsman.GetClaimData(ctx, uint(deposits[0].NetworkId), uint(deposits[0].DepositCnt))
+		require.NoError(t, err)
+		// Check the claim tx
+		err = opsman.SendL2Claim(ctx, deposits[0], smtProof, globaExitRoot)
+		require.NoError(t, err)
+
+		l2ETHWrapAddress := common.HexToAddress("0x82109a709138A2953C720D3d775168717b668ba6")
+		balance, err := opsman.CheckAccountTokenBalance(ctx, operations.L2, l2ETHWrapAddress, &destAddr)
+		require.NoError(t, err)
+		log.Infof("destAddr:%v, balance:%v ", destAddr.String(), balance)
+		require.Equal(t, amount, balance)
+
+		err = opsman.ApproveERC20(ctx, l2ETHWrapAddress, amount, operations.L2)
+		require.NoError(t, err)
+
+		// Test L2 Bridge Message
+		// Send L2 bridge message
+		destNetwork = 0
+
+		destAddr, err = opsman.DeployBridgeMessageReceiver(ctx, operations.L2)
+		require.NoError(t, err)
+		log.Infof("destAddr:%v, destNetwork:%v, amount:%v", destAddr.String(), destNetwork, amount.String())
+		err = opsman.SendL2BridgeMessage(ctx, destAddr, destNetwork, amount, []byte("metadata 4"))
+		require.NoError(t, err)
+
+		// Get Bridge Info By DestAddr
+		deposits, err = opsman.GetBridgeInfoByDestAddr(ctx, &destAddr)
+		require.NoError(t, err)
+		// Get the claim data
+		smtProof, globaExitRoot, err = opsman.GetClaimData(ctx, uint(deposits[0].NetworkId), uint(deposits[0].DepositCnt))
+		require.NoError(t, err)
+		// Claim a bridge message in L1
+		t.Logf("globalExitRoot: %+v", globaExitRoot)
+		err = opsman.SendL1Claim(ctx, deposits[0], smtProof, globaExitRoot)
+		require.NoError(t, err)
 	})
 }

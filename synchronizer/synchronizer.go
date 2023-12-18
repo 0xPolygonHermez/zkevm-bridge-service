@@ -116,7 +116,7 @@ func (s *ClientSynchronizer) Sync() error {
 	for {
 		select {
 		case <-s.ctx.Done():
-			log.Debug("synchronizer ctx done. NetworkID: ", s.networkID)
+			log.Debugf("NetworkID: %d, synchronizer ctx done", s.networkID)
 			return nil
 		case <-time.After(waitDuration):
 			log.Debugf("NetworkID: %d, syncing...", s.networkID)
@@ -208,7 +208,6 @@ func (s *ClientSynchronizer) syncTrustedState() error {
 
 // This function syncs the node from a specific block to the latest
 func (s *ClientSynchronizer) syncBlocks(lastBlockSynced *etherman.Block) (*etherman.Block, error) {
-	log.Debugf("NetworkID: %d, before checkReorg. lastBlockSynced: %+v", s.networkID, lastBlockSynced)
 	// This function will read events fromBlockNum to latestEthBlock. Check reorg to be sure that everything is ok.
 	block, err := s.checkReorg(lastBlockSynced)
 	if err != nil {

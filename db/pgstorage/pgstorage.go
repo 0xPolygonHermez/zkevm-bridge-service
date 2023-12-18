@@ -34,7 +34,6 @@ func (p *PostgresStorage) getExecQuerier(dbTx pgx.Tx) execQuerier {
 
 // NewPostgresStorage creates a new Storage DB
 func NewPostgresStorage(cfg Config) (*PostgresStorage, error) {
-	log.Debugf("Create PostgresStorage with Config: %v\n", cfg)
 	config, err := pgxpool.ParseConfig(fmt.Sprintf("postgres://%s:%s@%s:%s/%s?pool_max_conns=%d", cfg.User, cfg.Password, cfg.Host, cfg.Port, cfg.Name, cfg.MaxConns))
 	if err != nil {
 		log.Errorf("Unable to parse DB config: %v\n", err)
@@ -615,33 +614,32 @@ func (p *PostgresStorage) UpdateL2DepositsStatus(ctx context.Context, exitRoot [
 // AddClaimTx adds a claim monitored transaction to the storage.
 func (p *PostgresStorage) AddClaimTx(ctx context.Context, mTx ctmtypes.MonitoredTx, dbTx pgx.Tx) error {
 	addMonitoredTxSQL := fmt.Sprintf(`INSERT INTO sync.monitored_txs%[1]v 
-		(id, block_id, from_addr, to_addr, nonce, value, data, gas, status, history, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`, p.tableSuffix)
-	_, err := p.getExecQuerier(dbTx).Exec(ctx, addMonitoredTxSQL, mTx.ID, mTx.BlockID, mTx.From, mTx.To, mTx.Nonce, mTx.Value.String(), mTx.Data, mTx.Gas, mTx.Status, pq.Array(mTx.HistoryHashSlice()), time.Now().UTC(), time.Now().UTC())
+		(deposit_id, from_addr, to_addr, nonce, value, data, gas, status, history, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`, p.tableSuffix)
+	_, err := p.getExecQuerier(dbTx).Exec(ctx, addMonitoredTxSQL, mTx.DepositID, mTx.From, mTx.To, mTx.Nonce, mTx.Value.String(), mTx.Data, mTx.Gas, mTx.Status, pq.Array(mTx.HistoryHashSlice()), time.Now().UTC(), time.Now().UTC())
 	return err
 }
 
 // UpdateClaimTx updates a claim monitored transaction in the storage.
 func (p *PostgresStorage) UpdateClaimTx(ctx context.Context, mTx ctmtypes.MonitoredTx, dbTx pgx.Tx) error {
 	updateMonitoredTxSQL := fmt.Sprintf(`UPDATE sync.monitored_txs%[1]v 
-		SET block_id = $2
-		, from_addr = $3
-		, to_addr = $4
-		, nonce = $5
-		, value = $6
-		, data = $7
-		, gas = $8
-		, status = $9
-		, history = $10
-		, updated_at = $11
-		WHERE id = $1`, p.tableSuffix)
-	_, err := p.getExecQuerier(dbTx).Exec(ctx, updateMonitoredTxSQL, mTx.ID, mTx.BlockID, mTx.From, mTx.To, mTx.Nonce, mTx.Value.String(), mTx.Data, mTx.Gas, mTx.Status, pq.Array(mTx.HistoryHashSlice()), time.Now().UTC())
+		SET from_addr = $2
+		, to_addr = $3
+		, nonce = $4
+		, value = $5
+		, data = $6
+		, gas = $7
+		, status = $8
+		, history = $9
+		, updated_at = $10
+		WHERE deposit_id = $1`, p.tableSuffix)
+	_, err := p.getExecQuerier(dbTx).Exec(ctx, updateMonitoredTxSQL, mTx.DepositID, mTx.From, mTx.To, mTx.Nonce, mTx.Value.String(), mTx.Data, mTx.Gas, mTx.Status, pq.Array(mTx.HistoryHashSlice()), time.Now().UTC())
 	return err
 }
 
 // GetClaimTxsByStatus gets the monitored transactions by status.
 func (p *PostgresStorage) GetClaimTxsByStatus(ctx context.Context, statuses []ctmtypes.MonitoredTxStatus, dbTx pgx.Tx) ([]ctmtypes.MonitoredTx, error) {
-	getMonitoredTxsSQL := fmt.Sprintf("SELECT * FROM sync.monitored_txs%[1]v WHERE status = ANY($1) ORDER BY created_at ASC", p.tableSuffix)
+	getMonitoredTxsSQL := fmt.Sprintf("SELECT deposit_id, from_addr, to_addr, nonce, value, data, gas, status, history, created_at, updated_at FROM sync.monitored_txs%[1]v WHERE status = ANY($1) ORDER BY created_at ASC", p.tableSuffix)
 	rows, err := p.getExecQuerier(dbTx).Query(ctx, getMonitoredTxsSQL, pq.Array(statuses))
 	if errors.Is(err, pgx.ErrNoRows) {
 		return []ctmtypes.MonitoredTx{}, nil
@@ -656,7 +654,7 @@ func (p *PostgresStorage) GetClaimTxsByStatus(ctx context.Context, statuses []ct
 			history [][]byte
 		)
 		mTx := ctmtypes.MonitoredTx{}
-		err = rows.Scan(&mTx.ID, &mTx.BlockID, &mTx.From, &mTx.To, &mTx.Nonce, &value, &mTx.Data, &mTx.Gas, &mTx.Status, pq.Array(&history), &mTx.CreatedAt, &mTx.UpdatedAt)
+		err = rows.Scan(&mTx.DepositID, &mTx.From, &mTx.To, &mTx.Nonce, &value, &mTx.Data, &mTx.Gas, &mTx.Status, pq.Array(&history), &mTx.CreatedAt, &mTx.UpdatedAt)
 		if err != nil {
 			return mTxs, err
 		}
@@ -672,7 +670,7 @@ func (p *PostgresStorage) GetClaimTxsByStatus(ctx context.Context, statuses []ct
 }
 
 func (p *PostgresStorage) GetClaimTxsByStatusWithLimit(ctx context.Context, statuses []ctmtypes.MonitoredTxStatus, limit uint, offset uint, dbTx pgx.Tx) ([]ctmtypes.MonitoredTx, error) {
-	getMonitoredTxsSQL := fmt.Sprintf("SELECT * FROM sync.monitored_txs%[1]v WHERE status = ANY($1) ORDER BY created_at DESC LIMIT $2 OFFSET $3", p.tableSuffix)
+	getMonitoredTxsSQL := fmt.Sprintf("SELECT deposit_id, from_addr, to_addr, nonce, value, data, gas, status, history, created_at, updated_at FROM sync.monitored_txs%[1]v WHERE status = ANY($1) ORDER BY created_at DESC LIMIT $2 OFFSET $3", p.tableSuffix)
 	rows, err := p.getExecQuerier(dbTx).Query(ctx, getMonitoredTxsSQL, pq.Array(statuses), limit, offset)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return []ctmtypes.MonitoredTx{}, nil
@@ -687,7 +685,7 @@ func (p *PostgresStorage) GetClaimTxsByStatusWithLimit(ctx context.Context, stat
 			history [][]byte
 		)
 		mTx := ctmtypes.MonitoredTx{}
-		err = rows.Scan(&mTx.ID, &mTx.BlockID, &mTx.From, &mTx.To, &mTx.Nonce, &value, &mTx.Data, &mTx.Gas, &mTx.Status, pq.Array(&history), &mTx.CreatedAt, &mTx.UpdatedAt)
+		err = rows.Scan(&mTx.DepositID, &mTx.From, &mTx.To, &mTx.Nonce, &value, &mTx.Data, &mTx.Gas, &mTx.Status, pq.Array(&history), &mTx.CreatedAt, &mTx.UpdatedAt)
 		if err != nil {
 			return mTxs, err
 		}
@@ -704,14 +702,14 @@ func (p *PostgresStorage) GetClaimTxsByStatusWithLimit(ctx context.Context, stat
 
 // GetClaimTxById gets the monitored transactions by id (depositCount)
 func (p *PostgresStorage) GetClaimTxById(ctx context.Context, id uint, dbTx pgx.Tx) (*ctmtypes.MonitoredTx, error) {
-	getClaimSql := fmt.Sprintf("SELECT * FROM sync.monitored_txs%[1]v WHERE id = $1", p.tableSuffix)
+	getClaimSql := fmt.Sprintf("SELECT deposit_id, from_addr, to_addr, nonce, value, data, gas, status, history, created_at, updated_at FROM sync.monitored_txs%[1]v WHERE id = $1", p.tableSuffix)
 	var (
 		value   string
 		history [][]byte
 		mTx     = &ctmtypes.MonitoredTx{}
 	)
 	err := p.getExecQuerier(dbTx).QueryRow(ctx, getClaimSql, id).
-		Scan(&mTx.ID, &mTx.BlockID, &mTx.From, &mTx.To, &mTx.Nonce, &value, &mTx.Data, &mTx.Gas, &mTx.Status, pq.Array(&history), &mTx.CreatedAt, &mTx.UpdatedAt)
+		Scan(&mTx.DepositID, &mTx.From, &mTx.To, &mTx.Nonce, &value, &mTx.Data, &mTx.Gas, &mTx.Status, pq.Array(&history), &mTx.CreatedAt, &mTx.UpdatedAt)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, gerror.ErrStorageNotFound

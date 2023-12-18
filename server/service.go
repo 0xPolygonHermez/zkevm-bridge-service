@@ -626,7 +626,7 @@ func (s *bridgeService) GetMonitoredTxsByStatus(ctx context.Context, req *pb.Get
 	var pbTransactions []*pb.MonitoredTx
 	for _, mTx := range mTxs {
 		transaction := &pb.MonitoredTx{
-			Id:        uint64(mTx.ID),
+			Id:        uint64(mTx.DepositID),
 			From:      "0x" + mTx.From.String(),
 			To:        "0x" + mTx.To.String(),
 			Nonce:     mTx.Nonce,
@@ -635,7 +635,6 @@ func (s *bridgeService) GetMonitoredTxsByStatus(ctx context.Context, req *pb.Get
 			Gas:       mTx.Gas,
 			GasPrice:  mTx.GasPrice.String(),
 			Status:    string(mTx.Status),
-			BlockId:   mTx.BlockID,
 			CreatedAt: uint64(mTx.CreatedAt.UnixMilli()),
 			UpdatedAt: uint64(mTx.UpdatedAt.UnixMilli()),
 		}
