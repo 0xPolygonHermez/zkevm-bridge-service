@@ -185,21 +185,21 @@ func (s *ClientSynchronizer) Stop() {
 }
 
 func (s *ClientSynchronizer) syncTrustedState() error {
-	lastBatchNumber, err := s.zkEVMClient.BatchNumber(s.ctx)
+	lastBlockNumber, err := s.zkEVMClient.BlockNumber(s.ctx)
 	if err != nil {
-		log.Errorf("networkID: %d, error getting latest batch number from rpc. Error: %v", s.networkID, err)
+		log.Errorf("networkID: %d, error getting latest block number from rpc. Error: %v", s.networkID, err)
 		return err
 	}
-	lastBatch, err := s.zkEVMClient.BatchByNumber(s.ctx, big.NewInt(0).SetUint64(lastBatchNumber))
+	lastBlock, err := s.zkEVMClient.BlockByNumber(s.ctx, big.NewInt(0).SetUint64(lastBlockNumber))
 	if err != nil {
-		log.Warnf("networkID: %d, failed to get batch %v from trusted state. Error: %v", s.networkID, lastBatchNumber, err)
+		log.Warnf("networkID: %d, failed to get block %v from trusted state. Error: %v", s.networkID, lastBlockNumber, err)
 		return err
 	}
 	ger := &etherman.GlobalExitRoot{
-		GlobalExitRoot: lastBatch.GlobalExitRoot,
+		GlobalExitRoot: lastBlock.GlobalExitRoot,
 		ExitRoots: []common.Hash{
-			lastBatch.MainnetExitRoot,
-			lastBatch.RollupExitRoot,
+			lastBlock.MainnetExitRoot,
+			lastBlock.RollupExitRoot,
 		},
 	}
 	isUpdated, err := s.storage.AddTrustedGlobalExitRoot(s.ctx, ger, nil)
