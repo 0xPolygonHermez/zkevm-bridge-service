@@ -1,4 +1,4 @@
-# X1 Bridge service
+# x1 Bridge service
 
 This repo implements a backend service written in Go, that enables clients, like the [web UI](),
 to interact with the [bridge smart contract](https://github.com/okx/X1-contracts) by providing Merkleproofs.
