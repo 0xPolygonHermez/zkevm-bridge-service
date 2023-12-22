@@ -195,10 +195,18 @@ func (s *ClientSynchronizer) syncTrustedState() error {
 		log.Warnf("networkID: %d, failed to get block %v from trusted state. Error: %v", s.networkID, lastBlockNumber, err)
 		return err
 	}
+	if lastBlock.GlobalExitRoot == (common.Hash{}) {
+		log.Debugf("networkID: %d, syncTrustedState: skipping GlobalExitRoot because there is no result", s.networkID)
+		return nil
+	}
 	exitRoots, err := s.zkEVMClient.ExitRootsByGER(s.ctx, lastBlock.GlobalExitRoot)
 	if err != nil {
 		log.Warnf("networkID: %d, failed to get block %v from trusted state. Error: %v", s.networkID, lastBlockNumber, err)
 		return err
+	}
+	if exitRoots == nil {
+		log.Debugf("networkID: %d, syncTrustedState: skipping exitRoots because there is no result", s.networkID)
+		return nil
 	}
 	
 	ger := &etherman.GlobalExitRoot{
