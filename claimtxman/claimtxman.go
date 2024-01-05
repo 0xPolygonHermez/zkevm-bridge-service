@@ -206,8 +206,8 @@ func (tm *ClaimTxManager) getDeposits(ger *etherman.GlobalExitRoot) ([]*etherman
 	return deposits, nil
 }
 
-func (tm *ClaimTxManager) processDepositStatusL1(ger *etherman.GlobalExitRoot) error {
-	deposits, err := tm.getDeposits(ger)
+func (tm *ClaimTxManager) processDepositStatusL1(newGer *etherman.GlobalExitRoot) error {
+	deposits, err := tm.getDeposits(newGer)
 	if err != nil {
 		return err
 	}
@@ -218,13 +218,19 @@ func (tm *ClaimTxManager) processDepositStatusL1(ger *etherman.GlobalExitRoot) e
 		if err != nil {
 			return err
 		}
+		err = tm.storage.UpdateL1DepositStatus(tm.ctx, deposit.DepositCount, newGer.Time, dbTx)
+		if err != nil {
+			log.Errorf("error update deposit %d status. Error: %v", deposit.DepositCount, err)
+			tm.rollbackStore(dbTx)
+			return err
+		}
 		claimHash, err := tm.bridgeService.GetDepositStatus(tm.ctx, deposit.DepositCount, deposit.DestinationNetwork)
 		if err != nil {
 			log.Errorf("error getting deposit status for deposit %d. Error: %v", deposit.DepositCount, err)
 			tm.rollbackStore(dbTx)
 			return err
 		}
-		if len(claimHash) > 0 || deposit.LeafType == LeafTypeMessage {
+		if len(claimHash) > 0 || (deposit.LeafType == LeafTypeMessage && !tm.isDepositMessageAllowed(deposit)) {
 			log.Infof("Ignoring deposit: %d, leafType: %d, claimHash: %s", deposit.DepositCount, deposit.LeafType, claimHash)
 			continue
 		}
@@ -254,13 +260,6 @@ func (tm *ClaimTxManager) processDepositStatusL1(ger *etherman.GlobalExitRoot) e
 		}
 		if err = tm.addClaimTx(deposit.DepositCount, tm.auth.From, tx.To(), nil, tx.Data(), dbTx); err != nil {
 			log.Errorf("error adding claim tx for deposit %d. Error: %v", deposit.DepositCount, err)
-			tm.rollbackStore(dbTx)
-			return err
-		}
-
-		err = tm.storage.UpdateL1DepositStatus(tm.ctx, deposit.DepositCount, ger.Time, dbTx)
-		if err != nil {
-			log.Errorf("error update deposit %d status. Error: %v", deposit.DepositCount, err)
 			tm.rollbackStore(dbTx)
 			return err
 		}
@@ -309,7 +308,7 @@ func (tm *ClaimTxManager) processDepositStatus(ger *etherman.GlobalExitRoot, dbT
 				log.Errorf("error getting deposit status for deposit %d. Error: %v", deposit.DepositCount, err)
 				return err
 			}
-			if len(claimHash) > 0 || deposit.LeafType == LeafTypeMessage && !tm.isDepositMessageAllowed(deposit) {
+			if len(claimHash) > 0 || (deposit.LeafType == LeafTypeMessage && !tm.isDepositMessageAllowed(deposit)) {
 				log.Infof("Ignoring deposit: %d, leafType: %d, claimHash: %s, deposit.OriginalAddress: %s", deposit.DepositCount, deposit.LeafType, claimHash, deposit.OriginalAddress.String())
 				continue
 			}
