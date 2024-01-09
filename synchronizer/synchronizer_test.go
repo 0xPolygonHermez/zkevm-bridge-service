@@ -132,8 +132,9 @@ func TestSyncGer(t *testing.T) {
 			Return(&blocks[0].GlobalExitRoots[0], nil).
 			Once()
 
+		g := common.HexToHash("0xb14c74e4dddf25627a745f46cae6ac98782e2783c3ccc28107c8210e60d58861")
 		rpcResponse := &rpcTypes.Block{
-			GlobalExitRoot:  common.HexToHash("0xb14c74e4dddf25627a745f46cae6ac98782e2783c3ccc28107c8210e60d58861"),
+			GlobalExitRoot: &g,
 		}
 		m.ZkEVMClient.
 			On("BlockNumber", ctx).
@@ -155,7 +156,7 @@ func TestSyncGer(t *testing.T) {
 			Once()
 
 		ger := &etherman.GlobalExitRoot{
-			GlobalExitRoot: rpcResponse.GlobalExitRoot,
+			GlobalExitRoot: *rpcResponse.GlobalExitRoot,
 			ExitRoots: []common.Hash{
 				exitRootResponse.MainnetExitRoot,
 				exitRootResponse.RollupExitRoot,

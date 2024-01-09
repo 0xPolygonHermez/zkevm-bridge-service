@@ -34,7 +34,7 @@ type ClientSynchronizer struct {
 	chSynced         chan uint
 	zkEVMClient      zkEVMClientInterface
 	synced           bool
-	isLxLy           bool
+	isLxLyEtrog      bool
 	l1RollupExitRoot common.Hash
 }
 
@@ -66,11 +66,11 @@ func NewSynchronizer(
 	// Read db to see if the LxLy is already activated
 	isActivated, err := storage.(storageInterface).IsLxLyActivated(ctx, nil)
 	if err != nil {
-		log.Fatal("error checking id LxLy is activated. Error: ", err)
+		log.Fatal("error checking if LxLyEtrog is activated. Error: ", err)
 	}
 	if networkID == 0 {
 		return &ClientSynchronizer{
-			isLxLy:           isActivated,
+			isLxLyEtrog:      isActivated,
 			bridgeCtrl:       bridge,
 			storage:          storage.(storageInterface),
 			etherMan:         ethMan,
@@ -86,6 +86,7 @@ func NewSynchronizer(
 		}, nil
 	}
 	return &ClientSynchronizer{
+		isLxLyEtrog:    isActivated,
 		bridgeCtrl:     bridge,
 		storage:        storage.(storageInterface),
 		etherMan:       ethMan,
@@ -128,6 +129,13 @@ func (s *ClientSynchronizer) Sync() error {
 			return nil
 		case <-time.After(waitDuration):
 			log.Debugf("NetworkID: %d, syncing...", s.networkID)
+			if !s.isLxLyEtrog {
+				// Read db to see if the LxLy is already activated
+				s.isLxLyEtrog, err = s.storage.IsLxLyActivated(s.ctx, nil)
+				if err != nil {
+					log.Fatal("error checking if LxLyEtrog is activated. Error: ", err)
+				}
+			}
 			//Sync L1Blocks
 			if lastBlockSynced, err = s.syncBlocks(lastBlockSynced); err != nil {
 				log.Warnf("networkID: %d, error syncing blocks: %v", s.networkID, err)
@@ -195,11 +203,11 @@ func (s *ClientSynchronizer) syncTrustedState() error {
 		log.Warnf("networkID: %d, failed to get block %v from trusted state. Error: %v", s.networkID, lastBlockNumber, err)
 		return err
 	}
-	if lastBlock.GlobalExitRoot == (common.Hash{}) {
+	if lastBlock.GlobalExitRoot == nil || (lastBlock.GlobalExitRoot != nil && *lastBlock.GlobalExitRoot == (common.Hash{})) {
 		log.Debugf("networkID: %d, syncTrustedState: skipping GlobalExitRoot because there is no result", s.networkID)
 		return nil
 	}
-	exitRoots, err := s.zkEVMClient.ExitRootsByGER(s.ctx, lastBlock.GlobalExitRoot)
+	exitRoots, err := s.zkEVMClient.ExitRootsByGER(s.ctx, *lastBlock.GlobalExitRoot)
 	if err != nil {
 		log.Warnf("networkID: %d, failed to get block %v from trusted state. Error: %v", s.networkID, lastBlockNumber, err)
 		return err
@@ -210,7 +218,7 @@ func (s *ClientSynchronizer) syncTrustedState() error {
 	}
 	
 	ger := &etherman.GlobalExitRoot{
-		GlobalExitRoot: lastBlock.GlobalExitRoot,
+		GlobalExitRoot: *lastBlock.GlobalExitRoot,
 		ExitRoots: []common.Hash{
 			exitRoots.MainnetExitRoot,
 			exitRoots.RollupExitRoot,
@@ -365,6 +373,11 @@ func (s *ClientSynchronizer) processBlockRange(blocks []etherman.Block, order ma
 				}
 			case etherman.VerifyBatchOrder:
 				err = s.processVerifyBatch(blocks[i].VerifiedBatches[element.Pos], blockID, dbTx)
+				if err != nil {
+					return err
+				}
+			case etherman.ActivateEtrogOrder:
+				s.activateLxLyEtrog()
 				if err != nil {
 					return err
 				}
@@ -529,9 +542,6 @@ func (s *ClientSynchronizer) checkReorg(latestBlock *etherman.Block) (*etherman.
 }
 
 func (s *ClientSynchronizer) processVerifyBatch(verifyBatch etherman.VerifiedBatch, blockID uint64, dbTx pgx.Tx) error {
-	if !s.isLxLy { // this is activated when the bridge detects the first VerifyBatch from the rollupManager
-		s.isLxLy = true
-	}
 	if verifyBatch.RollupID == s.etherMan.GetRollupID()-1 {
 		// Just check that the calculated RollupExitRoot is fine
 		network, err := s.bridgeCtrl.GetNetworkID(s.networkID)
@@ -669,4 +679,9 @@ func (s *ClientSynchronizer) processTokenWrapped(tokenWrapped etherman.TokenWrap
 		return err
 	}
 	return nil
+}
+
+func (s *ClientSynchronizer) activateLxLyEtrog() {
+	// this is activated when the bridge detects the CreateNewRollup or the AddExistingRollup event from the rollupManager
+	s.isLxLyEtrog = true
 }
