@@ -151,7 +151,7 @@ func TestSyncGer(t *testing.T) {
 			RollupExitRoot:  common.HexToHash("0xd14c74e4dddf25627a745f46cae6ac98782e2783c3ccc28107c8210e60d58863"),
 		}
 		m.ZkEVMClient.
-			On("ExitRootsByGER", ctx, rpcResponse.GlobalExitRoot).
+			On("ExitRootsByGER", ctx, *rpcResponse.GlobalExitRoot).
 			Return(exitRootResponse, nil).
 			Once()
 

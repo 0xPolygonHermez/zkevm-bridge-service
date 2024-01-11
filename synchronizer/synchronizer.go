@@ -216,7 +216,6 @@ func (s *ClientSynchronizer) syncTrustedState() error {
 		log.Debugf("networkID: %d, syncTrustedState: skipping exitRoots because there is no result", s.networkID)
 		return nil
 	}
-	
 	ger := &etherman.GlobalExitRoot{
 		GlobalExitRoot: *lastBlock.GlobalExitRoot,
 		ExitRoots: []common.Hash{
