@@ -18,8 +18,8 @@ import (
 )
 
 var (
-	l1BridgeAddr = common.HexToAddress("0xaAE872C70944D40001755C3EAaE53bC4E1A78bD0")
-	l2BridgeAddr = common.HexToAddress("0xaAE872C70944D40001755C3EAaE53bC4E1A78bD0")
+	l1BridgeAddr = common.HexToAddress("0xCca6ECD73932e49633B9307e1aa0fC174525F424")
+	l2BridgeAddr = common.HexToAddress("0xCca6ECD73932e49633B9307e1aa0fC174525F424")
 )
 
 // TestE2E tests the flow of deposit and withdraw funds using the vector

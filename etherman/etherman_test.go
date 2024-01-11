@@ -194,13 +194,13 @@ func TestVerifyBatchEvent(t *testing.T) {
 	require.NoError(t, err)
 
 	rawTxs := "f84901843b9aca00827b0c945fbdb2315678afecb367f032d93f642f64180aa380a46057361d00000000000000000000000000000000000000000000000000000000000000048203e9808073efe1fa2d3e27f26f32208550ea9b0274d49050b816cadab05a771f4275d0242fd5d92b3fb89575c070e6c930587c520ee65a3aa8cfe382fcad20421bf51d621c"
-	tx := polygonzkevm.PolygonRollupBaseBatchData{
-		GlobalExitRoot:     common.Hash{},
-		Timestamp:          initBlock.Time(),
-		MinForcedTimestamp: 0,
-		Transactions:       common.Hex2Bytes(rawTxs),
+	tx := polygonzkevm.PolygonRollupBaseEtrogBatchData{
+		ForcedGlobalExitRoot: common.Hash{},
+		ForcedBlockHashL1:    common.Hash{},
+		ForcedTimestamp:      0,
+		Transactions:         common.Hex2Bytes(rawTxs),
 	}
-	_, err = zkevm.SequenceBatches(auth, []polygonzkevm.PolygonRollupBaseBatchData{tx}, auth.From)
+	_, err = zkevm.SequenceBatches(auth, []polygonzkevm.PolygonRollupBaseEtrogBatchData{tx}, auth.From)
 	require.NoError(t, err)
 
 	// Mine the tx in a block

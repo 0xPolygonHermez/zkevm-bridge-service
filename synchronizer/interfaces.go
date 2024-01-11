@@ -47,6 +47,7 @@ type bridgectrlInterface interface {
 }
 
 type zkEVMClientInterface interface {
-	BatchNumber(ctx context.Context) (uint64, error)
-	BatchByNumber(ctx context.Context, number *big.Int) (*rpcTypes.Batch, error)
+	BlockNumber(ctx context.Context) (uint64, error)
+	BlockByNumber(ctx context.Context, number *big.Int) (*rpcTypes.Block, error)
+	ExitRootsByGER(ctx context.Context, globalExitRoot common.Hash) (*rpcTypes.ExitRoots, error)
 }

@@ -87,6 +87,8 @@ const (
 	TokensOrder EventOrder = "TokenWrapped"
 	// VerifyBatchOrder identifies a VerifyBatch event
 	VerifyBatchOrder EventOrder = "VerifyBatch"
+	// ActivateEtrogOrder identifies the event to activate etrog
+	ActivateEtrogOrder EventOrder = "etrog"
 )
 
 type ethClienter interface {
@@ -276,11 +278,9 @@ func (etherMan *Client) processEvent(ctx context.Context, vLog types.Log, blocks
 		log.Debug("UpdateRollup event detected")
 		return nil
 	case addExistingRollupSignatureHash:
-		log.Debug("AddExistingRollup event detected")
-		return nil
+		return etherMan.AddExistingRollupEvent(ctx, vLog, blocks, blocksOrder)
 	case createNewRollupSignatureHash:
-		log.Debug("CreateNewRollup event detected")
-		return nil
+		return etherMan.createNewRollupEvent(ctx, vLog, blocks, blocksOrder)
 	case obsoleteRollupTypeSignatureHash:
 		log.Debug("ObsoleteRollupType event detected")
 		return nil
@@ -312,16 +312,16 @@ func (etherMan *Client) processEvent(ctx context.Context, vLog types.Log, blocks
 
 func (etherMan *Client) updateGlobalExitRootEvent(ctx context.Context, vLog types.Log, blocks *[]Block, blocksOrder *map[common.Hash][]Order) error {
 	log.Debug("UpdateGlobalExitRoot event detected. Processing...")
-	globalExitRoot, err := etherMan.PolygonZkEVMGlobalExitRoot.ParseUpdateGlobalExitRoot(vLog)
-	if err != nil {
-		return err
-	}
-	return etherMan.processUpdateGlobalExitRootEvent(ctx, globalExitRoot.MainnetExitRoot, globalExitRoot.RollupExitRoot, vLog, blocks, blocksOrder)
+	return etherMan.processUpdateGlobalExitRootEvent(ctx, vLog.Topics[1], vLog.Topics[2], vLog, blocks, blocksOrder)
 }
 
 func (etherMan *Client) updateL1InfoTreeEvent(ctx context.Context, vLog types.Log, blocks *[]Block, blocksOrder *map[common.Hash][]Order) error {
 	log.Debug("UpdateL1InfoTree event detected")
-	return etherMan.processUpdateGlobalExitRootEvent(ctx, vLog.Topics[1], vLog.Topics[2], vLog, blocks, blocksOrder)
+	globalExitRoot, err := etherMan.PolygonZkEVMGlobalExitRoot.ParseUpdateL1InfoTree(vLog)
+	if err != nil {
+		return err
+	}
+	return etherMan.processUpdateGlobalExitRootEvent(ctx, globalExitRoot.MainnetExitRoot, globalExitRoot.RollupExitRoot, vLog, blocks, blocksOrder)
 }
 
 func (etherMan *Client) processUpdateGlobalExitRootEvent(ctx context.Context, mainnetExitRoot, rollupExitRoot common.Hash, vLog types.Log, blocks *[]Block, blocksOrder *map[common.Hash][]Order) error {
@@ -616,4 +616,68 @@ func GenerateGlobalIndex(mainnetFlag bool, rollupIndex uint, localExitRootIndex 
 	leri := big.NewInt(0).SetUint64(uint64(localExitRootIndex)).FillBytes(buf[:])
 	globalIndexBytes = append(globalIndexBytes, leri...)
 	return big.NewInt(0).SetBytes(globalIndexBytes)
+}
+
+func (etherMan *Client) createNewRollupEvent(ctx context.Context, vLog types.Log, blocks *[]Block, blocksOrder *map[common.Hash][]Order) error {
+	log.Debug("CreateNewRollup event detected. Processing...")
+	rollup, err := etherMan.PolygonRollupManager.ParseCreateNewRollup(vLog)
+	if err != nil {
+		return err
+	}
+	if rollup.RollupID != etherMan.RollupID {
+		return nil
+	}
+
+	if len(*blocks) == 0 || ((*blocks)[len(*blocks)-1].BlockHash != vLog.BlockHash || (*blocks)[len(*blocks)-1].BlockNumber != vLog.BlockNumber) {
+		fullBlock, err := etherMan.EtherClient.BlockByHash(ctx, vLog.BlockHash)
+		if err != nil {
+			return fmt.Errorf("error getting hashParent. BlockNumber: %d. Error: %v", vLog.BlockNumber, err)
+		}
+		block := prepareBlock(vLog, time.Unix(int64(fullBlock.Time()), 0), fullBlock)
+		block.ActivateEtrog = append(block.ActivateEtrog, true)
+		*blocks = append(*blocks, block)
+	} else if (*blocks)[len(*blocks)-1].BlockHash == vLog.BlockHash && (*blocks)[len(*blocks)-1].BlockNumber == vLog.BlockNumber {
+		(*blocks)[len(*blocks)-1].ActivateEtrog = append((*blocks)[len(*blocks)-1].ActivateEtrog, true)
+	} else {
+		log.Error("Error processing TokenWrapped event. BlockHash:", vLog.BlockHash, ". BlockNumber: ", vLog.BlockNumber)
+		return fmt.Errorf("error processing TokenWrapped event")
+	}
+	or := Order{
+		Name: ActivateEtrogOrder,
+		Pos:  len((*blocks)[len(*blocks)-1].ActivateEtrog) - 1,
+	}
+	(*blocksOrder)[(*blocks)[len(*blocks)-1].BlockHash] = append((*blocksOrder)[(*blocks)[len(*blocks)-1].BlockHash], or)
+	return nil
+}
+
+func (etherMan *Client) AddExistingRollupEvent(ctx context.Context, vLog types.Log, blocks *[]Block, blocksOrder *map[common.Hash][]Order) error {
+	log.Debug("AddExistingRollup event detected. Processing...")
+	rollup, err := etherMan.PolygonRollupManager.ParseAddExistingRollup(vLog)
+	if err != nil {
+		return err
+	}
+	if rollup.RollupID != etherMan.RollupID {
+		return nil
+	}
+
+	if len(*blocks) == 0 || ((*blocks)[len(*blocks)-1].BlockHash != vLog.BlockHash || (*blocks)[len(*blocks)-1].BlockNumber != vLog.BlockNumber) {
+		fullBlock, err := etherMan.EtherClient.BlockByHash(ctx, vLog.BlockHash)
+		if err != nil {
+			return fmt.Errorf("error getting hashParent. BlockNumber: %d. Error: %v", vLog.BlockNumber, err)
+		}
+		block := prepareBlock(vLog, time.Unix(int64(fullBlock.Time()), 0), fullBlock)
+		block.ActivateEtrog = append(block.ActivateEtrog, true)
+		*blocks = append(*blocks, block)
+	} else if (*blocks)[len(*blocks)-1].BlockHash == vLog.BlockHash && (*blocks)[len(*blocks)-1].BlockNumber == vLog.BlockNumber {
+		(*blocks)[len(*blocks)-1].ActivateEtrog = append((*blocks)[len(*blocks)-1].ActivateEtrog, true)
+	} else {
+		log.Error("Error processing TokenWrapped event. BlockHash:", vLog.BlockHash, ". BlockNumber: ", vLog.BlockNumber)
+		return fmt.Errorf("error processing TokenWrapped event")
+	}
+	or := Order{
+		Name: ActivateEtrogOrder,
+		Pos:  len((*blocks)[len(*blocks)-1].ActivateEtrog) - 1,
+	}
+	(*blocksOrder)[(*blocks)[len(*blocks)-1].BlockHash] = append((*blocksOrder)[(*blocks)[len(*blocks)-1].BlockHash], or)
+	return nil
 }
