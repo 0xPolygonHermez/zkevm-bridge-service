@@ -380,7 +380,7 @@ func (s *ClientSynchronizer) processBlockRange(ctx context.Context, blocks []eth
 					return err
 				}
 			case etherman.VerifyBatchOrder:
-				err = s.processVerifyBatch(blocks[i].VerifiedBatches[element.Pos], blockID, dbTx)
+				err = s.processVerifyBatch(ctx, blocks[i].VerifiedBatches[element.Pos], blockID, dbTx)
 				if err != nil {
 					return err
 				}
