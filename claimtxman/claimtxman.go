@@ -233,6 +233,18 @@ func (tm *ClaimTxManager) processDepositStatusL1(newGer *etherman.GlobalExitRoot
 		}
 		if len(claimHash) > 0 || (deposit.LeafType == LeafTypeMessage && !tm.isDepositMessageAllowed(deposit)) {
 			log.Infof("Ignoring deposit: %d, leafType: %d, claimHash: %s", deposit.DepositCount, deposit.LeafType, claimHash)
+			// todo: optimize it
+			err = tm.storage.Commit(tm.ctx, dbTx)
+			if err != nil {
+				log.Errorf("AddClaimTx committing dbTx. Err: %v", err)
+				rollbackErr := tm.storage.Rollback(tm.ctx, dbTx)
+				if rollbackErr != nil {
+					log.Fatalf("claimtxman error rolling back state. RollbackErr: %s, err: %s", rollbackErr.Error(), err.Error())
+					return rollbackErr
+				}
+				log.Fatalf("AddClaimTx committing dbTx, err: %s", err.Error())
+				return err
+			}
 			continue
 		}
 		log.Infof("create the claim tx for the deposit %d", deposit.DepositCount)
