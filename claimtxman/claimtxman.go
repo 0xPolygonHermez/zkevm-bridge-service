@@ -168,7 +168,7 @@ func (tm *ClaimTxManager) processDepositStatus(ctx context.Context, ger *etherma
 				continue
 			}
 			logger.Infof("create the claim tx for the deposit %d", deposit.DepositCount)
-			ger, proof, rollupProof, err := tm.bridgeService.GetClaimProof(deposit.DepositCount, deposit.NetworkID, dbTx)
+			ger, proof, rollupProof, err := tm.bridgeService.GetClaimProof(ctx, deposit.DepositCount, deposit.NetworkID, dbTx)
 			if err != nil {
 				logger.Errorf("error getting Claim Proof for deposit %d. Error: %v", deposit.DepositCount, err)
 				return err
