@@ -106,9 +106,9 @@ func (tm *ClaimTxManager) Start() {
 				logger.Infof("Waiting for networkID %d to be synced before processing deposits", tm.l2NetworkID)
 			}
 		case <-ticker.C:
-			err := tm.monitorTxs(tm.ctx)
+			err := tm.monitorTxs(ctx)
 			if err != nil {
-				log.Errorf("failed to monitor txs: %v", err)
+				logger.Errorf("failed to monitor txs: %v", err)
 			}
 		}
 	}
@@ -286,18 +286,19 @@ func (tm *ClaimTxManager) monitorTxs(ctx context.Context) error {
 		logger.Errorf("failed to get created monitored txs: %v", err)
 		rollbackErr := tm.storage.Rollback(ctx, dbTx)
 		if rollbackErr != nil {
-			log.Errorf("claimtxman error rolling back state. RollbackErr: %s, err: %v", rollbackErr.Error(), err)
+			logger.Errorf("claimtxman error rolling back state. RollbackErr: %s, err: %v", rollbackErr.Error(), err)
 			return rollbackErr
 		}
 		return fmt.Errorf("failed to get created monitored txs: %v", err)
 	}
 
 	isResetNonce := false // it will reset the nonce in one cycle
-	log.Infof("found %v monitored tx to process", len(mTxs))
+	logger.Infof("found %v monitored tx to process", len(mTxs))
 	for _, mTx := range mTxs {
 		mTx := mTx // force variable shadowing to avoid pointer conflicts
 		mTxLog := logger.WithFields("monitoredTx", mTx.DepositID)
 		mTxLog.Infof("processing tx with nonce %d", mTx.Nonce)
+		ctx := log.CtxWithLogger(ctx, mTxLog)
 
 		// check if any of the txs in the history was mined
 		mined := false
@@ -471,7 +472,7 @@ func (tm *ClaimTxManager) monitorTxs(ctx context.Context) error {
 		logger.Errorf("UpdateClaimTx committing dbTx, err: %v", err)
 		rollbackErr := tm.storage.Rollback(ctx, dbTx)
 		if rollbackErr != nil {
-			log.Errorf("claimtxman error rolling back state. RollbackErr: %s, err: %v", rollbackErr.Error(), err)
+			logger.Errorf("claimtxman error rolling back state. RollbackErr: %s, err: %v", rollbackErr.Error(), err)
 			return rollbackErr
 		}
 		return err
