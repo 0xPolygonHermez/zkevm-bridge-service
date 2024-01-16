@@ -27,10 +27,15 @@ func GenerateTraceID() string {
 	return generateRandomString(traceIDLen)
 }
 
-// LoggerWithRandomTraceID returns a wrapping logger with a random trace id
-func LoggerWithRandomTraceID(logger *log.Logger) *log.Logger {
+// LoggerWithTraceID returns a wrapping logger with a specific trace id
+func LoggerWithTraceID(logger *log.Logger, traceID string) *log.Logger {
 	if logger == nil {
 		logger = log.GetDefaultLog()
 	}
-	return logger.WithFields(TraceID, GenerateTraceID())
+	return logger.WithFields(TraceID, traceID)
+}
+
+// LoggerWithRandomTraceID returns a wrapping logger with a random trace id
+func LoggerWithRandomTraceID(logger *log.Logger) *log.Logger {
+	return LoggerWithTraceID(logger, GenerateTraceID())
 }
