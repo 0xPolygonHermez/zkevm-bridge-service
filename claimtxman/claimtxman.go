@@ -61,6 +61,8 @@ func NewClaimTxManager(cfg Config, chExitRootEvent chan *etherman.GlobalExitRoot
 	}
 	ctx, cancel := context.WithCancel(ctx)
 	auth, err := client.GetSignerFromKeystore(ctx, cfg.PrivateKey)
+	logger := log.WithFields("component", fmt.Sprintf("claimtxman_%v", l2NetworkID))
+	ctx = log.CtxWithLogger(ctx, logger)
 	return &ClaimTxManager{
 		ctx:             ctx,
 		cancel:          cancel,
