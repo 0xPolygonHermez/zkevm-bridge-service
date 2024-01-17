@@ -11,6 +11,7 @@ import (
 	"github.com/0xPolygonHermez/zkevm-bridge-service/coinmiddleware"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/db"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/messagepush"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/nacos"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/server"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/synchronizer"
@@ -21,14 +22,15 @@ import (
 
 // Config struct
 type Config struct {
-	Log               log.Config
-	SyncDB            db.Config
-	ClaimTxManager    claimtxman.Config
-	Etherman          etherman.Config
-	Synchronizer      synchronizer.Config
-	BridgeController  bridgectrl.Config
-	BridgeServer      server.Config
-	CoinKafkaConsumer coinmiddleware.Config
+	Log                 log.Config
+	SyncDB              db.Config
+	ClaimTxManager      claimtxman.Config
+	Etherman            etherman.Config
+	Synchronizer        synchronizer.Config
+	BridgeController    bridgectrl.Config
+	BridgeServer        server.Config
+	CoinKafkaConsumer   coinmiddleware.Config
+	MessagePushProducer messagepush.Config
 	NetworkConfig
 	NacosConfig nacos.Config
 }

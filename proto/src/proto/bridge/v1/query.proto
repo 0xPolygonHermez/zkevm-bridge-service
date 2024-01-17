@@ -108,6 +108,22 @@ service BridgeService {
             get: "/estimate-time",
         };
     }
+
+    /// Return the messages from the fake producer, only for testing when UseFakeProducer is enabled
+    /// Return at most 100 latest messages, there's no offset management so client should handle duplications
+    rpc GetFakePushMessages(GetFakePushMessagesRequest) returns (GetFakePushMessagesResponse) {
+        option (google.api.http) = {
+            get: "/fake-push-messages/{topic}",
+        };
+    }
+}
+
+enum TransactionStatus {
+    TX_CREATED = 0;
+    TX_PENDING_USER_CLAIM = 1;
+    TX_CLAIMED = 2;
+    TX_PENDING_AUTO_CLAIM = 3; // Only for L1->L2
+    TX_PENDING_VERIFICATION = 4; // Only for L2->L1
 }
 
 // TokenWrapped message
@@ -189,7 +205,7 @@ message Transaction {
     string bridgeToken = 3;
     string tokenAmount = 4;
     uint32 estimateTime = 5;
-    uint32 status = 6; // 0: cannot claim; 1: pending & not claimed; 2; claimed
+    uint32 status = 6; // Enum: TransactionStatus
     uint64 time = 7; // Deposit's block time
     string txHash = 8; // Deposit tx hash
     string claimTxHash = 9;
@@ -199,6 +215,8 @@ message Transaction {
     uint64 id = 13;
     uint64 index = 14;
     string metadata = 15;
+    string destAddr = 16;
+    uint64 blockNumber = 17;
 }
 
 // Monitored tx
@@ -281,6 +299,10 @@ message GetMonitoredTxsByStatusRequest {
 }
 
 message GetEstimateTimeRequest {}
+
+message GetFakePushMessagesRequest {
+    string topic = 1;
+}
 
 // Get responses
 
@@ -399,4 +421,13 @@ message CommonEstimateTimeResponse {
     string error_message = 4;
     string detailMsg = 5;
     repeated uint32 data = 6; // Has 2 numbers which are the estimate time of L1 and L2
+}
+
+message GetFakePushMessagesResponse {
+    uint32 code = 1;
+    string msg = 2;
+    string error_code = 3;
+    string error_message = 4;
+    string detailMsg = 5;
+    repeated string data = 6;
 }

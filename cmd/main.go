@@ -47,8 +47,29 @@ func main() {
 		{
 			Name:    "run",
 			Aliases: []string{},
-			Usage:   "Run the zkevm bridge",
-			Action:  startServer,
+			Usage:   "Run the x1 bridge, including API, synchronizer, claimtxman, kafka consumer, etc.",
+			Action:  runAll,
+			Flags:   flags,
+		},
+		{
+			Name:    "runAPI",
+			Aliases: []string{},
+			Usage:   "Run the x1 bridge API server",
+			Action:  runAPI,
+			Flags:   flags,
+		},
+		{
+			Name:    "runTask",
+			Aliases: []string{},
+			Usage:   "Run the x1 bridge tasks, including synchronizer, claimtxman, kafka consumer",
+			Action:  runTask,
+			Flags:   flags,
+		},
+		{
+			Name:    "runPushTask",
+			Aliases: []string{},
+			Usage:   "Run the x1 bridge push tasks (monitor the block/batch number and push change event to FE)",
+			Action:  runPushTask,
 			Flags:   flags,
 		},
 	}

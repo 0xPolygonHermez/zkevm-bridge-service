@@ -241,9 +241,11 @@ func (etherMan *Client) depositEvent(ctx context.Context, vLog types.Log, blocks
 			return fmt.Errorf("error getting hashParent. BlockNumber: %d. Error: %w", vLog.BlockNumber, err)
 		}
 		block := prepareBlock(vLog, time.Unix(int64(fullBlock.Time()), 0), fullBlock)
+		deposit.Time = block.ReceivedAt
 		block.Deposits = append(block.Deposits, deposit)
 		*blocks = append(*blocks, block)
 	} else if (*blocks)[len(*blocks)-1].BlockHash == vLog.BlockHash && (*blocks)[len(*blocks)-1].BlockNumber == vLog.BlockNumber {
+		deposit.Time = (*blocks)[len(*blocks)-1].ReceivedAt
 		(*blocks)[len(*blocks)-1].Deposits = append((*blocks)[len(*blocks)-1].Deposits, deposit)
 	} else {
 		log.Error("Error processing deposit event. BlockHash:", vLog.BlockHash, ". BlockNumber: ", vLog.BlockNumber)
@@ -280,8 +282,10 @@ func (etherMan *Client) claimEvent(ctx context.Context, vLog types.Log, blocks *
 		}
 		block := prepareBlock(vLog, time.Unix(int64(fullBlock.Time()), 0), fullBlock)
 		block.Claims = append(block.Claims, claim)
+		claim.Time = block.ReceivedAt
 		*blocks = append(*blocks, block)
 	} else if (*blocks)[len(*blocks)-1].BlockHash == vLog.BlockHash && (*blocks)[len(*blocks)-1].BlockNumber == vLog.BlockNumber {
+		claim.Time = (*blocks)[len(*blocks)-1].ReceivedAt
 		(*blocks)[len(*blocks)-1].Claims = append((*blocks)[len(*blocks)-1].Claims, claim)
 	} else {
 		log.Error("Error processing claim event. BlockHash:", vLog.BlockHash, ". BlockNumber: ", vLog.BlockNumber)

@@ -2,10 +2,14 @@ package redisstorage
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/0xPolygonHermez/zkevm-bridge-service/bridgectrl/pb"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman"
 	"github.com/0xPolygonHermez/zkevm-node/log"
 	"github.com/pkg/errors"
 	"github.com/redis/go-redis/v9"
@@ -13,7 +17,26 @@ import (
 )
 
 const (
-	coinPriceHashKey = "bridge_coin_prices"
+	coinPriceHashKey         = "bridge_coin_prices"
+	l1BlockNumKey            = "bridge_l1_block_num"
+	l1BlockDepositListKey    = "bridge_block_deposits_%d_%d" // Params: networkID and block num
+	l1BlockDepositListExpiry = 24 * time.Hour
+
+	//batch info key
+	latestCommitBatchNumKey = "bridge_latest_commit_batch_num"
+	maxCommitBlockNumKey    = "bridge_max_commit_block_num"
+	avgCommitDurationKey    = "bridge_avg_commit_duration"
+	commitBatchTimeListKey  = "bridge_commit_batch_simple_info"
+	latestVerifyBatchNumKey = "bridge_latest_verify_batch_num"
+	avgVerifyDurationKey    = "bridge_avg_verify_duration"
+	verifyBatchTimeListKey  = "bridge_verify_batch_simple_info"
+	l2BlockCommitTimeKey    = "bridge_l2_block_commit_time_key_"
+
+	// Set a default expiration for locks to prevent a process from keeping the lock for too long
+	lockExpire = 1 * time.Minute
+
+	// time for 48 hour
+	durationFor48h = 48 * time.Hour
 )
 
 // redisStorageImpl implements RedisStorage interface
@@ -147,6 +170,248 @@ func (s *redisStorageImpl) GetCoinPrice(ctx context.Context, symbols []*pb.Symbo
 	return priceList, nil
 }
 
+func (s *redisStorageImpl) SetL1BlockNum(ctx context.Context, blockNum uint64) error {
+	if s == nil || s.client == nil {
+		return errors.New("redis client is nil")
+	}
+	err := s.client.Set(ctx, l1BlockNumKey, blockNum, 0).Err()
+	if err != nil {
+		return errors.Wrap(err, "SetL1BlockNum error")
+	}
+	return nil
+}
+
+func (s *redisStorageImpl) GetL1BlockNum(ctx context.Context) (uint64, error) {
+	if s == nil || s.client == nil {
+		return 0, errors.New("redis client is nil")
+	}
+	res, err := s.client.Get(ctx, l1BlockNumKey).Result()
+	if err != nil {
+		return 0, errors.Wrap(err, "GetL1BlockNum error")
+	}
+	num, err := strconv.ParseInt(res, 10, 64) //nolint:gomnd
+	return uint64(num), errors.Wrap(err, "GetL1BlockNum convert error")
+}
+
+func (s *redisStorageImpl) AddBlockDeposit(ctx context.Context, deposit *etherman.Deposit) error {
+	if s == nil || s.client == nil {
+		return errors.New("redis client is nil")
+	}
+	if deposit == nil {
+		return nil
+	}
+	// Encode to json
+	val, err := json.Marshal(deposit)
+	if err != nil {
+		return errors.Wrap(err, "json encode error")
+	}
+	key := getBlockDepositListKey(deposit.NetworkID, deposit.BlockNumber)
+	err = s.client.HSet(ctx, key, deposit.TxHash.String(), string(val)).Err()
+	if err != nil {
+		return errors.Wrap(err, "AddBlockDeposit HSet error")
+	}
+
+	// If add successfully, expire the list in 24 hours, no need to check for result
+	s.client.Expire(ctx, key, l1BlockDepositListExpiry)
+	return nil
+}
+
+func (s *redisStorageImpl) DeleteBlockDeposit(ctx context.Context, deposit *etherman.Deposit) error {
+	if s == nil || s.client == nil {
+		return errors.New("redis client is nil")
+	}
+	if deposit == nil {
+		return nil
+	}
+	key := getBlockDepositListKey(deposit.NetworkID, deposit.BlockNumber)
+	err := s.client.HDel(ctx, key, deposit.TxHash.String()).Err()
+	return errors.Wrap(err, "DeleteBlockDeposit HDel error")
+}
+
+func (s *redisStorageImpl) GetBlockDepositList(ctx context.Context, networkID uint, blockNum uint64) ([]*etherman.Deposit, error) {
+	if s == nil || s.client == nil {
+		return nil, errors.New("redis client is nil")
+	}
+
+	key := getBlockDepositListKey(networkID, blockNum)
+	res, err := s.client.HVals(ctx, key).Result()
+
+	if err != nil {
+		return nil, errors.Wrap(err, "GetBlockDeposits HVals error")
+	}
+
+	// Decode the deposit list
+	depositList := make([]*etherman.Deposit, len(res))
+	for i, s := range res {
+		deposit := &etherman.Deposit{}
+		err = json.Unmarshal([]byte(s), deposit)
+		if err != nil {
+			return nil, errors.Wrap(err, "GetBlockDeposits json decode error")
+		}
+		depositList[i] = deposit
+	}
+
+	return depositList, nil
+}
+
+func (s *redisStorageImpl) TryLock(ctx context.Context, lockKey string) (bool, error) {
+	if s == nil || s.client == nil {
+		return false, errors.New("redis client is nil")
+	}
+	success, err := s.client.SetNX(ctx, lockKey, true, lockExpire).Result()
+	return success, errors.Wrap(err, "TryLock error")
+}
+
+func (s *redisStorageImpl) ReleaseLock(ctx context.Context, lockKey string) error {
+	if s == nil || s.client == nil {
+		return errors.New("redis client is nil")
+	}
+	err := s.client.Del(ctx, lockKey).Err()
+	return errors.Wrap(err, "ReleaseLock error")
+}
+
+func (s *redisStorageImpl) SetCommitBatchNum(ctx context.Context, batchNum uint64) error {
+	return s.setFoundation(ctx, latestCommitBatchNumKey, batchNum, 0)
+}
+
+func (s *redisStorageImpl) GetCommitBatchNum(ctx context.Context) (uint64, error) {
+	return s.getIntCacheFoundation(ctx, latestCommitBatchNumKey)
+}
+
+func (s *redisStorageImpl) SetCommitMaxBlockNum(ctx context.Context, blockNum uint64) error {
+	return s.setFoundation(ctx, maxCommitBlockNumKey, blockNum, 0)
+}
+
+func (s *redisStorageImpl) GetCommitMaxBlockNum(ctx context.Context) (uint64, error) {
+	return s.getIntCacheFoundation(ctx, maxCommitBlockNumKey)
+}
+
+func (s *redisStorageImpl) SetAvgCommitDuration(ctx context.Context, duration int64) error {
+	return s.setFoundation(ctx, avgCommitDurationKey, duration, 0)
+}
+
+func (s *redisStorageImpl) SetL2BlockCommitTime(ctx context.Context, blockNum uint64, commitTimestamp int64) error {
+	key := s.buildL2BlockCommitTimeCacheKey(blockNum)
+	return s.setFoundation(ctx, key, commitTimestamp, durationFor48h)
+}
+func (s *redisStorageImpl) GetL2BlockCommitTime(ctx context.Context, blockNum uint64) (uint64, error) {
+	key := s.buildL2BlockCommitTimeCacheKey(blockNum)
+	return s.getIntCacheFoundation(ctx, key)
+}
+
+func (s *redisStorageImpl) buildL2BlockCommitTimeCacheKey(blockNum uint64) string {
+	return l2BlockCommitTimeKey + strconv.FormatUint(blockNum, 10)
+}
+
+func (s *redisStorageImpl) GetAvgCommitDuration(ctx context.Context) (uint64, error) {
+	return s.getIntCacheFoundation(ctx, avgCommitDurationKey)
+}
+
+func (s *redisStorageImpl) LPushCommitTime(ctx context.Context, commitTimeTimestamp int64) error {
+	return s.lPushFoundation(ctx, commitBatchTimeListKey, commitTimeTimestamp)
+}
+
+func (s *redisStorageImpl) LLenCommitTimeList(ctx context.Context) (int64, error) {
+	return s.lLenFoundation(ctx, commitBatchTimeListKey)
+}
+
+func (s *redisStorageImpl) RPopCommitTime(ctx context.Context) (int64, error) {
+	return s.rPopIntCacheFoundation(ctx, commitBatchTimeListKey)
+}
+
+func (s *redisStorageImpl) SetVerifyBatchNum(ctx context.Context, batchNum uint64) error {
+	return s.setFoundation(ctx, latestVerifyBatchNumKey, batchNum, 0)
+}
+
+func (s *redisStorageImpl) GetVerifyBatchNum(ctx context.Context) (uint64, error) {
+	return s.getIntCacheFoundation(ctx, latestVerifyBatchNumKey)
+}
+
+func (s *redisStorageImpl) SetAvgVerifyDuration(ctx context.Context, duration int64) error {
+	return s.setFoundation(ctx, avgVerifyDurationKey, duration, 0)
+}
+
+func (s *redisStorageImpl) GetAvgVerifyDuration(ctx context.Context) (uint64, error) {
+	return s.getIntCacheFoundation(ctx, avgVerifyDurationKey)
+}
+
+func (s *redisStorageImpl) LPushVerifyTime(ctx context.Context, commitTimeTimestamp int64) error {
+	return s.lPushFoundation(ctx, verifyBatchTimeListKey, commitTimeTimestamp)
+}
+
+func (s *redisStorageImpl) LLenVerifyTimeList(ctx context.Context) (int64, error) {
+	return s.lLenFoundation(ctx, verifyBatchTimeListKey)
+}
+
+func (s *redisStorageImpl) RPopVerifyTime(ctx context.Context) (int64, error) {
+	return s.rPopIntCacheFoundation(ctx, verifyBatchTimeListKey)
+}
+
+func (s *redisStorageImpl) setFoundation(ctx context.Context, key string, value interface{}, expiration time.Duration) error {
+	if s == nil || s.client == nil {
+		return errors.New("redis client is nil")
+	}
+	err := s.client.Set(ctx, key, value, expiration).Err()
+	if err != nil {
+		return errors.Wrap(err, fmt.Sprintf("set for key: %v error", key))
+	}
+	return nil
+}
+
+// todo: optimize adapt to all type
+func (s *redisStorageImpl) getIntCacheFoundation(ctx context.Context, key string) (uint64, error) {
+	if s == nil || s.client == nil {
+		return 0, errors.New("redis client is nil")
+	}
+	res, err := s.client.Get(ctx, key).Result()
+	if err != nil {
+		return 0, errors.Wrap(err, fmt.Sprintf("get redis cache for key: %v failed", key))
+	}
+	num, err := strconv.ParseInt(res, 10, 64)
+	if err != nil {
+		return 0, errors.Wrap(err, fmt.Sprintf("convert value for key: %v failed, value: %v", key, res))
+	}
+	return uint64(num), nil
+}
+
+func (s *redisStorageImpl) lPushFoundation(ctx context.Context, key string, values ...interface{}) error {
+	if s == nil || s.client == nil {
+		return errors.New("redis client is nil")
+	}
+	err := s.client.LPush(ctx, key, values).Err()
+	if err != nil {
+		return errors.Wrap(err, fmt.Sprintf("lPush redis cache for key: %v failed", key))
+	}
+	return nil
+}
+
+func (s *redisStorageImpl) lLenFoundation(ctx context.Context, key string) (int64, error) {
+	if s == nil || s.client == nil {
+		return 0, errors.New("redis client is nil")
+	}
+	res, err := s.client.LLen(ctx, key).Result()
+	if err != nil {
+		return 0, errors.Wrap(err, fmt.Sprintf("get redis list len for key: %v failed", key))
+	}
+	return res, nil
+}
+
+// todo: optimize adapt to all type
+func (s *redisStorageImpl) rPopIntCacheFoundation(ctx context.Context, key string) (int64, error) {
+	if s == nil || s.client == nil {
+		return 0, errors.New("redis client is nil")
+	}
+	res, err := s.client.RPop(ctx, key).Result()
+	if err != nil {
+		return 0, errors.Wrap(err, fmt.Sprintf("r-pop redis list item for key: %v, failed", key))
+	}
+	num, err := strconv.ParseInt(res, 10, 64)
+	if err != nil {
+		return 0, errors.Wrap(err, fmt.Sprintf("convert redis list item value for key: %v failed, value: %v", key, res))
+	}
+	return num, nil
+}
+
 func getCoinPriceKey(chainID uint64, tokenAddr string) string {
 	if tokenAddr == "" {
 		tokenAddr = "null"
@@ -163,4 +428,8 @@ func convertPricesToSymbols(prices []*pb.SymbolPrice) []*pb.SymbolInfo {
 		}
 	}
 	return result
+}
+
+func getBlockDepositListKey(networkID uint, blockNum uint64) string {
+	return fmt.Sprintf(l1BlockDepositListKey, networkID, blockNum)
 }

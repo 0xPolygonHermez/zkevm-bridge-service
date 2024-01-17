@@ -345,3 +345,61 @@ services:
       - "/bin/sh"
       - "-c"
       - "/app/x1-bridge run --cfg /app/config.toml"
+
+  x1-bridge-service-api:
+    container_name: x1-bridge-service-api
+    image: x1-bridge-service
+    ports:
+      - 8080:8080
+      - 9090:9090
+    environment:
+      - ZKEVM_BRIDGE_DATABASE_USER=test_user
+      - ZKEVM_BRIDGE_DATABASE_PASSWORD=test_password
+      - ZKEVM_BRIDGE_DATABASE_NAME=test_db
+      - ZKEVM_BRIDGE_DATABASE_HOST=x1-bridge-db
+      - ZKEVM_BRIDGE_DATABASE_PORT=5432
+    volumes:
+      - ./test/test.keystore.claimtx:/pk/keystore.claimtxmanager
+      - ./config/config.local.toml:/app/config.toml
+      - ./sentinel/config.json:/app/sentinel_config.json
+      - ./coinmiddleware/root-ca-cert:/app/root-ca-cert
+    command:
+      - "/bin/sh"
+      - "-c"
+      - "/app/x1-bridge runAPI --cfg /app/config.toml"
+
+  x1-bridge-service-task:
+    container_name: x1-bridge-service-task
+    image: x1-bridge-service
+    environment:
+      - ZKEVM_BRIDGE_DATABASE_USER=test_user
+      - ZKEVM_BRIDGE_DATABASE_PASSWORD=test_password
+      - ZKEVM_BRIDGE_DATABASE_NAME=test_db
+      - ZKEVM_BRIDGE_DATABASE_HOST=x1-bridge-db
+      - ZKEVM_BRIDGE_DATABASE_PORT=5432
+    volumes:
+      - ./test/test.keystore.claimtx:/pk/keystore.claimtxmanager
+      - ./config/config.local.toml:/app/config.toml
+      - ./coinmiddleware/root-ca-cert:/app/root-ca-cert
+    command:
+      - "/bin/sh"
+      - "-c"
+      - "/app/x1-bridge runTask --cfg /app/config.toml"
+
+  x1-bridge-service-push:
+    container_name: x1-bridge-service-push
+    image: x1-bridge-service
+    environment:
+      - ZKEVM_BRIDGE_DATABASE_USER=test_user
+      - ZKEVM_BRIDGE_DATABASE_PASSWORD=test_password
+      - ZKEVM_BRIDGE_DATABASE_NAME=test_db
+      - ZKEVM_BRIDGE_DATABASE_HOST=x1-bridge-db
+      - ZKEVM_BRIDGE_DATABASE_PORT=5432
+    volumes:
+      - ./test/test.keystore.claimtx:/pk/keystore.claimtxmanager
+      - ./config/config.local.toml:/app/config.toml
+      - ./coinmiddleware/root-ca-cert:/app/root-ca-cert
+    command:
+      - "/bin/sh"
+      - "-c"
+      - "/app/x1-bridge runPushTask --cfg /app/config.toml"

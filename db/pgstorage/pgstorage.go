@@ -437,6 +437,21 @@ func (p *PostgresStorage) GetDeposits(ctx context.Context, destAddr string, limi
 		WHERE dest_addr = $1
 		ORDER BY d.block_id DESC, d.deposit_cnt DESC LIMIT $2 OFFSET $3`, p.tableSuffix)
 	rows, err := p.getExecQuerier(dbTx).Query(ctx, getDepositsSQL, common.FromHex(destAddr), limit, offset)
+	return p.convertDepositBase(rows, err)
+}
+
+// GetDepositsWithLeafType gets the deposit list which be smaller than depositCount.
+func (p *PostgresStorage) GetDepositsWithLeafType(ctx context.Context, destAddr string, limit uint, offset uint, leafType uint, dbTx pgx.Tx) ([]*etherman.Deposit, error) {
+	getDepositsSQL := fmt.Sprintf(`
+		SELECT d.id, leaf_type, orig_net, orig_addr, amount, dest_net, dest_addr, deposit_cnt, block_id, b.block_num, d.network_id, tx_hash, metadata, ready_for_claim, b.received_at
+		FROM sync.deposit%[1]v as d INNER JOIN sync.block%[1]v as b ON d.network_id = b.network_id AND d.block_id = b.id
+		WHERE dest_addr = $1 AND leaf_type = $4
+		ORDER BY d.block_id DESC, d.deposit_cnt DESC LIMIT $2 OFFSET $3`, p.tableSuffix)
+	rows, err := p.getExecQuerier(dbTx).Query(ctx, getDepositsSQL, common.FromHex(destAddr), limit, offset, leafType)
+	return p.convertDepositBase(rows, err)
+}
+
+func (p *PostgresStorage) convertDepositBase(rows pgx.Rows, err error) ([]*etherman.Deposit, error) {
 	if err != nil {
 		return nil, err
 	}
@@ -461,14 +476,14 @@ func (p *PostgresStorage) GetDeposits(ctx context.Context, destAddr string, limi
 }
 
 // GetPendingTransactions gets all the deposit transactions of a user that have not been claimed
-func (p *PostgresStorage) GetPendingTransactions(ctx context.Context, destAddr string, limit uint, offset uint, dbTx pgx.Tx) ([]*etherman.Deposit, error) {
+func (p *PostgresStorage) GetPendingTransactions(ctx context.Context, destAddr string, limit uint, offset uint, leafType uint, dbTx pgx.Tx) ([]*etherman.Deposit, error) {
 	getDepositsSQL := fmt.Sprintf(`SELECT d.id, leaf_type, orig_net, orig_addr, amount, dest_net, dest_addr, deposit_cnt, block_id, b.block_num, d.network_id, tx_hash, metadata, ready_for_claim, b.received_at
 		FROM sync.deposit%[1]v as d INNER JOIN sync.block%[1]v as b ON d.network_id = b.network_id AND d.block_id = b.id
-		WHERE dest_addr = $1 AND NOT EXISTS
+		WHERE dest_addr = $1 AND leaf_type = $4 AND NOT EXISTS
 			(SELECT 1 FROM sync.claim%[1]v as c WHERE c.index = d.deposit_cnt AND c.network_id = d.dest_net)
 		ORDER BY d.block_id DESC, d.deposit_cnt DESC LIMIT $2 OFFSET $3`, p.tableSuffix)
 
-	rows, err := p.getExecQuerier(dbTx).Query(ctx, getDepositsSQL, common.FromHex(destAddr), limit, offset)
+	rows, err := p.getExecQuerier(dbTx).Query(ctx, getDepositsSQL, common.FromHex(destAddr), limit, offset, leafType)
 	if err != nil {
 		return nil, err
 	}
@@ -523,6 +538,36 @@ func (p *PostgresStorage) GetNotReadyTransactions(ctx context.Context, limit uin
 	return deposits, nil
 }
 
+func (p *PostgresStorage) GetNotReadyTransactionsWithBlockRange(ctx context.Context, networkID uint, minBlockNum, maxBlockNum uint64, limit, offset uint, dbTx pgx.Tx) ([]*etherman.Deposit, error) {
+	getDepositsSQL := fmt.Sprintf(`SELECT d.id, leaf_type, orig_net, orig_addr, amount, dest_net, dest_addr, deposit_cnt, block_id, b.block_num, d.network_id, tx_hash, metadata, ready_for_claim, b.received_at
+		FROM sync.deposit%[1]v as d INNER JOIN sync.block%[1]v as b ON d.network_id = b.network_id AND d.block_id = b.id
+		WHERE b.network_id = $1 AND ready_for_claim = false AND b.block_num >= $2 AND b.block_num <= $3
+		ORDER BY d.block_id DESC, d.deposit_cnt DESC LIMIT $4 OFFSET $5`, p.tableSuffix)
+
+	rows, err := p.getExecQuerier(dbTx).Query(ctx, getDepositsSQL, networkID, minBlockNum, maxBlockNum, limit, offset)
+	if err != nil {
+		return nil, err
+	}
+
+	deposits := make([]*etherman.Deposit, 0, len(rows.RawValues()))
+
+	for rows.Next() {
+		var (
+			deposit etherman.Deposit
+			amount  string
+		)
+		err = rows.Scan(&deposit.Id, &deposit.LeafType, &deposit.OriginalNetwork, &deposit.OriginalAddress, &amount, &deposit.DestinationNetwork, &deposit.DestinationAddress,
+			&deposit.DepositCount, &deposit.BlockID, &deposit.BlockNumber, &deposit.NetworkID, &deposit.TxHash, &deposit.Metadata, &deposit.ReadyForClaim, &deposit.Time)
+		if err != nil {
+			return nil, err
+		}
+		deposit.Amount, _ = new(big.Int).SetString(amount, 10) //nolint:gomnd
+		deposits = append(deposits, &deposit)
+	}
+
+	return deposits, nil
+}
+
 // GetDepositCount gets the deposit count for the destination address.
 func (p *PostgresStorage) GetDepositCount(ctx context.Context, destAddr string, dbTx pgx.Tx) (uint64, error) {
 	getDepositCountSQL := fmt.Sprintf("SELECT COUNT(*) FROM sync.deposit%[1]v WHERE dest_addr = $1", p.tableSuffix)
@@ -540,9 +585,10 @@ func (p *PostgresStorage) UpdateBlocksForTesting(ctx context.Context, networkID 
 
 // GetL1Deposits get the L1 deposits remain to be ready_for_claim
 func (p *PostgresStorage) GetL1Deposits(ctx context.Context, exitRoot []byte, dbTx pgx.Tx) ([]*etherman.Deposit, error) {
-	updateDepositsStatusSQL := fmt.Sprintf(`Select leaf_type, orig_net, orig_addr, amount, dest_net, dest_addr, deposit_cnt, block_id, network_id, tx_hash, metadata, ready_for_claim FROM sync.deposit%[1]v WHERE deposit_cnt <=
-			(SELECT deposit_cnt FROM mt.root%[1]v WHERE root = $1 AND network = 0) 
-			AND network_id = 0 AND ready_for_claim = false`, p.tableSuffix)
+	updateDepositsStatusSQL := fmt.Sprintf(`Select d.id, leaf_type, orig_net, orig_addr, amount, dest_net, dest_addr, deposit_cnt, block_id, b.block_num, d.network_id, tx_hash, metadata, ready_for_claim, b.received_at
+			FROM sync.deposit%[1]v as d INNER JOIN sync.block%[1]v as b ON d.network_id = b.network_id AND d.block_id = b.id
+			WHERE deposit_cnt <= (SELECT deposit_cnt FROM mt.root%[1]v WHERE root = $1 AND network = 0) 
+			AND d.network_id = 0 AND ready_for_claim = false`, p.tableSuffix)
 	rows, err := p.getExecQuerier(dbTx).Query(ctx, updateDepositsStatusSQL, exitRoot)
 	if err != nil {
 		return nil, err
@@ -554,8 +600,8 @@ func (p *PostgresStorage) GetL1Deposits(ctx context.Context, exitRoot []byte, db
 			deposit etherman.Deposit
 			amount  string
 		)
-		err = rows.Scan(&deposit.LeafType, &deposit.OriginalNetwork, &deposit.OriginalAddress, &amount, &deposit.DestinationNetwork, &deposit.DestinationAddress,
-			&deposit.DepositCount, &deposit.BlockID, &deposit.NetworkID, &deposit.TxHash, &deposit.Metadata, &deposit.ReadyForClaim)
+		err = rows.Scan(&deposit.Id, &deposit.LeafType, &deposit.OriginalNetwork, &deposit.OriginalAddress, &amount, &deposit.DestinationNetwork, &deposit.DestinationAddress,
+			&deposit.DepositCount, &deposit.BlockID, &deposit.BlockNumber, &deposit.NetworkID, &deposit.TxHash, &deposit.Metadata, &deposit.ReadyForClaim, &deposit.Time)
 		if err != nil {
 			return nil, err
 		}
@@ -567,11 +613,13 @@ func (p *PostgresStorage) GetL1Deposits(ctx context.Context, exitRoot []byte, db
 
 // UpdateL1DepositsStatus updates the ready_for_claim status of L1 deposits.
 func (p *PostgresStorage) UpdateL1DepositsStatus(ctx context.Context, exitRoot []byte, eventTime time.Time, dbTx pgx.Tx) ([]*etherman.Deposit, error) {
-	updateDepositsStatusSQL := fmt.Sprintf(`UPDATE sync.deposit%[1]v SET ready_for_claim = true, ready_time = $1 
+	updateDepositsStatusSQL := fmt.Sprintf(`WITH d AS (UPDATE sync.deposit%[1]v SET ready_for_claim = true, ready_time = $1 
 		WHERE deposit_cnt <=
 			(SELECT deposit_cnt FROM mt.root%[1]v WHERE root = $2 AND network = 0) 
 			AND network_id = 0 AND ready_for_claim = false
-			RETURNING leaf_type, orig_net, orig_addr, amount, dest_net, dest_addr, deposit_cnt, block_id, network_id, tx_hash, metadata, ready_for_claim;`, p.tableSuffix)
+			RETURNING *)
+		SELECT d.id, leaf_type, orig_net, orig_addr, amount, dest_net, dest_addr, deposit_cnt, block_id, b.block_num, d.network_id, tx_hash, metadata, ready_for_claim, b.received_at
+		FROM d INNER JOIN sync.block%[1]v as b ON d.network_id = b.network_id AND d.block_id = b.id`, p.tableSuffix)
 	rows, err := p.getExecQuerier(dbTx).Query(ctx, updateDepositsStatusSQL, eventTime, exitRoot)
 	if err != nil {
 		return nil, err
@@ -583,8 +631,8 @@ func (p *PostgresStorage) UpdateL1DepositsStatus(ctx context.Context, exitRoot [
 			deposit etherman.Deposit
 			amount  string
 		)
-		err = rows.Scan(&deposit.LeafType, &deposit.OriginalNetwork, &deposit.OriginalAddress, &amount, &deposit.DestinationNetwork, &deposit.DestinationAddress,
-			&deposit.DepositCount, &deposit.BlockID, &deposit.NetworkID, &deposit.TxHash, &deposit.Metadata, &deposit.ReadyForClaim)
+		err = rows.Scan(&deposit.Id, &deposit.LeafType, &deposit.OriginalNetwork, &deposit.OriginalAddress, &amount, &deposit.DestinationNetwork, &deposit.DestinationAddress,
+			&deposit.DepositCount, &deposit.BlockID, &deposit.BlockNumber, &deposit.NetworkID, &deposit.TxHash, &deposit.Metadata, &deposit.ReadyForClaim, &deposit.Time)
 		if err != nil {
 			return nil, err
 		}
@@ -599,6 +647,34 @@ func (p *PostgresStorage) UpdateL1DepositStatus(ctx context.Context, depositCoun
 		WHERE deposit_cnt = $2 And network_id = 0`, p.tableSuffix)
 	_, err := p.getExecQuerier(dbTx).Exec(ctx, updateDepositStatusSQL, eventTime, depositCount)
 	return err
+}
+
+// UpdateL2DepositsStatus updates the ready_for_claim status of L2 deposits. and return deposit list
+func (p *PostgresStorage) UpdateL2DepositsStatusWithBackDeposits(ctx context.Context, exitRoot []byte, eventTime time.Time, dbTx pgx.Tx) ([]*etherman.Deposit, error) {
+	updateDepositsStatusSQL := fmt.Sprintf(`UPDATE sync.deposit%[1]v SET ready_for_claim = true, ready_time = $1
+		WHERE deposit_cnt <=
+			(SELECT deposit_cnt FROM mt.root%[1]v WHERE root = $2 AND network = 1)
+			AND network_id = 1 AND ready_for_claim = false
+			RETURNING leaf_type, orig_net, orig_addr, amount, dest_net, dest_addr, deposit_cnt, block_id, network_id, tx_hash, metadata, ready_for_claim;`, p.tableSuffix)
+	rows, err := p.getExecQuerier(dbTx).Query(ctx, updateDepositsStatusSQL, eventTime, exitRoot)
+	if err != nil {
+		return nil, err
+	}
+	deposits := make([]*etherman.Deposit, 0, len(rows.RawValues()))
+	for rows.Next() {
+		var (
+			deposit etherman.Deposit
+			amount  string
+		)
+		err = rows.Scan(&deposit.LeafType, &deposit.OriginalNetwork, &deposit.OriginalAddress, &amount, &deposit.DestinationNetwork, &deposit.DestinationAddress,
+			&deposit.DepositCount, &deposit.BlockID, &deposit.NetworkID, &deposit.TxHash, &deposit.Metadata, &deposit.ReadyForClaim)
+		if err != nil {
+			return nil, err
+		}
+		deposit.Amount, _ = new(big.Int).SetString(amount, 10) //nolint:gomnd
+		deposits = append(deposits, &deposit)
+	}
+	return deposits, nil
 }
 
 // UpdateL2DepositsStatus updates the ready_for_claim status of L2 deposits.

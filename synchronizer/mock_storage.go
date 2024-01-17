@@ -170,6 +170,32 @@ func (_m *storageMock) Commit(ctx context.Context, dbTx pgx.Tx) error {
 	return r0
 }
 
+// GetDeposit provides a mock function with given fields: ctx, depositCounterUser, networkID, dbTx
+func (_m *storageMock) GetDeposit(ctx context.Context, depositCounterUser uint, networkID uint, dbTx pgx.Tx) (*etherman.Deposit, error) {
+	ret := _m.Called(ctx, depositCounterUser, networkID, dbTx)
+
+	var r0 *etherman.Deposit
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, uint, uint, pgx.Tx) (*etherman.Deposit, error)); ok {
+		return rf(ctx, depositCounterUser, networkID, dbTx)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, uint, uint, pgx.Tx) *etherman.Deposit); ok {
+		r0 = rf(ctx, depositCounterUser, networkID, dbTx)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*etherman.Deposit)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, uint, uint, pgx.Tx) error); ok {
+		r1 = rf(ctx, depositCounterUser, networkID, dbTx)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // GetLastBlock provides a mock function with given fields: ctx, networkID, dbTx
 func (_m *storageMock) GetLastBlock(ctx context.Context, networkID uint, dbTx pgx.Tx) (*etherman.Block, error) {
 	ret := _m.Called(ctx, networkID, dbTx)

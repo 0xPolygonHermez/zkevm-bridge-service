@@ -18,7 +18,6 @@ const (
 )
 
 type MainCoinsCache interface {
-	Refresh(ctx context.Context)
 	GetMainCoinsByNetwork(ctx context.Context, networkID uint32) ([]*pb.CoinInfo, error)
 }
 

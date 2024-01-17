@@ -4,6 +4,8 @@ import (
 	"crypto/sha256"
 	"math/rand"
 	"time"
+
+	"golang.org/x/exp/constraints"
 )
 
 func generateRandomString(length int) string {
@@ -25,4 +27,11 @@ func GenerateRandomHash() [sha256.Size]byte {
 // GenerateTraceID generates a random trace ID.
 func GenerateTraceID() string {
 	return generateRandomString(traceIDLen)
+}
+
+func Min[T constraints.Ordered](x, y T) T {
+	if x < y {
+		return x
+	}
+	return y
 }

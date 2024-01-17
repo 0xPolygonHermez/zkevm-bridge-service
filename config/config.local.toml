@@ -69,6 +69,9 @@ Username = ""
 Password = ""
 RootCAPath = "/app/root-ca-cert"
 
+[MessagePushProducer]
+Enabled = false
+
 [NetworkConfig]
 GenBlockNumber = 1
 PolygonBridgeAddress = "0x10B65c586f795aF3eCCEe594fE4E38E1F059F780"

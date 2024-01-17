@@ -15,4 +15,6 @@ var (
 	ErrDepositNotSynced = errors.New("not synchronized deposit")
 	// ErrNetworkNotRegister is used when the networkID is not registered in the bridge
 	ErrNetworkNotRegister = errors.New("not registered network")
+	// ErrInternalErrorForRpcCall bridge web call service, when occur a internal error(db error, redis error, network error...), return this error
+	ErrInternalErrorForRpcCall = errors.New("your request could not be processed, please try again later")
 )

@@ -34,6 +34,7 @@ type storageInterface interface {
 	GetNumberDeposits(ctx context.Context, origNetworkID uint, blockNumber uint64, dbTx pgx.Tx) (uint64, error)
 	AddTrustedGlobalExitRoot(ctx context.Context, trustedExitRoot *etherman.GlobalExitRoot, dbTx pgx.Tx) (bool, error)
 	GetLatestL1SyncedExitRoot(ctx context.Context, dbTx pgx.Tx) (*etherman.GlobalExitRoot, error)
+	GetDeposit(ctx context.Context, depositCounterUser uint, networkID uint, dbTx pgx.Tx) (*etherman.Deposit, error)
 }
 
 type bridgectrlInterface interface {

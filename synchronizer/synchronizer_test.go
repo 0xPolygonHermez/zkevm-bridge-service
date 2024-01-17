@@ -36,7 +36,7 @@ func TestSyncGer(t *testing.T) {
 		m.Storage.On("GetLatestL1SyncedExitRoot", context.Background(), nil).Return(&etherman.GlobalExitRoot{}, gerror.ErrStorageNotFound)
 		chEvent := make(chan *etherman.GlobalExitRoot)
 		chSynced := make(chan uint)
-		sync, err := NewSynchronizer(m.Storage, m.BridgeCtrl, m.Etherman, m.ZkEVMClient, genBlockNumber, chEvent, chSynced, cfg)
+		sync, err := NewSynchronizer(m.Storage, m.BridgeCtrl, m.Etherman, m.ZkEVMClient, genBlockNumber, chEvent, chSynced, nil, nil, cfg)
 		require.NoError(t, err)
 
 		go func() {
