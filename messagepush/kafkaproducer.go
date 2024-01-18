@@ -4,6 +4,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
+	"fmt"
 	"os"
 	"time"
 
@@ -12,6 +13,7 @@ import (
 	"github.com/0xPolygonHermez/zkevm-node/log"
 	"github.com/IBM/sarama"
 	"github.com/pkg/errors"
+	"google.golang.org/protobuf/encoding/protojson"
 )
 
 type produceOptions struct {
@@ -51,8 +53,10 @@ type kafkaProducerImpl struct {
 
 func NewKafkaProducer(cfg Config) (KafkaProducer, error) {
 	if cfg.UseFakeProducer {
+		log.Infof("start to init fake kafka producer!")
 		return newFakeProducer(cfg), nil
 	}
+	log.Infof("start to init real kafka producer!")
 	config := sarama.NewConfig()
 	config.Producer.Return.Successes = true
 
@@ -132,7 +136,14 @@ func (p *kafkaProducerImpl) PushTransactionUpdate(tx *pb.Transaction, optFns ...
 	if tx == nil {
 		return nil
 	}
-	b, err := json.Marshal([]*pb.Transaction{tx})
+	var b []byte
+	var err error
+	if tx.Status == uint32(pb.TransactionStatus_TX_CREATED) {
+		b, err = protojson.MarshalOptions{EmitUnpopulated: true}.Marshal(tx)
+	} else {
+		//b, err = json.Marshal([]*pb.Transaction{tx})
+		b, err = json.Marshal(tx)
+	}
 	if err != nil {
 		return errors.Wrap(err, "json marshal error")
 	}
@@ -141,7 +152,7 @@ func (p *kafkaProducerImpl) PushTransactionUpdate(tx *pb.Transaction, optFns ...
 		BizCode:       BizCodeBridgeOrder,
 		WalletAddress: tx.GetDestAddr(),
 		RequestID:     utils.GenerateTraceID(),
-		PushContent:   string(b),
+		PushContent:   fmt.Sprintf("[%v]", string(b)),
 		Time:          time.Now().UnixMilli(),
 	}
 

@@ -579,6 +579,7 @@ func (s *ClientSynchronizer) processDeposit(deposit etherman.Deposit, blockID ui
 	// Notify FE about a new deposit
 	go func() {
 		if s.messagePushProducer == nil {
+			log.Errorf("kafka push producer is nil, so can't push tx status change msg!")
 			return
 		}
 		if deposit.LeafType != uint8(utils.LeafTypeAsset) {
@@ -633,6 +634,7 @@ func (s *ClientSynchronizer) processClaim(claim etherman.Claim, blockID uint64, 
 	// Notify FE that the tx has been claimed
 	go func() {
 		if s.messagePushProducer == nil {
+			log.Errorf("kafka push producer is nil, so can't push tx status change msg!")
 			return
 		}
 

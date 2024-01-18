@@ -265,6 +265,7 @@ func (ins *CommittedBatchHandler) pushStatusChangedMsg(ctx context.Context, late
 func (ins *CommittedBatchHandler) pushMsgForDeposit(deposit *etherman.Deposit, l2AvgVerifyDuration uint64) {
 	go func(deposit *etherman.Deposit) {
 		if ins.messagePushProducer == nil {
+			log.Errorf("kafka push producer is nil, so can't push tx status change msg!")
 			return
 		}
 		if deposit.LeafType != uint8(utils.LeafTypeAsset) {

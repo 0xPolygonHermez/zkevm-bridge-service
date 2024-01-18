@@ -805,6 +805,7 @@ func (tm *ClaimTxManager) ReviewMonitoredTx(ctx context.Context, mTx *ctmtypes.M
 // Push message to FE to notify about tx status change
 func (tm *ClaimTxManager) pushTransactionUpdate(deposit *etherman.Deposit, status uint32) {
 	if tm.messagePushProducer == nil {
+		log.Errorf("kafka push producer is nil, so can't push tx status change msg!")
 		return
 	}
 	if deposit.LeafType != uint8(utils.LeafTypeAsset) {

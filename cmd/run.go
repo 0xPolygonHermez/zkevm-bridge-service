@@ -163,6 +163,7 @@ func startServer(ctx *cli.Context, opts ...runOptionFunc) error {
 
 	var messagePushProducer messagepush.KafkaProducer
 	if c.MessagePushProducer.Enabled {
+		log.Infof("message push producer's switch is open, so init producer!")
 		messagePushProducer, err = messagepush.NewKafkaProducer(c.MessagePushProducer)
 		if err != nil {
 			log.Error(err)
