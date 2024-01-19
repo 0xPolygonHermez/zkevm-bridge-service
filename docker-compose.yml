@@ -57,20 +57,41 @@ services:
 
   zkevm-node:
     container_name: zkevm-node
-    image: hermeznetwork/zkevm-node:v0.5.0-RC8
+    image: hermeznetwork/zkevm-node:v0.5.0-RC18
     ports:
       - 8123:8123
       - 61090:61090
     environment:
-      - ZKEVM_NODE_STATEDB_HOST=zkevm-state-db
+      - ZKEVM_NODE_STATE_DB_HOST=zkevm-state-db
       - ZKEVM_NODE_POOL_HOST=zkevm-pool-db
       - ZKEVM_NODE_RPC_DB_HOST=zkevm-rpc-db
-      - ZKEVM_NODE_ETHERMAN_PRIVATEKEYPATH=/pk/keystore
     volumes:
       - ./test/test.keystore.sequencer:/pk/keystore.sequencer
       - ./test/test.keystore.aggregator:/pk/keystore.aggregator
       - ./test/config/node/config.zkevm.node.toml:/app/config.toml
       - ./test/config/node/genesis.local.json:/app/genesis.json
+    command: 
+      - "/bin/sh"
+      - "-c"
+      - "/app/zkevm-node approve --network custom --custom-network-file /app/genesis.json --am 115792089237316195423570985008687907853269984665640564039457584007913129639935 -y --cfg /app/config.toml --key-store-path /pk/keystore.sequencer --password testonly &&
+         /app/zkevm-node run --network custom --custom-network-file /app/genesis.json --cfg /app/config.toml --components \"synchronizer,rpc,sequencer,sequence-sender,aggregator,eth-tx-manager,l2gaspricer\" --http.api eth,net,debug,zkevm,txpool,web3"
+
+  zkevm-node-v1tov2:
+    container_name: zkevm-node-v1tov2
+    image: hermeznetwork/zkevm-node:v0.5.0-RC18
+    ports:
+      - 8123:8123
+      - 61090:61090
+    environment:
+      - ZKEVM_NODE_STATE_DB_HOST=zkevm-state-db
+      - ZKEVM_NODE_POOL_HOST=zkevm-pool-db
+      - ZKEVM_NODE_RPC_DB_HOST=zkevm-rpc-db
+      - ZKEVM_NODE_ETHERMAN_URL=http://zkevm-v1tov2-l1-network:8545
+    volumes:
+      - ./test/test.keystore.sequencer:/pk/keystore.sequencer
+      - ./test/test.keystore.aggregator:/pk/keystore.aggregator
+      - ./test/config/node/config.zkevm.node.toml:/app/config.toml
+      - ./test/config/node/genesis.local-v1tov2.json:/app/genesis.json
     command: 
       - "/bin/sh"
       - "-c"
@@ -83,9 +104,39 @@ services:
     ports:
       - 8545:8545
 
+  zkevm-v1tov2-l1-network:
+    container_name: zkevm-v1tov2-l1-network
+    image: hermeznetwork/geth-zkevm-contracts:v2.1.1-lxly-updateV1ToV2-etrog-geth1.12.0
+    ports:
+      - 8545:8545
+      - 8546:8546
+    command:
+      - "--http"
+      - "--http.api"
+      - "admin,eth,debug,miner,net,txpool,personal,web3"
+      - "--http.addr"
+      - "0.0.0.0"
+      - "--http.corsdomain"
+      - "*"
+      - "--http.vhosts"
+      - "*"
+      - "--ws"
+      - "--ws.origins"
+      - "*"
+      - "--ws.addr"
+      - "0.0.0.0"
+      - "--dev"
+      - "--dev.period"
+      - "1"
+      - "--datadir"
+      - "/geth_data"
+      - "--syncmode"
+      - "full"
+      - "--rpc.allow-unprotected-txs"
+
   zkevm-prover:
     container_name: zkevm-prover
-    image: hermeznetwork/zkevm-prover:v4.0.0-RC21
+    image: hermeznetwork/zkevm-prover:v4.0.0-RC27
     ports:
       - 50051:50051 # Prover
       - 50052:50052 # MockProver
@@ -115,3 +166,28 @@ services:
       - "/bin/sh"
       - "-c"
       - "/app/zkevm-bridge run --cfg /app/config.toml"
+
+  zkevm-bridge-service-v1tov2:
+    container_name: zkevm-bridge-service-v1tov2
+    image: zkevm-bridge-service
+    ports:
+      - 8080:8080
+      - 9090:9090
+    environment:
+      - ZKEVM_BRIDGE_DATABASE_USER=test_user
+      - ZKEVM_BRIDGE_DATABASE_PASSWORD=test_password
+      - ZKEVM_BRIDGE_DATABASE_NAME=test_db
+      - ZKEVM_BRIDGE_DATABASE_HOST=zkevm-bridge-db
+      - ZKEVM_BRIDGE_DATABASE_PORT=5432
+      - ZKEVM_BRIDGE_ETHERMAN_L1URL=http://zkevm-v1tov2-l1-network:8545
+      - ZKEVM_BRIDGE_ETHERMAN_L2URLS=http://zkevm-node-v1tov2:8123
+      - ZKEVM_BRIDGE_NETWORKCONFIG_POLYGONZKEVMADDRESS=0x3Aa5ebB10DC797CAC828524e59A333d0A371443c
+      - ZKEVM_BRIDGE_NETWORKCONFIG_POLYGONBRIDGEADDRESS=0x80a540502706aa690476D5534e26939894559c05
+      - ZKEVM_BRIDGE_NETWORKCONFIG_L2POLYGONBRIDGEADDRESSES=0x80a540502706aa690476D5534e26939894559c05
+    volumes:
+      - ./test/test.keystore.claimtx:/pk/keystore.claimtxmanager
+      - ./config/config.local.toml:/app/config.toml
+    command:
+      - "/bin/sh"
+      - "-c"
+      - "env && /app/zkevm-bridge run --cfg /app/config.toml"
