@@ -22,9 +22,6 @@ import (
 )
 
 var (
-	updateGlobalExitRootSignatureHash = crypto.Keccak256Hash([]byte("UpdateGlobalExitRoot(bytes32,bytes32)"))
-	transferOwnershipSignatureHash    = crypto.Keccak256Hash([]byte("OwnershipTransferred(address,address)"))
-
 	// New Ger event
 	updateL1InfoTreeSignatureHash = crypto.Keccak256Hash([]byte("UpdateL1InfoTree(bytes32,bytes32)"))
 
@@ -68,6 +65,25 @@ var (
 	roleRevokedSignatureHash               = crypto.Keccak256Hash([]byte("RoleRevoked(bytes32,address,address)"))      // IAccessControlUpgradeable
 	emergencyStateActivatedSignatureHash   = crypto.Keccak256Hash([]byte("EmergencyStateActivated()"))                 // EmergencyManager. Used in oldZkEvm as well
 	emergencyStateDeactivatedSignatureHash = crypto.Keccak256Hash([]byte("EmergencyStateDeactivated()"))               // EmergencyManager. Used in oldZkEvm as well
+
+	// PreLxLy events
+	updateGlobalExitRootSignatureHash              = crypto.Keccak256Hash([]byte("UpdateGlobalExitRoot(bytes32,bytes32)"))
+	oldVerifyBatchesTrustedAggregatorSignatureHash = crypto.Keccak256Hash([]byte("VerifyBatchesTrustedAggregator(uint64,bytes32,address)"))
+	transferOwnershipSignatureHash                 = crypto.Keccak256Hash([]byte("OwnershipTransferred(address,address)"))
+	updateZkEVMVersionSignatureHash                = crypto.Keccak256Hash([]byte("UpdateZkEVMVersion(uint64,uint64,string)"))
+	oldConsolidatePendingStateSignatureHash        = crypto.Keccak256Hash([]byte("ConsolidatePendingState(uint64,bytes32,uint64)"))
+	oldOverridePendingStateSignatureHash           = crypto.Keccak256Hash([]byte("OverridePendingState(uint64,bytes32,address)"))
+	sequenceBatchesPreEtrogSignatureHash           = crypto.Keccak256Hash([]byte("SequenceBatches(uint64)"))
+
+	setForceBatchTimeoutSignatureHash   		   = crypto.Keccak256Hash([]byte("SetForceBatchTimeout(uint64)"))             // Used in oldZkEvm as well
+	setTrustedSequencerURLSignatureHash 		   = crypto.Keccak256Hash([]byte("SetTrustedSequencerURL(string)"))           // Used in oldZkEvm as well
+	setTrustedSequencerSignatureHash    		   = crypto.Keccak256Hash([]byte("SetTrustedSequencer(address)"))             // Used in oldZkEvm as well
+	verifyBatchesSignatureHash          		   = crypto.Keccak256Hash([]byte("VerifyBatches(uint64,bytes32,address)"))    // Used in oldZkEvm as well
+	sequenceForceBatchesSignatureHash   		   = crypto.Keccak256Hash([]byte("SequenceForceBatches(uint64)"))             // Used in oldZkEvm as well
+	forceBatchSignatureHash             		   = crypto.Keccak256Hash([]byte("ForceBatch(uint64,bytes32,address,bytes)")) // Used in oldZkEvm as well
+	sequenceBatchesSignatureHash        		   = crypto.Keccak256Hash([]byte("SequenceBatches(uint64,bytes32)"))          // Used in oldZkEvm as well
+	acceptAdminRoleSignatureHash        		   = crypto.Keccak256Hash([]byte("AcceptAdminRole(address)"))                 // Used in oldZkEvm as well
+	transferAdminRoleSignatureHash      		   = crypto.Keccak256Hash([]byte("TransferAdminRole(address)"))               // Used in oldZkEvm as well
 
 	// ErrNotFound is used when the object is not found
 	ErrNotFound = errors.New("Not found")
@@ -226,84 +242,126 @@ func (etherMan *Client) processEvent(ctx context.Context, vLog types.Log, blocks
 	case newWrappedTokenEventSignatureHash:
 		return etherMan.tokenWrappedEvent(ctx, vLog, blocks, blocksOrder)
 	case initializedProxySignatureHash:
-		log.Debug("Initialized proxy event detected")
+		log.Debug("Initialized proxy event detected. Ignoring...")
 		return nil
 	case adminChangedSignatureHash:
-		log.Debug("AdminChanged event detected")
+		log.Debug("AdminChanged event detected. Ignoring...")
 		return nil
 	case beaconUpgradedSignatureHash:
-		log.Debug("BeaconUpgraded event detected")
+		log.Debug("BeaconUpgraded event detected. Ignoring...")
 		return nil
 	case upgradedSignatureHash:
-		log.Debug("Upgraded event detected")
+		log.Debug("Upgraded event detected. Ignoring...")
 		return nil
 	case transferOwnershipSignatureHash:
-		log.Debug("TransferOwnership event detected")
+		log.Debug("TransferOwnership event detected. Ignoring...")
 		return nil
 	case setBatchFeeSignatureHash:
-		log.Debug("SetBatchFee event detected")
+		log.Debug("SetBatchFee event detected. Ignoring...")
 		return nil
 	case setTrustedAggregatorSignatureHash:
-		log.Debug("SetTrustedAggregator event detected")
+		log.Debug("SetTrustedAggregator event detected. Ignoring...")
 		return nil
 	case setVerifyBatchTimeTargetSignatureHash:
-		log.Debug("SetVerifyBatchTimeTarget event detected")
+		log.Debug("SetVerifyBatchTimeTarget event detected. Ignoring...")
 		return nil
 	case setMultiplierBatchFeeSignatureHash:
-		log.Debug("SetMultiplierBatchFee event detected")
+		log.Debug("SetMultiplierBatchFee event detected. Ignoring...")
 		return nil
 	case setPendingStateTimeoutSignatureHash:
-		log.Debug("SetPendingStateTimeout event detected")
+		log.Debug("SetPendingStateTimeout event detected. Ignoring...")
 		return nil
 	case setTrustedAggregatorTimeoutSignatureHash:
-		log.Debug("SetTrustedAggregatorTimeout event detected")
+		log.Debug("SetTrustedAggregatorTimeout event detected. Ignoring...")
 		return nil
 	case overridePendingStateSignatureHash:
-		log.Debug("OverridePendingState event detected")
+		log.Debug("OverridePendingState event detected. Ignoring...")
 		return nil
 	case proveNonDeterministicPendingStateSignatureHash:
-		log.Debug("ProveNonDeterministicPendingState event detected")
+		log.Debug("ProveNonDeterministicPendingState event detected. Ignoring...")
 		return nil
 	case consolidatePendingStateSignatureHash:
-		log.Debug("ConsolidatePendingState event detected")
+		log.Debug("ConsolidatePendingState event detected. Ignoring...")
 		return nil
 	case verifyBatchesTrustedAggregatorSignatureHash:
 		return etherMan.verifyBatchesTrustedAggregatorEvent(ctx, vLog, blocks, blocksOrder)
 	case rollupManagerVerifyBatchesSignatureHash:
 		return etherMan.verifyBatchesEvent(ctx, vLog, blocks, blocksOrder)
 	case onSequenceBatchesSignatureHash:
-		log.Debug("OnSequenceBatches event detected")
+		log.Debug("OnSequenceBatches event detected. Ignoring...")
 		return nil
 	case updateRollupSignatureHash:
-		log.Debug("UpdateRollup event detected")
+		log.Debug("UpdateRollup event detected. Ignoring...")
 		return nil
 	case addExistingRollupSignatureHash:
 		return etherMan.AddExistingRollupEvent(ctx, vLog, blocks, blocksOrder)
 	case createNewRollupSignatureHash:
 		return etherMan.createNewRollupEvent(ctx, vLog, blocks, blocksOrder)
 	case obsoleteRollupTypeSignatureHash:
-		log.Debug("ObsoleteRollupType event detected")
+		log.Debug("ObsoleteRollupType event detected. Ignoring...")
 		return nil
 	case addNewRollupTypeSignatureHash:
-		log.Debug("AddNewRollupType event detected")
+		log.Debug("AddNewRollupType event detected. Ignoring...")
 		return nil
 	case initializedSignatureHash:
-		log.Debug("Initialized event detected")
+		log.Debug("Initialized event detected. Ignoring...")
 		return nil
 	case roleAdminChangedSignatureHash:
-		log.Debug("RoleAdminChanged event detected")
+		log.Debug("RoleAdminChanged event detected. Ignoring...")
 		return nil
 	case roleGrantedSignatureHash:
-		log.Debug("RoleGranted event detected")
+		log.Debug("RoleGranted event detected. Ignoring...")
 		return nil
 	case roleRevokedSignatureHash:
-		log.Debug("RoleRevoked event detected")
+		log.Debug("RoleRevoked event detected. Ignoring...")
 		return nil
 	case emergencyStateActivatedSignatureHash:
-		log.Debug("EmergencyStateActivated event detected")
+		log.Debug("EmergencyStateActivated event detected. Ignoring...")
 		return nil
 	case emergencyStateDeactivatedSignatureHash:
-		log.Debug("EmergencyStateDeactivated event detected")
+		log.Debug("EmergencyStateDeactivated event detected. Ignoring...")
+		return nil
+	case oldVerifyBatchesTrustedAggregatorSignatureHash:
+		log.Debug("OldVerifyBatchesTrustedAggregator event detected. Ignoring...")
+		return nil
+	case updateZkEVMVersionSignatureHash:
+		log.Debug("UpdateZkEVMVersion event detected. Ignoring...")
+		return nil
+	case oldConsolidatePendingStateSignatureHash:
+		log.Debug("OldConsolidatePendingState event detected. Ignoring...")
+		return nil
+	case oldOverridePendingStateSignatureHash:
+		log.Debug("OldOverridePendingState event detected. Ignoring...")
+		return nil
+	case sequenceBatchesPreEtrogSignatureHash:
+		log.Debug("SequenceBatchesPreEtrog event detected. Ignoring...")
+		return nil
+	case setForceBatchTimeoutSignatureHash:
+		log.Debug("SetForceBatchTimeout event detected. Ignoring...")
+		return nil
+	case setTrustedSequencerURLSignatureHash:
+		log.Debug("SetTrustedSequencerURL event detected. Ignoring...")
+		return nil
+	case setTrustedSequencerSignatureHash:
+		log.Debug("SetTrustedSequencer event detected. Ignoring...")
+		return nil
+	case verifyBatchesSignatureHash:
+		log.Debug("VerifyBatches event detected. Ignoring...")
+		return nil
+	case sequenceForceBatchesSignatureHash:
+		log.Debug("SequenceForceBatches event detected. Ignoring...")
+		return nil
+	case forceBatchSignatureHash:
+		log.Debug("ForceBatch event detected. Ignoring...")
+		return nil
+	case sequenceBatchesSignatureHash:
+		log.Debug("SequenceBatches event detected. Ignoring...")
+		return nil
+	case acceptAdminRoleSignatureHash:
+		log.Debug("AcceptAdminRole event detected. Ignoring...")
+		return nil
+	case transferAdminRoleSignatureHash:
+		log.Debug("TransferAdminRole event detected. Ignoring...")
 		return nil
 	}
 	log.Warnf("Event not registered: %+v", vLog)
