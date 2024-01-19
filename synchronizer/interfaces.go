@@ -47,7 +47,6 @@ type bridgectrlInterface interface {
 }
 
 type zkEVMClientInterface interface {
-	BlockNumber(ctx context.Context) (uint64, error)
-	BlockByNumber(ctx context.Context, number *big.Int) (*rpcTypes.Block, error)
+	GetLatestGlobalExitRoot(ctx context.Context) (common.Hash, error)
 	ExitRootsByGER(ctx context.Context, globalExitRoot common.Hash) (*rpcTypes.ExitRoots, error)
 }

@@ -193,23 +193,18 @@ func (s *ClientSynchronizer) Stop() {
 }
 
 func (s *ClientSynchronizer) syncTrustedState() error {
-	lastBlockNumber, err := s.zkEVMClient.BlockNumber(s.ctx)
+	lastGER, err := s.zkEVMClient.GetLatestGlobalExitRoot(s.ctx)
 	if err != nil {
-		log.Errorf("networkID: %d, error getting latest block number from rpc. Error: %v", s.networkID, err)
+		log.Warnf("networkID: %d, failed to get latest ger from trusted state. Error: %v", s.networkID, err)
 		return err
 	}
-	lastBlock, err := s.zkEVMClient.BlockByNumber(s.ctx, big.NewInt(0).SetUint64(lastBlockNumber))
-	if err != nil {
-		log.Warnf("networkID: %d, failed to get block %v from trusted state. Error: %v", s.networkID, lastBlockNumber, err)
-		return err
-	}
-	if lastBlock.GlobalExitRoot == nil || (lastBlock.GlobalExitRoot != nil && *lastBlock.GlobalExitRoot == (common.Hash{})) {
+	if lastGER == (common.Hash{}) {
 		log.Debugf("networkID: %d, syncTrustedState: skipping GlobalExitRoot because there is no result", s.networkID)
 		return nil
 	}
-	exitRoots, err := s.zkEVMClient.ExitRootsByGER(s.ctx, *lastBlock.GlobalExitRoot)
+	exitRoots, err := s.zkEVMClient.ExitRootsByGER(s.ctx, lastGER)
 	if err != nil {
-		log.Warnf("networkID: %d, failed to get block %v from trusted state. Error: %v", s.networkID, lastBlockNumber, err)
+		log.Warnf("networkID: %d, failed to get exitRoots from trusted state. Error: %v", s.networkID, err)
 		return err
 	}
 	if exitRoots == nil {
@@ -217,7 +212,7 @@ func (s *ClientSynchronizer) syncTrustedState() error {
 		return nil
 	}
 	ger := &etherman.GlobalExitRoot{
-		GlobalExitRoot: *lastBlock.GlobalExitRoot,
+		GlobalExitRoot: lastGER,
 		ExitRoots: []common.Hash{
 			exitRoots.MainnetExitRoot,
 			exitRoots.RollupExitRoot,

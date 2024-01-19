@@ -3,7 +3,7 @@ module github.com/0xPolygonHermez/zkevm-bridge-service
 go 1.21
 
 require (
-	github.com/0xPolygonHermez/zkevm-node v0.5.0-RC16
+	github.com/0xPolygonHermez/zkevm-node v0.5.0-RC18
 	github.com/ethereum/go-ethereum v1.13.2
 	github.com/gobuffalo/packr/v2 v2.8.3
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.18.0
@@ -13,14 +13,14 @@ require (
 	github.com/jackc/pgx/v4 v4.18.1
 	github.com/lib/pq v1.10.9
 	github.com/mitchellh/mapstructure v1.5.0
-	github.com/rubenv/sql-migrate v1.5.2
+	github.com/rubenv/sql-migrate v1.6.1
 	github.com/spf13/viper v1.17.0
 	github.com/stretchr/testify v1.8.4
 	github.com/urfave/cli/v2 v2.26.0
-	golang.org/x/crypto v0.16.0
+	golang.org/x/crypto v0.17.0
 	google.golang.org/genproto/googleapis/api v0.0.0-20231106174013-bbf56f31fb17
 	google.golang.org/grpc v1.60.0
-	google.golang.org/protobuf v1.31.0
+	google.golang.org/protobuf v1.32.0
 )
 
 require (

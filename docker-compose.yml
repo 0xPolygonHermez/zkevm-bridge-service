@@ -57,7 +57,7 @@ services:
 
   zkevm-node:
     container_name: zkevm-node
-    image: hermeznetwork/zkevm-node:v0.5.0-RC8
+    image: hermeznetwork/zkevm-node:v0.5.0-RC18
     ports:
       - 8123:8123
       - 61090:61090
@@ -78,7 +78,7 @@ services:
 
   zkevm-node-v1tov2:
     container_name: zkevm-node-v1tov2
-    image: hermeznetwork/zkevm-node:v0.5.0-RC8
+    image: hermeznetwork/zkevm-node:v0.5.0-RC18
     ports:
       - 8123:8123
       - 61090:61090
