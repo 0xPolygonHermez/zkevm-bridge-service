@@ -140,6 +140,7 @@ func setupLog(c log.Config) {
 func newEthermans(c *config.Config) (*etherman.Client, []*etherman.Client, error) {
 	l1Etherman, err := etherman.NewClient(c.Etherman, c.NetworkConfig.PolygonBridgeAddress, c.NetworkConfig.PolygonZkEVMGlobalExitRootAddress, c.NetworkConfig.PolygonRollupManagerAddress, c.NetworkConfig.PolygonZkEvmAddress)
 	if err != nil {
+		log.Error("L1 etherman error: ", err)
 		return nil, nil, err
 	}
 	if len(c.L2PolygonBridgeAddresses) != len(c.Etherman.L2URLs) {
@@ -149,6 +150,7 @@ func newEthermans(c *config.Config) (*etherman.Client, []*etherman.Client, error
 	for i, addr := range c.L2PolygonBridgeAddresses {
 		l2Etherman, err := etherman.NewL2Client(c.Etherman.L2URLs[i], addr)
 		if err != nil {
+			log.Error("L2 etherman ", i, c.Etherman.L2URLs[i], ", error: ", err)
 			return l1Etherman, nil, err
 		}
 		l2Ethermans = append(l2Ethermans, l2Etherman)
