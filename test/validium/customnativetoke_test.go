@@ -63,7 +63,7 @@ func TestCustomNativeToken(t *testing.T) {
 	t.Logf("initial globalExitRootSMC: %+v,", globalExitRootSMC)
 	var destNetwork uint32 = 1
 	amount1 := new(big.Int).SetUint64(1000000)
-	nativeTokenL1Addr := common.HexToAddress("0x5FbDB2315678afecb367f032d93F642f64180aa3")
+	nativeTokenL1Addr := common.HexToAddress(operations.PolTokenAddress)
 	clientL1, err := ethclient.Dial("http://localhost:8545")
 	require.NoError(t, err)
 	l1MaticSC, err := ERC20.NewERC20(nativeTokenL1Addr, clientL1)
@@ -93,7 +93,7 @@ func TestCustomNativeToken(t *testing.T) {
 	require.Equal(t, balance.Int64(), int64(0))
 
 	// Send L1 deposit: MATIC on L1 => Native token on L2
-	bridgeAddr := common.HexToAddress("0x4C739372258826995C302CD655beE12689B97d3F")
+	bridgeAddr := common.HexToAddress("0x80a540502706aa690476D5534e26939894559c05")
 	client, err := utils.NewClient(ctx, "http://localhost:8545", bridgeAddr)
 	require.NoError(t, err)
 	err = client.ApproveERC20(ctx, nativeTokenL1Addr, bridgeAddr, amount1, authL1)
@@ -133,10 +133,10 @@ func TestCustomNativeToken(t *testing.T) {
 	require.NoError(t, err)
 	t.Log("Deposit 2: ", deposits[0])
 	// Get the claim data
-	smtProof, globaExitRoot, err := opsman.GetClaimData(ctx, uint(deposits[0].NetworkId), uint(deposits[0].DepositCnt))
+	smtProof, smtRollupProof, globaExitRoot, err := opsman.GetClaimData(ctx, uint(deposits[0].NetworkId), uint(deposits[0].DepositCnt))
 	require.NoError(t, err)
 	// Claim funds in L1
-	err = opsman.SendL1Claim(ctx, deposits[0], smtProof, globaExitRoot)
+	err = opsman.SendL1Claim(ctx, deposits[0], smtProof, smtRollupProof, globaExitRoot)
 	require.NoError(t, err)
 
 	// Check L1 funds to see if the amount has been increased (MATIC)
