@@ -68,6 +68,9 @@ func NewSynchronizer(
 	if err != nil {
 		log.Fatal("error checking if LxLyEtrog is activated. Error: ", err)
 	}
+	if isActivated {
+		log.Info("LxLyEtrog already activated")
+	}
 	if networkID == 0 {
 		return &ClientSynchronizer{
 			isLxLyEtrog:      isActivated,
@@ -129,13 +132,6 @@ func (s *ClientSynchronizer) Sync() error {
 			return nil
 		case <-time.After(waitDuration):
 			log.Debugf("NetworkID: %d, syncing...", s.networkID)
-			if !s.isLxLyEtrog {
-				// Read db to see if the LxLy is already activated
-				s.isLxLyEtrog, err = s.storage.IsLxLyActivated(s.ctx, nil)
-				if err != nil {
-					log.Fatal("error checking if LxLyEtrog is activated. Error: ", err)
-				}
-			}
 			//Sync L1Blocks
 			if lastBlockSynced, err = s.syncBlocks(lastBlockSynced); err != nil {
 				log.Warnf("networkID: %d, error syncing blocks: %v", s.networkID, err)
@@ -677,5 +673,6 @@ func (s *ClientSynchronizer) processTokenWrapped(tokenWrapped etherman.TokenWrap
 
 func (s *ClientSynchronizer) activateLxLyEtrog() {
 	// this is activated when the bridge detects the CreateNewRollup or the AddExistingRollup event from the rollupManager
+	log.Info("Event received. Activating LxLyEtrog...")
 	s.isLxLyEtrog = true
 }
