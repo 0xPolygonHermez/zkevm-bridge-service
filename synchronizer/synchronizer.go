@@ -34,7 +34,6 @@ type ClientSynchronizer struct {
 	chSynced         chan uint
 	zkEVMClient      zkEVMClientInterface
 	synced           bool
-	isLxLyEtrog      bool
 	l1RollupExitRoot common.Hash
 }
 
@@ -73,7 +72,6 @@ func NewSynchronizer(
 	}
 	if networkID == 0 {
 		return &ClientSynchronizer{
-			isLxLyEtrog:      isActivated,
 			bridgeCtrl:       bridge,
 			storage:          storage.(storageInterface),
 			etherMan:         ethMan,
@@ -89,7 +87,6 @@ func NewSynchronizer(
 		}, nil
 	}
 	return &ClientSynchronizer{
-		isLxLyEtrog:    isActivated,
 		bridgeCtrl:     bridge,
 		storage:        storage.(storageInterface),
 		etherMan:       ethMan,
@@ -367,10 +364,8 @@ func (s *ClientSynchronizer) processBlockRange(blocks []etherman.Block, order ma
 					return err
 				}
 			case etherman.ActivateEtrogOrder:
-				s.activateLxLyEtrog()
-				if err != nil {
-					return err
-				}
+				// this is activated when the bridge detects the CreateNewRollup or the AddExistingRollup event from the rollupManager
+				log.Info("Event received. Activating LxLyEtrog...")
 			}
 		}
 		err = s.storage.Commit(s.ctx, dbTx)
@@ -669,10 +664,4 @@ func (s *ClientSynchronizer) processTokenWrapped(tokenWrapped etherman.TokenWrap
 		return err
 	}
 	return nil
-}
-
-func (s *ClientSynchronizer) activateLxLyEtrog() {
-	// this is activated when the bridge detects the CreateNewRollup or the AddExistingRollup event from the rollupManager
-	log.Info("Event received. Activating LxLyEtrog...")
-	s.isLxLyEtrog = true
 }

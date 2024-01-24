@@ -169,7 +169,7 @@ func NewClient(cfg Config, polygonBridgeAddr, polygonZkEVMGlobalExitRootAddress,
 }
 
 // NewL2Client creates a new etherman for L2.
-func NewL2Client(url string, bridgeAddr common.Address) (*Client, error) {
+func NewL2Client(url string, polygonBridgeAddr common.Address) (*Client, error) {
 	// Connect to ethereum node
 	ethClient, err := ethclient.Dial(url)
 	if err != nil {
@@ -177,13 +177,17 @@ func NewL2Client(url string, bridgeAddr common.Address) (*Client, error) {
 		return nil, err
 	}
 	// Create smc clients
-	bridge, err := polygonzkevmbridge.NewPolygonzkevmbridge(bridgeAddr, ethClient)
+	bridge, err := polygonzkevmbridge.NewPolygonzkevmbridge(polygonBridgeAddr, ethClient)
 	if err != nil {
 		return nil, err
 	}
-	scAddresses := []common.Address{bridgeAddr}
+	oldpolygonBridge, err := oldpolygonzkevmbridge.NewOldpolygonzkevmbridge(polygonBridgeAddr, ethClient)
+	if err != nil {
+		return nil, err
+	}
+	scAddresses := []common.Address{polygonBridgeAddr}
 
-	return &Client{EtherClient: ethClient, PolygonBridge: bridge, SCAddresses: scAddresses}, nil
+	return &Client{EtherClient: ethClient, PolygonBridge: bridge, OldPolygonBridge: oldpolygonBridge, SCAddresses: scAddresses}, nil
 }
 
 // GetRollupInfoByBlockRange function retrieves the Rollup information that are included in all this ethereum blocks
