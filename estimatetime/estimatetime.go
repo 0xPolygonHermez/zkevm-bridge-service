@@ -6,16 +6,22 @@ import (
 	"math"
 	"time"
 
+	"github.com/0xPolygonHermez/zkevm-bridge-service/config/apolloconfig"
 	"github.com/0xPolygonHermez/zkevm-node/log"
 	"github.com/pkg/errors"
 )
 
 const (
-	// Number of deposits to get from DB to predict the estimate time
-	sampleLimit           = 10
-	refreshInterval       = 5 * time.Minute
+	refreshInterval = 5 * time.Minute
+	estTimeSize     = 2
+
+	estTimeConfigKey      = "estimateTime.defaultTime"
 	defaultL1EstimateTime = 15
 	defaultL2EstimateTime = 60
+
+	// Number of deposits to get from DB to predict the estimate time
+	sampleLimitConfigKey = "estimateTime.sampleLimit"
+	defaultSampleLimit   = 10
 )
 
 var (
@@ -36,8 +42,10 @@ func GetDefaultCalculator() Calculator {
 }
 
 type calculatorImpl struct {
-	storage      DBStorage
-	estimateTime []uint32 // In minutes
+	storage              DBStorage
+	estimateTime         []uint32 // In minutes
+	defaultEstTimeConfig apolloconfig.Entry[[]uint32]
+	sampleLimit          apolloconfig.Entry[uint]
 }
 
 func NewCalculator(storage interface{}) (Calculator, error) {
@@ -45,8 +53,14 @@ func NewCalculator(storage interface{}) (Calculator, error) {
 		return nil, errors.New("EstimateTime calculator: storage is nil")
 	}
 	c := &calculatorImpl{
-		storage:      storage.(DBStorage),
-		estimateTime: []uint32{defaultL1EstimateTime, defaultL2EstimateTime},
+		storage:              storage.(DBStorage),
+		estimateTime:         make([]uint32, estTimeSize),
+		defaultEstTimeConfig: apolloconfig.NewIntSliceEntry[uint32](estTimeConfigKey, []uint32{defaultL1EstimateTime, defaultL2EstimateTime}),
+		sampleLimit:          apolloconfig.NewIntEntry[uint](sampleLimitConfigKey, defaultSampleLimit),
+	}
+	def := c.defaultEstTimeConfig.Get()
+	for i := 0; i < estTimeSize; i++ {
+		c.estimateTime[i] = def[i]
 	}
 	c.init()
 	return c, nil
@@ -78,7 +92,7 @@ func (c *calculatorImpl) refresh(ctx context.Context, networkID uint) error {
 	if networkID > 1 {
 		return fmt.Errorf("invalid networkID %v", networkID)
 	}
-	deposits, err := c.storage.GetLatestReadyDeposits(ctx, networkID, sampleLimit, nil)
+	deposits, err := c.storage.GetLatestReadyDeposits(ctx, networkID, c.sampleLimit.Get(), nil)
 	if err != nil {
 		log.Errorf("GetLatestReadyDeposits err:%v", err)
 		return err
@@ -106,10 +120,7 @@ func (c *calculatorImpl) refresh(ctx context.Context, networkID uint) error {
 	}
 	newTime := uint32(math.Ceil(sum / float64(len(fMinutes))))
 	log.Debugf("Re-calculate estimate time, networkID[%v], fMinutes[%v], newTime[%v]", networkID, fMinutes, newTime)
-	defaultTime := uint32(defaultL1EstimateTime)
-	if networkID != 0 {
-		defaultTime = defaultL2EstimateTime
-	}
+	defaultTime := c.defaultEstTimeConfig.Get()[networkID]
 	if newTime > defaultTime {
 		newTime = defaultTime
 	}

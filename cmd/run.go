@@ -8,6 +8,7 @@ import (
 	"github.com/0xPolygonHermez/zkevm-bridge-service/claimtxman"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/coinmiddleware"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/config"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/config/apolloconfig"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/db"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/estimatetime"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman"
@@ -79,7 +80,11 @@ func startServer(ctx *cli.Context, opts ...runOptionFunc) error {
 	}
 
 	// Init sentinel
-	err = sentinel.InitFileDataSource(c.BridgeServer.SentinelConfigFilePath)
+	if c.Apollo.Enabled {
+		err = sentinel.InitApolloDataSource(c.Apollo)
+	} else {
+		err = sentinel.InitFileDataSource(c.BridgeServer.SentinelConfigFilePath)
+	}
 	if err != nil {
 		log.Infof("init sentinel error[%v]; ignored and proceed with no sentinel config", err)
 	}
@@ -293,6 +298,7 @@ func initCommon(ctx *cli.Context) (*config.Config, error) {
 		return nil, err
 	}
 	setupLog(c.Log)
+	apolloconfig.SetLogger()
 	return c, nil
 }
 

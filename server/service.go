@@ -9,6 +9,7 @@ import (
 	"github.com/0xPolygonHermez/zkevm-bridge-service/bridgectrl"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/bridgectrl/pb"
 	ctmtypes "github.com/0xPolygonHermez/zkevm-bridge-service/claimtxman/types"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/config/apolloconfig"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/estimatetime"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/localcache"
@@ -36,8 +37,8 @@ type bridgeService struct {
 	mainCoinsCache      localcache.MainCoinsCache
 	networkIDs          map[uint]uint8
 	height              uint8
-	defaultPageLimit    uint32
-	maxPageLimit        uint32
+	defaultPageLimit    apolloconfig.Entry[uint32]
+	maxPageLimit        apolloconfig.Entry[uint32]
 	version             string
 	cache               *lru.Cache[string, [][]byte]
 	estTimeCalculator   estimatetime.Calculator
@@ -63,8 +64,8 @@ func NewBridgeService(cfg Config, height uint8, networks []uint, storage interfa
 		estTimeCalculator: estTimeCalc,
 		height:            height,
 		networkIDs:        networkIDs,
-		defaultPageLimit:  cfg.DefaultPageLimit,
-		maxPageLimit:      cfg.MaxPageLimit,
+		defaultPageLimit:  apolloconfig.NewIntEntry("BridgeServer.DefaultPageLimit", cfg.DefaultPageLimit),
+		maxPageLimit:      apolloconfig.NewIntEntry("BridgeServer.MaxPageLimit", cfg.MaxPageLimit),
 		version:           cfg.BridgeVersion,
 		cache:             cache,
 	}
@@ -215,10 +216,10 @@ func (s *bridgeService) CheckAPI(ctx context.Context, req *pb.CheckAPIRequest) (
 func (s *bridgeService) GetBridges(ctx context.Context, req *pb.GetBridgesRequest) (*pb.GetBridgesResponse, error) {
 	limit := req.Limit
 	if limit == 0 {
-		limit = s.defaultPageLimit
+		limit = s.defaultPageLimit.Get()
 	}
-	if limit > s.maxPageLimit {
-		limit = s.maxPageLimit
+	if limit > s.maxPageLimit.Get() {
+		limit = s.maxPageLimit.Get()
 	}
 	totalCount, err := s.storage.GetDepositCount(ctx, req.DestAddr, nil)
 	if err != nil {
@@ -266,10 +267,10 @@ func (s *bridgeService) GetBridges(ctx context.Context, req *pb.GetBridgesReques
 func (s *bridgeService) GetClaims(ctx context.Context, req *pb.GetClaimsRequest) (*pb.GetClaimsResponse, error) {
 	limit := req.Limit
 	if limit == 0 {
-		limit = s.defaultPageLimit
+		limit = s.defaultPageLimit.Get()
 	}
-	if limit > s.maxPageLimit {
-		limit = s.maxPageLimit
+	if limit > s.maxPageLimit.Get() {
+		limit = s.maxPageLimit.Get()
 	}
 	totalCount, err := s.storage.GetClaimCount(ctx, req.DestAddr, nil)
 	if err != nil {
@@ -442,10 +443,10 @@ func (s *bridgeService) GetMainCoins(ctx context.Context, req *pb.GetMainCoinsRe
 func (s *bridgeService) GetPendingTransactions(ctx context.Context, req *pb.GetPendingTransactionsRequest) (*pb.CommonTransactionsResponse, error) {
 	limit := req.Limit
 	if limit == 0 {
-		limit = s.defaultPageLimit
+		limit = s.defaultPageLimit.Get()
 	}
-	if limit > s.maxPageLimit {
-		limit = s.maxPageLimit
+	if limit > s.maxPageLimit.Get() {
+		limit = s.maxPageLimit.Get()
 	}
 
 	deposits, err := s.storage.GetPendingTransactions(ctx, req.DestAddr, uint(limit+1), uint(req.Offset), uint(utils.LeafTypeAsset), nil)
@@ -501,7 +502,7 @@ func (s *bridgeService) GetPendingTransactions(ctx context.Context, req *pb.GetP
 			// For L1->L2, when ready_for_claim is false, but there have been more than 64 block confirmations,
 			// should also display the status as "L2 executing" (pending auto claim)
 			if deposit.NetworkID == 0 {
-				if l1BlockNum-deposit.BlockNumber >= utils.L1TargetBlockConfirmations {
+				if l1BlockNum-deposit.BlockNumber >= utils.L1TargetBlockConfirmations.Get() {
 					transaction.Status = uint32(pb.TransactionStatus_TX_PENDING_AUTO_CLAIM)
 				}
 			} else {
@@ -540,10 +541,10 @@ func (s *bridgeService) setDurationForL2Deposit(ctx context.Context, l2AvgCommit
 func (s *bridgeService) GetAllTransactions(ctx context.Context, req *pb.GetAllTransactionsRequest) (*pb.CommonTransactionsResponse, error) {
 	limit := req.Limit
 	if limit == 0 {
-		limit = s.defaultPageLimit
+		limit = s.defaultPageLimit.Get()
 	}
-	if limit > s.maxPageLimit {
-		limit = s.maxPageLimit
+	if limit > s.maxPageLimit.Get() {
+		limit = s.maxPageLimit.Get()
 	}
 
 	deposits, err := s.storage.GetDepositsWithLeafType(ctx, req.DestAddr, uint(limit+1), uint(req.Offset), uint(utils.LeafTypeAsset), nil)
@@ -614,7 +615,7 @@ func (s *bridgeService) GetAllTransactions(ctx context.Context, req *pb.GetAllTr
 			// For L1->L2, when ready_for_claim is false, but there have been more than 64 block confirmations,
 			// should also display the status as "L2 executing" (pending auto claim)
 			if deposit.NetworkID == 0 {
-				if l1BlockNum-deposit.BlockNumber >= utils.L1TargetBlockConfirmations {
+				if l1BlockNum-deposit.BlockNumber >= utils.L1TargetBlockConfirmations.Get() {
 					transaction.Status = uint32(pb.TransactionStatus_TX_PENDING_AUTO_CLAIM)
 				}
 			} else {
@@ -637,10 +638,10 @@ func (s *bridgeService) GetAllTransactions(ctx context.Context, req *pb.GetAllTr
 func (s *bridgeService) GetNotReadyTransactions(ctx context.Context, req *pb.GetNotReadyTransactionsRequest) (*pb.CommonTransactionsResponse, error) {
 	limit := req.Limit
 	if limit == 0 {
-		limit = s.defaultPageLimit
+		limit = s.defaultPageLimit.Get()
 	}
-	if limit > s.maxPageLimit {
-		limit = s.maxPageLimit
+	if limit > s.maxPageLimit.Get() {
+		limit = s.maxPageLimit.Get()
 	}
 
 	deposits, err := s.storage.GetNotReadyTransactions(ctx, uint(limit+1), uint(req.Offset), nil)
@@ -688,10 +689,10 @@ func (s *bridgeService) GetNotReadyTransactions(ctx context.Context, req *pb.Get
 func (s *bridgeService) GetMonitoredTxsByStatus(ctx context.Context, req *pb.GetMonitoredTxsByStatusRequest) (*pb.CommonMonitoredTxsResponse, error) {
 	limit := req.Limit
 	if limit == 0 {
-		limit = s.defaultPageLimit
+		limit = s.defaultPageLimit.Get()
 	}
-	if limit > s.maxPageLimit {
-		limit = s.maxPageLimit
+	if limit > s.maxPageLimit.Get() {
+		limit = s.maxPageLimit.Get()
 	}
 
 	mTxs, err := s.storage.GetClaimTxsByStatusWithLimit(ctx, []ctmtypes.MonitoredTxStatus{ctmtypes.MonitoredTxStatus(req.Status)}, uint(limit+1), uint(req.Offset), nil)

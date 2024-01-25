@@ -17,5 +17,8 @@ type Config struct {
 	// DB index
 	DB int `mapstructure:"DB"`
 
-	MockPrice bool `mapstructure:"MockPrice"`
+	EnablePrice bool `mapstructure:"EnablePrice" apollo:"CoinPrice.Enabled"`
+
+	// KeyPrefix will be added in front of the Redis key for environment isolation
+	KeyPrefix string `mapstructure:"KeyPrefix" apollo:"Redis.KeyPrefix"`
 }

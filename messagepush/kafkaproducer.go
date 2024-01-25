@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/0xPolygonHermez/zkevm-bridge-service/bridgectrl/pb"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/config/apolloconfig"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/utils"
 	"github.com/0xPolygonHermez/zkevm-node/log"
 	"github.com/IBM/sarama"
@@ -47,8 +48,9 @@ type KafkaProducer interface {
 
 type kafkaProducerImpl struct {
 	producer       sarama.SyncProducer
-	defaultTopic   string
-	defaultPushKey string
+	defaultTopic   apolloconfig.Entry[string]
+	defaultPushKey apolloconfig.Entry[string]
+	bizCode        apolloconfig.Entry[string]
 }
 
 func NewKafkaProducer(cfg Config) (KafkaProducer, error) {
@@ -87,8 +89,9 @@ func NewKafkaProducer(cfg Config) (KafkaProducer, error) {
 	}
 	return &kafkaProducerImpl{
 		producer:       producer,
-		defaultTopic:   cfg.Topic,
-		defaultPushKey: cfg.PushKey,
+		defaultTopic:   apolloconfig.NewStringEntry("MessagePushProducer.Topic", cfg.Topic),
+		defaultPushKey: apolloconfig.NewStringEntry("MessagePushProducer.PushKey", cfg.PushKey),
+		bizCode:        apolloconfig.NewStringEntry("MessagePushProducer.BizCode", BizCodeBridgeOrder),
 	}, nil
 }
 
@@ -101,8 +104,8 @@ func (p *kafkaProducerImpl) Produce(msg interface{}, optFns ...produceOptFunc) e
 		return nil
 	}
 	opts := &produceOptions{
-		topic:   p.defaultTopic,
-		pushKey: p.defaultPushKey,
+		topic:   p.defaultTopic.Get(),
+		pushKey: p.defaultPushKey.Get(),
 	}
 	for _, f := range optFns {
 		f(opts)
@@ -149,7 +152,7 @@ func (p *kafkaProducerImpl) PushTransactionUpdate(tx *pb.Transaction, optFns ...
 	}
 
 	msg := &PushMessage{
-		BizCode:       BizCodeBridgeOrder,
+		BizCode:       p.bizCode.Get(),
 		WalletAddress: tx.GetDestAddr(),
 		RequestID:     utils.GenerateTraceID(),
 		PushContent:   fmt.Sprintf("[%v]", string(b)),

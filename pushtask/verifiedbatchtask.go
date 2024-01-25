@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/0xPolygonHermez/zkevm-bridge-service/config/apolloconfig"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/redisstorage"
 	"github.com/0xPolygonHermez/zkevm-node/log"
 	"github.com/pkg/errors"
@@ -11,12 +12,15 @@ import (
 )
 
 const (
-	verifyDurationListLen             = 5
 	syncL1VerifiedBatchLockKey        = "sync_l1_verified_batch_lock"
-	minVerifyDuration                 = 2
-	defaultVerifyDuration             = 10
-	maxVerifyDuration                 = 60
 	verifiedBatchCacheRefreshInterval = 10 * time.Second
+)
+
+var (
+	minVerifyDuration     = apolloconfig.NewIntEntry[uint64]("pushtask.minVerifyDuration", 2)      //nolint:gomnd
+	defaultVerifyDuration = apolloconfig.NewIntEntry[uint64]("pushtask.defaultVerifyDuration", 10) //nolint:gomnd
+	maxVerifyDuration     = apolloconfig.NewIntEntry[uint64]("pushtask.maxVerifyDuration", 60)     //nolint:gomnd
+	verifyDurationListLen = apolloconfig.NewIntEntry("pushtask.verifyDurationListLen", 5)          //nolint:gomnd
 )
 
 type VerifiedBatchHandler struct {
@@ -105,7 +109,7 @@ func (ins *VerifiedBatchHandler) freshRedisForAvgCommitDuration(ctx context.Cont
 	if err != nil {
 		return err
 	}
-	if listLen <= verifyDurationListLen {
+	if listLen <= int64(verifyDurationListLen.Get()) {
 		log.Infof("redis verify duration list is not enough, so skip count the avg duration!")
 		return nil
 	}
@@ -147,18 +151,18 @@ func (ins *VerifiedBatchHandler) checkLatestBatchLegal(ctx context.Context, late
 
 // checkAvgDurationLegal duration has a default range, 2-30 minutes, if over range, maybe dirty data, drop the data
 func (ins *VerifiedBatchHandler) checkAvgDurationLegal(avgDuration int64) bool {
-	return avgDuration > int64(minVerifyDuration) && avgDuration < int64(maxVerifyDuration)
+	return avgDuration > int64(minVerifyDuration.Get()) && avgDuration < int64(maxVerifyDuration.Get())
 }
 
 func GetAvgVerifyDuration(ctx context.Context, redisStorage redisstorage.RedisStorage) uint64 {
 	avgDuration, err := redisStorage.GetAvgVerifyDuration(ctx)
 	if err != nil && !errors.Is(err, redis.Nil) {
 		log.Errorf("get avg verify duration from redis failed, error: %v", err)
-		return uint64(defaultVerifyDuration)
+		return defaultVerifyDuration.Get()
 	}
 	if avgDuration == 0 {
 		log.Infof("get avg verify duration from redis is 0, so use default")
-		return uint64(defaultVerifyDuration)
+		return defaultVerifyDuration.Get()
 	}
 	return avgDuration
 }

@@ -16,7 +16,6 @@ import (
 )
 
 const (
-	queryLimit             = 100
 	l1BlockNumTaskInterval = 5 * time.Second
 	l1BlockNumTaskLockKey  = "bridge_l1_block_num_lock"
 )
@@ -103,8 +102,8 @@ func (t *L1BlockNumTask) doTask(ctx context.Context) {
 	}(blockNum)
 
 	// Minus 64 to get the target query block num
-	oldBlockNum -= utils.Min(utils.L1TargetBlockConfirmations, oldBlockNum)
-	blockNum -= utils.Min(utils.L1TargetBlockConfirmations, blockNum)
+	oldBlockNum -= utils.Min(utils.L1TargetBlockConfirmations.Get(), oldBlockNum)
+	blockNum -= utils.Min(utils.L1TargetBlockConfirmations.Get(), blockNum)
 	if blockNum <= oldBlockNum {
 		return
 	}

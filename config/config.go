@@ -9,6 +9,7 @@ import (
 	"github.com/0xPolygonHermez/zkevm-bridge-service/bridgectrl"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/claimtxman"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/coinmiddleware"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/config/apolloconfig"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/db"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/messagepush"
@@ -23,16 +24,17 @@ import (
 // Config struct
 type Config struct {
 	Log                 log.Config
-	SyncDB              db.Config
-	ClaimTxManager      claimtxman.Config
-	Etherman            etherman.Config
-	Synchronizer        synchronizer.Config
-	BridgeController    bridgectrl.Config
-	BridgeServer        server.Config
-	CoinKafkaConsumer   coinmiddleware.Config
-	MessagePushProducer messagepush.Config
-	NetworkConfig
-	NacosConfig nacos.Config
+	Apollo              apolloconfig.Config
+	SyncDB              db.Config             `apollo:"SyncDB"`
+	ClaimTxManager      claimtxman.Config     `apollo:"ClaimTxManager"`
+	Etherman            etherman.Config       `apollo:"Etherman"`
+	Synchronizer        synchronizer.Config   `apollo:"Synchronizer"`
+	BridgeController    bridgectrl.Config     `apollo:"BridgeController"`
+	BridgeServer        server.Config         `apollo:"BridgeServer"`
+	CoinKafkaConsumer   coinmiddleware.Config `apollo:"CoinKafkaConsumer"`
+	MessagePushProducer messagepush.Config    `apollo:"MessagePushProducer"`
+	NetworkConfig       `apollo:"NetworkConfig"`
+	NacosConfig         nacos.Config `apollo:"NacosConfig"`
 }
 
 // Load loads the configuration
@@ -86,6 +88,17 @@ func Load(configFilePath string, network string) (*Config, error) {
 	}
 	if !viper.IsSet("NetworkConfig") && network != "" {
 		cfg.loadNetworkConfig(network)
+	}
+
+	if cfg.Apollo.Enabled {
+		err = apolloconfig.Init(cfg.Apollo)
+		if err != nil {
+			return nil, err
+		}
+		err = apolloconfig.Load(&cfg)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return &cfg, nil

@@ -2,6 +2,15 @@
 Level = "debug"
 Outputs = ["stdout"]
 
+[Apollo]
+Enabled = false
+AppID = "haibridgetest"
+Cluster = "default"
+MetaAddress = "http://81.68.181.139:8080"
+Namespaces = ["application"]
+Secret = ""
+IsBackupConfig = true
+
 [SyncDB]
 Database = "postgres"
 User = "test_user"

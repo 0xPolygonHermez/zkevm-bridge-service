@@ -12,8 +12,8 @@ type Config struct {
 	Brokers []string `mapstructure:"Brokers"`
 
 	// Topic is the default topic name to send message to
-	Topic   string `mapstructure:"Topic"`
-	PushKey string `mapstructure:"PushKey"`
+	Topic   string `mapstructure:"Topic" apollo:"MessagePushProducer.Topic"`
+	PushKey string `mapstructure:"PushKey" apollo:"MessagePushProducer.PushKey"`
 
 	// Username and Password are used for SASL_SSL authentication
 	Username string `mapstructure:"Username"`

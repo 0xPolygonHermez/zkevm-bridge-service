@@ -2,6 +2,15 @@
 Level = "debug"
 Outputs = ["stdout"]
 
+[Apollo]
+Enabled = false
+AppID = "x1-bridge-service"
+Cluster = "default"
+MetaAddress = "http://127.0.0.1:8080"
+Namespaces = ["application"]
+Secret = ""
+IsBackupConfig = true
+
 [SyncDB]
 Database = "postgres"
 User = "test_user"

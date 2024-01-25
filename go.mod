@@ -7,6 +7,8 @@ require (
 	github.com/IBM/sarama v1.41.2
 	github.com/alibaba/sentinel-golang v1.0.4
 	github.com/alibaba/sentinel-golang/pkg/adapters/grpc v0.0.0-20230626085943-08071855bc67
+	github.com/alibaba/sentinel-golang/pkg/datasource/apollo v0.0.0-20230626085943-08071855bc67
+	github.com/apolloconfig/agollo/v4 v4.0.9
 	github.com/ethereum/go-ethereum v1.13.2
 	github.com/gobuffalo/packr/v2 v2.8.3
 	github.com/grpc-ecosystem/go-grpc-middleware v1.4.0
@@ -25,6 +27,7 @@ require (
 	github.com/stretchr/testify v1.8.4
 	github.com/urfave/cli/v2 v2.25.7
 	golang.org/x/crypto v0.13.0
+	golang.org/x/exp v0.0.0-20230810033253-352e893a4cad
 	google.golang.org/genproto/googleapis/api v0.0.0-20230822172742-b8732ec3820d
 	google.golang.org/grpc v1.58.2
 	google.golang.org/protobuf v1.31.0
@@ -166,7 +169,6 @@ require (
 	go.uber.org/atomic v1.9.0 // indirect
 	go.uber.org/multierr v1.8.0 // indirect
 	go.uber.org/zap v1.24.0 // indirect
-	golang.org/x/exp v0.0.0-20230810033253-352e893a4cad // indirect
 	golang.org/x/mod v0.11.0 // indirect
 	golang.org/x/net v0.15.0 // indirect
 	golang.org/x/sync v0.3.0 // indirect

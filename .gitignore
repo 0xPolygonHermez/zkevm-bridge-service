@@ -19,3 +19,6 @@
 
 config/config.mainnet.toml
 config/config.testnet.toml
+
+# Local test files
+test/test

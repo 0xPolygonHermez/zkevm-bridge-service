@@ -9,6 +9,7 @@ import (
 
 	"github.com/0xPolygonHermez/zkevm-bridge-service/bridgectrl/pb"
 	ctmtypes "github.com/0xPolygonHermez/zkevm-bridge-service/claimtxman/types"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/config/apolloconfig"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/utils/gerror"
 	"github.com/0xPolygonHermez/zkevm-node/log"
@@ -21,7 +22,7 @@ import (
 // PostgresStorage implements the Storage interface.
 type PostgresStorage struct {
 	*pgxpool.Pool
-	tableSuffix string
+	tableSuffix apolloconfig.Entry[string]
 }
 
 // getExecQuerier determines which execQuerier to use, dbTx or the main pgxpool
@@ -44,7 +45,7 @@ func NewPostgresStorage(cfg Config) (*PostgresStorage, error) {
 		log.Errorf("Unable to connect to database: %v\n", err)
 		return nil, err
 	}
-	return &PostgresStorage{Pool: db, tableSuffix: cfg.TableSuffix}, nil
+	return &PostgresStorage{Pool: db, tableSuffix: apolloconfig.NewStringEntry("DB.TableSuffix", cfg.TableSuffix)}, nil
 }
 
 // Rollback rollbacks a db transaction.
@@ -376,7 +377,7 @@ func (p *PostgresStorage) Set(ctx context.Context, key []byte, value [][]byte, d
 
 // BulkSet is similar to Set, but it inserts multiple key-value pairs into the db.
 func (p *PostgresStorage) BulkSet(ctx context.Context, rows [][]interface{}, dbTx pgx.Tx) error {
-	_, err := p.getExecQuerier(dbTx).CopyFrom(ctx, pgx.Identifier{"mt", "rht" + p.tableSuffix}, []string{"key", "value", "deposit_id"}, pgx.CopyFromRows(rows))
+	_, err := p.getExecQuerier(dbTx).CopyFrom(ctx, pgx.Identifier{"mt", "rht" + p.tableSuffix.Get()}, []string{"key", "value", "deposit_id"}, pgx.CopyFromRows(rows))
 	return err
 }
 
