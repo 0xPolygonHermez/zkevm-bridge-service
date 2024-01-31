@@ -23,6 +23,7 @@ import (
 	"github.com/0xPolygonHermez/zkevm-bridge-service/utils/gerror"
 	"github.com/0xPolygonHermez/zkevm-node/jsonrpc/client"
 	"github.com/0xPolygonHermez/zkevm-node/log"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/urfave/cli/v2"
 )
 
@@ -123,6 +124,23 @@ func startServer(ctx *cli.Context, opts ...runOptionFunc) error {
 		networkIDs = append(networkIDs, networkID)
 	}
 
+	l2NodeClients := make([]*utils.Client, len(c.Etherman.L2URLs))
+	l2Auths := make([]*bind.TransactOpts, len(c.Etherman.L2URLs))
+	for i := range c.Etherman.L2URLs {
+		nodeClient, err := utils.NewClient(ctx.Context, c.Etherman.L2URLs[i], c.NetworkConfig.L2PolygonBridgeAddresses[i])
+		if err != nil {
+			log.Error(err)
+			return err
+		}
+		auth, err := nodeClient.GetSignerFromKeystore(ctx.Context, c.ClaimTxManager.PrivateKey)
+		if err != nil {
+			log.Error(err)
+			return err
+		}
+		l2NodeClients[i] = nodeClient
+		l2Auths[i] = auth
+	}
+
 	storage, err := db.NewStorage(c.SyncDB)
 	if err != nil {
 		log.Error(err)
@@ -185,7 +203,7 @@ func startServer(ctx *cli.Context, opts ...runOptionFunc) error {
 	// Initialize chainId manager
 	utils.InitChainIdManager(networkIDs, chainIDs)
 
-	bridgeService := server.NewBridgeService(c.BridgeServer, c.BridgeController.Height, networkIDs, apiStorage, redisStorage, mainCoinsCache, estimatetime.GetDefaultCalculator()).
+	bridgeService := server.NewBridgeService(c.BridgeServer, c.BridgeController.Height, networkIDs, l2NodeClients, l2Auths, apiStorage, redisStorage, mainCoinsCache, estimatetime.GetDefaultCalculator()).
 		WithMessagePushProducer(messagePushProducer)
 
 	// ---------- Run API ----------

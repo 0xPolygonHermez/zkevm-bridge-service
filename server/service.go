@@ -19,6 +19,7 @@ import (
 	"github.com/0xPolygonHermez/zkevm-bridge-service/utils"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/utils/gerror"
 	"github.com/0xPolygonHermez/zkevm-node/log"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	lru "github.com/hashicorp/golang-lru/v2"
 	"github.com/jackc/pgx/v4"
@@ -28,6 +29,7 @@ import (
 const (
 	defaultErrorCode   = 1
 	defaultSuccessCode = 0
+	mtHeight           = 32 // For sending mtProof to bridge contract, it requires constant-sized array...
 	defaultMinDuration = 1
 )
 
@@ -36,6 +38,8 @@ type bridgeService struct {
 	redisStorage        redisstorage.RedisStorage
 	mainCoinsCache      localcache.MainCoinsCache
 	networkIDs          map[uint]uint8
+	nodeClients         map[uint]*utils.Client
+	auths               map[uint]*bind.TransactOpts
 	height              uint8
 	defaultPageLimit    apolloconfig.Entry[uint32]
 	maxPageLimit        apolloconfig.Entry[uint32]
@@ -47,11 +51,17 @@ type bridgeService struct {
 }
 
 // NewBridgeService creates new bridge service.
-func NewBridgeService(cfg Config, height uint8, networks []uint, storage interface{}, redisStorage redisstorage.RedisStorage,
-	mainCoinsCache localcache.MainCoinsCache, estTimeCalc estimatetime.Calculator) *bridgeService {
+func NewBridgeService(cfg Config, height uint8, networks []uint, l2Clients []*utils.Client, l2Auths []*bind.TransactOpts,
+	storage interface{}, redisStorage redisstorage.RedisStorage, mainCoinsCache localcache.MainCoinsCache, estTimeCalc estimatetime.Calculator) *bridgeService {
 	var networkIDs = make(map[uint]uint8)
+	var nodeClients = make(map[uint]*utils.Client, len(networks))
+	var authMap = make(map[uint]*bind.TransactOpts, len(networks))
 	for i, network := range networks {
 		networkIDs[network] = uint8(i)
+		if i > 0 {
+			nodeClients[network] = l2Clients[i-1]
+			authMap[network] = l2Auths[i-1]
+		}
 	}
 	cache, err := lru.New[string, [][]byte](cfg.CacheSize)
 	if err != nil {
@@ -64,6 +74,8 @@ func NewBridgeService(cfg Config, height uint8, networks []uint, storage interfa
 		estTimeCalculator: estTimeCalc,
 		height:            height,
 		networkIDs:        networkIDs,
+		nodeClients:       nodeClients,
+		auths:             authMap,
 		defaultPageLimit:  apolloconfig.NewIntEntry("BridgeServer.DefaultPageLimit", cfg.DefaultPageLimit),
 		maxPageLimit:      apolloconfig.NewIntEntry("BridgeServer.MaxPageLimit", cfg.MaxPageLimit),
 		version:           cfg.BridgeVersion,
@@ -472,21 +484,8 @@ func (s *bridgeService) GetPendingTransactions(ctx context.Context, req *pb.GetP
 
 	var pbTransactions []*pb.Transaction
 	for _, deposit := range deposits {
-		transaction := &pb.Transaction{
-			FromChain:    uint32(deposit.NetworkID),
-			ToChain:      uint32(deposit.DestinationNetwork),
-			BridgeToken:  deposit.OriginalAddress.Hex(),
-			TokenAmount:  deposit.Amount.String(),
-			EstimateTime: s.estTimeCalculator.Get(deposit.NetworkID),
-			Time:         uint64(deposit.Time.UnixMilli()),
-			TxHash:       deposit.TxHash.String(),
-			FromChainId:  utils.GetChainIdByNetworkId(deposit.NetworkID),
-			ToChainId:    utils.GetChainIdByNetworkId(deposit.DestinationNetwork),
-			Id:           deposit.Id,
-			Index:        uint64(deposit.DepositCount),
-			Metadata:     "0x" + hex.EncodeToString(deposit.Metadata),
-			BlockNumber:  deposit.BlockNumber,
-		}
+		transaction := utils.EthermanDepositToPbTransaction(deposit)
+		transaction.EstimateTime = s.estTimeCalculator.Get(deposit.NetworkID)
 		transaction.Status = uint32(pb.TransactionStatus_TX_CREATED)
 		if deposit.ReadyForClaim {
 			transaction.Status = uint32(pb.TransactionStatus_TX_PENDING_USER_CLAIM)
@@ -570,21 +569,8 @@ func (s *bridgeService) GetAllTransactions(ctx context.Context, req *pb.GetAllTr
 
 	var pbTransactions []*pb.Transaction
 	for _, deposit := range deposits {
-		transaction := &pb.Transaction{
-			FromChain:    uint32(deposit.NetworkID),
-			ToChain:      uint32(deposit.DestinationNetwork),
-			BridgeToken:  deposit.OriginalAddress.Hex(),
-			TokenAmount:  deposit.Amount.String(),
-			EstimateTime: s.estTimeCalculator.Get(deposit.NetworkID),
-			Time:         uint64(deposit.Time.UnixMilli()),
-			TxHash:       deposit.TxHash.String(),
-			FromChainId:  utils.GetChainIdByNetworkId(deposit.NetworkID),
-			ToChainId:    utils.GetChainIdByNetworkId(deposit.DestinationNetwork),
-			Id:           deposit.Id,
-			Index:        uint64(deposit.DepositCount),
-			Metadata:     "0x" + hex.EncodeToString(deposit.Metadata),
-			BlockNumber:  deposit.BlockNumber,
-		}
+		transaction := utils.EthermanDepositToPbTransaction(deposit)
+		transaction.EstimateTime = s.estTimeCalculator.Get(deposit.NetworkID)
 		transaction.Status = uint32(pb.TransactionStatus_TX_CREATED) // Not ready for claim
 		if deposit.ReadyForClaim {
 			// Check whether it has been claimed or not
@@ -660,22 +646,9 @@ func (s *bridgeService) GetNotReadyTransactions(ctx context.Context, req *pb.Get
 
 	var pbTransactions []*pb.Transaction
 	for _, deposit := range deposits {
-		transaction := &pb.Transaction{
-			FromChain:    uint32(deposit.NetworkID),
-			ToChain:      uint32(deposit.DestinationNetwork),
-			BridgeToken:  deposit.OriginalAddress.Hex(),
-			TokenAmount:  deposit.Amount.String(),
-			EstimateTime: s.estTimeCalculator.Get(deposit.NetworkID),
-			Status:       0,
-			Time:         uint64(deposit.Time.UnixMilli()),
-			TxHash:       deposit.TxHash.String(),
-			FromChainId:  utils.GetChainIdByNetworkId(deposit.NetworkID),
-			ToChainId:    utils.GetChainIdByNetworkId(deposit.DestinationNetwork),
-			Id:           deposit.Id,
-			Index:        uint64(deposit.DepositCount),
-			Metadata:     "0x" + hex.EncodeToString(deposit.Metadata),
-			BlockNumber:  deposit.BlockNumber,
-		}
+		transaction := utils.EthermanDepositToPbTransaction(deposit)
+		transaction.EstimateTime = s.estTimeCalculator.Get(deposit.NetworkID)
+		transaction.Status = uint32(pb.TransactionStatus_TX_CREATED)
 		pbTransactions = append(pbTransactions, transaction)
 	}
 
@@ -741,6 +714,120 @@ func (s *bridgeService) GetEstimateTime(ctx context.Context, req *pb.GetEstimate
 	return &pb.CommonEstimateTimeResponse{
 		Code: defaultSuccessCode,
 		Data: []uint32{s.estTimeCalculator.Get(0), s.estTimeCalculator.Get(1)},
+	}, nil
+}
+
+// ManualClaim manually sends a claim transaction for a specific deposit
+func (s *bridgeService) ManualClaim(ctx context.Context, req *pb.ManualClaimRequest) (*pb.CommonManualClaimResponse, error) {
+	// Only allow L1->L2
+	if req.FromChain != 0 {
+		return &pb.CommonManualClaimResponse{
+			Code: defaultErrorCode,
+			Msg:  "only allow L1->L2 claim",
+		}, nil
+	}
+
+	// Query the deposit info from storage
+	deposit, err := s.storage.GetDepositByHash(ctx, req.DestAddr, uint(req.FromChain), req.DepositTxHash, nil)
+	if err != nil {
+		log.Errorf("Failed to get deposit: %v", err)
+		return &pb.CommonManualClaimResponse{
+			Code: defaultErrorCode,
+			Msg:  "failed to get deposit info",
+		}, nil
+	}
+
+	// Only allow to claim ready transactions
+	if !deposit.ReadyForClaim {
+		return &pb.CommonManualClaimResponse{
+			Code: defaultErrorCode,
+			Msg:  "transaction is not ready for claim",
+		}, nil
+	}
+
+	// Check whether the deposit has already been claimed
+	_, err = s.storage.GetClaim(ctx, deposit.DepositCount, deposit.DestinationNetwork, nil)
+	if err == nil {
+		return &pb.CommonManualClaimResponse{
+			Code: defaultErrorCode,
+			Msg:  "transaction has already been claimed",
+		}, nil
+	}
+	if !errors.Is(err, gerror.ErrStorageNotFound) {
+		return &pb.CommonManualClaimResponse{
+			Code: defaultErrorCode,
+		}, nil
+	}
+
+	destNet := deposit.DestinationNetwork
+	client, ok := s.nodeClients[destNet]
+	if !ok || client == nil {
+		log.Errorf("node client for networkID %v not found", destNet)
+		return &pb.CommonManualClaimResponse{
+			Code: defaultErrorCode,
+		}, nil
+	}
+	// Get the claim proof
+	ger, proves, err := s.GetClaimProof(deposit.DepositCount, deposit.NetworkID, nil)
+	if err != nil {
+		log.Errorf("failed to get claim proof for deposit %v networkID %v: %v", deposit.DepositCount, deposit.NetworkID, err)
+	}
+	var mtProves [mtHeight][bridgectrl.KeyLen]byte
+	for i := 0; i < mtHeight; i++ {
+		mtProves[i] = proves[i]
+	}
+	// Send claim transaction to the node
+	tx, err := client.SendClaim(ctx, deposit, mtProves, ger, s.auths[destNet])
+	if err != nil {
+		log.Errorf("failed to send claim transaction: %v", err)
+		return &pb.CommonManualClaimResponse{
+			Code: defaultErrorCode,
+			Msg:  "failed to send claim transaction",
+		}, nil
+	}
+
+	return &pb.CommonManualClaimResponse{
+		Code: defaultSuccessCode,
+		Data: &pb.ManualClaimResponse{
+			ClaimTxHash: tx.Hash().String(),
+		},
+	}, nil
+}
+
+// GetReadyPendingTransactions returns all transactions from a network which are ready_for_claim but not claimed
+func (s *bridgeService) GetReadyPendingTransactions(ctx context.Context, req *pb.GetReadyPendingTransactionsRequest) (*pb.CommonTransactionsResponse, error) {
+	limit := req.Limit
+	if limit == 0 {
+		limit = s.defaultPageLimit.Get()
+	}
+	if limit > s.maxPageLimit.Get() {
+		limit = s.maxPageLimit.Get()
+	}
+
+	deposits, err := s.storage.GetReadyPendingTransactions(ctx, uint(req.NetworkId), uint(limit+1), uint(req.Offset), nil)
+	if err != nil {
+		return &pb.CommonTransactionsResponse{
+			Code: defaultErrorCode,
+			Data: nil,
+		}, nil
+	}
+
+	hasNext := len(deposits) > int(limit)
+	if hasNext {
+		deposits = deposits[:limit]
+	}
+
+	var pbTransactions []*pb.Transaction
+	for _, deposit := range deposits {
+		transaction := utils.EthermanDepositToPbTransaction(deposit)
+		transaction.EstimateTime = s.estTimeCalculator.Get(deposit.NetworkID)
+		transaction.Status = uint32(pb.TransactionStatus_TX_PENDING_USER_CLAIM)
+		pbTransactions = append(pbTransactions, transaction)
+	}
+
+	return &pb.CommonTransactionsResponse{
+		Code: defaultSuccessCode,
+		Data: &pb.TransactionDetail{HasNext: hasNext, Transactions: pbTransactions},
 	}, nil
 }
 

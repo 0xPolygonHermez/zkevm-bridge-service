@@ -14,7 +14,6 @@ import (
 	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/test/mocksmartcontracts/BridgeMessageReceiver"
 	zkevmtypes "github.com/0xPolygonHermez/zkevm-node/config/types"
-	"github.com/0xPolygonHermez/zkevm-node/encoding"
 	"github.com/0xPolygonHermez/zkevm-node/etherman/smartcontracts/polygonzkevmbridge"
 	"github.com/0xPolygonHermez/zkevm-node/etherman/smartcontracts/polygonzkevmbridgel2"
 	"github.com/0xPolygonHermez/zkevm-node/log"
@@ -241,17 +240,16 @@ func (c *Client) BuildSendClaim(ctx context.Context, deposit *etherman.Deposit, 
 	return tx, nil
 }
 
-// SendClaim sends a claim transaction.
-func (c *Client) SendClaim(ctx context.Context, deposit *pb.Deposit, smtProof [mtHeight][keyLen]byte, globalExitRoot *etherman.GlobalExitRoot, auth *bind.TransactOpts) error {
-	amount, _ := new(big.Int).SetString(deposit.Amount, encoding.Base10)
+// SendClaim sends a claim transaction
+func (c *Client) SendClaim(ctx context.Context, deposit *etherman.Deposit, smtProof [mtHeight][keyLen]byte, globalExitRoot *etherman.GlobalExitRoot, auth *bind.TransactOpts) (*types.Transaction, error) {
 	var (
 		tx  *types.Transaction
 		err error
 	)
-	if deposit.LeafType == LeafTypeAsset {
-		tx, err = c.bridge.ClaimAsset(auth, smtProof, uint32(deposit.DepositCnt), globalExitRoot.ExitRoots[0], globalExitRoot.ExitRoots[1], deposit.OrigNet, common.HexToAddress(deposit.OrigAddr), deposit.DestNet, common.HexToAddress(deposit.DestAddr), amount, common.FromHex(deposit.Metadata))
-	} else if deposit.LeafType == LeafTypeMessage {
-		tx, err = c.bridge.ClaimMessage(auth, smtProof, uint32(deposit.DepositCnt), globalExitRoot.ExitRoots[0], globalExitRoot.ExitRoots[1], deposit.OrigNet, common.HexToAddress(deposit.OrigAddr), deposit.DestNet, common.HexToAddress(deposit.DestAddr), amount, common.FromHex(deposit.Metadata))
+	if deposit.LeafType == uint8(LeafTypeAsset) {
+		tx, err = c.bridge.ClaimAsset(auth, smtProof, uint32(deposit.DepositCount), globalExitRoot.ExitRoots[0], globalExitRoot.ExitRoots[1], uint32(deposit.OriginalNetwork), deposit.OriginalAddress, uint32(deposit.DestinationNetwork), deposit.DestinationAddress, deposit.Amount, deposit.Metadata)
+	} else if deposit.LeafType == uint8(LeafTypeMessage) {
+		tx, err = c.bridge.ClaimMessage(auth, smtProof, uint32(deposit.DepositCount), globalExitRoot.ExitRoots[0], globalExitRoot.ExitRoots[1], uint32(deposit.OriginalNetwork), deposit.OriginalAddress, uint32(deposit.DestinationNetwork), deposit.DestinationAddress, deposit.Amount, deposit.Metadata)
 	}
 	if err != nil {
 		txHash := ""
@@ -259,6 +257,16 @@ func (c *Client) SendClaim(ctx context.Context, deposit *pb.Deposit, smtProof [m
 			txHash = tx.Hash().String()
 		}
 		log.Error("Error: ", err, ". Tx Hash: ", txHash)
+		return nil, err
+	}
+
+	return tx, nil
+}
+
+// SendClaimAndWait sends a claim transaction and wait for the claim tx to be mined.
+func (c *Client) SendClaimAndWait(ctx context.Context, deposit *pb.Deposit, smtProof [mtHeight][keyLen]byte, globalExitRoot *etherman.GlobalExitRoot, auth *bind.TransactOpts) error {
+	tx, err := c.SendClaim(ctx, PbToEthermanDeposit(deposit), smtProof, globalExitRoot, auth)
+	if err != nil {
 		return err
 	}
 

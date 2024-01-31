@@ -119,7 +119,7 @@ func NewManager(ctx context.Context, cfg *Config) (*Manager, error) {
 	if err != nil {
 		return nil, err
 	}
-	bService := server.NewBridgeService(cfg.BS, cfg.BT.Height, []uint{0, 1}, pgst, nil, nil, nil)
+	bService := server.NewBridgeService(cfg.BS, cfg.BT.Height, []uint{0, 1}, []*utils.Client{nil}, []*bind.TransactOpts{nil}, pgst, nil, nil, nil)
 	opsman.storage = st.(StorageInterface)
 	opsman.bridgetree = bt
 	opsman.bridgeService = bService
@@ -573,7 +573,7 @@ func (m *Manager) SendL1Claim(ctx context.Context, deposit *pb.Deposit, smtProof
 		return err
 	}
 
-	return client.SendClaim(ctx, deposit, smtProof, globalExitRoot, auth)
+	return client.SendClaimAndWait(ctx, deposit, smtProof, globalExitRoot, auth)
 }
 
 // SendL2Claim send an L2 claim
@@ -584,7 +584,7 @@ func (m *Manager) SendL2Claim(ctx context.Context, deposit *pb.Deposit, smtProof
 		return err
 	}
 
-	err = client.SendClaim(ctx, deposit, smtProof, globalExitRoot, auth)
+	err = client.SendClaimAndWait(ctx, deposit, smtProof, globalExitRoot, auth)
 	return err
 }
 

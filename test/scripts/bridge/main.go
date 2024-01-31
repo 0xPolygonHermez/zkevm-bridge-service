@@ -220,7 +220,7 @@ func claimL1() {
 		ExitRoots: []common.Hash{common.HexToHash(proof.MainExitRoot), common.HexToHash(proof.RollupExitRoot)},
 	}
 	log.Info("Sending claim tx...")
-	err = c.SendClaim(ctx, bridgeData, smt, globalExitRoot, auth)
+	_, err = c.SendClaim(ctx, utils.PbToEthermanDeposit(bridgeData), smt, globalExitRoot, auth)
 	if err != nil {
 		log.Fatal("error: ", err)
 	}

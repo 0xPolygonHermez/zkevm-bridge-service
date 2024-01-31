@@ -476,6 +476,27 @@ func (p *PostgresStorage) convertDepositBase(rows pgx.Rows, err error) ([]*ether
 	return deposits, nil
 }
 
+// GetDepositByHash returns a deposit from a specific account and tx hash
+func (p *PostgresStorage) GetDepositByHash(ctx context.Context, destAddr string, networkID uint, txHash string, dbTx pgx.Tx) (*etherman.Deposit, error) {
+	var (
+		deposit etherman.Deposit
+		amount  string
+	)
+	getDepositSQL := fmt.Sprintf(`
+		SELECT leaf_type, orig_net, orig_addr, amount, dest_net, dest_addr, deposit_cnt, block_id, b.block_num, d.network_id, tx_hash, metadata, ready_for_claim
+		FROM sync.deposit%[1]v as d INNER JOIN sync.block%[1]v as b ON d.network_id = b.network_id AND d.block_id = b.id
+		WHERE d.dest_addr = $1 AND d.network_id = $2 AND d.tx_hash = $3`, p.tableSuffix)
+	err := p.getExecQuerier(dbTx).QueryRow(ctx, getDepositSQL, common.HexToAddress(destAddr), networkID, common.HexToHash(txHash)).Scan(
+		&deposit.LeafType, &deposit.OriginalNetwork, &deposit.OriginalAddress, &amount, &deposit.DestinationNetwork, &deposit.DestinationAddress,
+		&deposit.DepositCount, &deposit.BlockID, &deposit.BlockNumber, &deposit.NetworkID, &deposit.TxHash, &deposit.Metadata, &deposit.ReadyForClaim)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, gerror.ErrStorageNotFound
+	}
+	deposit.Amount, _ = new(big.Int).SetString(amount, 10) //nolint:gomnd
+
+	return &deposit, err
+}
+
 // GetPendingTransactions gets all the deposit transactions of a user that have not been claimed
 func (p *PostgresStorage) GetPendingTransactions(ctx context.Context, destAddr string, limit uint, offset uint, leafType uint, dbTx pgx.Tx) ([]*etherman.Deposit, error) {
 	getDepositsSQL := fmt.Sprintf(`SELECT d.id, leaf_type, orig_net, orig_addr, amount, dest_net, dest_addr, deposit_cnt, block_id, b.block_num, d.network_id, tx_hash, metadata, ready_for_claim, b.received_at
@@ -484,28 +505,7 @@ func (p *PostgresStorage) GetPendingTransactions(ctx context.Context, destAddr s
 			(SELECT 1 FROM sync.claim%[1]v as c WHERE c.index = d.deposit_cnt AND c.network_id = d.dest_net)
 		ORDER BY d.block_id DESC, d.deposit_cnt DESC LIMIT $2 OFFSET $3`, p.tableSuffix)
 
-	rows, err := p.getExecQuerier(dbTx).Query(ctx, getDepositsSQL, common.FromHex(destAddr), limit, offset, leafType)
-	if err != nil {
-		return nil, err
-	}
-
-	deposits := make([]*etherman.Deposit, 0, len(rows.RawValues()))
-
-	for rows.Next() {
-		var (
-			deposit etherman.Deposit
-			amount  string
-		)
-		err = rows.Scan(&deposit.Id, &deposit.LeafType, &deposit.OriginalNetwork, &deposit.OriginalAddress, &amount, &deposit.DestinationNetwork, &deposit.DestinationAddress,
-			&deposit.DepositCount, &deposit.BlockID, &deposit.BlockNumber, &deposit.NetworkID, &deposit.TxHash, &deposit.Metadata, &deposit.ReadyForClaim, &deposit.Time)
-		if err != nil {
-			return nil, err
-		}
-		deposit.Amount, _ = new(big.Int).SetString(amount, 10) //nolint:gomnd
-		deposits = append(deposits, &deposit)
-	}
-
-	return deposits, nil
+	return p.getDepositList(ctx, getDepositsSQL, dbTx, common.FromHex(destAddr), limit, offset, leafType)
 }
 
 // GetNotReadyTransactions returns all the deposit transactions with ready_for_claim = false
@@ -515,7 +515,21 @@ func (p *PostgresStorage) GetNotReadyTransactions(ctx context.Context, limit uin
 		WHERE ready_for_claim = false
 		ORDER BY d.block_id DESC, d.deposit_cnt DESC LIMIT $1 OFFSET $2`, p.tableSuffix)
 
-	rows, err := p.getExecQuerier(dbTx).Query(ctx, getDepositsSQL, limit, offset)
+	return p.getDepositList(ctx, getDepositsSQL, dbTx, limit, offset)
+}
+
+func (p *PostgresStorage) GetReadyPendingTransactions(ctx context.Context, networkID uint, limit uint, offset uint, dbTx pgx.Tx) ([]*etherman.Deposit, error) {
+	getDepositsSQL := fmt.Sprintf(`SELECT d.id, leaf_type, orig_net, orig_addr, amount, dest_net, dest_addr, deposit_cnt, block_id, b.block_num, d.network_id, tx_hash, metadata, ready_for_claim, b.received_at
+		FROM sync.deposit%[1]v as d INNER JOIN sync.block%[1]v as b ON d.network_id = b.network_id AND d.block_id = b.id
+		WHERE d.network_id = $1 AND ready_for_claim = true AND NOT EXISTS
+			(SELECT 1 FROM sync.claim%[1]v as c WHERE c.index = d.deposit_cnt AND c.network_id = d.dest_net)
+		ORDER BY d.block_id DESC, d.deposit_cnt DESC LIMIT $2 OFFSET $3`, p.tableSuffix)
+
+	return p.getDepositList(ctx, getDepositsSQL, dbTx, networkID, limit, offset)
+}
+
+func (p *PostgresStorage) getDepositList(ctx context.Context, sql string, dbTx pgx.Tx, args ...interface{}) ([]*etherman.Deposit, error) {
+	rows, err := p.getExecQuerier(dbTx).Query(ctx, sql, args...)
 	if err != nil {
 		return nil, err
 	}

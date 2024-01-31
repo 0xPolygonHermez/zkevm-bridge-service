@@ -109,6 +109,20 @@ service BridgeService {
         };
     }
 
+    rpc ManualClaim(ManualClaimRequest) returns (CommonManualClaimResponse) {
+        option (google.api.http) = {
+            post: "/manual-claim",
+            body: "*",
+        };
+    }
+
+    /// Returns all transactions from a network that are ready_for_claim but not claimed
+    rpc GetReadyPendingTransactions(GetReadyPendingTransactionsRequest) returns (CommonTransactionsResponse) {
+        option (google.api.http) = {
+            get: "/ready-pending/{networkId}",
+        };
+    }
+
     /// Return the messages from the fake producer, only for testing when UseFakeProducer is enabled
     /// Return at most 100 latest messages, there's no offset management so client should handle duplications
     rpc GetFakePushMessages(GetFakePushMessagesRequest) returns (GetFakePushMessagesResponse) {
@@ -216,7 +230,8 @@ message Transaction {
     uint64 index = 14;
     string metadata = 15;
     string destAddr = 16;
-    uint64 blockNumber = 17;
+    uint32 leafType = 17;
+    uint64 blockNumber = 18;
 }
 
 // Monitored tx
@@ -299,6 +314,18 @@ message GetMonitoredTxsByStatusRequest {
 }
 
 message GetEstimateTimeRequest {}
+
+message ManualClaimRequest {
+    uint32 fromChain = 1; // L1: 0; L2: 1
+    string destAddr = 2;
+    string depositTxHash = 3;
+}
+
+message GetReadyPendingTransactionsRequest {
+    uint32 networkId = 1;
+    uint64 offset = 2;
+    uint32 limit = 3;
+}
 
 message GetFakePushMessagesRequest {
     string topic = 1;
@@ -396,8 +423,8 @@ message ProofDetail {
 }
 
 message GetSmtProofRequest {
-    uint32 index = 1;
-    uint64 fromChain = 2;
+    uint64 index = 1;
+    uint32 fromChain = 2;
 }
 
 message CommonMonitoredTxsResponse {
@@ -421,6 +448,19 @@ message CommonEstimateTimeResponse {
     string error_message = 4;
     string detailMsg = 5;
     repeated uint32 data = 6; // Has 2 numbers which are the estimate time of L1 and L2
+}
+
+message ManualClaimResponse {
+    string claimTxHash = 1; // Claim tx hash
+}
+
+message CommonManualClaimResponse {
+    uint32 code = 1;
+    string msg = 2;
+    string error_code = 3;
+    string error_message = 4;
+    string detailMsg = 5;
+    ManualClaimResponse data = 6;
 }
 
 message GetFakePushMessagesResponse {
