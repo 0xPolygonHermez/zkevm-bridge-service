@@ -804,7 +804,7 @@ func (s *bridgeService) GetReadyPendingTransactions(ctx context.Context, req *pb
 		limit = s.maxPageLimit.Get()
 	}
 
-	deposits, err := s.storage.GetReadyPendingTransactions(ctx, uint(req.NetworkId), uint(limit+1), uint(req.Offset), nil)
+	deposits, err := s.storage.GetReadyPendingTransactions(ctx, uint(req.NetworkId), uint(utils.LeafTypeAsset), uint(limit+1), uint(req.Offset), nil)
 	if err != nil {
 		return &pb.CommonTransactionsResponse{
 			Code: defaultErrorCode,
