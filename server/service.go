@@ -33,6 +33,10 @@ const (
 	defaultMinDuration = 1
 )
 
+var (
+	minReadyTimeLimitForWaitClaimSeconds = apolloconfig.NewIntEntry[int64]("api.minReadyTimeLimitForWaitClaim", 24*60*1000) //nolint:gomnd
+)
+
 type bridgeService struct {
 	storage             BridgeServiceStorage
 	redisStorage        redisstorage.RedisStorage
@@ -804,7 +808,9 @@ func (s *bridgeService) GetReadyPendingTransactions(ctx context.Context, req *pb
 		limit = s.maxPageLimit.Get()
 	}
 
-	deposits, err := s.storage.GetReadyPendingTransactions(ctx, uint(req.NetworkId), uint(utils.LeafTypeAsset), uint(limit+1), uint(req.Offset), nil)
+	minReadyTime := time.Now().Add(time.Duration(-minReadyTimeLimitForWaitClaimSeconds.Get()) * time.Second)
+
+	deposits, err := s.storage.GetReadyPendingTransactions(ctx, uint(req.NetworkId), uint(utils.LeafTypeAsset), uint(limit+1), uint(req.Offset), minReadyTime, nil)
 	if err != nil {
 		return &pb.CommonTransactionsResponse{
 			Code: defaultErrorCode,
