@@ -14,8 +14,8 @@ services:
       - ZKEVM_NODE_STATEDB_HOST=x1-state-db
       - ZKEVM_NODE_POOL_DB_HOST=x1-pool-db
     volumes:
-      - ./test/config/node/test.node.config.toml:/app/config.toml
-      - ./test/config/node/test.genesis.config.json:/app/genesis.json
+      - ./test/config/node/config.x1.node.toml:/app/config.toml
+      - ./test/config/node/genesis.local.x1.json:/app/genesis.json
     command:
       - "/bin/sh"
       - "-c"
@@ -30,8 +30,8 @@ services:
       - ZKEVM_NODE_SEQUENCER_SENDER_ADDRESS=0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266
     volumes:
       - ./test/test.keystore.sequencer:/pk/sequencer.keystore
-      - ./test/config/node/test.node.config.toml:/app/config.toml
-      - ./test/config/node/test.genesis.config.json:/app/genesis.json
+      - ./test/config/node/config.x1.node.toml:/app/config.toml
+      - ./test/config/node/genesis.local.x1.json:/app/genesis.json
     command:
       - "/bin/sh"
       - "-c"
@@ -48,8 +48,8 @@ services:
       - ZKEVM_NODE_STATEDB_HOST=x1-state-db
       - ZKEVM_NODE_POOL_DB_HOST=x1-pool-db
     volumes:
-      - ./test/config/node/test.node.config.toml:/app/config.toml
-      - ./test/config/node/test.genesis.config.json:/app/genesis.json
+      - ./test/config/node/config.x1.node.toml:/app/config.toml
+      - ./test/config/node/genesis.local.x1.json:/app/genesis.json
     command:
       - "/bin/sh"
       - "-c"
@@ -65,8 +65,8 @@ services:
       - ZKEVM_NODE_STATEDB_HOST=x1-state-db
       - ZKEVM_NODE_AGGREGATOR_SENDER_ADDRESS=0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266
     volumes:
-      - ./test/config/node/test.node.config.toml:/app/config.toml
-      - ./test/config/node/test.genesis.config.json:/app/genesis.json
+      - ./test/config/node/config.x1.node.toml:/app/config.toml
+      - ./test/config/node/genesis.local.x1.json:/app/genesis.json
     command:
       - "/bin/sh"
       - "-c"
@@ -80,8 +80,8 @@ services:
     environment:
       - ZKEVM_NODE_STATEDB_HOST=x1-state-db
     volumes:
-      - ./test/config/node/test.node.config.toml:/app/config.toml
-      - ./test/config/node/test.genesis.config.json:/app/genesis.json
+      - ./test/config/node/config.x1.node.toml:/app/config.toml
+      - ./test/config/node/genesis.local.x1.json:/app/genesis.json
     command:
       - "/bin/sh"
       - "-c"
@@ -97,8 +97,8 @@ services:
     volumes:
       - ./test/test.keystore.sequencer:/pk/sequencer.keystore
       - ./test/test.keystore.aggregator:/pk/aggregator.keystore
-      - ./test/config/node/test.node.config.toml:/app/config.toml
-      - ./test/config/node/test.genesis.config.json:/app/genesis.json
+      - ./test/config/node/config.x1.node.toml:/app/config.toml
+      - ./test/config/node/genesis.local.x1.json:/app/genesis.json
     command:
       - "/bin/sh"
       - "-c"
@@ -111,8 +111,8 @@ services:
       - ZKEVM_NODE_POOL_DB_HOST=x1-pool-db
     volumes:
       - ./test/test.keystore.sequencer:/pk/keystore
-      - ./test/config/node/test.node.config.toml:/app/config.toml
-      - ./test/config/node/test.genesis.config.json:/app/genesis.json
+      - ./test/config/node/config.x1.node.toml:/app/config.toml
+      - ./test/config/node/genesis.local.x1.json:/app/genesis.json
     command:
       - "/bin/sh"
       - "-c"
@@ -232,8 +232,8 @@ services:
       - ZKEVM_NODE_STATEDB_HOST=x1-state-db
     volumes:
       - ./test/test.keystore.sequencer:/pk/keystore
-      - ./test/config/node/test.node.config.toml:/app/config.toml
-      - ./test/config/node/test.genesis.config.json:/app/genesis.json
+      - ./test/config/node/config.x1.node.toml:/app/config.toml
+      - ./test/config/node/genesis.local.x1.json:/app/genesis.json
     command:
       - "/bin/sh"
       - "-c"
