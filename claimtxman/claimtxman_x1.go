@@ -62,7 +62,7 @@ func (tm *ClaimTxManager) startMonitorTxs() {
 		ctx := context.WithValue(tm.ctx, utils.CtxTraceID, traceID)
 		logger := log.WithFields(utils.TraceID, traceID)
 		logger.Infof("MonitorTxs begin %d", tm.l2NetworkID)
-		err := tm.monitorTxs(ctx)
+		err := tm.monitorTxsX1(ctx)
 		if err != nil {
 			logger.Errorf("failed to monitor txs: %v", err)
 		}
@@ -340,7 +340,7 @@ func (tm *ClaimTxManager) processDepositStatusX1(ger *etherman.GlobalExitRoot, d
 	return nil
 }
 
-// monitorTxs process all pending monitored tx
+// monitorTxsX1 process all pending monitored tx
 func (tm *ClaimTxManager) monitorTxsX1(ctx context.Context) error {
 	mLog := log.WithFields(utils.TraceID, ctx.Value(utils.CtxTraceID))
 

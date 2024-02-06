@@ -68,6 +68,8 @@ func withPushTasks() runOptionFunc {
 	}
 }
 
+var _ = start // This is to ignore the "unused" error when linting
+
 func startServer(ctx *cli.Context, opts ...runOptionFunc) error {
 	opt := &runOption{}
 	for _, f := range opts {

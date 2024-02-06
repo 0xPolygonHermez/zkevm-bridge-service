@@ -12,36 +12,10 @@ import (
 	"github.com/jackc/pgx/v4"
 )
 
-func (s *ClientSynchronizer) processDepositX1(deposit etherman.Deposit, blockID uint64, dbTx pgx.Tx) error {
-	deposit.BlockID = blockID
-	deposit.NetworkID = s.networkID
-	depositID, err := s.storage.AddDeposit(s.ctx, &deposit, dbTx)
-	if err != nil {
-		log.Errorf("networkID: %d, failed to store new deposit locally, BlockNumber: %d, Deposit: %+v err: %v", s.networkID, deposit.BlockNumber, deposit, err)
-		rollbackErr := s.storage.Rollback(s.ctx, dbTx)
-		if rollbackErr != nil {
-			log.Errorf("networkID: %d, error rolling back state to store block. BlockNumber: %v, rollbackErr: %v, err: %s",
-				s.networkID, deposit.BlockNumber, rollbackErr, err.Error())
-			return rollbackErr
-		}
-		return err
-	}
-
-	err = s.bridgeCtrl.AddDeposit(&deposit, depositID, dbTx)
-	if err != nil {
-		log.Errorf("networkID: %d, failed to store new deposit in the bridge tree, BlockNumber: %d, Deposit: %+v err: %v", s.networkID, deposit.BlockNumber, deposit, err)
-		rollbackErr := s.storage.Rollback(s.ctx, dbTx)
-		if rollbackErr != nil {
-			log.Errorf("networkID: %d, error rolling back state to store block. BlockNumber: %v, rollbackErr: %v, err: %s",
-				s.networkID, deposit.BlockNumber, rollbackErr, err.Error())
-			return rollbackErr
-		}
-		return err
-	}
-
+func (s *ClientSynchronizer) afterProcessDeposit(deposit *etherman.Deposit, depositID uint64, dbTx pgx.Tx) error {
 	// Add the deposit to Redis for L1
 	if deposit.NetworkID == 0 {
-		err := s.redisStorage.AddBlockDeposit(context.Background(), &deposit)
+		err := s.redisStorage.AddBlockDeposit(context.Background(), deposit)
 		if err != nil {
 			log.Errorf("networkID: %d, failed to add block deposit to Redis, BlockNumber: %d, Deposit: %+v, err: %s", s.networkID, deposit.BlockNumber, deposit, err)
 			rollbackErr := s.storage.Rollback(s.ctx, dbTx)
@@ -94,21 +68,7 @@ func (s *ClientSynchronizer) getEstimateTimeForDepositCreated(networkId uint) ui
 	return uint32(pushtask.GetAvgCommitDuration(s.ctx, s.redisStorage))
 }
 
-func (s *ClientSynchronizer) processClaimX1(claim etherman.Claim, blockID uint64, dbTx pgx.Tx) error {
-	claim.BlockID = blockID
-	claim.NetworkID = s.networkID
-	err := s.storage.AddClaim(s.ctx, &claim, dbTx)
-	if err != nil {
-		log.Errorf("networkID: %d, error storing new Claim in Block:  %d, Claim: %+v, err: %v", s.networkID, claim.BlockNumber, claim, err)
-		rollbackErr := s.storage.Rollback(s.ctx, dbTx)
-		if rollbackErr != nil {
-			log.Errorf("networkID: %d, error rolling back state to store block. BlockNumber: %d, rollbackErr: %v, err: %s",
-				s.networkID, claim.BlockNumber, rollbackErr, err.Error())
-			return rollbackErr
-		}
-		return err
-	}
-
+func (s *ClientSynchronizer) afterProcessClaim(claim *etherman.Claim) error {
 	// Notify FE that the tx has been claimed
 	go func() {
 		if s.messagePushProducer == nil {

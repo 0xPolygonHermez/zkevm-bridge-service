@@ -559,7 +559,7 @@ func (s *ClientSynchronizer) processDeposit(deposit etherman.Deposit, blockID ui
 		return err
 	}
 
-	return nil
+	return s.afterProcessDeposit(&deposit, depositID, dbTx)
 }
 
 func (s *ClientSynchronizer) processClaim(claim etherman.Claim, blockID uint64, dbTx pgx.Tx) error {
@@ -577,7 +577,7 @@ func (s *ClientSynchronizer) processClaim(claim etherman.Claim, blockID uint64, 
 		return err
 	}
 
-	return nil
+	return s.afterProcessClaim(&claim)
 }
 
 func (s *ClientSynchronizer) processTokenWrapped(tokenWrapped etherman.TokenWrapped, blockID uint64, dbTx pgx.Tx) error {
