@@ -46,6 +46,7 @@ type ClaimTxManager struct {
 	chSynced        chan uint
 	storage         storageInterface
 	auth            *bind.TransactOpts
+	rollupID        uint
 	nonceCache      *lru.Cache[string, uint64]
 	synced          bool
 
@@ -61,7 +62,7 @@ type ClaimTxManager struct {
 // NewClaimTxManager creates a new claim transaction manager.
 func NewClaimTxManager(cfg Config, chExitRootEvent chan *etherman.GlobalExitRoot, chSynced chan uint, l2NodeURL string, l2NetworkID uint,
 	l2BridgeAddr common.Address, bridgeService bridgeServiceInterface, storage interface{}, producer messagepush.KafkaProducer,
-	redisStorage redisstorage.RedisStorage) (*ClaimTxManager, error) {
+	redisStorage redisstorage.RedisStorage, rollupID uint) (*ClaimTxManager, error) {
 	ctx := context.Background()
 	client, err := utils.NewClient(ctx, l2NodeURL, l2BridgeAddr)
 	if err != nil {
@@ -84,6 +85,7 @@ func NewClaimTxManager(cfg Config, chExitRootEvent chan *etherman.GlobalExitRoot
 		chSynced:            chSynced,
 		storage:             storage.(storageInterface),
 		auth:                auth,
+		rollupID:            rollupID,
 		nonceCache:          cache,
 		messagePushProducer: producer,
 		redisStorage:        redisStorage,
@@ -156,7 +158,7 @@ func (tm *ClaimTxManager) updateDepositsStatus(ger *etherman.GlobalExitRoot) err
 func (tm *ClaimTxManager) processDepositStatus(ger *etherman.GlobalExitRoot, dbTx pgx.Tx) error {
 	if ger.BlockID != 0 { // L2 exit root is updated
 		log.Infof("Rollup exitroot %v is updated", ger.ExitRoots[1])
-		if err := tm.storage.UpdateL2DepositsStatus(tm.ctx, ger.ExitRoots[1][:], tm.l2NetworkID, dbTx); err != nil {
+		if err := tm.storage.UpdateL2DepositsStatus(tm.ctx, ger.ExitRoots[1][:], tm.rollupID, tm.l2NetworkID, dbTx); err != nil {
 			log.Errorf("error updating L2DepositsStatus. Error: %v", err)
 			return err
 		}
@@ -178,21 +180,25 @@ func (tm *ClaimTxManager) processDepositStatus(ger *etherman.GlobalExitRoot, dbT
 				continue
 			}
 			log.Infof("create the claim tx for the deposit %d", deposit.DepositCount)
-			ger, proves, err := tm.bridgeService.GetClaimProof(deposit.DepositCount, deposit.NetworkID, dbTx)
+			ger, proof, rollupProof, err := tm.bridgeService.GetClaimProof(deposit.DepositCount, deposit.NetworkID, dbTx)
 			if err != nil {
 				log.Errorf("error getting Claim Proof for deposit %d. Error: %v", deposit.DepositCount, err)
 				return err
 			}
-			var mtProves [mtHeight][keyLen]byte
+			var (
+				mtProof       [mtHeight][keyLen]byte
+				mtRollupProof [mtHeight][keyLen]byte
+			)
 			for i := 0; i < mtHeight; i++ {
-				mtProves[i] = proves[i]
+				mtProof[i] = proof[i]
+				mtRollupProof[i] = rollupProof[i]
 			}
-			tx, err := tm.l2Node.BuildSendClaim(tm.ctx, deposit, mtProves,
+			tx, err := tm.l2Node.BuildSendClaim(tm.ctx, deposit, mtProof, mtRollupProof,
 				&etherman.GlobalExitRoot{
 					ExitRoots: []common.Hash{
 						ger.ExitRoots[0],
 						ger.ExitRoots[1],
-					}}, 1, 1, 1,
+					}}, 1, 1, 1, tm.rollupID,
 				tm.auth)
 			if err != nil {
 				log.Errorf("error BuildSendClaim tx for deposit %d. Error: %v", deposit.DepositCount, err)
@@ -519,7 +525,7 @@ func (tm *ClaimTxManager) ReviewMonitoredTx(ctx context.Context, mTx *ctmtypes.M
 		// check nonce
 		nonce, err := tm.getNextNonce(mTx.From)
 		if err != nil {
-			err := fmt.Errorf("failed to get nonce: %w", err)
+			err := fmt.Errorf("failed to get nonce: %v", err)
 			mTxLog.Errorf(err.Error())
 			return err
 		}

@@ -16,7 +16,7 @@ import (
 	"github.com/0xPolygonHermez/zkevm-bridge-service/utils"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/utils/gerror"
 	"github.com/0xPolygonHermez/zkevm-node/encoding"
-	erc20 "github.com/0xPolygonHermez/zkevm-node/etherman/smartcontracts/matic"
+	erc20 "github.com/0xPolygonHermez/zkevm-node/etherman/smartcontracts/pol"
 	"github.com/0xPolygonHermez/zkevm-node/etherman/smartcontracts/polygonzkevmbridge"
 	"github.com/0xPolygonHermez/zkevm-node/etherman/smartcontracts/polygonzkevmglobalexitroot"
 	"github.com/0xPolygonHermez/zkevm-node/log"
@@ -43,6 +43,8 @@ const (
 	l1NetworkURL = "http://localhost:8545"
 	l2NetworkURL = "http://localhost:8123"
 
+	// PolTokenAddress token address
+	PolTokenAddress = "0x5FbDB2315678afecb367f032d93F642f64180aa3" //nolint:gosec
 	// MaticTokenAddress token address
 	MaticTokenAddress = "0xcFE6D77a653b988203BfAc9C6a69eA9D583bdC2b" //nolint:gosec
 	l1BridgeAddr      = "0x10B65c586f795aF3eCCEe594fE4E38E1F059F780"
@@ -56,6 +58,7 @@ const (
 	cmdDir  = "../.."
 
 	mtHeight = 32
+	rollupID = 1
 )
 
 var (
@@ -107,7 +110,7 @@ func NewManager(ctx context.Context, cfg *Config) (*Manager, error) {
 	if err != nil {
 		return nil, err
 	}
-	bt, err := bridgectrl.NewBridgeController(cfg.BT, []uint{0, 1}, pgst)
+	bt, err := bridgectrl.NewBridgeController(ctx, cfg.BT, []uint{0, 1}, pgst)
 	if err != nil {
 		return nil, err
 	}
@@ -119,7 +122,7 @@ func NewManager(ctx context.Context, cfg *Config) (*Manager, error) {
 	if err != nil {
 		return nil, err
 	}
-	bService := server.NewBridgeService(cfg.BS, cfg.BT.Height, []uint{0, 1}, []*utils.Client{nil}, []*bind.TransactOpts{nil}, pgst)
+	bService := server.NewBridgeService(cfg.BS, cfg.BT.Height, []uint{0, 1}, []*utils.Client{nil}, []*bind.TransactOpts{nil}, pgst, rollupID)
 	opsman.storage = st.(StorageInterface)
 	opsman.bridgetree = bt
 	opsman.bridgeService = bService
@@ -292,7 +295,7 @@ func (m *Manager) Setup() error {
 	return nil
 }
 
-// AddFunds adds matic and eth to the zkevm node wallet.
+// AddFunds adds pol and eth to the zkevm node wallet.
 func (m *Manager) AddFunds(ctx context.Context) error {
 	// Eth client
 	log.Infof("Connecting to l1")
@@ -337,26 +340,26 @@ func (m *Manager) AddFunds(ctx context.Context) error {
 		return err
 	}
 
-	// Create matic maticTokenSC sc instance
-	log.Infof("Loading Matic token SC instance")
-	maticAddr := common.HexToAddress(MaticTokenAddress)
-	maticTokenSC, err := operations.NewToken(maticAddr, client)
+	// Create pol polTokenSC sc instance
+	log.Infof("Loading pol token SC instance")
+	polAddr := common.HexToAddress(PolTokenAddress)
+	polTokenSC, err := operations.NewToken(polAddr, client)
 	if err != nil {
 		return err
 	}
 
-	// Send matic to sequencer
-	log.Infof("Transferring MATIC tokens to sequencer")
-	maticAmount, _ := big.NewInt(0).SetString("200000000000000000000000", encoding.Base10)
-	tx, err = maticTokenSC.Transfer(auth, toAddress, maticAmount)
+	// Send pol to sequencer
+	log.Infof("Transferring pol tokens to sequencer")
+	polAmount, _ := big.NewInt(0).SetString("200000000000000000000000", encoding.Base10)
+	tx, err = polTokenSC.Transfer(auth, toAddress, polAmount)
 	if err != nil {
 		return err
 	}
 
-	// wait matic transfer to be mined
+	// wait pol transfer to be mined
 	log.Infof("Waiting tx to be mined")
-	const txMaticTransferTimeout = 5 * time.Second
-	return WaitTxToBeMined(ctx, client.Client, tx, txMaticTransferTimeout)
+	const txPolTransferTimeout = 5 * time.Second
+	return WaitTxToBeMined(ctx, client.Client, tx, txPolTransferTimeout)
 }
 
 // Teardown stops all the components.
@@ -495,7 +498,7 @@ func (m *Manager) CheckAccountTokenBalance(ctx context.Context, network NetworkS
 	if account == nil {
 		account = &auth.From
 	}
-	erc20Token, err := erc20.NewMatic(tokenAddr, client)
+	erc20Token, err := erc20.NewPol(tokenAddr, client)
 	if err != nil {
 		return big.NewInt(0), errors.Wrap(err, "NewMatic failed")
 	}
@@ -508,21 +511,25 @@ func (m *Manager) CheckAccountTokenBalance(ctx context.Context, network NetworkS
 }
 
 // GetClaimData gets the claim data
-func (m *Manager) GetClaimData(ctx context.Context, networkID, depositCount uint) ([mtHeight][bridgectrl.KeyLen]byte, *etherman.GlobalExitRoot, error) {
+func (m *Manager) GetClaimData(ctx context.Context, networkID, depositCount uint) ([mtHeight][bridgectrl.KeyLen]byte, [mtHeight][bridgectrl.KeyLen]byte, *etherman.GlobalExitRoot, error) {
 	res, err := m.bridgeService.GetProof(context.Background(), &pb.GetProofRequest{
 		NetId:      uint32(networkID),
 		DepositCnt: uint64(depositCount),
 	})
 	if err != nil {
-		return [mtHeight][32]byte{}, nil, err
+		return [mtHeight][32]byte{}, [mtHeight][32]byte{}, nil, err
 	}
-	proves := [mtHeight][bridgectrl.KeyLen]byte{}
+	merkleproof := [mtHeight][bridgectrl.KeyLen]byte{}
+	rollupMerkleProof := [mtHeight][bridgectrl.KeyLen]byte{}
 	for i, p := range res.Proof.MerkleProof {
 		var proof [bridgectrl.KeyLen]byte
 		copy(proof[:], common.FromHex(p))
-		proves[i] = proof
+		merkleproof[i] = proof
+		var rollupProof [bridgectrl.KeyLen]byte
+		copy(rollupProof[:], common.FromHex(res.Proof.RollupMerkleProof[i]))
+		rollupMerkleProof[i] = rollupProof
 	}
-	return proves, &etherman.GlobalExitRoot{
+	return merkleproof, rollupMerkleProof, &etherman.GlobalExitRoot{
 		ExitRoots: []common.Hash{
 			common.HexToHash(res.Proof.MainExitRoot),
 			common.HexToHash(res.Proof.RollupExitRoot),
@@ -550,25 +557,25 @@ func (m *Manager) GetBridgeInfoByDestAddr(ctx context.Context, addr *common.Addr
 }
 
 // SendL1Claim send an L1 claim
-func (m *Manager) SendL1Claim(ctx context.Context, deposit *pb.Deposit, smtProof [mtHeight][32]byte, globalExitRoot *etherman.GlobalExitRoot) error {
+func (m *Manager) SendL1Claim(ctx context.Context, deposit *pb.Deposit, smtProof, smtRollupProof [mtHeight][32]byte, globalExitRoot *etherman.GlobalExitRoot) error {
 	client := m.clients[L1]
 	auth, err := client.GetSigner(ctx, accHexPrivateKeys[L1])
 	if err != nil {
 		return err
 	}
 
-	return client.SendClaim(ctx, deposit, smtProof, globalExitRoot, auth)
+	return client.SendClaim(ctx, deposit, smtProof, smtRollupProof, globalExitRoot, auth)
 }
 
 // SendL2Claim send an L2 claim
-func (m *Manager) SendL2Claim(ctx context.Context, deposit *pb.Deposit, smtProof [mtHeight][32]byte, globalExitRoot *etherman.GlobalExitRoot) error {
+func (m *Manager) SendL2Claim(ctx context.Context, deposit *pb.Deposit, smtProof, smtRollupProof [mtHeight][32]byte, globalExitRoot *etherman.GlobalExitRoot) error {
 	client := m.clients[L2]
 	auth, err := client.GetSigner(ctx, accHexPrivateKeys[L2])
 	if err != nil {
 		return err
 	}
 
-	err = client.SendClaim(ctx, deposit, smtProof, globalExitRoot, auth)
+	err = client.SendClaim(ctx, deposit, smtProof, smtRollupProof, globalExitRoot, auth)
 	return err
 }
 

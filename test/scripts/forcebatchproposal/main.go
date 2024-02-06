@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/0xPolygonHermez/zkevm-bridge-service/utils"
+	"github.com/0xPolygonHermez/zkevm-node/etherman/smartcontracts/polygonrollupmanager"
 	"github.com/0xPolygonHermez/zkevm-node/etherman/smartcontracts/polygonzkevm"
 	"github.com/0xPolygonHermez/zkevm-node/log"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -14,9 +15,10 @@ import (
 const (
 	l1AccHexPrivateKey = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
 
-	l1NetworkURL           = "http://localhost:8545"
-	polygonZkEVMAddressHex = "0x0D9088C72Cd4F08e9dDe474D8F5394147f64b22C"
-	maticTokenAddressHex   = "0xcFE6D77a653b988203BfAc9C6a69eA9D583bdC2b" //nolint:gosec
+	l1NetworkURL                   = "http://localhost:8545"
+	polygonZkEVMAddressHex         = "0x0D9088C72Cd4F08e9dDe474D8F5394147f64b22C"
+	polygonRollupManagerAddressHex = "0xB7f8BC63BbcaD18155201308C8f3540b07f84F5e"
+	polTokenAddressHex             = "0x5FbDB2315678afecb367f032d93F642f64180aa3" //nolint:gosec
 )
 
 func main() {
@@ -36,15 +38,20 @@ func main() {
 	if err != nil {
 		log.Fatal("Error: ", err)
 	}
-	maticAmount, err := polygonZkEVM.GetForcedBatchFee(&bind.CallOpts{Pending: false})
+	polygonRollupManagerAddress := common.HexToAddress(polygonRollupManagerAddressHex)
+	polygonRollupManager, err := polygonrollupmanager.NewPolygonrollupmanager(polygonRollupManagerAddress, client)
+	if err != nil {
+		log.Fatal("Error: ", err)
+	}
+	polAmount, err := polygonRollupManager.GetForcedBatchFee(&bind.CallOpts{Pending: false})
 	if err != nil {
 		log.Fatal("Error getting collateral amount from smc: ", err)
 	}
-	err = client.ApproveERC20(ctx, common.HexToAddress(maticTokenAddressHex), polygonZkEVMAddress, maticAmount, auth)
+	err = client.ApproveERC20(ctx, common.HexToAddress(polTokenAddressHex), polygonZkEVMAddress, polAmount, auth)
 	if err != nil {
-		log.Fatal("Error approving matics: ", err)
+		log.Fatal("Error approving pol: ", err)
 	}
-	tx, err := polygonZkEVM.SequenceBatches(auth, nil, auth.From, nil)
+	tx, err := polygonZkEVM.SequenceBatches(auth, nil, auth.From)
 	if err != nil {
 		log.Fatal("Error sending the batch: ", err)
 	}

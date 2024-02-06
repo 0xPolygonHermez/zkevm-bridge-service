@@ -19,11 +19,15 @@ DOCKER_COMPOSE_SYNC := x1-sync
 DOCKER_COMPOSE_ETH_TX_MANAGER := x1-eth-tx-manager
 
 DOCKER_COMPOSE_L1_NETWORK := x1-mock-l1-network
+DOCKER_COMPOSE_L1_NETWORK_V1TOV2 := zkevm-v1tov2-l1-network
 DOCKER_COMPOSE_ZKPROVER := x1-prover
+DOCKER_COMPOSE_ZKPROVER_V1TOV2 := zkevm-prover-v1tov2
 DOCKER_COMPOSE_BRIDGE := x1-bridge-service
+DOCKER_COMPOSE_BRIDGE_V1TOV2 := zkevm-bridge-service-v1tov2
 DOCKER_COMPOSE_DA_NODE := x1-data-availability
 DOCKER_COMPOSE_COIN_KAFKA_NODE := x1-bridge-coin-kafka
 DOCKER_COMPOSE_ZOOKEEPER := kafka-zookeeper
+DOCKER_COMPOSE_ZKEVM_AGGREGATOR_V1TOV2 := zkevm-aggregator-v1tov2
 
 RUN_STATE_DB := $(DOCKER_COMPOSE) up -d $(DOCKER_COMPOSE_STATE_DB)
 RUN_EVENT_DB := $(DOCKER_COMPOSE) up -d $(DOCKER_COMPOSE_EVENT_DB)
@@ -42,9 +46,15 @@ RUN_AGGREGATOR := $(DOCKER_COMPOSE) up -d $(DOCKER_COMPOSE_AGG)
 RUN_JSON_RPC := $(DOCKER_COMPOSE) up -d $(DOCKER_COMPOSE_RPC)
 RUN_SYNC := $(DOCKER_COMPOSE) up -d $(DOCKER_COMPOSE_SYNC)
 RUN_ETH_TX_MANAGER := $(DOCKER_COMPOSE) up -d $(DOCKER_COMPOSE_ETH_TX_MANAGER)
+RUN_NODE := $(DOCKER_COMPOSE) up -d $(DOCKER_COMPOSE_ZKEVM_NODE)
+RUN_NODE_V1TOV2 := $(DOCKER_COMPOSE) up -d $(DOCKER_COMPOSE_ZKEVM_NODE_V1TOV2)
+RUN_AGGREGATOR_V1TOV2 := $(DOCKER_COMPOSE) up -d $(DOCKER_COMPOSE_ZKEVM_AGGREGATOR_V1TOV2)
 RUN_L1_NETWORK := $(DOCKER_COMPOSE) up -d $(DOCKER_COMPOSE_L1_NETWORK)
+RUN_L1_NETWORK_V1TOV2 := $(DOCKER_COMPOSE) up -d $(DOCKER_COMPOSE_L1_NETWORK_V1TOV2)
 RUN_ZKPROVER := $(DOCKER_COMPOSE) up -d $(DOCKER_COMPOSE_ZKPROVER)
+RUN_ZKPROVER_V1TOV2 := $(DOCKER_COMPOSE) up -d $(DOCKER_COMPOSE_ZKPROVER_V1TOV2)
 RUN_BRIDGE := $(DOCKER_COMPOSE) up -d $(DOCKER_COMPOSE_BRIDGE)
+RUN_BRIDGE_V1TOV2 := $(DOCKER_COMPOSE) up -d $(DOCKER_COMPOSE_BRIDGE_V1TOV2)
 
 STOP_NODE_DB := $(DOCKER_COMPOSE) stop $(DOCKER_COMPOSE_NODE_DB) && $(DOCKER_COMPOSE) rm -f $(DOCKER_COMPOSE_NODE_DB)
 STOP_BRIDGE_DB := $(DOCKER_COMPOSE) stop $(DOCKER_COMPOSE_BRIDGE_DB) && $(DOCKER_COMPOSE) rm -f $(DOCKER_COMPOSE_BRIDGE_DB)
@@ -56,9 +66,15 @@ STOP_AGGREGATOR := $(DOCKER_COMPOSE) stop $(DOCKER_COMPOSE_AGG) && $(DOCKER_COMP
 STOP_JSON_RPC := $(DOCKER_COMPOSE) stop $(DOCKER_COMPOSE_RPC) && $(DOCKER_COMPOSE) rm -f $(DOCKER_COMPOSE_RPC)
 STOP_SYNC := $(DOCKER_COMPOSE) stop $(DOCKER_COMPOSE_SYNC) && $(DOCKER_COMPOSE) rm -f $(DOCKER_COMPOSE_SYNC)
 STOP_ETH_TX_MANAGER := $(DOCKER_COMPOSE) stop $(DOCKER_COMPOSE_ETH_TX_MANAGER) && $(DOCKER_COMPOSE) rm -f $(DOCKER_COMPOSE_ETH_TX_MANAGER)
+STOP_NODE := $(DOCKER_COMPOSE) stop $(DOCKER_COMPOSE_ZKEVM_NODE) && $(DOCKER_COMPOSE) rm -f $(DOCKER_COMPOSE_ZKEVM_NODE)
+STOP_NODE_V1TOV2 := $(DOCKER_COMPOSE) stop $(DOCKER_COMPOSE_ZKEVM_NODE_V1TOV2) && $(DOCKER_COMPOSE) rm -f $(DOCKER_COMPOSE_ZKEVM_NODE_V1TOV2)
+STOP_AGGREGATOR_V1TOV2 := $(DOCKER_COMPOSE) stop $(DOCKER_COMPOSE_ZKEVM_AGGREGATOR_V1TOV2) && $(DOCKER_COMPOSE) rm -f $(DOCKER_COMPOSE_ZKEVM_AGGREGATOR_V1TOV2)
 STOP_NETWORK := $(DOCKER_COMPOSE) stop $(DOCKER_COMPOSE_L1_NETWORK) && $(DOCKER_COMPOSE) rm -f $(DOCKER_COMPOSE_L1_NETWORK)
+STOP_NETWORK_V1TOV2 := $(DOCKER_COMPOSE) stop $(DOCKER_COMPOSE_L1_NETWORK_V1TOV2) && $(DOCKER_COMPOSE) rm -f $(DOCKER_COMPOSE_L1_NETWORK_V1TOV2)
 STOP_ZKPROVER := $(DOCKER_COMPOSE) stop $(DOCKER_COMPOSE_ZKPROVER) && $(DOCKER_COMPOSE) rm -f $(DOCKER_COMPOSE_ZKPROVER)
+STOP_ZKPROVER_V1TOV2 := $(DOCKER_COMPOSE) stop $(DOCKER_COMPOSE_ZKPROVER_V1TOV2) && $(DOCKER_COMPOSE) rm -f $(DOCKER_COMPOSE_ZKPROVER_V1TOV2)
 STOP_BRIDGE := $(DOCKER_COMPOSE) stop $(DOCKER_COMPOSE_BRIDGE) && $(DOCKER_COMPOSE) rm -f $(DOCKER_COMPOSE_BRIDGE)
+STOP_BRIDGE_V1TOV2 := $(DOCKER_COMPOSE) stop $(DOCKER_COMPOSE_BRIDGE_V1TOV2) && $(DOCKER_COMPOSE) rm -f $(DOCKER_COMPOSE_BRIDGE_V1TOV2)
 STOP := $(DOCKER_COMPOSE) down --remove-orphans
 
 LDFLAGS += -X 'github.com/0xPolygonHermez/zkevm-bridge-service.Version=$(VERSION)'
@@ -95,7 +111,7 @@ test: ## Runs only short tests without checking race conditions
 
 .PHONY: install-linter
 install-linter: ## Installs the linter
-	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $$(go env GOPATH)/bin v1.51.2
+	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $$(go env GOPATH)/bin v1.54.2
 
 .PHONY: build-docker
 build-docker: ## Builds a docker image with the zkevm bridge binary
@@ -154,6 +170,30 @@ run-network: ## Runs the l1 network
 stop-network: ## Stops the l1 network
 	$(STOP_NETWORK)
 
+.PHONY: run-node-v1tov2
+run-node-v1tov2: ## Runs the node
+	$(RUN_NODE_V1TOV2)
+
+.PHONY: stop-node-v1tov2
+stop-node-v1tov2: ## Stops the node
+	$(STOP_NODE_V1TOV2)
+
+.PHONY: run-aggregator-v1tov2
+run-aggregator-v1tov2: ## Runs the aggregator
+	$(RUN_AGGREGATOR_V1TOV2)
+
+.PHONY: stop-aggregator-v1tov2
+stop-aggregator-v1tov2: ## Stops the aggregator
+	$(STOP_AGGREGATOR_V1TOV2)
+
+.PHONY: run-network-v1tov2
+run-network-v1tov2: ## Runs the l1 network
+	$(RUN_L1_NETWORK_V1TOV2)
+
+.PHONY: stop-network-v1tov2
+stop-network-v1tov2: ## Stops the l1 network
+	$(STOP_NETWORK_V1TOV2)
+
 .PHONY: run-prover
 run-prover: ## Runs the zk prover
 	$(RUN_ZKPROVER)
@@ -162,6 +202,14 @@ run-prover: ## Runs the zk prover
 stop-prover: ## Stops the zk prover
 	$(STOP_ZKPROVER)
 
+.PHONY: run-prover-v1tov2
+run-prover-v1tov2: ## Runs the zk prover
+	$(RUN_ZKPROVER_V1TOV2)
+
+.PHONY: stop-prover-v1tov2
+stop-prover-v1tov2: ## Stops the zk prover
+	$(STOP_ZKPROVER_V1TOV2)	
+
 .PHONY: run-bridge
 run-bridge: ## Runs the bridge service
 	$(RUN_BRIDGE)
@@ -169,6 +217,14 @@ run-bridge: ## Runs the bridge service
 .PHONY: stop-bridge
 stop-bridge: ## Stops the bridge service
 	$(STOP_BRIDGE)
+
+.PHONY: run-bridge-v1tov2
+run-bridge-v1tov2: ## Runs the bridge service
+	$(RUN_BRIDGE_V1TOV2)
+
+.PHONY: stop-bridge-v1tov2
+stop-bridge-v1tov2: ## Stops the bridge service
+	$(STOP_BRIDGE_V1TOV2)
 
 .PHONY: stop
 stop: ## Stops all services
@@ -200,6 +256,18 @@ run: stop ## runs all services
 	$(RUN_JSON_RPC)
 	sleep 7
 	$(RUN_BRIDGE)
+
+.PHONY: run-v1tov2
+run-v1tov2: stop ## runs all services
+	$(RUN_DBS)
+	$(RUN_L1_NETWORK_V1TOV2)
+	sleep 5
+	$(RUN_ZKPROVER_V1TOV2)
+	sleep 3
+	$(RUN_NODE_V1TOV2)
+	sleep 7
+	$(RUN_AGGREGATOR_V1TOV2)
+	$(RUN_BRIDGE_V1TOV2)
 
 .PHONY: update-external-dependencies
 update-external-dependencies: ## Updates external dependencies like images, test vectors or proto files

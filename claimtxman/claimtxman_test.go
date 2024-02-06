@@ -125,7 +125,7 @@ func TestUpdateDepositStatus(t *testing.T) {
 	depositID, err := pg.AddDeposit(ctx, deposit, nil)
 	require.NoError(t, err)
 	l1Root := common.FromHex("0x838c5655cb21c6cb83313b5a631175dff4963772cce9108188b34ac87c81c41e")
-	require.NoError(t, pg.SetRoot(ctx, l1Root, depositID, deposit.DepositCount, deposit.NetworkID, nil))
+	require.NoError(t, pg.SetRoot(ctx, l1Root, depositID, deposit.NetworkID, nil))
 
 	block = &etherman.Block{
 		BlockNumber: 1,
@@ -153,7 +153,9 @@ func TestUpdateDepositStatus(t *testing.T) {
 	depositID, err = pg.AddDeposit(ctx, deposit, nil)
 	require.NoError(t, err)
 	l2Root := common.FromHex("0xb4c11951957c6f8f642c4af61cd6b24640fec6dc7fc607ee8206a99e92410d30")
-	require.NoError(t, pg.SetRoot(ctx, l2Root, depositID, deposit.DepositCount, deposit.NetworkID, nil))
+	require.NoError(t, pg.SetRoot(ctx, l2Root, depositID, deposit.NetworkID, nil))
+	_, err = pg.Exec(ctx, "INSERT INTO mt.rollup_exit (leaf, rollup_id, root, block_id) VALUES ($1, $2, $3, $4)", l2Root, 1, l2Root, blockID)
+	require.NoError(t, err)
 
 	deposit = &etherman.Deposit{
 		NetworkID:          1,
@@ -170,16 +172,16 @@ func TestUpdateDepositStatus(t *testing.T) {
 	depositID, err = pg.AddDeposit(ctx, deposit, nil)
 	require.NoError(t, err)
 	l2Root1 := common.FromHex("0xda7bce9f4e8618b6bd2f4132ce798cdc7a60e7e1460a7299e3c6342a579626d2")
-	require.NoError(t, pg.SetRoot(ctx, l2Root1, depositID, deposit.DepositCount, deposit.NetworkID, nil))
+	require.NoError(t, pg.SetRoot(ctx, l2Root1, depositID, deposit.NetworkID, nil))
 
 	deposits, err := pg.UpdateL1DepositsStatus(ctx, l1Root, nil)
 	require.NoError(t, err)
 	require.Len(t, deposits, 1)
 	require.True(t, deposits[0].ReadyForClaim)
-	require.Equal(t, deposits[0].DepositCount, uint(1))
-	require.Equal(t, deposits[0].NetworkID, uint(0))
+	require.Equal(t, uint(1), deposits[0].DepositCount)
+	require.Equal(t, uint(0), deposits[0].NetworkID)
 
-	require.NoError(t, pg.UpdateL2DepositsStatus(ctx, l2Root, 1, nil))
+	require.NoError(t, pg.UpdateL2DepositsStatus(ctx, l2Root, 1, 1, nil))
 	deposits, err = pg.GetDeposits(ctx, destAdr, 10, 0, nil)
 	require.NoError(t, err)
 	require.Len(t, deposits, 2)
@@ -222,7 +224,9 @@ func TestUpdateL2DepositStatusMultipleRollups(t *testing.T) {
 	depositID1, err := pg.AddDeposit(ctx, deposit1, nil)
 	require.NoError(t, err)
 	l2Root1 := common.FromHex("0xb4c11951957c6f8f642c4af61cd6b24640fec6dc7fc607ee8206a99e92410d30")
-	require.NoError(t, pg.SetRoot(ctx, l2Root1, depositID1, deposit1.DepositCount, deposit1.NetworkID, nil))
+	require.NoError(t, pg.SetRoot(ctx, l2Root1, depositID1, deposit1.NetworkID, nil))
+	_, err = pg.Exec(ctx, "INSERT INTO mt.rollup_exit (leaf, rollup_id, root, block_id) VALUES ($1, $2, $3, $4)", l2Root1, 1, l2Root1, blockID1)
+	require.NoError(t, err)
 
 	block2 := &etherman.Block{
 		BlockNumber: 1,
@@ -249,10 +253,12 @@ func TestUpdateL2DepositStatusMultipleRollups(t *testing.T) {
 	depositID2, err := pg.AddDeposit(ctx, deposit2, nil)
 	require.NoError(t, err)
 	l2Root2 := common.FromHex("0x90c89934975cc71a021a11dbe78cb2008d77e018dfffcc629b8d6d4dc905ac5c")
-	require.NoError(t, pg.SetRoot(ctx, l2Root2, depositID2, deposit2.DepositCount, deposit2.NetworkID, nil))
+	require.NoError(t, pg.SetRoot(ctx, l2Root2, depositID2, deposit2.NetworkID, nil))
+	_, err = pg.Exec(ctx, "INSERT INTO mt.rollup_exit (leaf, rollup_id, root, block_id) VALUES ($1, $2, $3, $4)", l2Root2, 1, l2Root2, blockID2)
+	require.NoError(t, err)
 
 	// This root is for network 1, this won't upgrade anything
-	require.NoError(t, pg.UpdateL2DepositsStatus(ctx, l2Root1, 2, nil))
+	require.NoError(t, pg.UpdateL2DepositsStatus(ctx, l2Root1, 1, 2, nil))
 	deposits, err := pg.GetDeposits(ctx, destAdr, 10, 0, nil)
 	require.NoError(t, err)
 	require.Len(t, deposits, 2)
@@ -260,21 +266,21 @@ func TestUpdateL2DepositStatusMultipleRollups(t *testing.T) {
 	require.False(t, deposits[0].ReadyForClaim)
 
 	// This root is for network 2, this won't upgrade anything
-	require.NoError(t, pg.UpdateL2DepositsStatus(ctx, l2Root2, 1, nil))
+	require.NoError(t, pg.UpdateL2DepositsStatus(ctx, l2Root2, 1, 1, nil))
 	deposits, err = pg.GetDeposits(ctx, destAdr, 10, 0, nil)
 	require.NoError(t, err)
 	require.Len(t, deposits, 2)
 	require.False(t, deposits[1].ReadyForClaim)
 	require.False(t, deposits[0].ReadyForClaim)
 
-	require.NoError(t, pg.UpdateL2DepositsStatus(ctx, l2Root1, 1, nil))
+	require.NoError(t, pg.UpdateL2DepositsStatus(ctx, l2Root1, 1, 1, nil))
 	deposits, err = pg.GetDeposits(ctx, destAdr, 10, 0, nil)
 	require.NoError(t, err)
 	require.Len(t, deposits, 2)
 	require.True(t, deposits[1].ReadyForClaim)
 	require.False(t, deposits[0].ReadyForClaim)
 
-	require.NoError(t, pg.UpdateL2DepositsStatus(ctx, l2Root2, 2, nil))
+	require.NoError(t, pg.UpdateL2DepositsStatus(ctx, l2Root2, 1, 2, nil))
 	deposits, err = pg.GetDeposits(ctx, destAdr, 10, 0, nil)
 	require.NoError(t, err)
 	require.Len(t, deposits, 2)

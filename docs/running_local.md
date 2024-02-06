@@ -74,16 +74,17 @@ make test-edge
 | 0x0D9088C72Cd4F08e9dDe474D8F5394147f64b22C | Proof of Efficiency |
 | 0x10B65c586f795aF3eCCEe594fE4E38E1F059F780 | L1 Bridge |
 | 0x10B65c586f795aF3eCCEe594fE4E38E1F059F780 | L2 Bridge |
+| 0x5FbDB2315678afecb367f032d93F642f64180aa3 | Pol token |
 | 0xcFE6D77a653b988203BfAc9C6a69eA9D583bdC2b | Matic token |
 | 0x82109a709138A2953C720D3d775168717b668ba6 | L1 OKB token |
 | 0x82109a709138A2953C720D3d775168717b668ba6 | L2 WETH token |
 | 0xEd236da21Ff62bC7B62608AdB818da49E8549fa7 | GlobalExitRootManager |
+|  | RollupManager |
 
 ## Admin Account
 | Address | Private Key |
 |---|---|
 | 0x2ECF31eCe36ccaC2d3222A303b1409233ECBB225 | 0xde3ca643a52f5543e84ba984c4419ff40dbabd0e483c31c1d09fee8168d68e38 |
-
 
 ## Fund account on L2 with ETH
 

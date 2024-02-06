@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"math"
 	"math/big"
 	"testing"
 	"time"
@@ -229,7 +230,7 @@ func TestMTStorage(t *testing.T) {
 	}
 	depositID, err := pg.AddDeposit(ctx, deposit, tx)
 	require.NoError(t, err)
-	err = pg.SetRoot(ctx, root, depositID, 1, 0, tx)
+	err = pg.SetRoot(ctx, root, depositID, 0, tx)
 	require.NoError(t, err)
 
 	err = pg.Set(ctx, root, [][]byte{leaf1, leaf2}, depositID, tx)
@@ -237,20 +238,20 @@ func TestMTStorage(t *testing.T) {
 
 	vals, err := pg.Get(ctx, root, tx)
 	require.NoError(t, err)
-	require.Equal(t, vals[0], leaf1)
-	require.Equal(t, vals[1], leaf2)
+	require.Equal(t, leaf1, vals[0])
+	require.Equal(t, leaf2, vals[1])
 
-	rRoot, err := pg.GetRoot(ctx, 1, 0, tx)
+	rRoot, err := pg.GetRoot(ctx, 0, 0, tx)
 	require.NoError(t, err)
-	require.Equal(t, rRoot, root)
+	require.Equal(t, root, rRoot)
 
 	count, err := pg.GetLastDepositCount(ctx, 0, tx)
 	require.NoError(t, err)
-	require.Equal(t, count, uint(1))
+	require.Equal(t, uint(0), count)
 
 	dCount, err := pg.GetDepositCountByRoot(ctx, root, 0, tx)
 	require.NoError(t, err)
-	require.Equal(t, dCount, uint(1))
+	require.Equal(t, uint(0), dCount)
 
 	require.NoError(t, tx.Commit(ctx))
 }
@@ -302,6 +303,8 @@ func TestBSStorage(t *testing.T) {
 		BlockNumber:        2,
 		NetworkID:          0,
 		TxHash:             common.HexToHash("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9f2"),
+		RollupIndex:        1,
+		MainnetFlag:        true,
 	}
 	err = pg.AddClaim(ctx, claim, tx)
 	require.NoError(t, err)
@@ -335,6 +338,8 @@ func TestBSStorage(t *testing.T) {
 	require.Equal(t, rClaim.DestinationAddress, claim.DestinationAddress)
 	require.Equal(t, rClaim.NetworkID, claim.NetworkID)
 	require.Equal(t, rClaim.Index, claim.Index)
+	require.Equal(t, rClaim.RollupIndex, claim.RollupIndex)
+	require.Equal(t, rClaim.MainnetFlag, claim.MainnetFlag)
 
 	rClaims, err := pg.GetClaims(ctx, claim.DestinationAddress.String(), 10, 0, tx)
 	require.NoError(t, err)
@@ -362,5 +367,30 @@ func TestBSStorage(t *testing.T) {
 	require.Equal(t, wt.TokenMetadata.Symbol, "COA")
 	require.Equal(t, wt.TokenMetadata.Decimals, uint8(12))
 
+	require.NoError(t, tx.Commit(ctx))
+}
+
+// Test Set Max uint as networkID into setRoot storage
+func TestSetMaxUintNetworkID(t *testing.T) {
+	// Init database instance
+	cfg := pgstorage.NewConfigFromEnv()
+	err := pgstorage.InitOrReset(cfg)
+	require.NoError(t, err)
+	ctx := context.Background()
+	pg, err := pgstorage.NewPostgresStorage(cfg)
+	require.NoError(t, err)
+	tx, err := pg.BeginDBTransaction(ctx)
+	require.NoError(t, err)
+	deposit := &etherman.Deposit{
+		Metadata: common.Hex2Bytes("0x0"),
+	}
+	depositID, err := pg.AddDeposit(ctx, deposit, tx)
+	require.NoError(t, err)
+	root := common.FromHex("0x88e652896cb1de5962a0173a222059f51e6b943a2ba6dfc9acbff051ceb1abb5")
+	err = pg.SetRoot(ctx, root, depositID, math.MaxInt32, tx)
+	require.NoError(t, err)
+	rRoot, err := pg.GetRoot(ctx, 0, math.MaxInt32, tx)
+	require.NoError(t, err)
+	require.Equal(t, root, rRoot)
 	require.NoError(t, tx.Commit(ctx))
 }

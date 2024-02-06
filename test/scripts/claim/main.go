@@ -56,16 +56,18 @@ func main() {
 	log.Debug("mainnetExitRoot: ", proof.MainExitRoot)
 	log.Debug("rollupExitRoot: ", proof.RollupExitRoot)
 
-	var smt [mtHeight][32]byte
+	var smtProof, smtRollupProof [mtHeight][32]byte
 	for i := 0; i < len(proof.MerkleProof); i++ {
-		log.Debug("smt: ", proof.MerkleProof[i])
-		smt[i] = common.HexToHash(proof.MerkleProof[i])
+		log.Debug("smtProof: ", proof.MerkleProof[i])
+		smtProof[i] = common.HexToHash(proof.MerkleProof[i])
+		log.Debug("smtRollupProof: ", proof.MerkleProof[i])
+		smtRollupProof[i] = common.HexToHash(proof.RollupMerkleProof[i])
 	}
 	globalExitRoot := &etherman.GlobalExitRoot{
 		ExitRoots: []common.Hash{common.HexToHash(proof.MainExitRoot), common.HexToHash(proof.RollupExitRoot)},
 	}
 	log.Info("Sending claim tx...")
-	err = c.SendClaim(ctx, bridgeData, smt, globalExitRoot, auth)
+	err = c.SendClaim(ctx, bridgeData, smtProof, smtRollupProof, globalExitRoot, auth)
 	if err != nil {
 		log.Fatal("error: ", err)
 	}

@@ -22,7 +22,8 @@ import (
 )
 
 type bridgeService struct {
-	storage          BridgeServiceStorage
+	rollupID         uint
+	storage          bridgeServiceStorage
 	networkIDs       map[uint]uint8
 	height           uint8
 	defaultPageLimit apolloconfig.Entry[uint32]
@@ -40,7 +41,7 @@ type bridgeService struct {
 }
 
 // NewBridgeService creates new bridge service.
-func NewBridgeService(cfg Config, height uint8, networks []uint, l2Clients []*utils.Client, l2Auths []*bind.TransactOpts, storage interface{}) *bridgeService {
+func NewBridgeService(cfg Config, height uint8, networks []uint, l2Clients []*utils.Client, l2Auths []*bind.TransactOpts, storage interface{}, rollupID uint) *bridgeService {
 	var networkIDs = make(map[uint]uint8)
 	var nodeClients = make(map[uint]*utils.Client, len(networks))
 	var authMap = make(map[uint]*bind.TransactOpts, len(networks))
@@ -56,7 +57,8 @@ func NewBridgeService(cfg Config, height uint8, networks []uint, l2Clients []*ut
 		panic(err)
 	}
 	return &bridgeService{
-		storage:          storage.(BridgeServiceStorage),
+		rollupID:         rollupID,
+		storage:          storage.(bridgeServiceStorage),
 		height:           height,
 		networkIDs:       networkIDs,
 		nodeClients:      nodeClients,
@@ -83,7 +85,7 @@ func (s *bridgeService) getNode(ctx context.Context, parentHash [bridgectrl.KeyL
 		var err error
 		value, err = s.storage.Get(ctx, parentHash[:], dbTx)
 		if err != nil {
-			return left, right, fmt.Errorf("parentHash: %v, error: %w", parentHash, err)
+			return left, right, fmt.Errorf("parentHash: %s, error: %v", common.BytesToHash(parentHash[:]).String(), err)
 		}
 		s.cache.Add(string(parentHash[:]), value)
 	}
@@ -102,7 +104,7 @@ func (s *bridgeService) getProof(index uint, root [bridgectrl.KeyLen]byte, dbTx 
 	for h := int(s.height - 1); h >= 0; h-- {
 		left, right, err := s.getNode(ctx, cur, dbTx)
 		if err != nil {
-			return nil, fmt.Errorf("height: %d, cur: %v, error: %w", h, cur, err)
+			return nil, fmt.Errorf("height: %d, cur: %s, error: %v", h, common.BytesToHash(cur[:]).String(), err)
 		}
 		/*
 					*        Root                (level h=3 => height=4)
@@ -143,39 +145,92 @@ func (s *bridgeService) getProof(index uint, root [bridgectrl.KeyLen]byte, dbTx 
 	return siblings, nil
 }
 
+// getRollupExitProof returns the merkle proof for the zkevm leaf.
+func (s *bridgeService) getRollupExitProof(rollupIndex uint, root common.Hash, dbTx pgx.Tx) ([][bridgectrl.KeyLen]byte, common.Hash, error) {
+	ctx := context.Background()
+
+	// Get leaves given the root
+	leaves, err := s.storage.GetRollupExitLeavesByRoot(ctx, root, dbTx)
+	if err != nil {
+		return nil, common.Hash{}, err
+	}
+	// Compute Siblings
+	var ls [][bridgectrl.KeyLen]byte
+	for _, l := range leaves {
+		var aux [bridgectrl.KeyLen]byte
+		copy(aux[:], l.Leaf.Bytes())
+		ls = append(ls, aux)
+	}
+	siblings, r, err := bridgectrl.ComputeSiblings(rollupIndex, ls, s.height)
+	if err != nil {
+		return nil, common.Hash{}, err
+	} else if root != r {
+		return nil, common.Hash{}, fmt.Errorf("error checking calculated root: %s, %s", root.String(), r.String())
+	}
+	return siblings, ls[rollupIndex], nil
+}
+
 // GetClaimProof returns the merkle proof to claim the given deposit.
-func (s *bridgeService) GetClaimProof(depositCnt, networkID uint, dbTx pgx.Tx) (*etherman.GlobalExitRoot, [][bridgectrl.KeyLen]byte, error) {
+func (s *bridgeService) GetClaimProof(depositCnt, networkID uint, dbTx pgx.Tx) (*etherman.GlobalExitRoot, [][bridgectrl.KeyLen]byte, [][bridgectrl.KeyLen]byte, error) {
 	ctx := context.Background()
 
 	if dbTx == nil { // if the call comes from the rest API
 		deposit, err := s.storage.GetDeposit(ctx, depositCnt, networkID, nil)
 		if err != nil {
 			log.Errorf("failed to get deposit from db for GetClaimProof, depositCnt: %v, networkID: %v, error: %v", depositCnt, networkID, err)
-			return nil, nil, gerror.ErrInternalErrorForRpcCall
+			return nil, nil, nil, gerror.ErrInternalErrorForRpcCall
 		}
 
 		if !deposit.ReadyForClaim {
-			return nil, nil, gerror.ErrDepositNotSynced
+			return nil, nil, nil, gerror.ErrDepositNotSynced
 		}
 	}
 
 	tID, err := s.getNetworkID(networkID)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	globalExitRoot, err := s.storage.GetLatestExitRoot(ctx, tID != 0, dbTx)
 	if err != nil {
 		log.Errorf("get latest exit root failed fot network: %v, error: %v", networkID, err)
-		return nil, nil, gerror.ErrInternalErrorForRpcCall
+		return nil, nil, nil, gerror.ErrInternalErrorForRpcCall
 	}
 
-	merkleProof, err := s.getProof(depositCnt, globalExitRoot.ExitRoots[tID], dbTx)
-	if err != nil {
-		return nil, nil, fmt.Errorf("getting the proof failed, error: %v, network: %d", err, networkID)
+	var (
+		merkleProof       [][bridgectrl.KeyLen]byte
+		rollupMerkleProof [][bridgectrl.KeyLen]byte
+		rollupLeaf        common.Hash
+	)
+	if networkID == 0 { // Mainnet
+		merkleProof, err = s.getProof(depositCnt, globalExitRoot.ExitRoots[tID], dbTx)
+		if err != nil {
+			log.Error("error getting merkleProof. Error: ", err)
+			return nil, nil, nil, fmt.Errorf("getting the proof failed, error: %v, network: %d", err, networkID)
+		}
+		rollupMerkleProof = emptyProof()
+	} else { // Rollup
+		rollupMerkleProof, rollupLeaf, err = s.getRollupExitProof(s.rollupID-1, globalExitRoot.ExitRoots[tID], dbTx)
+		if err != nil {
+			log.Error("error getting rollupProof. Error: ", err)
+			return nil, nil, nil, fmt.Errorf("getting the rollup proof failed, error: %v, network: %d", err, networkID)
+		}
+		merkleProof, err = s.getProof(depositCnt, rollupLeaf, dbTx)
+		if err != nil {
+			log.Error("error getting merkleProof. Error: ", err)
+			return nil, nil, nil, fmt.Errorf("getting the proof failed, error: %v, network: %d", err, networkID)
+		}
 	}
 
-	return globalExitRoot, merkleProof, nil
+	return globalExitRoot, merkleProof, rollupMerkleProof, nil
+}
+
+func emptyProof() [][bridgectrl.KeyLen]byte {
+	var proof [][bridgectrl.KeyLen]byte
+	for i := 0; i < 32; i++ {
+		proof = append(proof, common.Hash{})
+	}
+	return proof
 }
 
 // GetDepositStatus returns deposit with ready_for_claim status.
@@ -229,6 +284,9 @@ func (s *bridgeService) GetBridges(ctx context.Context, req *pb.GetBridgesReques
 		if err != nil {
 			return nil, err
 		}
+		mainnetFlag := deposit.NetworkID == 0
+		rollupIndex := s.rollupID - 1
+		localExitRootIndex := deposit.DepositCount
 		pbDeposits = append(
 			pbDeposits, &pb.Deposit{
 				LeafType:      uint32(deposit.LeafType),
@@ -244,6 +302,7 @@ func (s *bridgeService) GetBridges(ctx context.Context, req *pb.GetBridgesReques
 				ClaimTxHash:   claimTxHash,
 				Metadata:      "0x" + hex.EncodeToString(deposit.Metadata),
 				ReadyForClaim: deposit.ReadyForClaim,
+				GlobalIndex:   etherman.GenerateGlobalIndex(mainnetFlag, rollupIndex, localExitRootIndex).String(),
 			},
 		)
 	}
@@ -278,14 +337,16 @@ func (s *bridgeService) GetClaims(ctx context.Context, req *pb.GetClaimsRequest)
 	var pbClaims []*pb.Claim
 	for _, claim := range claims {
 		pbClaims = append(pbClaims, &pb.Claim{
-			Index:     uint64(claim.Index),
-			OrigNet:   uint32(claim.OriginalNetwork),
-			OrigAddr:  claim.OriginalAddress.Hex(),
-			Amount:    claim.Amount.String(),
-			NetworkId: uint32(claim.NetworkID),
-			DestAddr:  claim.DestinationAddress.Hex(),
-			BlockNum:  claim.BlockNumber,
-			TxHash:    claim.TxHash.String(),
+			Index:       uint64(claim.Index),
+			OrigNet:     uint32(claim.OriginalNetwork),
+			OrigAddr:    claim.OriginalAddress.Hex(),
+			Amount:      claim.Amount.String(),
+			NetworkId:   uint32(claim.NetworkID),
+			DestAddr:    claim.DestinationAddress.Hex(),
+			BlockNum:    claim.BlockNumber,
+			TxHash:      claim.TxHash.String(),
+			RollupIndex: claim.RollupIndex,
+			MainnetFlag: claim.MainnetFlag,
 		})
 	}
 
@@ -298,20 +359,28 @@ func (s *bridgeService) GetClaims(ctx context.Context, req *pb.GetClaimsRequest)
 // GetProof returns the merkle proof for the given deposit.
 // Bridge rest API endpoint
 func (s *bridgeService) GetProof(ctx context.Context, req *pb.GetProofRequest) (*pb.GetProofResponse, error) {
-	globalExitRoot, merkleProof, err := s.GetClaimProof(uint(req.DepositCnt), uint(req.NetId), nil)
+	globalExitRoot, merkleProof, rollupMerkleProof, err := s.GetClaimProof(uint(req.DepositCnt), uint(req.NetId), nil)
 	if err != nil {
 		return nil, err
 	}
-	var proof []string
+	var (
+		proof       []string
+		rollupProof []string
+	)
+	if len(proof) != len(rollupProof) {
+		return nil, fmt.Errorf("proofs have different lengths. MerkleProof: %d. RollupMerkleProof: %d", len(merkleProof), len(rollupMerkleProof))
+	}
 	for i := 0; i < len(merkleProof); i++ {
 		proof = append(proof, "0x"+hex.EncodeToString(merkleProof[i][:]))
+		rollupProof = append(rollupProof, "0x"+hex.EncodeToString(rollupMerkleProof[i][:]))
 	}
 
 	return &pb.GetProofResponse{
 		Proof: &pb.Proof{
-			MerkleProof:    proof,
-			MainExitRoot:   globalExitRoot.ExitRoots[0].Hex(),
-			RollupExitRoot: globalExitRoot.ExitRoots[1].Hex(),
+			RollupMerkleProof: rollupProof,
+			MerkleProof:       proof,
+			MainExitRoot:      globalExitRoot.ExitRoots[0].Hex(),
+			RollupExitRoot:    globalExitRoot.ExitRoots[1].Hex(),
 		},
 	}, nil
 }

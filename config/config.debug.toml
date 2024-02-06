@@ -83,6 +83,8 @@ Enabled = false
 GenBlockNumber = 1
 PolygonBridgeAddress = "0x10B65c586f795aF3eCCEe594fE4E38E1F059F780"
 PolygonZkEVMGlobalExitRootAddress = "0xEd236da21Ff62bC7B62608AdB818da49E8549fa7"
+PolygonRollupManagerAddress = "0xB7f8BC63BbcaD18155201308C8f3540b07f84F5e"
+PolygonZkEvmAddress = "0x8dAF17A20c9DBA35f005b6324F493785D239719d"
 L2PolygonBridgeAddresses = ["0x10B65c586f795aF3eCCEe594fE4E38E1F059F780"]
 
 [NacosConfig]
