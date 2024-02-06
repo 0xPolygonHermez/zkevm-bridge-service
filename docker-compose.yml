@@ -221,7 +221,7 @@ services:
       - 50061:50061 # MT
       - 50071:50071 # Executor
     volumes:
-      - ./test/config/prover/config.prover.x1.json.json:/usr/src/app/config.json
+      - ./test/config/prover/config.prover.x1.json:/usr/src/app/config.json
     command: >
       zkProver -c /usr/src/app/config.json
 
