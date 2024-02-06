@@ -119,7 +119,7 @@ func NewManager(ctx context.Context, cfg *Config) (*Manager, error) {
 	if err != nil {
 		return nil, err
 	}
-	bService := server.NewBridgeService(cfg.BS, cfg.BT.Height, []uint{0, 1}, []*utils.Client{nil}, []*bind.TransactOpts{nil}, pgst, nil, nil, nil)
+	bService := server.NewBridgeService(cfg.BS, cfg.BT.Height, []uint{0, 1}, []*utils.Client{nil}, []*bind.TransactOpts{nil}, pgst)
 	opsman.storage = st.(StorageInterface)
 	opsman.bridgetree = bt
 	opsman.bridgeService = bService
@@ -165,22 +165,6 @@ func (m *Manager) SendL1Deposit(ctx context.Context, tokenAddr common.Address, a
 
 	// sync for new exit root
 	return m.WaitExitRootToBeSynced(ctx, orgExitRoot, false)
-}
-
-// SetL2TokensAllowed set l2 tokens allowed set
-func (m *Manager) SetL2TokensAllowed(ctx context.Context, allowed bool) error {
-	client := m.clients[L2]
-	auth, err := client.GetSigner(ctx, accHexPrivateKeys[L1])
-	if err != nil {
-		return err
-	}
-
-	err = client.SetL2TokensAllowed(ctx, allowed, auth)
-	if err != nil {
-		return errors.Wrap(err, "SetL2TokensAllowed")
-	}
-
-	return nil
 }
 
 // SendL2Deposit sends a deposit from l2 to l1.
@@ -573,7 +557,7 @@ func (m *Manager) SendL1Claim(ctx context.Context, deposit *pb.Deposit, smtProof
 		return err
 	}
 
-	return client.SendClaimAndWait(ctx, deposit, smtProof, globalExitRoot, auth)
+	return client.SendClaim(ctx, deposit, smtProof, globalExitRoot, auth)
 }
 
 // SendL2Claim send an L2 claim
@@ -584,7 +568,7 @@ func (m *Manager) SendL2Claim(ctx context.Context, deposit *pb.Deposit, smtProof
 		return err
 	}
 
-	err = client.SendClaimAndWait(ctx, deposit, smtProof, globalExitRoot, auth)
+	err = client.SendClaim(ctx, deposit, smtProof, globalExitRoot, auth)
 	return err
 }
 
@@ -670,29 +654,13 @@ func (m *Manager) MintERC20(ctx context.Context, erc20Addr common.Address, amoun
 	return errors.Wrap(client.MintERC20(ctx, erc20Addr, amount, auth), "MintERC20")
 }
 
-// ApproveERC20OKB approves erc20 tokens
-func (m *Manager) ApproveERC20OKB(ctx context.Context, okbAddress common.Address, amount *big.Int) error {
-	client := m.clients[L1]
-	auth, err := client.GetSigner(ctx, accHexPrivateKeys[L1])
-	if err != nil {
-		return err
-	}
-	return client.ApproveERC20(ctx, okbAddress, common.HexToAddress(l1BridgeAddr), amount, auth)
-}
-
 // ApproveERC20 approves erc20 tokens
-func (m *Manager) ApproveERC20(ctx context.Context, erc20Addr common.Address, amount *big.Int, network NetworkSID) error {
+func (m *Manager) ApproveERC20(ctx context.Context, erc20Addr, bridgeAddr common.Address, amount *big.Int, network NetworkSID) error {
 	client := m.clients[network]
 	auth, err := client.GetSigner(ctx, accHexPrivateKeys[network])
 	if err != nil {
 		return err
 	}
-
-	bridgeAddr := common.HexToAddress(l1BridgeAddr)
-	if network == L2 {
-		bridgeAddr = common.HexToAddress(l2BridgeAddr)
-	}
-
 	return client.ApproveERC20(ctx, erc20Addr, bridgeAddr, amount, auth)
 }
 

@@ -13,18 +13,21 @@ import (
 	"github.com/0xPolygonHermez/zkevm-bridge-service/db"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/server"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/test/operations"
+	"github.com/0xPolygonHermez/zkevm-node/log"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/stretchr/testify/require"
 )
 
 var (
-	l1BridgeAddr = common.HexToAddress("0xff0EE8ea08cEf5cb4322777F5CC3E8A584B8A4A0")
-	l2BridgeAddr = common.HexToAddress("0xff0EE8ea08cEf5cb4322777F5CC3E8A584B8A4A0")
+	l1BridgeAddrX1 = common.HexToAddress("0x10B65c586f795aF3eCCEe594fE4E38E1F059F780")
+	l2BridgeAddrX1 = common.HexToAddress("0x10B65c586f795aF3eCCEe594fE4E38E1F059F780")
 )
 
 // TestE2E tests the flow of deposit and withdraw funds using the vector
-func TestE2E(t *testing.T) {
-	t.Skip()
+func TestE2EX1(t *testing.T) {
+	if testing.Short() {
+		t.Skip()
+	}
 
 	ctx := context.Background()
 	opsCfg := &operations.Config{
@@ -62,7 +65,8 @@ func TestE2E(t *testing.T) {
 	opsman, err := operations.NewManager(ctx, opsCfg)
 	require.NoError(t, err)
 
-	t.Run("L1-L2 eth bridge", func(t *testing.T) {
+	t.Run("L1-L2 okb bridge", func(t *testing.T) {
+		log.Infof("TestE2E, L1-L2 okb bridge start.")
 		// Check initial globalExitRoot. Must fail because at the beginning, no globalExitRoot event is thrown.
 		globalExitRootSMC, err := opsman.GetCurrentGlobalExitRootFromSmc(ctx)
 		require.NoError(t, err)
@@ -70,15 +74,17 @@ func TestE2E(t *testing.T) {
 		// Send L1 deposit
 		var destNetwork uint32 = 1
 		amount := new(big.Int).SetUint64(10000000000000000000)
-		tokenAddr := common.Address{} // This means is eth
+		okbAddr := common.HexToAddress("0x82109a709138A2953C720D3d775168717b668ba6") // This means is okb
 		destAddr := common.HexToAddress("0xc949254d682d8c9ad5682521675b8f43b102aec4")
 
-		l1Balance, err := opsman.CheckAccountBalance(ctx, operations.L1, &l1BridgeAddr)
+		err = opsman.ApproveERC20OKB(ctx, okbAddr, amount)
+		l1Balance, err := opsman.CheckAccountTokenBalance(ctx, operations.L1, okbAddr, &l1BridgeAddrX1)
 		require.NoError(t, err)
 		t.Logf("L1 Bridge Balance: %v", l1Balance)
-		err = opsman.SendL1Deposit(ctx, tokenAddr, amount, destNetwork, &destAddr)
 		require.NoError(t, err)
-		l1Balance, err = opsman.CheckAccountBalance(ctx, operations.L1, &l1BridgeAddr)
+		err = opsman.SendL1Deposit(ctx, okbAddr, amount, destNetwork, &destAddr)
+		require.NoError(t, err)
+		l1Balance, err = opsman.CheckAccountTokenBalance(ctx, operations.L1, okbAddr, &l1BridgeAddrX1)
 		require.NoError(t, err)
 		t.Logf("L1 Bridge Balance: %v", l1Balance)
 
@@ -95,6 +101,7 @@ func TestE2E(t *testing.T) {
 		// Check L2 funds
 		balance, err := opsman.CheckAccountBalance(ctx, operations.L2, &destAddr)
 		require.NoError(t, err)
+		log.Infof("balance:%v", balance.String())
 		initL2Balance := big.NewInt(0)
 		require.Equal(t, 0, balance.Cmp(initL2Balance))
 		t.Log("Deposit: ", deposits[0])
@@ -102,7 +109,9 @@ func TestE2E(t *testing.T) {
 		err = opsman.CheckL2Claim(ctx, uint(deposits[0].DestNet), uint(deposits[0].DepositCnt))
 		require.NoError(t, err)
 		// Check L2 funds to see if the amount has been increased
+		log.Infof("destAddr:%v", destAddr.String())
 		balance2, err := opsman.CheckAccountBalance(ctx, operations.L2, &destAddr)
+		log.Infof("balance:%v, balance2:%v, amount:%v", balance.String(), balance2.String(), amount.String())
 		require.NoError(t, err)
 		require.NotEqual(t, balance, balance2)
 		require.Equal(t, amount, balance2)
@@ -113,12 +122,12 @@ func TestE2E(t *testing.T) {
 		// Send L2 Deposit to withdraw the some funds
 		destNetwork = 0
 		amount = new(big.Int).SetUint64(1000000000000000000)
-		l2Balance, err := opsman.CheckAccountBalance(ctx, operations.L2, &l2BridgeAddr)
+		l2Balance, err := opsman.CheckAccountBalance(ctx, operations.L2, &l2BridgeAddrX1)
 		require.NoError(t, err)
 		t.Logf("L2 Bridge Balance: %v", l2Balance)
-		err = opsman.SendL2Deposit(ctx, tokenAddr, amount, destNetwork, &destAddr)
+		err = opsman.SendL2Deposit(ctx, common.Address{}, amount, destNetwork, &destAddr)
 		require.NoError(t, err)
-		l2Balance, err = opsman.CheckAccountBalance(ctx, operations.L2, &l2BridgeAddr)
+		l2Balance, err = opsman.CheckAccountBalance(ctx, operations.L2, &l2BridgeAddrX1)
 		require.NoError(t, err)
 		t.Logf("L2 Bridge Balance: %v", l2Balance)
 
@@ -145,13 +154,14 @@ func TestE2E(t *testing.T) {
 		require.NoError(t, err)
 
 		// Check L1 funds to see if the amount has been increased
-		balance, err = opsman.CheckAccountBalance(ctx, operations.L1, &destAddr)
+		balance, err = opsman.CheckAccountTokenBalance(ctx, operations.L1, okbAddr, &destAddr)
 		require.NoError(t, err)
 		require.Equal(t, big.NewInt(1000000000000000000), balance)
 		// Check L2 funds to see that the amount has been reduced
 		balance, err = opsman.CheckAccountBalance(ctx, operations.L2, &destAddr)
 		require.NoError(t, err)
 		require.True(t, big.NewInt(9000000000000000000).Cmp(balance) > 0)
+		log.Infof("TestE2E, L1-L2 okb bridge end.")
 	})
 
 	t.Run("L1-L2 token bridge", func(t *testing.T) {
@@ -160,6 +170,7 @@ func TestE2E(t *testing.T) {
 			2. Bridge from L2 to L1
 			3. Claim the deposits in both layers
 		*/
+		log.Infof("TestE2E, L1-L2 token bridge start.")
 		// Check initial globalExitRoot.
 		globalExitRootSMC, err := opsman.GetCurrentGlobalExitRootFromSmc(ctx)
 		require.NoError(t, err)
@@ -168,12 +179,12 @@ func TestE2E(t *testing.T) {
 		var destNetwork uint32 = 1
 		amount1 := new(big.Int).SetUint64(1000000000000000000)
 		totAmount := new(big.Int).SetUint64(3500000000000000000)
-		tokenAddr, _, err := opsman.DeployERC20(ctx, "A COIN", "ACO", "l1")
+		tokenAddr, _, err := opsman.DeployERC20(ctx, "A COIN", "ACO", operations.L1)
 		require.NoError(t, err)
-		err = opsman.MintERC20(ctx, tokenAddr, totAmount, "l1")
+		err = opsman.MintERC20(ctx, tokenAddr, totAmount, operations.L1)
 		require.NoError(t, err)
-		origAddr := common.HexToAddress("0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC")
-		balance, err := opsman.CheckAccountTokenBalance(ctx, "l1", tokenAddr, &origAddr)
+		origAddr := common.HexToAddress("0x2ecf31ece36ccac2d3222a303b1409233ecbb225")
+		balance, err := opsman.CheckAccountTokenBalance(ctx, operations.L1, tokenAddr, &origAddr)
 		require.NoError(t, err)
 		t.Log("Init account balance l1: ", balance)
 		destAddr := common.HexToAddress("0xc949254d682d8c9ad5682521675b8f43b102aec4")
@@ -191,7 +202,7 @@ func TestE2E(t *testing.T) {
 		time.Sleep(3 * time.Second) // wait for sync token_wrapped event
 		tokenWrapped, err := opsman.GetTokenWrapped(ctx, 0, tokenAddr, false)
 		require.NoError(t, err)
-		balance2, err := opsman.CheckAccountTokenBalance(ctx, "l2", tokenWrapped.WrappedTokenAddress, &destAddr)
+		balance2, err := opsman.CheckAccountTokenBalance(ctx, operations.L2, tokenWrapped.WrappedTokenAddress, &destAddr)
 		require.NoError(t, err)
 		t.Log("Init account balance l2: ", balance2)
 
@@ -220,7 +231,7 @@ func TestE2E(t *testing.T) {
 		err = opsman.SendL1Claim(ctx, deposits[0], smtProof, globaExitRoot)
 		require.NoError(t, err)
 		// Check L1 funds to see if the amount has been increased
-		balance, err = opsman.CheckAccountTokenBalance(ctx, "l1", tokenAddr, &origAddr)
+		balance, err = opsman.CheckAccountTokenBalance(ctx, operations.L1, tokenAddr, &origAddr)
 		require.NoError(t, err)
 		require.Equal(t, big.NewInt(2000000000000000000), balance)
 
@@ -231,13 +242,15 @@ func TestE2E(t *testing.T) {
 		err = opsman.CheckL2Claim(ctx, uint(deposits[0].DestNet), uint(deposits[0].DepositCnt))
 		require.NoError(t, err)
 		// Check L2 funds to see if the amount has been increased
-		balance, err = opsman.CheckAccountTokenBalance(ctx, "l2", tokenWrapped.WrappedTokenAddress, &destAddr)
+		balance, err = opsman.CheckAccountTokenBalance(ctx, operations.L2, tokenWrapped.WrappedTokenAddress, &destAddr)
 		require.NoError(t, err)
 		t.Log("Balance tokenWrapped: ", balance)
 		require.Equal(t, new(big.Int).SetUint64(1500000000000000000), balance)
+		log.Infof("TestE2E, L1-L2 token bridge end.")
 	})
 
 	t.Run("Reversal ERC20", func(t *testing.T) {
+		log.Infof("TestE2E, Reversal ERC20 start.")
 		// Check initial globalExitRoot.
 		globalExitRootSMC, err := opsman.GetCurrentGlobalExitRootFromSmc(ctx)
 		require.NoError(t, err)
@@ -255,8 +268,10 @@ func TestE2E(t *testing.T) {
 		balance, err := opsman.CheckAccountTokenBalance(ctx, operations.L2, tokenAddr, &origAddr)
 		require.NoError(t, err)
 		t.Log("Token balance: ", balance, ". tokenaddress: ", tokenAddr, ". account: ", origAddr)
-		destAddr := common.HexToAddress("0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC")
+		destAddr := common.HexToAddress("0x2ecf31ece36ccac2d3222a303b1409233ecbb225")
 		amount = new(big.Int).SetUint64(1000000000000000000)
+		err = opsman.SetL2TokensAllowed(ctx, true)
+		require.NoError(t, err)
 		err = opsman.SendL2Deposit(ctx, tokenAddr, amount, destNetwork, &destAddr)
 		require.NoError(t, err)
 		// Check globalExitRoot
@@ -329,9 +344,11 @@ func TestE2E(t *testing.T) {
 		balance, err = opsman.CheckAccountTokenBalance(ctx, operations.L1, tokenWrapped.WrappedTokenAddress, &destAddr)
 		require.NoError(t, err)
 		require.Equal(t, 0, big.NewInt(400000000000000000).Cmp(balance))
+		log.Infof("TestE2E, Reversal ERC20 end.")
 	})
 
 	t.Run("ERC20", func(t *testing.T) {
+		log.Infof("TestE2E, ERC20 start.")
 		// Check initial globalExitRoot.
 		globalExitRootSMC, err := opsman.GetCurrentGlobalExitRootFromSmc(ctx)
 		require.NoError(t, err)
@@ -343,7 +360,7 @@ func TestE2E(t *testing.T) {
 		require.NoError(t, err)
 		err = opsman.MintERC20(ctx, tokenAddr, amount, operations.L1)
 		require.NoError(t, err)
-		origAddr := common.HexToAddress("0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC")
+		origAddr := common.HexToAddress("0x2ecf31ece36ccac2d3222a303b1409233ecbb225")
 		balance, err := opsman.CheckAccountTokenBalance(ctx, operations.L1, tokenAddr, &origAddr)
 		require.NoError(t, err)
 		t.Log("Init account balance l1: ", balance)
@@ -412,6 +429,7 @@ func TestE2E(t *testing.T) {
 		balance, err = opsman.CheckAccountTokenBalance(ctx, operations.L2, tokenWrapped.WrappedTokenAddress, &destAddr)
 		require.NoError(t, err)
 		require.Equal(t, big.NewInt(2000000000000000000), balance)
+		log.Infof("TestE2E, ERC20 end.")
 	})
 
 	t.Run("Multi deposits", func(t *testing.T) {
@@ -420,7 +438,7 @@ func TestE2E(t *testing.T) {
 			2. Do 2 more deposits
 			3. Claim the first 3 deposits in L2
 		*/
-
+		log.Infof("TestE2E, Multi deposits start.")
 		// Check initial globalExitRoot.
 		globalExitRootSMC, err := opsman.GetCurrentGlobalExitRootFromSmc(ctx)
 		require.NoError(t, err)
@@ -431,12 +449,12 @@ func TestE2E(t *testing.T) {
 		amount2 := new(big.Int).SetUint64(2000000000000000000)
 		amount3 := new(big.Int).SetUint64(3000000000000000000)
 		totAmount := new(big.Int).SetUint64(9000000000000000000)
-		tokenAddr, _, err := opsman.DeployERC20(ctx, "A COIN", "ACO", "l1")
+		tokenAddr, _, err := opsman.DeployERC20(ctx, "A COIN", "ACO", operations.L1)
 		require.NoError(t, err)
-		err = opsman.MintERC20(ctx, tokenAddr, totAmount, "l1")
+		err = opsman.MintERC20(ctx, tokenAddr, totAmount, operations.L1)
 		require.NoError(t, err)
-		origAddr := common.HexToAddress("0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC")
-		balance, err := opsman.CheckAccountTokenBalance(ctx, "l1", tokenAddr, &origAddr)
+		origAddr := common.HexToAddress("0x2ecf31ece36ccac2d3222a303b1409233ecbb225")
+		balance, err := opsman.CheckAccountTokenBalance(ctx, operations.L1, tokenAddr, &origAddr)
 		require.NoError(t, err)
 		t.Log("Init account balance l1: ", balance)
 		destAddr := common.HexToAddress("0xc949254d682d8c9ad5682521675b8f43b102aec4")
@@ -475,36 +493,38 @@ func TestE2E(t *testing.T) {
 		require.NoError(t, err)
 		t.Log("TokenWrapped: ", tokenWrapped)
 		// Check L2 funds to see if the amount has been increased
-		balance, err = opsman.CheckAccountTokenBalance(ctx, "l2", tokenWrapped.WrappedTokenAddress, &destAddr)
+		balance, err = opsman.CheckAccountTokenBalance(ctx, operations.L2, tokenWrapped.WrappedTokenAddress, &destAddr)
 		require.NoError(t, err)
 		t.Log("Balance tokenWrapped: ", balance)
 
 		// Check the claim tx
 		err = opsman.CheckL2Claim(ctx, uint(deposits[0].DestNet), uint(deposits[0].DepositCnt))
 		require.NoError(t, err)
-		balance, err = opsman.CheckAccountTokenBalance(ctx, "l2", tokenWrapped.WrappedTokenAddress, &destAddr)
+		balance, err = opsman.CheckAccountTokenBalance(ctx, operations.L2, tokenWrapped.WrappedTokenAddress, &destAddr)
 		require.NoError(t, err)
 
 		// Check the claim tx
 		err = opsman.CheckL2Claim(ctx, uint(deposits[0].DestNet), uint(deposits[0].DepositCnt))
 		require.NoError(t, err)
 		// Check L2 funds to see if the amount has been increased
-		balance, err = opsman.CheckAccountTokenBalance(ctx, "l2", tokenWrapped.WrappedTokenAddress, &destAddr)
+		balance, err = opsman.CheckAccountTokenBalance(ctx, operations.L2, tokenWrapped.WrappedTokenAddress, &destAddr)
 		require.NoError(t, err)
 		t.Log("Balance tokenWrapped: ", balance)
 		require.Equal(t, new(big.Int).SetUint64(6000000000000000000), balance)
+		log.Infof("TestE2E, Multi deposits end.")
 	})
 
 	t.Run("Bridge Message Test", func(t *testing.T) {
 		// Test L1 Bridge Message
 		// Send L1 bridge message
+		log.Infof("TestE2E, Bridge Message Test start.")
 		var destNetwork uint32 = 1
 		amount := new(big.Int).SetUint64(1000000000000000000)
 
 		destAddr, err := opsman.DeployBridgeMessageReceiver(ctx, operations.L1)
 		require.NoError(t, err)
-
-		err = opsman.SendL1BridgeMessage(ctx, destAddr, destNetwork, amount, []byte("metadata 1"), nil)
+		log.Infof("first, destAddr:%v,amount:%v,destNetwork:%v", destAddr.String(), amount.String(), destNetwork)
+		err = opsman.SendL1BridgeMessage(ctx, destAddr, destNetwork, amount, []byte("metadata"), nil)
 		require.NoError(t, err)
 
 		// Get Bridge Info By DestAddr
@@ -517,14 +537,39 @@ func TestE2E(t *testing.T) {
 		err = opsman.SendL2Claim(ctx, deposits[0], smtProof, globaExitRoot)
 		require.NoError(t, err)
 
+		// Send L1 message to L2' 0xc949254d682d8c9ad5682521675b8f43b102aec4
+		destAddr = common.HexToAddress("0xc949254d682d8c9ad5682521675b8f43b102aec4")
+		log.Infof("second, destAddr:%v,amount:%v,destNetwork:%v", destAddr.String(), amount.String(), destNetwork)
+		err = opsman.SendL1BridgeMessage(ctx, destAddr, destNetwork, amount, []byte("metadata"), nil)
+		require.NoError(t, err)
+
+		// Get Bridge Info By DestAddr
+		deposits, err = opsman.GetBridgeInfoByDestAddr(ctx, &destAddr)
+		require.NoError(t, err)
+		// Get the claim data
+		smtProof, globaExitRoot, err = opsman.GetClaimData(ctx, uint(deposits[0].NetworkId), uint(deposits[0].DepositCnt))
+		require.NoError(t, err)
+		// Check the claim tx
+		err = opsman.SendL2Claim(ctx, deposits[0], smtProof, globaExitRoot)
+		require.NoError(t, err)
+
+		l2ETHWrapAddress := common.HexToAddress("0x82109a709138A2953C720D3d775168717b668ba6")
+		balance, err := opsman.CheckAccountTokenBalance(ctx, operations.L2, l2ETHWrapAddress, &destAddr)
+		require.NoError(t, err)
+		log.Infof("destAddr:%v, balance:%v ", destAddr.String(), balance)
+		require.Equal(t, amount, balance)
+
+		err = opsman.ApproveERC20X1(ctx, l2ETHWrapAddress, amount, operations.L2)
+		require.NoError(t, err)
+
 		// Test L2 Bridge Message
 		// Send L2 bridge message
 		destNetwork = 0
 
 		destAddr, err = opsman.DeployBridgeMessageReceiver(ctx, operations.L2)
 		require.NoError(t, err)
-
-		err = opsman.SendL2BridgeMessage(ctx, destAddr, destNetwork, amount, []byte("metadata 2"))
+		log.Infof("destAddr:%v, destNetwork:%v, amount:%v", destAddr.String(), destNetwork, amount.String())
+		err = opsman.SendL2BridgeMessage(ctx, destAddr, destNetwork, amount, []byte("metadata"))
 		require.NoError(t, err)
 
 		// Get Bridge Info By DestAddr
@@ -537,16 +582,18 @@ func TestE2E(t *testing.T) {
 		t.Logf("globalExitRoot: %+v", globaExitRoot)
 		err = opsman.SendL1Claim(ctx, deposits[0], smtProof, globaExitRoot)
 		require.NoError(t, err)
+		log.Infof("TestE2E, Bridge Message Test end.")
 	})
 	t.Run("Bridge Message Authorized Account Test", func(t *testing.T) {
 		// Test L1 Bridge Message
 		// Send L1 bridge message
+		log.Infof("TestE2E, Bridge Message Test start.")
 		var destNetwork uint32 = 1
 		amount := new(big.Int).SetUint64(1000000000000000000)
 
 		destAddr, err := opsman.DeployBridgeMessageReceiver(ctx, operations.L1)
 		require.NoError(t, err)
-
+		log.Infof("first, destAddr:%v,amount:%v,destNetwork:%v", destAddr.String(), amount.String(), destNetwork)
 		pk := "0x7c852118294e51e653712a81e05800f419141751be58f605c371e15141b007a6" //0x90F79bf6EB2c4f870365E785982E1f101E93b906
 
 		err = opsman.SendL1BridgeMessage(ctx, destAddr, destNetwork, amount, []byte("metadata 3"), &pk)
@@ -560,14 +607,10 @@ func TestE2E(t *testing.T) {
 		err = opsman.CheckL2Claim(ctx, uint(deposits[0].DestNet), uint(deposits[0].DepositCnt))
 		require.NoError(t, err)
 
-		// Test L2 Bridge Message
-		// Send L2 bridge message
-		destNetwork = 0
-
-		destAddr, err = opsman.DeployBridgeMessageReceiver(ctx, operations.L2)
-		require.NoError(t, err)
-
-		err = opsman.SendL2BridgeMessage(ctx, destAddr, destNetwork, amount, []byte("metadata 4"))
+		// Send L1 message to L2' 0xc949254d682d8c9ad5682521675b8f43b102aec4
+		destAddr = common.HexToAddress("0xc949254d682d8c9ad5682521675b8f43b102aec4")
+		log.Infof("second, destAddr:%v,amount:%v,destNetwork:%v", destAddr.String(), amount.String(), destNetwork)
+		err = opsman.SendL1BridgeMessage(ctx, destAddr, destNetwork, amount, []byte("metadata"), nil)
 		require.NoError(t, err)
 
 		// Get Bridge Info By DestAddr
@@ -575,6 +618,35 @@ func TestE2E(t *testing.T) {
 		require.NoError(t, err)
 		// Get the claim data
 		smtProof, globaExitRoot, err := opsman.GetClaimData(ctx, uint(deposits[0].NetworkId), uint(deposits[0].DepositCnt))
+		require.NoError(t, err)
+		// Check the claim tx
+		err = opsman.SendL2Claim(ctx, deposits[0], smtProof, globaExitRoot)
+		require.NoError(t, err)
+
+		l2ETHWrapAddress := common.HexToAddress("0x82109a709138A2953C720D3d775168717b668ba6")
+		balance, err := opsman.CheckAccountTokenBalance(ctx, operations.L2, l2ETHWrapAddress, &destAddr)
+		require.NoError(t, err)
+		log.Infof("destAddr:%v, balance:%v ", destAddr.String(), balance)
+		require.Equal(t, amount, balance)
+
+		err = opsman.ApproveERC20X1(ctx, l2ETHWrapAddress, amount, operations.L2)
+		require.NoError(t, err)
+
+		// Test L2 Bridge Message
+		// Send L2 bridge message
+		destNetwork = 0
+
+		destAddr, err = opsman.DeployBridgeMessageReceiver(ctx, operations.L2)
+		require.NoError(t, err)
+		log.Infof("destAddr:%v, destNetwork:%v, amount:%v", destAddr.String(), destNetwork, amount.String())
+		err = opsman.SendL2BridgeMessage(ctx, destAddr, destNetwork, amount, []byte("metadata 4"))
+		require.NoError(t, err)
+
+		// Get Bridge Info By DestAddr
+		deposits, err = opsman.GetBridgeInfoByDestAddr(ctx, &destAddr)
+		require.NoError(t, err)
+		// Get the claim data
+		smtProof, globaExitRoot, err = opsman.GetClaimData(ctx, uint(deposits[0].NetworkId), uint(deposits[0].DepositCnt))
 		require.NoError(t, err)
 		// Claim a bridge message in L1
 		t.Logf("globalExitRoot: %+v", globaExitRoot)

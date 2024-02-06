@@ -130,7 +130,7 @@ services:
     ports:
       - 5432:5432
     volumes:
-      - ./test/config/prover/init_prover_db.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./test/config/prover/initproverdb_x1.sql:/docker-entrypoint-initdb.d/init.sql
     environment:
       - POSTGRES_USER=state_user
       - POSTGRES_PASSWORD=state_password
@@ -221,7 +221,7 @@ services:
       - 50061:50061 # MT
       - 50071:50071 # Executor
     volumes:
-      - ./test/config/prover/test.prover.config.json:/usr/src/app/config.json
+      - ./test/config/prover/config.prover.x1.json.json:/usr/src/app/config.json
     command: >
       zkProver -c /usr/src/app/config.json
 

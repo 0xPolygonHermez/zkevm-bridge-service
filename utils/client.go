@@ -14,6 +14,7 @@ import (
 	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/test/mocksmartcontracts/BridgeMessageReceiver"
 	zkevmtypes "github.com/0xPolygonHermez/zkevm-node/config/types"
+	"github.com/0xPolygonHermez/zkevm-node/encoding"
 	"github.com/0xPolygonHermez/zkevm-node/etherman/smartcontracts/polygonzkevmbridge"
 	"github.com/0xPolygonHermez/zkevm-node/etherman/smartcontracts/polygonzkevmbridgel2"
 	"github.com/0xPolygonHermez/zkevm-node/log"
@@ -196,20 +197,6 @@ func (c *Client) SendBridgeMessage(ctx context.Context, destNetwork uint32, dest
 	return WaitTxToBeMined(ctx, c.Client, tx, txTimeout)
 }
 
-// SendL2BridgeMessage sends a bridge message transaction.
-func (c *Client) SendL2BridgeMessage(ctx context.Context, destNetwork uint32, amountWETH *big.Int, destAddr common.Address, metadata []byte,
-	auth *bind.TransactOpts,
-) error {
-	tx, err := c.bridgeL2.BridgeMessage(auth, destNetwork, destAddr, amountWETH, true, metadata)
-	if err != nil {
-		log.Error("Error: ", err)
-		return err
-	}
-	// wait transfer to be included in a batch
-	const txTimeout = 60 * time.Second
-	return WaitTxToBeMined(ctx, c.Client, tx, txTimeout)
-}
-
 // BuildSendClaim builds a tx data to be sent to the bridge method SendClaim.
 func (c *Client) BuildSendClaim(ctx context.Context, deposit *etherman.Deposit, smtProof [mtHeight][keyLen]byte, globalExitRoot *etherman.GlobalExitRoot, nonce, gasPrice int64, gasLimit uint64, auth *bind.TransactOpts) (*types.Transaction, error) {
 	opts := *auth
@@ -240,16 +227,17 @@ func (c *Client) BuildSendClaim(ctx context.Context, deposit *etherman.Deposit, 
 	return tx, nil
 }
 
-// SendClaim sends a claim transaction
-func (c *Client) SendClaim(ctx context.Context, deposit *etherman.Deposit, smtProof [mtHeight][keyLen]byte, globalExitRoot *etherman.GlobalExitRoot, auth *bind.TransactOpts) (*types.Transaction, error) {
+// SendClaim sends a claim transaction.
+func (c *Client) SendClaim(ctx context.Context, deposit *pb.Deposit, smtProof [mtHeight][keyLen]byte, globalExitRoot *etherman.GlobalExitRoot, auth *bind.TransactOpts) error {
+	amount, _ := new(big.Int).SetString(deposit.Amount, encoding.Base10)
 	var (
 		tx  *types.Transaction
 		err error
 	)
-	if deposit.LeafType == uint8(LeafTypeAsset) {
-		tx, err = c.bridge.ClaimAsset(auth, smtProof, uint32(deposit.DepositCount), globalExitRoot.ExitRoots[0], globalExitRoot.ExitRoots[1], uint32(deposit.OriginalNetwork), deposit.OriginalAddress, uint32(deposit.DestinationNetwork), deposit.DestinationAddress, deposit.Amount, deposit.Metadata)
-	} else if deposit.LeafType == uint8(LeafTypeMessage) {
-		tx, err = c.bridge.ClaimMessage(auth, smtProof, uint32(deposit.DepositCount), globalExitRoot.ExitRoots[0], globalExitRoot.ExitRoots[1], uint32(deposit.OriginalNetwork), deposit.OriginalAddress, uint32(deposit.DestinationNetwork), deposit.DestinationAddress, deposit.Amount, deposit.Metadata)
+	if deposit.LeafType == LeafTypeAsset {
+		tx, err = c.bridge.ClaimAsset(auth, smtProof, uint32(deposit.DepositCnt), globalExitRoot.ExitRoots[0], globalExitRoot.ExitRoots[1], deposit.OrigNet, common.HexToAddress(deposit.OrigAddr), deposit.DestNet, common.HexToAddress(deposit.DestAddr), amount, common.FromHex(deposit.Metadata))
+	} else if deposit.LeafType == LeafTypeMessage {
+		tx, err = c.bridge.ClaimMessage(auth, smtProof, uint32(deposit.DepositCnt), globalExitRoot.ExitRoots[0], globalExitRoot.ExitRoots[1], deposit.OrigNet, common.HexToAddress(deposit.OrigAddr), deposit.DestNet, common.HexToAddress(deposit.DestAddr), amount, common.FromHex(deposit.Metadata))
 	}
 	if err != nil {
 		txHash := ""
@@ -257,38 +245,10 @@ func (c *Client) SendClaim(ctx context.Context, deposit *etherman.Deposit, smtPr
 			txHash = tx.Hash().String()
 		}
 		log.Error("Error: ", err, ". Tx Hash: ", txHash)
-		return nil, err
-	}
-
-	return tx, nil
-}
-
-// SendClaimAndWait sends a claim transaction and wait for the claim tx to be mined.
-func (c *Client) SendClaimAndWait(ctx context.Context, deposit *pb.Deposit, smtProof [mtHeight][keyLen]byte, globalExitRoot *etherman.GlobalExitRoot, auth *bind.TransactOpts) error {
-	tx, err := c.SendClaim(ctx, PbToEthermanDeposit(deposit), smtProof, globalExitRoot, auth)
-	if err != nil {
 		return err
 	}
 
 	// wait transfer to be mined
-	const txTimeout = 60 * time.Second
-	return WaitTxToBeMined(ctx, c.Client, tx, txTimeout)
-}
-
-// SetL2TokensAllowed set l2 token allowed.
-func (c *Client) SetL2TokensAllowed(ctx context.Context, allowed bool, auth *bind.TransactOpts) error {
-	result, _ := c.bridgeL2.IsAllL2TokensAllowed(&bind.CallOpts{})
-	if result == allowed {
-		log.Infof("Do nothing, allowed:%v", allowed)
-		return nil
-	}
-
-	tx, err := c.bridgeL2.SetAllL2TokensAllowed(auth, allowed)
-	if err != nil {
-		log.Error("Error: ", err)
-		return err
-	}
-	// wait transfer to be included in a batch
 	const txTimeout = 60 * time.Second
 	return WaitTxToBeMined(ctx, c.Client, tx, txTimeout)
 }

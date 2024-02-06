@@ -27,7 +27,9 @@ type GlobalExitRoot struct {
 	BlockNumber    uint64
 	ExitRoots      []common.Hash
 	GlobalExitRoot common.Hash
-	Time           time.Time
+
+	// X1
+	Time time.Time
 }
 
 // Deposit struct
@@ -46,9 +48,11 @@ type Deposit struct {
 	Metadata           []byte
 	// it is only used for the bridge service
 	ReadyForClaim bool
-	Time          time.Time
-	Id            uint64
-	ReadyTime     time.Time
+
+	// X1
+	Time      time.Time
+	Id        uint64
+	ReadyTime time.Time
 }
 
 // Claim struct
@@ -62,7 +66,9 @@ type Claim struct {
 	BlockNumber        uint64
 	NetworkID          uint
 	TxHash             common.Hash
-	Time               time.Time
+
+	// X1
+	Time time.Time
 }
 
 // TokenWrapped struct

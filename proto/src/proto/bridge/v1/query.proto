@@ -14,44 +14,48 @@ service BridgeService {
     /// Get api version
     rpc CheckAPI(CheckAPIRequest) returns (CheckAPIResponse) {
         option (google.api.http) = {
-            get: "/api",
+            get: "/api"
         };
     }
 
     /// Get bridges for the destination address both in L1 and L2
     rpc GetBridges(GetBridgesRequest) returns (GetBridgesResponse) {
         option (google.api.http) = {
-            get: "/bridges/{dest_addr}",
+            get: "/bridges/{dest_addr}"
         };
     }
 
     /// Get the merkle proof for the specific deposit
     rpc GetProof(GetProofRequest) returns (GetProofResponse) {
         option (google.api.http) = {
-            get: "/merkle-proof",
+            get: "/merkle-proof"
         };
     }
 
     /// Get the specific deposit
     rpc GetBridge(GetBridgeRequest) returns (GetBridgeResponse) {
         option (google.api.http) = {
-            get: "/bridge",
+            get: "/bridge"
         };
     }
 
     /// Get claims for the specific smart contract address both in L1 and L2
     rpc GetClaims(GetClaimsRequest) returns (GetClaimsResponse) {
         option (google.api.http) = {
-            get: "/claims/{dest_addr}",
+            get: "/claims/{dest_addr}"
         };
     }
 
     /// Get token wrapped for the specific smart contract address both in L1 and L2
     rpc GetTokenWrapped(GetTokenWrappedRequest) returns (GetTokenWrappedResponse) {
         option (google.api.http) = {
-            get: "/bridge/tokenwrapped",
+            get: "/tokenwrapped"
         };
     }
+
+    /*
+     * ---------- X1 endpoints ----------
+     */
 
     /// Get the latest price of the specified coins
     rpc GetCoinPrice(GetCoinPriceRequest) returns (CommonCoinPricesResponse) {
@@ -132,14 +136,6 @@ service BridgeService {
     }
 }
 
-enum TransactionStatus {
-    TX_CREATED = 0;
-    TX_PENDING_USER_CLAIM = 1;
-    TX_CLAIMED = 2;
-    TX_PENDING_AUTO_CLAIM = 3; // Only for L1->L2
-    TX_PENDING_VERIFICATION = 4; // Only for L2->L1
-}
-
 // TokenWrapped message
 message TokenWrapped {
     uint32 orig_net = 1;
@@ -185,6 +181,77 @@ message Proof {
     repeated string merkle_proof = 1;
     string main_exit_root = 2;
     string rollup_exit_root = 3;
+}
+
+// Get requests
+
+message CheckAPIRequest {}
+
+message GetBridgesRequest {
+    string dest_addr = 1;
+    uint64 offset = 2;
+    uint32 limit = 3;
+}
+
+message GetProofRequest {
+    uint32 net_id = 1;
+    uint64 deposit_cnt = 2;
+}
+
+message GetTokenWrappedRequest {
+    string orig_token_addr = 1;
+    uint32 orig_net = 2;
+}
+
+message GetBridgeRequest {
+    uint32 net_id = 1;
+    uint64 deposit_cnt = 2;
+}
+
+message GetClaimsRequest {
+    string dest_addr = 1;
+    uint64 offset = 2;
+    uint32 limit = 3;
+}
+
+// Get responses
+
+message CheckAPIResponse {
+    string api = 1;
+}
+
+message GetBridgesResponse {
+    repeated Deposit deposits = 1;
+    uint64 total_cnt = 2;
+}
+
+message GetProofResponse {
+    Proof proof = 1;
+}
+
+message GetTokenWrappedResponse {
+    TokenWrapped tokenwrapped = 1;
+}
+
+message GetBridgeResponse {
+    Deposit deposit = 1;
+}
+
+message GetClaimsResponse {
+    repeated Claim claims = 1;
+    uint64 total_cnt = 2;
+}
+
+/*
+ * ---------- X1 protos ----------
+ */
+
+enum TransactionStatus {
+    TX_CREATED = 0;
+    TX_PENDING_USER_CLAIM = 1;
+    TX_CLAIMED = 2;
+    TX_PENDING_AUTO_CLAIM = 3; // Only for L1->L2
+    TX_PENDING_VERIFICATION = 4; // Only for L2->L1
 }
 
 // Symbol info message
@@ -251,146 +318,8 @@ message MonitoredTx {
     uint64 updatedAt = 13; // Unix timestamp ms
 }
 
-// Get requests
-
-message CheckAPIRequest {}
-
-message GetBridgesRequest {
-    string dest_addr = 1;
-    uint64 offset = 2;
-    uint32 limit = 3;
-}
-
-message GetProofRequest {
-    uint32 net_id = 1;
-    uint64 deposit_cnt = 2;
-}
-
-message GetTokenWrappedRequest {
-    string orig_token_addr = 1;
-    uint32 orig_net = 2;
-}
-
-message GetBridgeRequest {
-    uint32 net_id = 1;
-    uint64 deposit_cnt = 2;
-}
-
-message GetClaimsRequest {
-    string dest_addr = 1;
-    uint64 offset = 2;
-    uint32 limit = 3;
-}
-
 message GetCoinPriceRequest {
     repeated SymbolInfo symbolInfos = 1;
-}
-
-message GetMainCoinsRequest {
-    uint32 networkId = 1;
-}
-
-message GetPendingTransactionsRequest {
-    string destAddr = 1;
-    uint64 offset = 2;
-    uint32 limit = 3;
-}
-
-message GetAllTransactionsRequest {
-    string destAddr = 1;
-    uint64 offset = 2;
-    uint32 limit = 3;
-}
-
-message GetNotReadyTransactionsRequest {
-    uint64 offset = 1;
-    uint32 limit = 2;
-}
-
-message GetMonitoredTxsByStatusRequest {
-    string status = 1; // created/failed/confirmed
-    uint64 offset = 2;
-    uint32 limit = 3;
-}
-
-message GetEstimateTimeRequest {}
-
-message ManualClaimRequest {
-    uint32 fromChain = 1; // L1: 0; L2: 1
-    string destAddr = 2;
-    string depositTxHash = 3;
-}
-
-message GetReadyPendingTransactionsRequest {
-    uint32 networkId = 1;
-    uint64 offset = 2;
-    uint32 limit = 3;
-}
-
-message GetFakePushMessagesRequest {
-    string topic = 1;
-}
-
-// Get responses
-
-message CheckAPIResponse {
-    string api = 1;
-}
-
-message GetBridgesResponse {
-    repeated Deposit deposits = 1;
-    uint64 total_cnt = 2;
-}
-
-message GetProofResponse {
-    Proof proof = 1;
-}
-
-message GetTokenWrappedResponse {
-    TokenWrapped tokenwrapped = 1;
-}
-
-message GetBridgeResponse {
-    Deposit deposit = 1;
-}
-
-message GetClaimsResponse {
-    repeated Claim claims = 1;
-    uint64 total_cnt = 2;
-}
-
-message GetCoinPriceResponse {
-    repeated SymbolPrice prices = 1;
-}
-
-message GetMainCoinsResponse {
-    repeated CoinInfo coinInfos = 1;
-}
-
-message GetPendingTransactionsResponse {
-    repeated Transaction transactions = 1;
-}
-
-message GetAllTransactionsResponse {
-    repeated Transaction transactions = 1;
-}
-
-message CommonTransactionsResponse {
-    uint32 code = 1;
-    string msg = 2;
-    string error_code = 3;
-    string error_message = 4;
-    string detailMsg = 5;
-    TransactionDetail data = 6;
-}
-
-message CommonCoinsResponse {
-    uint32 code = 1;
-    string msg = 2;
-    string error_code = 3;
-    string error_message = 4;
-    string detailMsg = 5;
-    repeated CoinInfo data = 6;
 }
 
 message CommonCoinPricesResponse {
@@ -402,9 +331,47 @@ message CommonCoinPricesResponse {
     repeated SymbolPrice data = 6;
 }
 
+message GetMainCoinsRequest {
+    uint32 networkId = 1;
+}
+
+message CommonCoinsResponse {
+    uint32 code = 1;
+    string msg = 2;
+    string error_code = 3;
+    string error_message = 4;
+    string detailMsg = 5;
+    repeated CoinInfo data = 6;
+}
+
+message GetPendingTransactionsRequest {
+    string destAddr = 1;
+    uint64 offset = 2;
+    uint32 limit = 3;
+}
+message CommonTransactionsResponse {
+    uint32 code = 1;
+    string msg = 2;
+    string error_code = 3;
+    string error_message = 4;
+    string detailMsg = 5;
+    TransactionDetail data = 6;
+}
+
 message TransactionDetail {
     bool hasNext = 1;
     repeated Transaction transactions = 2;
+}
+
+message GetAllTransactionsRequest {
+    string destAddr = 1;
+    uint64 offset = 2;
+    uint32 limit = 3;
+}
+
+message GetSmtProofRequest {
+    uint64 index = 1;
+    uint32 fromChain = 2;
 }
 
 message CommonProofResponse {
@@ -422,9 +389,15 @@ message ProofDetail {
     string rollupExitRoot = 3;
 }
 
-message GetSmtProofRequest {
-    uint64 index = 1;
-    uint32 fromChain = 2;
+message GetNotReadyTransactionsRequest {
+    uint64 offset = 1;
+    uint32 limit = 2;
+}
+
+message GetMonitoredTxsByStatusRequest {
+    string status = 1; // created/failed/confirmed
+    uint64 offset = 2;
+    uint32 limit = 3;
 }
 
 message CommonMonitoredTxsResponse {
@@ -441,6 +414,8 @@ message MonitoredTxsDetail {
     repeated MonitoredTx transactions = 2;
 }
 
+message GetEstimateTimeRequest {}
+
 message CommonEstimateTimeResponse {
     uint32 code = 1;
     string msg = 2;
@@ -448,6 +423,12 @@ message CommonEstimateTimeResponse {
     string error_message = 4;
     string detailMsg = 5;
     repeated uint32 data = 6; // Has 2 numbers which are the estimate time of L1 and L2
+}
+
+message ManualClaimRequest {
+    uint32 fromChain = 1; // L1: 0; L2: 1
+    string destAddr = 2;
+    string depositTxHash = 3;
 }
 
 message ManualClaimResponse {
@@ -461,6 +442,16 @@ message CommonManualClaimResponse {
     string error_message = 4;
     string detailMsg = 5;
     ManualClaimResponse data = 6;
+}
+
+message GetReadyPendingTransactionsRequest {
+    uint32 networkId = 1;
+    uint64 offset = 2;
+    uint32 limit = 3;
+}
+
+message GetFakePushMessagesRequest {
+    string topic = 1;
 }
 
 message GetFakePushMessagesResponse {

@@ -978,7 +978,7 @@ func RegisterBridgeServiceHandlerServer(ctx context.Context, mux *runtime.ServeM
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/bridge.v1.BridgeService/GetTokenWrapped", runtime.WithHTTPPathPattern("/bridge/tokenwrapped"))
+		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/bridge.v1.BridgeService/GetTokenWrapped", runtime.WithHTTPPathPattern("/tokenwrapped"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1427,7 +1427,7 @@ func RegisterBridgeServiceHandlerClient(ctx context.Context, mux *runtime.ServeM
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/bridge.v1.BridgeService/GetTokenWrapped", runtime.WithHTTPPathPattern("/bridge/tokenwrapped"))
+		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/bridge.v1.BridgeService/GetTokenWrapped", runtime.WithHTTPPathPattern("/tokenwrapped"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1699,7 +1699,7 @@ var (
 
 	pattern_BridgeService_GetClaims_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 1, 0, 4, 1, 5, 1}, []string{"claims", "dest_addr"}, ""))
 
-	pattern_BridgeService_GetTokenWrapped_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1}, []string{"bridge", "tokenwrapped"}, ""))
+	pattern_BridgeService_GetTokenWrapped_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0}, []string{"tokenwrapped"}, ""))
 
 	pattern_BridgeService_GetCoinPrice_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0}, []string{"coin-price"}, ""))
 
