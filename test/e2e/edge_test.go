@@ -100,8 +100,8 @@ func TestEdgeCase(t *testing.T) {
 	time.Sleep(st * time.Second)
 
 	t.Run("Test a case of restart with reorg.", func(t *testing.T) {
-		depositFromL1(ctx, opsman, t)
-		depositFromL2(ctx, opsman, t)
+		depositFromL1X1(ctx, opsman, t)
+		depositFromL2X1(ctx, opsman, t)
 		// Stop the bridge service.
 		require.NoError(t, operations.StopBridge())
 		// Modify the L1 blocks for L1 reorg
