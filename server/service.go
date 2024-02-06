@@ -22,19 +22,21 @@ import (
 )
 
 type bridgeService struct {
-	storage             BridgeServiceStorage
+	storage          BridgeServiceStorage
+	networkIDs       map[uint]uint8
+	height           uint8
+	defaultPageLimit apolloconfig.Entry[uint32]
+	maxPageLimit     apolloconfig.Entry[uint32]
+	version          string
+	cache            *lru.Cache[string, [][]byte]
+	pb.UnimplementedBridgeServiceServer
+
+	// X1
 	redisStorage        redisstorage.RedisStorage
 	mainCoinsCache      localcache.MainCoinsCache
-	networkIDs          map[uint]uint8
 	nodeClients         map[uint]*utils.Client
 	auths               map[uint]*bind.TransactOpts
-	height              uint8
-	defaultPageLimit    apolloconfig.Entry[uint32]
-	maxPageLimit        apolloconfig.Entry[uint32]
-	version             string
-	cache               *lru.Cache[string, [][]byte]
 	messagePushProducer messagepush.KafkaProducer
-	pb.UnimplementedBridgeServiceServer
 }
 
 // NewBridgeService creates new bridge service.

@@ -34,10 +34,8 @@ const (
 
 // ClaimTxManager is the claim transaction manager for L2.
 type ClaimTxManager struct {
-	ctx                   context.Context
-	cancel                context.CancelFunc
-	updateDepositsL1Mutex sync.Mutex
-	updateDepositsL2Mutex sync.Mutex
+	ctx    context.Context
+	cancel context.CancelFunc
 
 	// client is the ethereum client
 	l2Node          *utils.Client
@@ -50,8 +48,11 @@ type ClaimTxManager struct {
 	auth            *bind.TransactOpts
 	nonceCache      *lru.Cache[string, uint64]
 	synced          bool
-	isDone          bool
 
+	// X1
+	updateDepositsL1Mutex sync.Mutex
+	updateDepositsL2Mutex sync.Mutex
+	isDone                bool
 	// Producer to push the transaction status change to front end
 	messagePushProducer messagepush.KafkaProducer
 	redisStorage        redisstorage.RedisStorage
