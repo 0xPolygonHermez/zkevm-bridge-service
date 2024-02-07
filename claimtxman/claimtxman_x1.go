@@ -117,7 +117,7 @@ func (tm *ClaimTxManager) processDepositStatusL2(ger *etherman.GlobalExitRoot) e
 		return err
 	}
 	log.Infof("Rollup exitroot %v is updated", ger.ExitRoots[1])
-	deposits, err := tm.storage.UpdateL2DepositsStatusX1(tm.ctx, ger.ExitRoots[1][:], ger.Time, dbTx)
+	deposits, err := tm.storage.UpdateL2DepositsStatusX1(tm.ctx, ger.ExitRoots[1][:], ger.Time, tm.rollupID, tm.l2NetworkID, dbTx)
 	if err != nil {
 		log.Errorf("error getting and updating L2DepositsStatus. Error: %v", err)
 		rollbackErr := tm.storage.Rollback(tm.ctx, dbTx)
@@ -269,7 +269,7 @@ func (tm *ClaimTxManager) rollbackStore(dbTx pgx.Tx) {
 func (tm *ClaimTxManager) processDepositStatusX1(ger *etherman.GlobalExitRoot, dbTx pgx.Tx) error {
 	if ger.BlockID != 0 { // L2 exit root is updated
 		log.Infof("Rollup exitroot %v is updated", ger.ExitRoots[1])
-		deposits, err := tm.storage.UpdateL2DepositsStatusX1(tm.ctx, ger.ExitRoots[1][:], ger.Time, dbTx)
+		deposits, err := tm.storage.UpdateL2DepositsStatusX1(tm.ctx, ger.ExitRoots[1][:], ger.Time, tm.rollupID, tm.l2NetworkID, dbTx)
 		if err != nil {
 			log.Errorf("error getting and updating L2DepositsStatus. Error: %v", err)
 			return err

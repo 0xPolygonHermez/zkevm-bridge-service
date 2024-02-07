@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	queryLatestCommitBatchNumMethod = "zkevm_virtualBatchNumber"
+	queryLatestCommitBatchNumMethod = "zkevm_virtualBatchNumber" //nolint:gosec
 	queryLatestVerifyBatchNumMethod = "zkevm_verifiedBatchNumber"
 	secondsPreMinute                = 60
 )

@@ -211,16 +211,20 @@ func claimL1() {
 	log.Info("mainnetExitRoot: ", proof.MainExitRoot)
 	log.Info("rollupExitRoot: ", proof.RollupExitRoot)
 
-	var smt [mtHeight][32]byte
+	var (
+		smt       [mtHeight][32]byte
+		rollupSmt [mtHeight][32]byte
+	)
 	for i := 0; i < len(proof.MerkleProof); i++ {
 		log.Info("smt: ", proof.MerkleProof[i])
 		smt[i] = common.HexToHash(proof.MerkleProof[i])
+		rollupSmt[i] = common.HexToHash(proof.RollupMerkleProof[i])
 	}
 	globalExitRoot := &etherman.GlobalExitRoot{
 		ExitRoots: []common.Hash{common.HexToHash(proof.MainExitRoot), common.HexToHash(proof.RollupExitRoot)},
 	}
 	log.Info("Sending claim tx...")
-	err = c.SendClaim(ctx, bridgeData, smt, globalExitRoot, auth)
+	err = c.SendClaim(ctx, bridgeData, smt, rollupSmt, globalExitRoot, auth)
 	if err != nil {
 		log.Fatal("error: ", err)
 	}
