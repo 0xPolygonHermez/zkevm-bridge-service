@@ -161,7 +161,7 @@ func (p *PostgresStorage) GetNotReadyTransactionsWithBlockRange(ctx context.Cont
 // GetL1Deposits get the L1 deposits remain to be ready_for_claim
 func (p *PostgresStorage) GetL1Deposits(ctx context.Context, exitRoot []byte, dbTx pgx.Tx) ([]*etherman.Deposit, error) {
 	const updateDepositsStatusSQL = `Select d.id, leaf_type, orig_net, orig_addr, amount, dest_net, dest_addr, deposit_cnt, block_id, b.block_num, d.network_id, tx_hash, metadata, ready_for_claim, b.received_at
-			FROM sync.deposit as de INNER JOIN sync.block as b ON d.network_id = b.network_id AND d.block_id = b.id
+			FROM sync.deposit as d INNER JOIN sync.block as b ON d.network_id = b.network_id AND d.block_id = b.id
 			WHERE deposit_cnt <= (SELECT d.deposit_cnt FROM mt.root as r INNER JOIN sync.deposit as d ON d.id = r.deposit_id WHERE r.root = $1 AND r.network = 0) 
 			AND d.network_id = 0 AND ready_for_claim = false`
 	rows, err := p.getExecQuerier(dbTx).Query(ctx, updateDepositsStatusSQL, exitRoot)
@@ -338,7 +338,7 @@ func (p *PostgresStorage) GetLatestReadyDeposits(ctx context.Context, networkID 
 func (p *PostgresStorage) UpdateL1DepositsStatusX1(ctx context.Context, exitRoot []byte, eventTime time.Time, dbTx pgx.Tx) ([]*etherman.Deposit, error) {
 	const updateDepositsStatusSQL = `WITH d AS (UPDATE sync.deposit SET ready_for_claim = true, ready_time = $1 
 		WHERE deposit_cnt <=
-			(SELECT deposit_cnt FROM mt.root WHERE root = $2 AND network = 0) 
+			(SELECT d.deposit_cnt FROM mt.root as r INNER JOIN sync.deposit as d ON d.id = r.deposit_id WHERE r.root = $2 AND r.network = 0) 
 			AND network_id = 0 AND ready_for_claim = false
 			RETURNING *)
 		SELECT d.id, leaf_type, orig_net, orig_addr, amount, dest_net, dest_addr, deposit_cnt, block_id, b.block_num, d.network_id, tx_hash, metadata, ready_for_claim, b.received_at
