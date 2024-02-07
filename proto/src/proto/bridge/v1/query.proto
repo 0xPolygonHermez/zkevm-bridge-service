@@ -303,6 +303,7 @@ message Transaction {
     string destAddr = 16;
     uint32 leafType = 17;
     uint64 blockNumber = 18;
+    string globalIndex = 19;
 }
 
 // Monitored tx
@@ -389,8 +390,9 @@ message CommonProofResponse {
 
 message ProofDetail {
     repeated string smtProof = 1;
-    string mainnetExitRoot = 2;
-    string rollupExitRoot = 3;
+    repeated string rollupSmtProof = 2;
+    string mainnetExitRoot = 3;
+    string rollupExitRoot = 4;
 }
 
 message GetNotReadyTransactionsRequest {

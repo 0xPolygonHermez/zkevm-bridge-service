@@ -27,15 +27,19 @@ func (c *Client) SendL2BridgeMessage(ctx context.Context, destNetwork uint32, am
 }
 
 // SendClaimX1 sends a claim transaction
-func (c *Client) SendClaimX1(ctx context.Context, deposit *etherman.Deposit, smtProof [mtHeight][keyLen]byte, globalExitRoot *etherman.GlobalExitRoot, auth *bind.TransactOpts) (*types.Transaction, error) {
+func (c *Client) SendClaimX1(ctx context.Context, deposit *etherman.Deposit, smtProof, rollupSmtProof [mtHeight][keyLen]byte, globalExitRoot *etherman.GlobalExitRoot, rollupID uint, auth *bind.TransactOpts) (*types.Transaction, error) {
 	var (
 		tx  *types.Transaction
 		err error
 	)
+	mainnetFlag := deposit.NetworkID == 0
+	rollupIndex := rollupID - 1
+	localExitRootIndex := deposit.DepositCount
+	globalIndex := etherman.GenerateGlobalIndex(mainnetFlag, rollupIndex, localExitRootIndex)
 	if deposit.LeafType == uint8(LeafTypeAsset) {
-		tx, err = c.bridge.ClaimAsset(auth, smtProof, uint32(deposit.DepositCount), globalExitRoot.ExitRoots[0], globalExitRoot.ExitRoots[1], uint32(deposit.OriginalNetwork), deposit.OriginalAddress, uint32(deposit.DestinationNetwork), deposit.DestinationAddress, deposit.Amount, deposit.Metadata)
+		tx, err = c.bridge.ClaimAsset(auth, smtProof, rollupSmtProof, globalIndex, globalExitRoot.ExitRoots[0], globalExitRoot.ExitRoots[1], uint32(deposit.OriginalNetwork), deposit.OriginalAddress, uint32(deposit.DestinationNetwork), deposit.DestinationAddress, deposit.Amount, deposit.Metadata)
 	} else if deposit.LeafType == uint8(LeafTypeMessage) {
-		tx, err = c.bridge.ClaimMessage(auth, smtProof, uint32(deposit.DepositCount), globalExitRoot.ExitRoots[0], globalExitRoot.ExitRoots[1], uint32(deposit.OriginalNetwork), deposit.OriginalAddress, uint32(deposit.DestinationNetwork), deposit.DestinationAddress, deposit.Amount, deposit.Metadata)
+		tx, err = c.bridge.ClaimMessage(auth, smtProof, rollupSmtProof, globalIndex, globalExitRoot.ExitRoots[0], globalExitRoot.ExitRoots[1], uint32(deposit.OriginalNetwork), deposit.OriginalAddress, uint32(deposit.DestinationNetwork), deposit.DestinationAddress, deposit.Amount, deposit.Metadata)
 	}
 	if err != nil {
 		txHash := ""

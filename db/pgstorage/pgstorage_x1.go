@@ -161,8 +161,8 @@ func (p *PostgresStorage) GetNotReadyTransactionsWithBlockRange(ctx context.Cont
 // GetL1Deposits get the L1 deposits remain to be ready_for_claim
 func (p *PostgresStorage) GetL1Deposits(ctx context.Context, exitRoot []byte, dbTx pgx.Tx) ([]*etherman.Deposit, error) {
 	const updateDepositsStatusSQL = `Select d.id, leaf_type, orig_net, orig_addr, amount, dest_net, dest_addr, deposit_cnt, block_id, b.block_num, d.network_id, tx_hash, metadata, ready_for_claim, b.received_at
-			FROM sync.deposit as d INNER JOIN sync.block as b ON d.network_id = b.network_id AND d.block_id = b.id
-			WHERE deposit_cnt <= (SELECT deposit_cnt FROM mt.root WHERE root = $1 AND network = 0) 
+			FROM sync.deposit as de INNER JOIN sync.block as b ON d.network_id = b.network_id AND d.block_id = b.id
+			WHERE deposit_cnt <= (SELECT d.deposit_cnt FROM mt.root as r INNER JOIN sync.deposit as d ON d.id = r.deposit_id WHERE r.root = $1 AND r.network = 0) 
 			AND d.network_id = 0 AND ready_for_claim = false`
 	rows, err := p.getExecQuerier(dbTx).Query(ctx, updateDepositsStatusSQL, exitRoot)
 	if err != nil {
@@ -194,13 +194,13 @@ func (p *PostgresStorage) UpdateL1DepositStatus(ctx context.Context, depositCoun
 }
 
 // UpdateL2DepositsStatus updates the ready_for_claim status of L2 deposits. and return deposit list
-func (p *PostgresStorage) UpdateL2DepositsStatusX1(ctx context.Context, exitRoot []byte, eventTime time.Time, dbTx pgx.Tx) ([]*etherman.Deposit, error) {
-	const updateDepositsStatusSQL = `UPDATE sync.deposit SET ready_for_claim = true, ready_time = $1
+func (p *PostgresStorage) UpdateL2DepositsStatusX1(ctx context.Context, exitRoot []byte, eventTime time.Time, rollupID, networkID uint, dbTx pgx.Tx) ([]*etherman.Deposit, error) {
+	const updateDepositsStatusSQL = `UPDATE sync.deposit SET ready_for_claim = true, ready_time = $4
 		WHERE deposit_cnt <=
-			(SELECT deposit_cnt FROM mt.root WHERE root = $2 AND network = 1)
-			AND network_id = 1 AND ready_for_claim = false
+			(SELECT d.deposit_cnt FROM mt.root as r INNER JOIN sync.deposit as d ON d.id = r.deposit_id WHERE r.root = (select leaf from mt.rollup_exit where root = $1 and rollup_id = $2) AND r.network = $3)
+			AND network_id = $3 AND ready_for_claim = false
 			RETURNING leaf_type, orig_net, orig_addr, amount, dest_net, dest_addr, deposit_cnt, block_id, network_id, tx_hash, metadata, ready_for_claim;`
-	rows, err := p.getExecQuerier(dbTx).Query(ctx, updateDepositsStatusSQL, eventTime, exitRoot)
+	rows, err := p.getExecQuerier(dbTx).Query(ctx, updateDepositsStatusSQL, exitRoot, rollupID, networkID, eventTime)
 	if err != nil {
 		return nil, err
 	}

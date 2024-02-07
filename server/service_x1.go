@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"encoding/hex"
+	"math/big"
 	"time"
 
 	"github.com/0xPolygonHermez/zkevm-bridge-service/bridgectrl"
@@ -10,6 +11,7 @@ import (
 	ctmtypes "github.com/0xPolygonHermez/zkevm-bridge-service/claimtxman/types"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/config/apolloconfig"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/estimatetime"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/localcache"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/messagepush"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/pushtask"
@@ -47,23 +49,29 @@ func (s *bridgeService) WithMessagePushProducer(producer messagepush.KafkaProduc
 }
 
 func (s *bridgeService) GetSmtProof(ctx context.Context, req *pb.GetSmtProofRequest) (*pb.CommonProofResponse, error) {
-	globalExitRoot, merkleProof, err := s.GetClaimProof(uint(req.Index), uint(req.FromChain), nil)
-	if err != nil {
+	globalExitRoot, merkleProof, rollupMerkleProof, err := s.GetClaimProof(uint(req.Index), uint(req.FromChain), nil)
+	if err != nil || len(merkleProof) != len(rollupMerkleProof) {
+		log.Errorf("GetSmtProof err[%v] merkleProofLen[%v] rollupMerkleProofLen[%v]", err, len(merkleProof), len(rollupMerkleProof))
 		return &pb.CommonProofResponse{
 			Code: defaultErrorCode,
 			Data: nil,
 			Msg:  err.Error(),
 		}, nil
 	}
-	var proof []string
+	var (
+		proof       []string
+		rollupProof []string
+	)
 	for i := 0; i < len(merkleProof); i++ {
 		proof = append(proof, "0x"+hex.EncodeToString(merkleProof[i][:]))
+		rollupProof = append(rollupProof, "0x"+hex.EncodeToString(rollupMerkleProof[i][:]))
 	}
 
 	return &pb.CommonProofResponse{
 		Code: defaultSuccessCode,
 		Data: &pb.ProofDetail{
 			SmtProof:        proof,
+			RollupSmtProof:  rollupProof,
 			MainnetExitRoot: globalExitRoot.ExitRoots[0].Hex(),
 			RollupExitRoot:  globalExitRoot.ExitRoots[1].Hex(),
 		},
@@ -143,6 +151,7 @@ func (s *bridgeService) GetPendingTransactions(ctx context.Context, req *pb.GetP
 		transaction := utils.EthermanDepositToPbTransaction(deposit)
 		transaction.EstimateTime = estimatetime.GetDefaultCalculator().Get(deposit.NetworkID)
 		transaction.Status = uint32(pb.TransactionStatus_TX_CREATED)
+		transaction.GlobalIndex = s.getGlobalIndex(deposit).String()
 		if deposit.ReadyForClaim {
 			transaction.Status = uint32(pb.TransactionStatus_TX_PENDING_USER_CLAIM)
 			// For L1->L2, if backend is trying to auto-claim, set the status to 0 to block the user from manual-claim
@@ -228,6 +237,7 @@ func (s *bridgeService) GetAllTransactions(ctx context.Context, req *pb.GetAllTr
 		transaction := utils.EthermanDepositToPbTransaction(deposit)
 		transaction.EstimateTime = estimatetime.GetDefaultCalculator().Get(deposit.NetworkID)
 		transaction.Status = uint32(pb.TransactionStatus_TX_CREATED) // Not ready for claim
+		transaction.GlobalIndex = s.getGlobalIndex(deposit).String()
 		if deposit.ReadyForClaim {
 			// Check whether it has been claimed or not
 			claim, err := s.storage.GetClaim(ctx, deposit.DepositCount, deposit.DestinationNetwork, nil)
@@ -305,6 +315,7 @@ func (s *bridgeService) GetNotReadyTransactions(ctx context.Context, req *pb.Get
 		transaction := utils.EthermanDepositToPbTransaction(deposit)
 		transaction.EstimateTime = estimatetime.GetDefaultCalculator().Get(deposit.NetworkID)
 		transaction.Status = uint32(pb.TransactionStatus_TX_CREATED)
+		transaction.GlobalIndex = s.getGlobalIndex(deposit).String()
 		pbTransactions = append(pbTransactions, transaction)
 	}
 
@@ -424,16 +435,20 @@ func (s *bridgeService) ManualClaim(ctx context.Context, req *pb.ManualClaimRequ
 		}, nil
 	}
 	// Get the claim proof
-	ger, proves, err := s.GetClaimProof(deposit.DepositCount, deposit.NetworkID, nil)
+	ger, proves, rollupProves, err := s.GetClaimProof(deposit.DepositCount, deposit.NetworkID, nil)
 	if err != nil {
 		log.Errorf("failed to get claim proof for deposit %v networkID %v: %v", deposit.DepositCount, deposit.NetworkID, err)
 	}
-	var mtProves [mtHeight][bridgectrl.KeyLen]byte
+	var (
+		mtProves       [mtHeight][bridgectrl.KeyLen]byte
+		mtRollupProves [mtHeight][bridgectrl.KeyLen]byte
+	)
 	for i := 0; i < mtHeight; i++ {
 		mtProves[i] = proves[i]
+		mtRollupProves[i] = rollupProves[i]
 	}
 	// Send claim transaction to the node
-	tx, err := client.SendClaimX1(ctx, deposit, mtProves, ger, s.auths[destNet])
+	tx, err := client.SendClaimX1(ctx, deposit, mtProves, mtRollupProves, ger, s.rollupID, s.auths[destNet])
 	if err != nil {
 		log.Errorf("failed to send claim transaction: %v", err)
 		return &pb.CommonManualClaimResponse{
@@ -480,6 +495,7 @@ func (s *bridgeService) GetReadyPendingTransactions(ctx context.Context, req *pb
 		transaction := utils.EthermanDepositToPbTransaction(deposit)
 		transaction.EstimateTime = estimatetime.GetDefaultCalculator().Get(deposit.NetworkID)
 		transaction.Status = uint32(pb.TransactionStatus_TX_PENDING_USER_CLAIM)
+		transaction.GlobalIndex = s.getGlobalIndex(deposit).String()
 		pbTransactions = append(pbTransactions, transaction)
 	}
 
@@ -487,6 +503,13 @@ func (s *bridgeService) GetReadyPendingTransactions(ctx context.Context, req *pb
 		Code: defaultSuccessCode,
 		Data: &pb.TransactionDetail{HasNext: hasNext, Transactions: pbTransactions},
 	}, nil
+}
+
+func (s *bridgeService) getGlobalIndex(deposit *etherman.Deposit) *big.Int {
+	mainnetFlag := deposit.NetworkID == 0
+	rollupIndex := s.rollupID - 1
+	localExitRootIndex := deposit.DepositCount
+	return etherman.GenerateGlobalIndex(mainnetFlag, rollupIndex, localExitRootIndex)
 }
 
 func (s *bridgeService) GetFakePushMessages(ctx context.Context, req *pb.GetFakePushMessagesRequest) (*pb.GetFakePushMessagesResponse, error) {

@@ -52,7 +52,7 @@ var (
 			PolygonBridgeAddress:              common.HexToAddress("0x10B65c586f795aF3eCCEe594fE4E38E1F059F780"),
 			PolygonZkEVMGlobalExitRootAddress: common.HexToAddress("0xEd236da21Ff62bC7B62608AdB818da49E8549fa7"),
 			PolygonRollupManagerAddress:       common.HexToAddress("0xB7f8BC63BbcaD18155201308C8f3540b07f84F5e"),
-			PolygonZkEvmAddress:               common.HexToAddress("0x8dAF17A20c9DBA35f005b6324F493785D239719d"),
+			PolygonZkEvmAddress:               common.HexToAddress("0x0D9088C72Cd4F08e9dDe474D8F5394147f64b22C"),
 			L2PolygonBridgeAddresses:          []common.Address{common.HexToAddress("0x10B65c586f795aF3eCCEe594fE4E38E1F059F780")},
 		},
 	}

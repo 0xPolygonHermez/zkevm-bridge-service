@@ -196,23 +196,27 @@ func (tm *ClaimTxManager) processDepositStatusL1(newGer *etherman.GlobalExitRoot
 			continue
 		}
 		log.Infof("create the claim tx for the deposit %d", deposit.DepositCount)
-		ger, proves, err := tm.bridgeService.GetClaimProof(deposit.DepositCount, deposit.NetworkID, dbTx)
+		ger, proof, rollupProof, err := tm.bridgeService.GetClaimProof(deposit.DepositCount, deposit.NetworkID, dbTx)
 		if err != nil {
 			log.Errorf("error getting Claim Proof for deposit %d. Error: %v", deposit.DepositCount, err)
 			tm.rollbackStore(dbTx)
 			return err
 		}
 		log.Infof("get the claim proof for the deposit %d successfully", deposit.DepositCount)
-		var mtProves [mtHeight][keyLen]byte
+		var (
+			mtProof       [mtHeight][keyLen]byte
+			mtRollupProof [mtHeight][keyLen]byte
+		)
 		for i := 0; i < mtHeight; i++ {
-			mtProves[i] = proves[i]
+			mtProof[i] = proof[i]
+			mtRollupProof[i] = rollupProof[i]
 		}
-		tx, err := tm.l2Node.BuildSendClaim(tm.ctx, deposit, mtProves,
+		tx, err := tm.l2Node.BuildSendClaim(tm.ctx, deposit, mtProof, mtRollupProof,
 			&etherman.GlobalExitRoot{
 				ExitRoots: []common.Hash{
 					ger.ExitRoots[0],
 					ger.ExitRoots[1],
-				}}, 1, 1, 1,
+				}}, 1, 1, 1, tm.rollupID,
 			tm.auth)
 		if err != nil {
 			log.Errorf("error BuildSendClaim tx for deposit %d. Error: %v", deposit.DepositCount, err)
@@ -295,22 +299,26 @@ func (tm *ClaimTxManager) processDepositStatusX1(ger *etherman.GlobalExitRoot, d
 				continue
 			}
 			log.Infof("create the claim tx for the deposit %d", deposit.DepositCount)
-			ger, proves, err := tm.bridgeService.GetClaimProof(deposit.DepositCount, deposit.NetworkID, dbTx)
+			ger, proof, rollupProof, err := tm.bridgeService.GetClaimProof(deposit.DepositCount, deposit.NetworkID, dbTx)
 			if err != nil {
 				log.Errorf("error getting Claim Proof for deposit %d. Error: %v", deposit.DepositCount, err)
 				return err
 			}
 			log.Debugf("get claim proof done for the deposit %d", deposit.DepositCount)
-			var mtProves [mtHeight][keyLen]byte
+			var (
+				mtProof       [mtHeight][keyLen]byte
+				mtRollupProof [mtHeight][keyLen]byte
+			)
 			for i := 0; i < mtHeight; i++ {
-				mtProves[i] = proves[i]
+				mtProof[i] = proof[i]
+				mtRollupProof[i] = rollupProof[i]
 			}
-			tx, err := tm.l2Node.BuildSendClaim(tm.ctx, deposit, mtProves,
+			tx, err := tm.l2Node.BuildSendClaim(tm.ctx, deposit, mtProof, mtRollupProof,
 				&etherman.GlobalExitRoot{
 					ExitRoots: []common.Hash{
 						ger.ExitRoots[0],
 						ger.ExitRoots[1],
-					}}, 1, 1, 1,
+					}}, 1, 1, 1, tm.rollupID,
 				tm.auth)
 			if err != nil {
 				log.Errorf("error BuildSendClaim tx for deposit %d. Error: %v", deposit.DepositCount, err)

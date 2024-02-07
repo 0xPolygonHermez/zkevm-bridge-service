@@ -151,7 +151,7 @@ func startServer(ctx *cli.Context, opts ...runOptionFunc) error {
 	var bridgeController *bridgectrl.BridgeController
 
 	if c.BridgeController.Store == "postgres" {
-		bridgeController, err = bridgectrl.NewBridgeController(c.BridgeController, networkIDs, storage)
+		bridgeController, err = bridgectrl.NewBridgeController(ctx.Context, c.BridgeController, networkIDs, storage)
 		if err != nil {
 			log.Error(err)
 			return err
@@ -204,7 +204,8 @@ func startServer(ctx *cli.Context, opts ...runOptionFunc) error {
 	// Initialize chainId manager
 	utils.InitChainIdManager(networkIDs, chainIDs)
 
-	bridgeService := server.NewBridgeService(c.BridgeServer, c.BridgeController.Height, networkIDs, l2NodeClients, l2Auths, apiStorage).
+	rollupID := l1Etherman.GetRollupID()
+	bridgeService := server.NewBridgeService(c.BridgeServer, c.BridgeController.Height, networkIDs, l2NodeClients, l2Auths, apiStorage, rollupID).
 		WithRedisStorage(redisStorage).WithMainCoinsCache(mainCoinsCache).WithMessagePushProducer(messagePushProducer)
 
 	// ---------- Run API ----------
@@ -251,16 +252,16 @@ func startServer(ctx *cli.Context, opts ...runOptionFunc) error {
 		zkEVMClient := client.NewClient(c.Etherman.L2URLs[0])
 		chExitRootEvent := make(chan *etherman.GlobalExitRoot)
 		chSynced := make(chan uint)
-		go runSynchronizer(c.NetworkConfig.GenBlockNumber, bridgeController, l1Etherman, c.Synchronizer, storage, zkEVMClient, chExitRootEvent, chSynced, messagePushProducer, redisStorage)
+		go runSynchronizer(ctx.Context, c.NetworkConfig.GenBlockNumber, bridgeController, l1Etherman, c.Synchronizer, storage, zkEVMClient, chExitRootEvent, chSynced, messagePushProducer, redisStorage)
 		for _, cl := range l2Ethermans {
-			go runSynchronizer(0, bridgeController, cl, c.Synchronizer, storage, zkEVMClient, chExitRootEvent, chSynced, messagePushProducer, redisStorage)
+			go runSynchronizer(ctx.Context, 0, bridgeController, cl, c.Synchronizer, storage, zkEVMClient, chExitRootEvent, chSynced, messagePushProducer, redisStorage)
 		}
 
 		if c.ClaimTxManager.Enabled {
 			for i := 0; i < len(c.Etherman.L2URLs); i++ {
 				// we should match the orders of L2URLs between etherman and claimtxman
 				// since we are using the networkIDs in the same order
-				claimTxManager, err := claimtxman.NewClaimTxManager(c.ClaimTxManager, chExitRootEvent, chSynced, c.Etherman.L2URLs[i], networkIDs[i+1], c.NetworkConfig.L2PolygonBridgeAddresses[i], bridgeService, storage, messagePushProducer, redisStorage)
+				claimTxManager, err := claimtxman.NewClaimTxManager(c.ClaimTxManager, chExitRootEvent, chSynced, c.Etherman.L2URLs[i], networkIDs[i+1], c.NetworkConfig.L2PolygonBridgeAddresses[i], bridgeService, storage, messagePushProducer, redisStorage, rollupID)
 				if err != nil {
 					log.Fatalf("error creating claim tx manager for L2 %s. Error: %v", c.Etherman.L2URLs[i], err)
 				}
