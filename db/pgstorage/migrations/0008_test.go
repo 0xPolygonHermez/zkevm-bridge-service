@@ -42,7 +42,6 @@ func (m migrationTest0008) InsertData(db *sql.DB) error {
 }
 
 func (m migrationTest0008) RunAssertsAfterMigrationUp(t *testing.T, db *sql.DB) {
-
 	queryDepositCount := "select orig_net,dest_net from sync.deposit where id = 1;"
 	row := db.QueryRow(queryDepositCount)
 	var origNet, destNet uint32
@@ -122,7 +121,6 @@ func (m migrationTest0008) RunAssertsAfterMigrationDown(t *testing.T, db *sql.DB
 	row = db.QueryRow(queryClaim)
 	assert.NoError(t, row.Scan(&origNet))
 	assert.Equal(t, int(1234), origNet)
-
 }
 
 func TestMigration0008(t *testing.T) {

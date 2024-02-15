@@ -25,6 +25,10 @@ func TestInsertDeposit(t *testing.T) {
 	tx, err := pg.BeginDBTransaction(ctx)
 	require.NoError(t, err)
 
+	_, err = pg.AddBlock(ctx, &etherman.Block{
+		BlockNumber: 1,
+	}, tx)
+	require.NoError(t, err)
 	deposit := &etherman.Deposit{
 		NetworkID:          1,
 		OriginalNetwork:    4294967295,
@@ -35,6 +39,7 @@ func TestInsertDeposit(t *testing.T) {
 		BlockNumber:        1,
 		BlockID:            1,
 		DepositCount:       1,
+		Metadata:           common.FromHex("0x00"),
 	}
 	_, err = pg.AddDeposit(ctx, deposit, tx)
 	require.NoError(t, err)
