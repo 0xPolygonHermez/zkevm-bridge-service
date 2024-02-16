@@ -1,30 +1,25 @@
 [Log]
 Level = "debug"
-Outputs = ["stdout"]
+Environment = "production"
+Outputs = ["stderr"]
 
 [SyncDB]
 Database = "postgres"
 User = "test_user"
 Password = "test_password"
 Name = "test_db"
-Host = "zkevm-bridge-db"
-Port = "5432"
+Host = "localhost"
+Port = "5435"
 MaxConns = 20
 
-[ClaimTxManager]
-Enabled = true
-FrequencyToMonitorTxs = "1s"
-PrivateKey = {Path = "/pk/keystore.claimtxmanager", Password = "testonly"}
-RetryInterval = "1s"
-RetryNumber = 10
-AuthorizedClaimMessageAddresses = ["0x90F79bf6EB2c4f870365E785982E1f101E93b906"]
-
 [Etherman]
-L1URL = "http://zkevm-mock-l1-network:8545"
-L2URLs = ["http://zkevm-node:8123"]
+L1URL = "https://eth-sepolia.g.alchemy.com/v2/cQPfsPndh1RMnx6MxpdV4XN8Z3EYICsz"
+# L2URLs = ["https://rpc-agglayer-devnet-zkevm.polygondev.tools", "https://eth-sepolia.g.alchemy.com/v2/cQPfsPndh1RMnx6MxpdV4XN8Z3EYICsz"]
+# L2URLs = ["https://rpc-agglayer-devnet-zkevm.polygondev.tools"]
+L2URLs = ["https://rpc-agglayer-devnet-zkevm.polygondev.tools"]
 
 [Synchronizer]
-SyncInterval = "1s"
+SyncInterval = "5s"
 SyncChunkSize = 100
 
 [BridgeController]
@@ -34,7 +29,6 @@ Height = 32
 [BridgeServer]
 GRPCPort = "9090"
 HTTPPort = "8080"
-CacheSize = 100000
 DefaultPageLimit = 25
 MaxPageLimit = 100
 BridgeVersion = "v1"
@@ -43,14 +37,28 @@ BridgeVersion = "v1"
     User = "test_user"
     Password = "test_password"
     Name = "test_db"
-    Host = "zkevm-bridge-db"
-    Port = "5432"
+    Host = "localhost"
+    Port = "5435"
     MaxConns = 20
 
 [NetworkConfig]
-GenBlockNumber = 1
-PolygonBridgeAddress = "0xCca6ECD73932e49633B9307e1aa0fC174525F424"
-PolygonZkEVMGlobalExitRootAddress = "0x8A791620dd6260079BF849Dc5567aDC3F2FdC318"
-PolygonRollupManagerAddress = "0xB7f8BC63BbcaD18155201308C8f3540b07f84F5e"
-PolygonZkEvmAddress = "0x8dAF17A20c9DBA35f005b6324F493785D239719d"
-L2PolygonBridgeAddresses = ["0xCca6ECD73932e49633B9307e1aa0fC174525F424"]
+GenBlockNumber = "5294124"
+# GenBlockNumber = "5297929"
+PolygonBridgeAddress = "0x8465B7EF3Cc59668a0bA97aB982179Bf7B268f41"
+PolygonZkEVMGlobalExitRootAddress = "0xB5CA10d75648bC67a9CAB2198Bc31D9A8e3c5240"
+PolygonRollupManagerAddress = "0x9688e4ce6d7C274a98b302eD89BF00ea79F1d281"
+PolygonZkEVMAddress = "0x148b74F1Ce7E3CCed43651A95eEd7a320ce1035B"
+L2PolygonBridgeAddresses = ["0x8465B7EF3Cc59668a0bA97aB982179Bf7B268f41"]
+# MaticTokenAddress = ""
+# L1ChainID = 11155111
+
+[ClaimTxManager]
+Enabled = true
+# FrequencyToMonitorTxs = "10s"
+# PrivateKey = {Path = "./claimtxmanager.keystore", Password = "super_secret_password"}
+FrequencyToMonitorTxs = "1s"
+# PrivateKey = {Path = "/pk/keystore.claimtxmanager", Password = "testonly"}
+PrivateKey = {Path = "../test/test.keystore.claimtx", Password = "testonly"}
+RetryInterval = "1s"
+RetryNumber = 10
+AuthorizedClaimMessageAddresses = ["0x90F79bf6EB2c4f870365E785982E1f101E93b906"]
