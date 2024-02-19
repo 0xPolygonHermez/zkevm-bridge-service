@@ -418,7 +418,7 @@ func (etherMan *Client) processUpdateGlobalExitRootEvent(ctx context.Context, ma
 }
 
 func (etherMan *Client) depositEvent(ctx context.Context, vLog types.Log, blocks *[]Block, blocksOrder *map[common.Hash][]Order) error {
-	log.Debug("Deposit event detected. Processing...")
+	log.Debugf("Deposit event detected. From RollupID %d Processing...", etherMan.GetRollupID())
 	d, err := etherMan.PolygonBridge.ParseBridgeEvent(vLog)
 	if err != nil {
 		return err
@@ -426,6 +426,8 @@ func (etherMan *Client) depositEvent(ctx context.Context, vLog types.Log, blocks
 	var deposit Deposit
 	deposit.Amount = d.Amount
 	deposit.BlockNumber = vLog.BlockNumber
+	// TODO: add new column for origin rollupID network?
+	// TODO: deposit.OriginalNetwork = etherMan.GetRollupID()
 	deposit.OriginalNetwork = uint(d.OriginNetwork)
 	deposit.DestinationAddress = d.DestinationAddress
 	deposit.DestinationNetwork = uint(d.DestinationNetwork)
