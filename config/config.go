@@ -34,7 +34,7 @@ type Config struct {
 	CoinKafkaConsumer   coinmiddleware.Config `apollo:"CoinKafkaConsumer"`
 	MessagePushProducer messagepush.Config    `apollo:"MessagePushProducer"`
 	NetworkConfig       `apollo:"NetworkConfig"`
-	NacosConfig         nacos.Config `apollo:"NacosConfig"`
+	NacosConfig         nacos.Config
 }
 
 // Load loads the configuration
