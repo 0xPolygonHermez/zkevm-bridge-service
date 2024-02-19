@@ -198,13 +198,41 @@ func (p *PostgresStorage) AddTrustedGlobalExitRoot(ctx context.Context, trustedE
 }
 
 // GetClaim gets a specific claim from the storage.
-func (p *PostgresStorage) GetClaim(ctx context.Context, depositCount, networkID uint, dbTx pgx.Tx) (*etherman.Claim, error) {
+func (p *PostgresStorage) GetClaim(ctx context.Context, depositCount, originNetworkID, destNetworkID uint, dbTx pgx.Tx) (*etherman.Claim, error) {
 	var (
 		claim  etherman.Claim
 		amount string
 	)
-	const getClaimSQL = "SELECT index, orig_net, orig_addr, amount, dest_addr, block_id, network_id, tx_hash, rollup_index, mainnet_flag FROM sync.claim WHERE index = $1 AND network_id = $2"
-	err := p.getExecQuerier(dbTx).QueryRow(ctx, getClaimSQL, depositCount, networkID).Scan(&claim.Index, &claim.OriginalNetwork, &claim.OriginalAddress, &amount, &claim.DestinationAddress, &claim.BlockID, &claim.NetworkID, &claim.TxHash, &claim.RollupIndex, &claim.MainnetFlag)
+	// if mainnet flag == 0 => origin network = rollup index +1
+	// else origin network = 0
+	const getClaimSQLMainnet = `
+	SELECT index, orig_net, orig_addr, amount, dest_addr, block_id, network_id, tx_hash, rollup_index, mainnet_flag 
+	FROM sync.claim 
+	WHERE index = $1 AND network_id = $2 AND mainnet_flag AND 0 = $3;
+	`
+	const getClaimSQLRollup = `
+	SELECT index, orig_net, orig_addr, amount, dest_addr, block_id, network_id, tx_hash, rollup_index, mainnet_flag 
+	FROM sync.claim 
+	WHERE index = $1 AND network_id = $2 AND NOT mainnet_flag AND rollup_index + 1 = $3;
+	`
+	getClaimSQL := getClaimSQLMainnet
+	if originNetworkID != 0 {
+		getClaimSQL = getClaimSQLRollup
+	}
+	err := p.getExecQuerier(dbTx).
+		QueryRow(ctx, getClaimSQL, depositCount, destNetworkID, originNetworkID).
+		Scan(
+			&claim.Index,
+			&claim.OriginalNetwork,
+			&claim.OriginalAddress,
+			&amount,
+			&claim.DestinationAddress,
+			&claim.BlockID,
+			&claim.NetworkID,
+			&claim.TxHash,
+			&claim.RollupIndex,
+			&claim.MainnetFlag,
+		)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, gerror.ErrStorageNotFound
 	}

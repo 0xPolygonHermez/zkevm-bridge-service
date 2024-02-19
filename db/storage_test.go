@@ -365,7 +365,7 @@ func TestBSStorage(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, count, uint64(1))
 
-	rClaim, err := pg.GetClaim(ctx, 1, 0, tx)
+	rClaim, err := pg.GetClaim(ctx, 1, 1, 0, tx)
 	require.NoError(t, err)
 	require.Equal(t, rClaim.DestinationAddress, claim.DestinationAddress)
 	require.Equal(t, rClaim.NetworkID, claim.NetworkID)

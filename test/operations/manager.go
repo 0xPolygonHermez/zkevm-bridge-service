@@ -130,9 +130,9 @@ func NewManager(ctx context.Context, cfg *Config) (*Manager, error) {
 }
 
 // CheckL2Claim checks if the claim is already in the L2 network.
-func (m *Manager) CheckL2Claim(ctx context.Context, networkID, depositCnt uint) error {
+func (m *Manager) CheckL2Claim(ctx context.Context, origNetworkID, destNetworkID, depositCnt uint) error {
 	return operations.Poll(defaultInterval, defaultDeadline, func() (bool, error) {
-		_, err := m.storage.GetClaim(ctx, depositCnt, networkID, nil)
+		_, err := m.storage.GetClaim(ctx, depositCnt, origNetworkID, destNetworkID, nil)
 		if err != nil {
 			if err == gerror.ErrStorageNotFound {
 				return false, nil

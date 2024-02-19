@@ -211,12 +211,12 @@ func emptyProof() [][bridgectrl.KeyLen]byte {
 }
 
 // GetDepositStatus returns deposit with ready_for_claim status.
-func (s *bridgeService) GetDepositStatus(ctx context.Context, depositCount uint, destNetworkID uint) (string, error) {
+func (s *bridgeService) GetDepositStatus(ctx context.Context, depositCount uint, originNetworkID, destNetworkID uint) (string, error) {
 	var (
 		claimTxHash string
 	)
 	// Get the claim tx hash
-	claim, err := s.storage.GetClaim(ctx, depositCount, destNetworkID, nil)
+	claim, err := s.storage.GetClaim(ctx, depositCount, originNetworkID, destNetworkID, nil)
 	if err != nil {
 		if err != gerror.ErrStorageNotFound {
 			return "", err
@@ -256,7 +256,7 @@ func (s *bridgeService) GetBridges(ctx context.Context, req *pb.GetBridgesReques
 
 	var pbDeposits []*pb.Deposit
 	for _, deposit := range deposits {
-		claimTxHash, err := s.GetDepositStatus(ctx, deposit.DepositCount, deposit.DestinationNetwork)
+		claimTxHash, err := s.GetDepositStatus(ctx, deposit.DepositCount, deposit.OriginalNetwork, deposit.DestinationNetwork)
 		if err != nil {
 			return nil, err
 		}
@@ -367,7 +367,7 @@ func (s *bridgeService) GetBridge(ctx context.Context, req *pb.GetBridgeRequest)
 		return nil, err
 	}
 
-	claimTxHash, err := s.GetDepositStatus(ctx, uint(req.DepositCnt), deposit.DestinationNetwork)
+	claimTxHash, err := s.GetDepositStatus(ctx, uint(req.DepositCnt), deposit.OriginalNetwork, deposit.DestinationNetwork)
 	if err != nil {
 		return nil, err
 	}
