@@ -426,8 +426,6 @@ func (etherMan *Client) depositEvent(ctx context.Context, vLog types.Log, blocks
 	var deposit Deposit
 	deposit.Amount = d.Amount
 	deposit.BlockNumber = vLog.BlockNumber
-	// TODO: add new column for origin rollupID network?
-	// TODO: deposit.OriginalNetwork = etherMan.GetRollupID()
 	deposit.OriginalNetwork = uint(d.OriginNetwork)
 	deposit.DestinationAddress = d.DestinationAddress
 	deposit.DestinationNetwork = uint(d.DestinationNetwork)
@@ -436,6 +434,7 @@ func (etherMan *Client) depositEvent(ctx context.Context, vLog types.Log, blocks
 	deposit.TxHash = vLog.TxHash
 	deposit.Metadata = d.Metadata
 	deposit.LeafType = d.LeafType
+	deposit.OriginRollupID = etherMan.GetRollupID()
 
 	if len(*blocks) == 0 || ((*blocks)[len(*blocks)-1].BlockHash != vLog.BlockHash || (*blocks)[len(*blocks)-1].BlockNumber != vLog.BlockNumber) {
 		fullBlock, err := etherMan.EtherClient.BlockByHash(ctx, vLog.BlockHash)

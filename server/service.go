@@ -256,7 +256,7 @@ func (s *bridgeService) GetBridges(ctx context.Context, req *pb.GetBridgesReques
 
 	var pbDeposits []*pb.Deposit
 	for _, deposit := range deposits {
-		claimTxHash, err := s.GetDepositStatus(ctx, deposit.DepositCount, deposit.OriginalNetwork, deposit.DestinationNetwork)
+		claimTxHash, err := s.GetDepositStatus(ctx, deposit.DepositCount, deposit.OriginRollupID, deposit.NetworkID)
 		if err != nil {
 			return nil, err
 		}
@@ -367,7 +367,7 @@ func (s *bridgeService) GetBridge(ctx context.Context, req *pb.GetBridgeRequest)
 		return nil, err
 	}
 
-	claimTxHash, err := s.GetDepositStatus(ctx, uint(req.DepositCnt), deposit.OriginalNetwork, deposit.DestinationNetwork)
+	claimTxHash, err := s.GetDepositStatus(ctx, uint(req.DepositCnt), deposit.OriginRollupID, deposit.DestinationNetwork)
 	if err != nil {
 		return nil, err
 	}
