@@ -130,7 +130,7 @@ func NewManager(ctx context.Context, cfg *Config) (*Manager, error) {
 }
 
 // CheckL2Claim checks if the claim is already in the L2 network.
-func (m *Manager) CheckL2Claim(ctx context.Context, deposit pb.Deposit) error { //nolint:copylocks
+func (m *Manager) CheckL2Claim(ctx context.Context, deposit *pb.Deposit) error {
 	return operations.Poll(defaultInterval, defaultDeadline, func() (bool, error) {
 		_, err := m.storage.GetClaim(ctx, uint(deposit.DepositCnt), uint(deposit.OrigNet), uint(deposit.DestNet), nil)
 		if err != nil {
