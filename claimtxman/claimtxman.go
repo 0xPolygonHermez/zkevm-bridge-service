@@ -5,13 +5,13 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
-	"strings"
 	"time"
 
 	ctmtypes "github.com/0xPolygonHermez/zkevm-bridge-service/claimtxman/types"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/utils"
 	"github.com/0xPolygonHermez/zkevm-node/log"
+	"github.com/0xPolygonHermez/zkevm-node/pool"
 	"github.com/0xPolygonHermez/zkevm-node/state/runtime"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -427,7 +427,7 @@ func (tm *ClaimTxManager) monitorTxs(ctx context.Context) error {
 				if err != nil {
 					mTxLog.Errorf("failed to send tx %s to network: %v", signedTx.Hash().String(), err)
 					var reviewNonce bool
-					if strings.Contains(err.Error(), "nonce") {
+					if err.Error() == pool.ErrNonceTooLow.Error() {
 						mTxLog.Infof("nonce error detected, Nonce used: %d", signedTx.Nonce())
 						if !isResetNonce {
 							isResetNonce = true
