@@ -221,44 +221,41 @@ func (p *PostgresStorage) GetClaim(ctx context.Context, depositCount, originNetw
 		claim  etherman.Claim
 		amount string
 	)
-	// if mainnet flag == 0 => origin network = rollup index +1
-	// else origin network = 0
-	const getClaimSQLOriginMainnetDestRollup = `
-	SELECT index, orig_net, orig_addr, amount, dest_addr, block_id, network_id, tx_hash, rollup_index 
-	FROM sync.claim 
-	WHERE index = $1 AND network_id = $2 AND NOT mainnet_flag AND rollup_index + 1 = $3;
-	`
-	const getClaimSQLOriginMainnetDestMainnet = `
-	SELECT index, orig_net, orig_addr, amount, dest_addr, block_id, network_id, tx_hash, rollup_index 
-	FROM sync.claim 
-	WHERE index = $1 AND network_id = $2 AND NOT mainnet_flag AND rollup_index + 1 = $3;
-	`
+
 	const getClaimSQLOriginRollupDestMainnet = `
 	SELECT index, orig_net, orig_addr, amount, dest_addr, block_id, network_id, tx_hash, rollup_index 
 	FROM sync.claim 
 	WHERE index = $1 AND network_id = $2 AND mainnet_flag;
 	`
-	const getClaimSQLOriginRollupDestRollup = `
+
+	const getClaimSQLOriginMainnetDestMainnet = `
+	SELECT index, orig_net, orig_addr, amount, dest_addr, block_id, network_id, tx_hash, rollup_index 
+	FROM sync.claim 
+	WHERE index = $1 AND network_id = 0 AND mainnet_flag AND rollup_index = 0;
+	`
+
+	const getClaimSQLDestRollup = `
 	SELECT index, orig_net, orig_addr, amount, dest_addr, block_id, network_id, tx_hash, rollup_index 
 	FROM sync.claim 
 	WHERE index = $1 AND network_id = $2 AND NOT mainnet_flag AND rollup_index + 1 = $3;
 	`
+
 	var row pgx.Row
-	if originNetworkID != 0 && destNetworkID == 0 {
-		row = p.getExecQuerier(dbTx).
-			QueryRow(ctx, getClaimSQLOriginRollupDestMainnet, depositCount, originNetworkID)
+	if destNetworkID == 0 {
 		claim.MainnetFlag = true
-	} else if originNetworkID != 0 && destNetworkID != 0 {
-		row = p.getExecQuerier(dbTx).
-			QueryRow(ctx, getClaimSQLOriginRollupDestRollup, depositCount, originNetworkID, destNetworkID)
-	} else if originNetworkID == 0 && destNetworkID != 0 {
-		row = p.getExecQuerier(dbTx).
-			QueryRow(ctx, getClaimSQLOriginMainnetDestRollup, depositCount, originNetworkID, destNetworkID)
+
+		if originNetworkID != 0 {
+			row = p.getExecQuerier(dbTx).
+				QueryRow(ctx, getClaimSQLOriginRollupDestMainnet, depositCount, originNetworkID)
+		} else {
+			row = p.getExecQuerier(dbTx).
+				QueryRow(ctx, getClaimSQLOriginMainnetDestMainnet, depositCount)
+		}
 	} else {
 		row = p.getExecQuerier(dbTx).
-			QueryRow(ctx, getClaimSQLOriginMainnetDestMainnet, depositCount, originNetworkID)
-		claim.MainnetFlag = true
+			QueryRow(ctx, getClaimSQLDestRollup, depositCount, originNetworkID, destNetworkID)
 	}
+
 	err := row.Scan(
 		&claim.Index,
 		&claim.OriginalNetwork,
