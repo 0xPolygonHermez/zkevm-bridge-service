@@ -194,7 +194,7 @@ run: stop ## runs all services
 	$(RUN_ZKPROVER)
 	sleep 3
 	$(RUN_NODE)
-	sleep 7
+	sleep 25
 	$(RUN_BRIDGE)
 
 .PHONY: run-v1tov2
