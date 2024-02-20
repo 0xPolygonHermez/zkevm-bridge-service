@@ -64,8 +64,6 @@ type Claim struct {
 	BlockNumber        uint64
 	NetworkID          uint
 	TxHash             common.Hash
-	// rollup ID of the network were the claim was sent (desitnation)
-	DestinationRollupID uint
 }
 
 // GetOriginRollupID returns the rollup ID of the claim
