@@ -66,6 +66,14 @@ type Claim struct {
 	TxHash             common.Hash
 }
 
+// GetRollupID returns the rollup ID of the claim
+func (c *Claim) GetRollupID() uint {
+	if c.MainnetFlag {
+		return 0
+	}
+	return uint(c.RollupIndex + 1)
+}
+
 // TokenWrapped struct
 type TokenWrapped struct {
 	TokenMetadata

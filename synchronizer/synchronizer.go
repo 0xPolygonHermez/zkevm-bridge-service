@@ -595,7 +595,7 @@ func (s *ClientSynchronizer) processDeposit(deposit etherman.Deposit, blockID ui
 }
 
 func (s *ClientSynchronizer) processClaim(claim etherman.Claim, blockID uint64, dbTx pgx.Tx) error {
-	if !claim.MainnetFlag && claim.RollupIndex+1 != uint64(s.etherMan.GetRollupID()) {
+	if !claim.MainnetFlag && claim.GetRollupID() != s.etherMan.GetRollupID() {
 		log.Debugf("claim from different Rollup (RollupID: %d, RollupIndex: %d). Ignoring...", s.etherMan.GetRollupID(), claim.RollupIndex)
 		return nil
 	}
