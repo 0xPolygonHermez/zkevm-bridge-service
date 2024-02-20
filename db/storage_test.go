@@ -14,6 +14,38 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestInsertDeposit(t *testing.T) {
+	cfg := pgstorage.NewConfigFromEnv()
+	// Init database instance
+	err := pgstorage.InitOrReset(cfg)
+	require.NoError(t, err)
+	ctx := context.Background()
+	pg, err := pgstorage.NewPostgresStorage(cfg)
+	require.NoError(t, err)
+	tx, err := pg.BeginDBTransaction(ctx)
+	require.NoError(t, err)
+
+	_, err = pg.AddBlock(ctx, &etherman.Block{
+		BlockNumber: 1,
+	}, tx)
+	require.NoError(t, err)
+	deposit := &etherman.Deposit{
+		NetworkID:          1,
+		OriginalNetwork:    4294967295,
+		OriginalAddress:    common.HexToAddress("0x6B175474E89094C44Da98b954EedeAC495271d0F"),
+		Amount:             big.NewInt(1000000),
+		DestinationNetwork: 4294967295,
+		DestinationAddress: common.HexToAddress("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"),
+		BlockNumber:        1,
+		BlockID:            1,
+		DepositCount:       1,
+		Metadata:           common.FromHex("0x00"),
+	}
+	_, err = pg.AddDeposit(ctx, deposit, tx)
+	require.NoError(t, err)
+	require.NoError(t, tx.Rollback(ctx))
+}
+
 func TestL1GlobalExitRoot(t *testing.T) {
 	cfg := pgstorage.NewConfigFromEnv()
 	// Init database instance
