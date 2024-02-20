@@ -47,6 +47,8 @@ type Deposit struct {
 	Metadata           []byte
 	// it is only used for the bridge service
 	ReadyForClaim bool
+	// rollup ID of the network were the deposit was sent
+	OriginRollupID uint
 }
 
 // Claim struct
