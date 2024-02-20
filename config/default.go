@@ -11,7 +11,7 @@ Database = "postgres"
 User = "test_user"
 Password = "test_password"
 Name = "test_db"
-Host = "x1-bridge-db"
+Host = "zkevm-bridge-db"
 Port = "5432"
 MaxConns = 20
 
@@ -47,7 +47,7 @@ BridgeVersion = "v1"
     User = "test_user"
     Password = "test_password"
     Name = "test_db"
-    Host = "x1-bridge-db"
+    Host = "zkevm-bridge-db"
     Port = "5432"
     MaxConns = 20
 `
