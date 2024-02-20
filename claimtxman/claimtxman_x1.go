@@ -476,7 +476,7 @@ func (tm *ClaimTxManager) monitorTxsX1(ctx context.Context) error {
 						continue
 					}
 				}
-				log.Infof("tx: %s not mined yet", txHash.String())
+				mTxLog.Infof("tx: %s not mined yet", txHash.String())
 
 				allHistoryTxMined = false
 				continue
@@ -523,7 +523,7 @@ func (tm *ClaimTxManager) monitorTxsX1(ctx context.Context) error {
 				// Retrieve L1 transaction info
 				deposit, err := tm.storage.GetDeposit(ctx, mTx.DepositID, 0, nil)
 				if err != nil {
-					log.Errorf("push message: GetDeposit error: %v", err)
+					mTxLog.Errorf("push message: GetDeposit error: %v", err)
 					return
 				}
 				tm.pushTransactionUpdate(deposit, uint32(pb.TransactionStatus_TX_PENDING_USER_CLAIM))
@@ -562,10 +562,12 @@ func (tm *ClaimTxManager) monitorTxsX1(ctx context.Context) error {
 			mTxLog.Infof("Using gasPrice: %s. The gasPrice suggested by the network is %s", mTx.GasPrice.String(), gasPrice.String())
 
 			// Calculate nonce before signing
-			err = tm.setTxNonce(&mTx)
-			if err != nil {
-				mTxLog.Errorf("failed to set tx nonce: %v", err)
-				continue
+			if mTx.Nonce <= 0 {
+				err = tm.setTxNonce(&mTx)
+				if err != nil {
+					mTxLog.Errorf("failed to set tx nonce: %v", err)
+					continue
+				}
 			}
 
 			// rebuild transaction
