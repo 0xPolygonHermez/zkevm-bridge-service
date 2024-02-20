@@ -120,7 +120,7 @@ type Client struct {
 	OldPolygonBridge           *oldpolygonzkevmbridge.Oldpolygonzkevmbridge
 	PolygonZkEVMGlobalExitRoot *polygonzkevmglobalexitroot.Polygonzkevmglobalexitroot
 	PolygonRollupManager       *polygonrollupmanager.Polygonrollupmanager
-	RollupID                   uint32
+	rollupID                   uint32
 	SCAddresses                []common.Address
 }
 
@@ -149,12 +149,6 @@ func NewClient(cfg Config, polygonBridgeAddr, polygonZkEVMGlobalExitRootAddress,
 	if err != nil {
 		return nil, err
 	}
-	// Get RollupID
-	rollupID, err := polygonRollupManager.RollupAddressToID(&bind.CallOpts{Pending: false}, polygonZkEvmAddress)
-	if err != nil {
-		return nil, err
-	}
-	log.Debug("rollupID: ", rollupID)
 	var scAddresses []common.Address
 	scAddresses = append(scAddresses, polygonZkEVMGlobalExitRootAddress, polygonBridgeAddr, polygonRollupManagerAddress)
 
@@ -164,7 +158,7 @@ func NewClient(cfg Config, polygonBridgeAddr, polygonZkEVMGlobalExitRootAddress,
 		OldPolygonBridge:           oldpolygonBridge,
 		PolygonZkEVMGlobalExitRoot: polygonZkEVMGlobalExitRoot,
 		PolygonRollupManager:       polygonRollupManager,
-		RollupID:                   rollupID,
+		rollupID:                   0,
 		SCAddresses:                scAddresses}, nil
 }
 
@@ -187,7 +181,18 @@ func NewL2Client(url string, polygonBridgeAddr common.Address) (*Client, error) 
 	}
 	scAddresses := []common.Address{polygonBridgeAddr}
 
-	return &Client{EtherClient: ethClient, PolygonBridge: bridge, OldPolygonBridge: oldpolygonBridge, SCAddresses: scAddresses}, nil
+	rollupID, err := bridge.NetworkID(&bind.CallOpts{Pending: false})
+	if err != nil {
+		return nil, err
+	}
+
+	return &Client{
+		EtherClient:      ethClient,
+		PolygonBridge:    bridge,
+		OldPolygonBridge: oldpolygonBridge,
+		SCAddresses:      scAddresses,
+		rollupID:         rollupID,
+	}, nil
 }
 
 // GetRollupInfoByBlockRange function retrieves the Rollup information that are included in all this ethereum blocks
@@ -587,11 +592,8 @@ func (etherMan *Client) EthBlockByNumber(ctx context.Context, blockNumber uint64
 
 // GetNetworkID gets the network ID of the dedicated chain.
 func (etherMan *Client) GetNetworkID(ctx context.Context) (uint, error) {
-	networkID, err := etherMan.PolygonBridge.NetworkID(&bind.CallOpts{Pending: false})
-	if err != nil {
-		return 0, err
-	}
-	return uint(networkID), nil
+	// TODO: this is redundant with GetRollupID
+	return uint(etherMan.rollupID), nil
 }
 
 func (etherMan *Client) verifyBatchesTrustedAggregatorEvent(ctx context.Context, vLog types.Log, blocks *[]Block, blocksOrder *map[common.Hash][]Order) error {
@@ -646,8 +648,11 @@ func (etherMan *Client) verifyBatches(ctx context.Context, vLog types.Log, block
 	return nil
 }
 
+// GetRollupID returns the ID of the rollup that this etherman is connected to through the RPC.
+// So this will return 0 in case is the etherman for L1
 func (etherMan *Client) GetRollupID() uint {
-	return uint(etherMan.RollupID)
+	// TODO: this is redundant with GetNetworkID
+	return uint(etherMan.rollupID)
 }
 
 func decodeGlobalIndex(globalIndex *big.Int) (bool, uint64, uint64, error) {
@@ -687,7 +692,9 @@ func (etherMan *Client) createNewRollupEvent(ctx context.Context, vLog types.Log
 	if err != nil {
 		return err
 	}
-	if rollup.RollupID != etherMan.RollupID {
+	// TODO: this is broken. Should have an array of rollup IDs that the bridge service cares about
+	// as GetRollupID will always return 0 in this case. Leaving it as it is since this event is basically ignored
+	if rollup.RollupID != uint32(etherMan.GetRollupID()) {
 		return nil
 	}
 
@@ -719,7 +726,9 @@ func (etherMan *Client) AddExistingRollupEvent(ctx context.Context, vLog types.L
 	if err != nil {
 		return err
 	}
-	if rollup.RollupID != etherMan.RollupID {
+	// TODO: this is broken. Should have an array of rollup IDs that the bridge service cares about
+	// as GetRollupID will always return 0 in this case. Leaving it as it is since this event is basically ignored
+	if rollup.RollupID != uint32(etherMan.GetRollupID()) {
 		return nil
 	}
 

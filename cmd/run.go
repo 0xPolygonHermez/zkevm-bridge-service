@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"os/signal"
 
@@ -81,7 +82,9 @@ func start(ctx *cli.Context) error {
 		log.Error(err)
 		return err
 	}
-	rollupID := l1Etherman.GetRollupID()
+
+	// TODO: this works because the service only supports one L2 network
+	rollupID := l2Ethermans[0].GetRollupID()
 	bridgeService := server.NewBridgeService(c.BridgeServer, c.BridgeController.Height, networkIDs, apiStorage, rollupID)
 	err = server.RunServer(c.BridgeServer, bridgeService)
 	if err != nil {
@@ -146,9 +149,15 @@ func newEthermans(c *config.Config) (*etherman.Client, []*etherman.Client, error
 	if len(c.L2PolygonBridgeAddresses) != len(c.Etherman.L2URLs) {
 		log.Fatal("environment configuration error. zkevm bridge addresses and zkevm node urls mismatch")
 	}
+	if len(c.L2PolygonBridgeAddresses) != 1 {
+		return nil, nil, fmt.Errorf(
+			"the bridge service only supports working with a single L2, but %d were provided",
+			len(c.L2PolygonBridgeAddresses),
+		)
+	}
 	var l2Ethermans []*etherman.Client
-	for i, addr := range c.L2PolygonBridgeAddresses {
-		l2Etherman, err := etherman.NewL2Client(c.Etherman.L2URLs[i], addr)
+	for i, bridgeAddr := range c.L2PolygonBridgeAddresses {
+		l2Etherman, err := etherman.NewL2Client(c.Etherman.L2URLs[i], bridgeAddr)
 		if err != nil {
 			log.Error("L2 etherman ", i, c.Etherman.L2URLs[i], ", error: ", err)
 			return l1Etherman, nil, err

@@ -47,7 +47,7 @@ type Deposit struct {
 	Metadata           []byte
 	// it is only used for the bridge service
 	ReadyForClaim bool
-	// rollup ID of the network were the deposit was sent
+	// rollup ID of the network were the deposit was sent (origin)
 	OriginRollupID uint
 }
 
@@ -64,10 +64,12 @@ type Claim struct {
 	BlockNumber        uint64
 	NetworkID          uint
 	TxHash             common.Hash
+	// rollup ID of the network were the claim was sent (desitnation)
+	DestinationRollupID uint
 }
 
-// GetRollupID returns the rollup ID of the claim
-func (c *Claim) GetRollupID() uint {
+// GetOriginRollupID returns the rollup ID of the claim
+func (c *Claim) GetOriginRollupID() uint {
 	if c.MainnetFlag {
 		return 0
 	}

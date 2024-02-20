@@ -333,10 +333,10 @@ func TestBSStorage(t *testing.T) {
 		DestinationAddress: common.HexToAddress("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"),
 		BlockID:            1,
 		BlockNumber:        2,
-		NetworkID:          0,
+		NetworkID:          1,
 		TxHash:             common.HexToHash("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9f2"),
 		RollupIndex:        0,
-		MainnetFlag:        false,
+		MainnetFlag:        true,
 	}
 	err = pg.AddClaim(ctx, claim, tx)
 	require.NoError(t, err)

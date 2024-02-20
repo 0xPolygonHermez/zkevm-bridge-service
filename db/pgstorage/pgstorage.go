@@ -222,38 +222,32 @@ func (p *PostgresStorage) GetClaim(ctx context.Context, depositCount, originNetw
 		amount string
 	)
 
-	const getClaimSQLOriginRollupDestMainnet = `
+	// origin rollup ID is calculated as follows:
+	// // if mainnet_flag: 0
+	// // else: rollup_index + 1
+	// destination rollup ID == network_id: network that has received the claim, therefore, the destination rollupID of the claim
+
+	const getClaimSQLOriginMainnet = `
 	SELECT index, orig_net, orig_addr, amount, dest_addr, block_id, network_id, tx_hash, rollup_index 
 	FROM sync.claim 
-	WHERE index = $1 AND network_id = $2 AND mainnet_flag;
+	WHERE index = $1 AND mainnet_flag AND network_id = $2;
 	`
 
-	const getClaimSQLOriginMainnetDestMainnet = `
+	const getClaimSQLOriginRollup = `
 	SELECT index, orig_net, orig_addr, amount, dest_addr, block_id, network_id, tx_hash, rollup_index 
 	FROM sync.claim 
-	WHERE index = $1 AND network_id = 0 AND mainnet_flag AND rollup_index = 0;
-	`
-
-	const getClaimSQLDestRollup = `
-	SELECT index, orig_net, orig_addr, amount, dest_addr, block_id, network_id, tx_hash, rollup_index 
-	FROM sync.claim 
-	WHERE index = $1 AND network_id = $2 AND NOT mainnet_flag AND rollup_index + 1 = $3;
+	WHERE index = $1 AND NOT mainnet_flag AND rollup_index + 1 = $2 AND network_id = $3;
 	`
 
 	var row pgx.Row
-	if destNetworkID == 0 {
+	if originNetworkID == 0 {
 		claim.MainnetFlag = true
+		row = p.getExecQuerier(dbTx).
+			QueryRow(ctx, getClaimSQLOriginMainnet, depositCount, destNetworkID)
 
-		if originNetworkID != 0 {
-			row = p.getExecQuerier(dbTx).
-				QueryRow(ctx, getClaimSQLOriginRollupDestMainnet, depositCount, originNetworkID)
-		} else {
-			row = p.getExecQuerier(dbTx).
-				QueryRow(ctx, getClaimSQLOriginMainnetDestMainnet, depositCount)
-		}
 	} else {
 		row = p.getExecQuerier(dbTx).
-			QueryRow(ctx, getClaimSQLDestRollup, depositCount, originNetworkID, destNetworkID)
+			QueryRow(ctx, getClaimSQLOriginRollup, depositCount, originNetworkID, destNetworkID)
 	}
 
 	err := row.Scan(
