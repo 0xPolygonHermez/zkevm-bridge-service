@@ -244,7 +244,6 @@ func (p *PostgresStorage) GetClaim(ctx context.Context, depositCount, originNetw
 		claim.MainnetFlag = true
 		row = p.getExecQuerier(dbTx).
 			QueryRow(ctx, getClaimSQLOriginMainnet, depositCount, destNetworkID)
-
 	} else {
 		row = p.getExecQuerier(dbTx).
 			QueryRow(ctx, getClaimSQLOriginRollup, depositCount, originNetworkID, destNetworkID)
