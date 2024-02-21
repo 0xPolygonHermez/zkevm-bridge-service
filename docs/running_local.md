@@ -6,12 +6,12 @@
 
 This documentation will help you running the following components:
 
-- X1 Node Databases
-- X1 Bridge Database
+- zkEVM Node Databases
+- zkEVM Bridge Database
 - L1 Network
 - Prover
-- X1 Node
-- X1 Bridge Service
+- zkEVM Node
+- zkEVM Bridge Service
 
 ## Requirements
 
@@ -53,7 +53,7 @@ make test-edge
 
 ## Accessing the environment
 
-- X1 Bridge Database 
+- zkEVM Bridge Database 
   - `Type:` Postgres DB
   - `User:` test_user
   - `Password:` test_password
@@ -61,7 +61,7 @@ make test-edge
   - `Host:` localhost
   - `Port:` 5435
   - `Url:` <postgres://test_user:test_password@localhost:5435/test_db>
-- X1 Bridge Service
+- zkEVM Bridge Service
   - `Type:` Web
   - `Host:` localhost
   - `Port:` 8080
@@ -71,19 +71,11 @@ make test-edge
 
 | Address | Description |
 |---|---|
-| 0x0D9088C72Cd4F08e9dDe474D8F5394147f64b22C | Proof of Efficiency |
-| 0x10B65c586f795aF3eCCEe594fE4E38E1F059F780 | L1 Bridge |
-| 0x10B65c586f795aF3eCCEe594fE4E38E1F059F780 | L2 Bridge |
+| 0xCca6ECD73932e49633B9307e1aa0fC174525F424 | L1 Bridge |
+| 0xCca6ECD73932e49633B9307e1aa0fC174525F424 | L2 Bridge |
 | 0x5FbDB2315678afecb367f032d93F642f64180aa3 | Pol token |
-| 0x82109a709138A2953C720D3d775168717b668ba6 | L1 OKB token |
-| 0x82109a709138A2953C720D3d775168717b668ba6 | L2 WETH token |
-| 0xEd236da21Ff62bC7B62608AdB818da49E8549fa7 | GlobalExitRootManager |
-|  | RollupManager |
-
-## Admin Account
-| Address | Private Key |
-|---|---|
-| 0x2ECF31eCe36ccaC2d3222A303b1409233ECBB225 | 0xde3ca643a52f5543e84ba984c4419ff40dbabd0e483c31c1d09fee8168d68e38 |
+| 0x8A791620dd6260079BF849Dc5567aDC3F2FdC318 | GlobalExitRootManager |
+| 0xB7f8BC63BbcaD18155201308C8f3540b07f84F5e | RollupManager |
 
 ## Fund account on L2 with ETH
 

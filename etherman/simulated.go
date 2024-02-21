@@ -37,8 +37,8 @@ func NewSimulatedEtherman(cfg Config, auth *bind.TransactOpts) (*Client, *backen
 			Balance: balance,
 		},
 	}
-	blockGasLimit := uint64(999999999999999999) //nolint:gomnd
-	client := backends.NewSimulatedBackend(genesisAlloc, blockGasLimit)
+	//blockGasLimit := uint64(999999999999999999)                         //nolint:gomnd
+	client := backends.NewSimulatedBackend(genesisAlloc, 999999999999999999) //nolint:staticcheck,gomnd
 
 	// Deploy contracts
 	const polDecimalPlaces = 18

@@ -25,7 +25,6 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/pkg/errors"
 )
 
 // NetworkSID is used to identify the network.
@@ -45,10 +44,10 @@ const (
 
 	// PolTokenAddress token address
 	PolTokenAddress = "0x5FbDB2315678afecb367f032d93F642f64180aa3" //nolint:gosec
-	l1BridgeAddr    = "0x10B65c586f795aF3eCCEe594fE4E38E1F059F780"
-	l2BridgeAddr    = "0x10B65c586f795aF3eCCEe594fE4E38E1F059F780"
+	l1BridgeAddr    = "0xCca6ECD73932e49633B9307e1aa0fC174525F424"
+	l2BridgeAddr    = "0xCca6ECD73932e49633B9307e1aa0fC174525F424"
 
-	l1AccHexAddress = "0x2ecf31ece36ccac2d3222a303b1409233ecbb225"
+	l1AccHexAddress = "0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC"
 
 	sequencerAddress = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
 
@@ -62,7 +61,7 @@ const (
 var (
 	dbConfig          = pgstorage.NewConfigFromEnv()
 	accHexPrivateKeys = map[NetworkSID]string{
-		L1: "0xde3ca643a52f5543e84ba984c4419ff40dbabd0e483c31c1d09fee8168d68e38", //0x2ecf31ece36ccac2d3222a303b1409233ecbb225
+		L1: "0x5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a", //0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC
 		L2: "0xdfd01798f92667dbf91df722434e8fbe96af0211d4d1b82bbbbc8f1def7a814f", //0xc949254d682d8c9ad5682521675b8f43b102aec4
 	}
 )
@@ -185,7 +184,7 @@ func (m *Manager) SendL2Deposit(ctx context.Context, tokenAddr common.Address, a
 
 	err = client.SendBridgeAsset(ctx, tokenAddr, amount, destNetwork, destAddr, []byte{}, auth)
 	if err != nil {
-		return errors.Wrap(err, "SendBridgeAsset")
+		return err
 	}
 
 	// sync for new exit root
@@ -234,8 +233,8 @@ func (m *Manager) SendL2BridgeMessage(ctx context.Context, destAddr common.Addre
 		return err
 	}
 
-	//auth.Value = amount
-	err = client.SendL2BridgeMessage(ctx, destNetwork, amount, destAddr, metadata, auth)
+	auth.Value = amount
+	err = client.SendBridgeMessage(ctx, destNetwork, destAddr, metadata, auth)
 	if err != nil {
 		return err
 	}
@@ -471,7 +470,7 @@ func (m *Manager) CheckAccountBalance(ctx context.Context, network NetworkSID, a
 	client := m.clients[network]
 	auth, err := client.GetSigner(ctx, accHexPrivateKeys[network])
 	if err != nil {
-		return big.NewInt(0), errors.Wrap(err, "GetSigner failed")
+		return big.NewInt(0), nil
 	}
 
 	if account == nil {
@@ -479,9 +478,8 @@ func (m *Manager) CheckAccountBalance(ctx context.Context, network NetworkSID, a
 	}
 	balance, err := client.BalanceAt(ctx, *account, nil)
 	if err != nil {
-		return big.NewInt(0), errors.Wrap(err, "eth_getBalance failed")
+		return big.NewInt(0), nil
 	}
-	log.Debugf("CheckAccountBalance success network[%v] account[%v] balance[%v]", network, account.String(), balance.String())
 	return balance, nil
 }
 
@@ -490,7 +488,7 @@ func (m *Manager) CheckAccountTokenBalance(ctx context.Context, network NetworkS
 	client := m.clients[network]
 	auth, err := client.GetSigner(ctx, accHexPrivateKeys[network])
 	if err != nil {
-		return big.NewInt(0), errors.Wrap(err, "GetSigner failed")
+		return big.NewInt(0), nil
 	}
 
 	if account == nil {
@@ -498,13 +496,12 @@ func (m *Manager) CheckAccountTokenBalance(ctx context.Context, network NetworkS
 	}
 	erc20Token, err := erc20.NewPol(tokenAddr, client)
 	if err != nil {
-		return big.NewInt(0), errors.Wrap(err, "NewMatic failed")
+		return big.NewInt(0), nil
 	}
 	balance, err := erc20Token.BalanceOf(&bind.CallOpts{Pending: false}, *account)
 	if err != nil {
-		return big.NewInt(0), errors.Wrap(err, "balanceOf failed")
+		return big.NewInt(0), nil
 	}
-	log.Debugf("CheckAccountTokenBalance success network[%v] tokenAddr[%v] account[%v] balance[%v]", network, tokenAddr.String(), account.String(), balance.String())
 	return balance, nil
 }
 
@@ -643,7 +640,7 @@ func (m *Manager) MintERC20(ctx context.Context, erc20Addr common.Address, amoun
 	client := m.clients[network]
 	auth, err := client.GetSigner(ctx, accHexPrivateKeys[network])
 	if err != nil {
-		return errors.Wrap(err, "GetSigner")
+		return err
 	}
 
 	var bridgeAddress = l1BridgeAddr
@@ -653,10 +650,10 @@ func (m *Manager) MintERC20(ctx context.Context, erc20Addr common.Address, amoun
 
 	err = client.ApproveERC20(ctx, erc20Addr, common.HexToAddress(bridgeAddress), amount, auth)
 	if err != nil {
-		return errors.Wrap(err, "ApproveERC20")
+		return err
 	}
 
-	return errors.Wrap(client.MintERC20(ctx, erc20Addr, amount, auth), "MintERC20")
+	return client.MintERC20(ctx, erc20Addr, amount, auth)
 }
 
 // ApproveERC20 approves erc20 tokens

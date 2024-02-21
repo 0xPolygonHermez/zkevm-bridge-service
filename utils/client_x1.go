@@ -2,29 +2,12 @@ package utils
 
 import (
 	"context"
-	"math/big"
-	"time"
 
 	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman"
 	"github.com/0xPolygonHermez/zkevm-node/log"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 )
-
-// SendL2BridgeMessage sends a bridge message transaction.
-func (c *Client) SendL2BridgeMessage(ctx context.Context, destNetwork uint32, amountWETH *big.Int, destAddr common.Address, metadata []byte,
-	auth *bind.TransactOpts,
-) error {
-	tx, err := c.bridgeL2.BridgeMessage(auth, destNetwork, destAddr, amountWETH, true, metadata)
-	if err != nil {
-		log.Error("Error: ", err)
-		return err
-	}
-	// wait transfer to be included in a batch
-	const txTimeout = 60 * time.Second
-	return WaitTxToBeMined(ctx, c.Client, tx, txTimeout)
-}
 
 // SendClaimX1 sends a claim transaction
 func (c *Client) SendClaimX1(ctx context.Context, deposit *etherman.Deposit, smtProof, rollupSmtProof [mtHeight][keyLen]byte, globalExitRoot *etherman.GlobalExitRoot, rollupID uint, auth *bind.TransactOpts) (*types.Transaction, error) {
@@ -51,22 +34,4 @@ func (c *Client) SendClaimX1(ctx context.Context, deposit *etherman.Deposit, smt
 	}
 
 	return tx, nil
-}
-
-// SetL2TokensAllowed set l2 token allowed.
-func (c *Client) SetL2TokensAllowed(ctx context.Context, allowed bool, auth *bind.TransactOpts) error {
-	result, _ := c.bridgeL2.IsAllL2TokensAllowed(&bind.CallOpts{})
-	if result == allowed {
-		log.Infof("Do nothing, allowed:%v", allowed)
-		return nil
-	}
-
-	tx, err := c.bridgeL2.SetAllL2TokensAllowed(auth, allowed)
-	if err != nil {
-		log.Error("Error: ", err)
-		return err
-	}
-	// wait transfer to be included in a batch
-	const txTimeout = 60 * time.Second
-	return WaitTxToBeMined(ctx, c.Client, tx, txTimeout)
 }

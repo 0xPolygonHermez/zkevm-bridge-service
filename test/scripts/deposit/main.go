@@ -10,10 +10,10 @@ import (
 )
 
 const (
-	l1BridgeAddr = "0x10B65c586f795aF3eCCEe594fE4E38E1F059F780"
+	l1BridgeAddr = "0xCca6ECD73932e49633B9307e1aa0fC174525F424"
 
-	l1AccHexAddress    = "0x2ecf31ece36ccac2d3222a303b1409233ecbb225"
-	l1AccHexPrivateKey = "0xde3ca643a52f5543e84ba984c4419ff40dbabd0e483c31c1d09fee8168d68e38"
+	l1AccHexAddress    = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
+	l1AccHexPrivateKey = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
 	l1NetworkURL       = "http://localhost:8545"
 
 	funds              = 90000000000000000 // nolint

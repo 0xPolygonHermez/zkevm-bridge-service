@@ -5,8 +5,8 @@ Typically this action is used to include the claim tx to fill the bridge autocla
 ## Parameters
 At the beginning of the script there are the next constant variables that need to be reviewed.
 ```
-    l2BridgeAddr = "0x10B65c586f795aF3eCCEe594fE4E38E1F059F780"
-	zkevmAddr      = "0x0D9088C72Cd4F08e9dDe474D8F5394147f64b22C"
+    l2BridgeAddr = "0xCca6ECD73932e49633B9307e1aa0fC174525F424"
+	zkevmAddr    = "0x8dAF17A20c9DBA35f005b6324F493785D239719d"
 
 	accHexAddress    = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
 	accHexPrivateKey = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
@@ -15,7 +15,7 @@ At the beginning of the script there are the next constant variables that need t
 	bridgeURL          = "http://localhost:8080"
 ```
 `l2BridgeAddr` is the bridge address smart contract in L2
-`zkevmAddr` is the zkEvm address in L1
+`zkevmAddr` is the polygonZkEvm address in L1
 `accHexAddress` is the wallet address used to send the claim in L2 and to send the forcedBatch in L1
 `accHexPrivateKey` is the wallet private key used to send the claim in L2 and to send the forcedBatch in L1
 `l1NetworkURL` is the url of the L1 rpc

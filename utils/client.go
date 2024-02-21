@@ -16,7 +16,6 @@ import (
 	zkevmtypes "github.com/0xPolygonHermez/zkevm-node/config/types"
 	"github.com/0xPolygonHermez/zkevm-node/encoding"
 	"github.com/0xPolygonHermez/zkevm-node/etherman/smartcontracts/polygonzkevmbridge"
-	"github.com/0xPolygonHermez/zkevm-node/etherman/smartcontracts/polygonzkevmbridgel2"
 	"github.com/0xPolygonHermez/zkevm-node/log"
 	"github.com/0xPolygonHermez/zkevm-node/test/contracts/bin/ERC20"
 	ops "github.com/0xPolygonHermez/zkevm-node/test/operations"
@@ -43,8 +42,7 @@ const (
 type Client struct {
 	// Client ethclient
 	*ethclient.Client
-	bridge   *polygonzkevmbridge.Polygonzkevmbridge
-	bridgeL2 *polygonzkevmbridgel2.Polygonzkevmbridgel2
+	bridge *polygonzkevmbridge.Polygonzkevmbridge
 }
 
 // NewClient creates client.
@@ -54,16 +52,12 @@ func NewClient(ctx context.Context, nodeURL string, bridgeSCAddr common.Address)
 		return nil, err
 	}
 	var br *polygonzkevmbridge.Polygonzkevmbridge
-	var brl2 *polygonzkevmbridgel2.Polygonzkevmbridgel2
 	if len(bridgeSCAddr) != 0 {
-		br, _ = polygonzkevmbridge.NewPolygonzkevmbridge(bridgeSCAddr, client)
-		brl2, err = polygonzkevmbridgel2.NewPolygonzkevmbridgel2(bridgeSCAddr, client)
+		br, err = polygonzkevmbridge.NewPolygonzkevmbridge(bridgeSCAddr, client)
 	}
-	log.Infof("nodeURL:%v, bridgeSCAddr:%v, ", nodeURL, bridgeSCAddr.String())
 	return &Client{
-		Client:   client,
-		bridge:   br,
-		bridgeL2: brl2,
+		Client: client,
+		bridge: br,
 	}, err
 }
 
@@ -172,7 +166,6 @@ func (c *Client) SendBridgeAsset(ctx context.Context, tokenAddr common.Address, 
 	if destAddr == nil {
 		destAddr = &auth.From
 	}
-	log.Infof("token address:%v, amount:%v, destnetwork:%v, dest address:%v", tokenAddr.String(), amount.String(), destNetwork, destAddr.String())
 	tx, err := c.bridge.BridgeAsset(auth, destNetwork, *destAddr, amount, tokenAddr, true, metadata)
 	if err != nil {
 		log.Error("Error: ", err)

@@ -16,7 +16,7 @@ const (
 	l1AccHexPrivateKey = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
 
 	l1NetworkURL                   = "http://localhost:8545"
-	polygonZkEVMAddressHex         = "0x0D9088C72Cd4F08e9dDe474D8F5394147f64b22C"
+	polygonZkEVMAddressHex         = "0x8dAF17A20c9DBA35f005b6324F493785D239719d"
 	polygonRollupManagerAddressHex = "0xB7f8BC63BbcaD18155201308C8f3540b07f84F5e"
 	polTokenAddressHex             = "0x5FbDB2315678afecb367f032d93F642f64180aa3" //nolint:gosec
 )
