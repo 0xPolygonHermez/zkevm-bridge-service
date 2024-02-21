@@ -470,7 +470,7 @@ func (m *Manager) CheckAccountBalance(ctx context.Context, network NetworkSID, a
 	client := m.clients[network]
 	auth, err := client.GetSigner(ctx, accHexPrivateKeys[network])
 	if err != nil {
-		return big.NewInt(0), nil
+		return nil, err
 	}
 
 	if account == nil {
@@ -478,7 +478,7 @@ func (m *Manager) CheckAccountBalance(ctx context.Context, network NetworkSID, a
 	}
 	balance, err := client.BalanceAt(ctx, *account, nil)
 	if err != nil {
-		return big.NewInt(0), nil
+		return nil, err
 	}
 	return balance, nil
 }

@@ -246,6 +246,11 @@ test-edge: build-docker stop run ## Runs all tests checking race conditions
 	sleep 3
 	trap '$(STOP)' EXIT; MallocNanoZone=0 go test -race -p 1 -timeout 2400s ./test/e2e/... -count 1 -tags='edge'
 
+.PHONY: test-multirollup
+test-multirollup: build-docker stop run ## Runs all tests checking race conditions
+	sleep 3
+	trap '$(STOP)' EXIT; MallocNanoZone=0 go test -race -p 1 -timeout 2400s ./test/e2e/... -count 1 -tags='multirollup'
+
 .PHONY: validate
 validate: lint build test-full ## Validates the whole integrity of the code base
 
