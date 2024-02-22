@@ -18,4 +18,4 @@
 
 config/config.mainnet.toml
 config/config.testnet.toml
-**__debug__**
+**__debug**

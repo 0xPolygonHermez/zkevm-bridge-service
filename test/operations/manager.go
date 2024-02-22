@@ -99,7 +99,13 @@ func NewManager(ctx context.Context, cfg *Config) (*Manager, error) {
 	// 	return nil, err
 	// }
 
-	pgst, err := pgstorage.NewPostgresStorage(dbConfig)
+	pgst, err := pgstorage.NewPostgresStorage(pgstorage.Config{
+		Name:     cfg.Storage.Name,
+		User:     cfg.Storage.User,
+		Password: cfg.Storage.Password,
+		Host:     cfg.Storage.Host,
+		MaxConns: cfg.Storage.MaxConns,
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -709,4 +715,8 @@ func (m *Manager) WaitExitRootToBeSynced(ctx context.Context, orgExitRoot *ether
 		}
 		return exitRoot.ExitRoots[tID] != orgExitRoot.ExitRoots[tID], nil
 	})
+}
+
+func (m *Manager) GetRollupID() (uint32, error) {
+	return m.clients[L2].GetRollupID()
 }

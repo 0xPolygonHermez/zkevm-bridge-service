@@ -255,3 +255,7 @@ func (c *Client) SendClaim(ctx context.Context, deposit *pb.Deposit, smtProof [m
 func WaitTxToBeMined(ctx context.Context, client *ethclient.Client, tx *types.Transaction, timeout time.Duration) error {
 	return ops.WaitTxToBeMined(ctx, client, tx, timeout)
 }
+
+func (c *Client) GetRollupID() (uint32, error) {
+	return c.bridge.NetworkID(nil)
+}

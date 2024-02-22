@@ -63,11 +63,11 @@ func TestEdgeCase(t *testing.T) {
 	opsCfg := &operations.Config{
 		Storage: db.Config{
 			Database: "postgres",
-			Name:     "test_db",
-			User:     "test_user",
-			Password: "test_password",
+			Name:     "bridge_db_1",
+			User:     "user",
+			Password: "pass",
 			Host:     "localhost",
-			Port:     "5435",
+			Port:     "5432",
 			MaxConns: 10,
 		},
 		BT: bridgectrl.Config{
@@ -83,11 +83,11 @@ func TestEdgeCase(t *testing.T) {
 			BridgeVersion:    "v1",
 			DB: db.Config{
 				Database: "postgres",
-				Name:     "test_db",
-				User:     "test_user",
-				Password: "test_password",
+				Name:     "bridge_db_1",
+				User:     "user",
+				Password: "pass",
 				Host:     "localhost",
-				Port:     "5435",
+				Port:     "5432",
 				MaxConns: 10,
 			},
 		},

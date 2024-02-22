@@ -7,10 +7,10 @@ Outputs = ["stderr"]
 
 [State]
 	[State.DB]
-	User = "state_user"
-	Password = "state_password"
-	Name = "state_db"
-	Host = "zkevm-state-db"
+	User = "user"
+	Password = "pass"
+	Name = "state_db_1"
+	Host = "zkevm-db"
 	Port = "5432"
 	EnableLog = false	
 	MaxConns = 200
@@ -47,10 +47,10 @@ GlobalQueue = 1024
 	    BreakEvenFactor = 1.1			
 		FinalDeviationPct = 10
 	[Pool.DB]
-	User = "pool_user"
-	Password = "pool_password"
-	Name = "pool_db"
-	Host = "zkevm-pool-db"
+	User = "user"
+	Password = "pass"
+	Name = "pool_db_1"
+	Host = "zkevm-db"
 	Port = "5432"
 	EnableLog = false
 	MaxConns = 200
@@ -155,10 +155,10 @@ DefaultGasPriceWei = 1000000000
 MaxGasPriceWei = 0
 
 [MTClient]
-URI = "zkevm-prover:50061"
+URI = "zkevm-prover-1:50061"
 
 [Executor]
-URI = "zkevm-prover:50071"
+URI = "zkevm-prover-1:50071"
 MaxGRPCMessageSize = 100000000
 
 [Metrics]
@@ -169,21 +169,11 @@ ProfilingHost = "0.0.0.0"
 ProfilingPort = 6060
 ProfilingEnabled = true
 
-#[EventLog]
-#	[EventLog.DB]
-#	User = "event_user"
-#	Password = "event_password"
-#	Name = "event_db"
-#	Host = "zkevm-event-db"
-#	Port = "5432"
-#	EnableLog = false
-#	MaxConns = 200
-
 [HashDB]
-User = "prover_user"
+User = "prover_user_1"
 Password = "prover_pass"
-Name = "prover_db"
-Host = "zkevm-state-db"
+Name = "prover_db_1"
+Host = "zkevm-db"
 Port = "5432"
 EnableLog = false
 MaxConns = 200
