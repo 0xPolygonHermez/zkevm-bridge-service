@@ -1,3 +1,6 @@
+//go:build e2e
+// +build e2e
+
 package e2e
 
 import (
@@ -473,6 +476,7 @@ func TestE2E(t *testing.T) {
 		tokenWrapped, err := opsman.GetTokenWrapped(ctx, 0, tokenAddr, false)
 		require.NoError(t, err)
 		t.Log("TokenWrapped: ", tokenWrapped)
+
 		// Check L2 funds to see if the amount has been increased
 		balance, err = opsman.CheckAccountTokenBalance(ctx, "l2", tokenWrapped.WrappedTokenAddress, &destAddr)
 		require.NoError(t, err)
@@ -481,7 +485,7 @@ func TestE2E(t *testing.T) {
 		// Check the claim tx
 		err = opsman.CheckL2Claim(ctx, uint(deposits[0].OrigNet), uint(deposits[0].DestNet), uint(deposits[0].DepositCnt))
 		require.NoError(t, err)
-		balance, err = opsman.CheckAccountTokenBalance(ctx, "l2", tokenWrapped.WrappedTokenAddress, &destAddr)
+		_, err = opsman.CheckAccountTokenBalance(ctx, "l2", tokenWrapped.WrappedTokenAddress, &destAddr)
 		require.NoError(t, err)
 
 		// Check the claim tx

@@ -1,3 +1,6 @@
+//go:build edge
+// +build edge
+
 package e2e
 
 import (
