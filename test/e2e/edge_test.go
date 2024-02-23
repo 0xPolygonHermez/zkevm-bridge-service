@@ -29,7 +29,7 @@ func depositFromL1(ctx context.Context, opsman *operations.Manager, t *testing.T
 	deposits, err := opsman.GetBridgeInfoByDestAddr(ctx, &destAddr)
 	require.NoError(t, err)
 	// Check a L2 claim tx
-	err = opsman.CheckL2Claim(ctx, uint(deposits[0].OrigNet), uint(deposits[0].DestNet), uint(deposits[0].DepositCnt))
+	err = opsman.CheckL2Claim(ctx, uint(deposits[0].DestNet), uint(deposits[0].DepositCnt))
 	require.NoError(t, err)
 }
 
