@@ -2,7 +2,7 @@ IsTrustedSequencer = true
 
 [Log]
 Environment = "development" # "production" or "development"
-Level = "warn"
+Level = "debug"
 Outputs = ["stderr"]
 
 [State]
@@ -18,7 +18,7 @@ Outputs = ["stderr"]
 		[State.Batch.Constraints]
 		MaxTxsPerBatch = 300
 		MaxBatchBytesSize = 120000
-		MaxCumulativeGasUsed = 30000000
+		MaxCumulativeGasUsed = 1125899906842624
 		MaxKeccakHashes = 2145
 		MaxPoseidonHashes = 252357
 		MaxPoseidonPaddings = 135191
@@ -26,6 +26,7 @@ Outputs = ["stderr"]
 		MaxArithmetics = 236585
 		MaxBinaries = 473170
 		MaxSteps = 7570538
+		MaxSHA256Hashes = 1596
 
 [Pool]
 FreeClaimGasLimit = 1500000
@@ -46,6 +47,9 @@ GlobalQueue = 1024
 		NetProfit = 1
 	    BreakEvenFactor = 1.1			
 		FinalDeviationPct = 10
+		EthTransferGasPrice = 0
+		EthTransferL1GasPriceFactor = 0			
+		L2GasPriceSuggesterFactor = 0.5
 	[Pool.DB]
 	User = "user"
 	Password = "pass"
@@ -59,7 +63,7 @@ GlobalQueue = 1024
 URL = "http://zkevm-mock-l1-network:8545"
 ForkIDChunkSize = 20000
 MultiGasProvider = false
-	[Etherman.Etherscan]
+	[Etherscan]
 		ApiKey = ""
 
 [RPC]
@@ -94,27 +98,25 @@ L1SynchronizationMode = "sequential"
 			ApplyAfterNumRollupReceived = 10
 
 [Sequencer]
-WaitPeriodPoolIsEmpty = "1s"
-LastBatchVirtualizationTimeMaxWaitPeriod = "5s"
-BlocksAmountForTxsToBeDeleted = 100
-FrequencyToCheckTxsForDelete = "12h"
-TxLifetimeCheckTimeout = "10m"
-MaxTxLifetime = "3h"
+DeletePoolTxsL1BlockConfirmations = 100
+DeletePoolTxsCheckInterval = "12h"
+TxLifetimeCheckInterval = "10m"
+TxLifetimeMax = "3h"
+LoadPoolTxsCheckInterval = "500ms"
+StateConsistencyCheckInterval = "5s"
 	[Sequencer.Finalizer]
-		GERDeadlineTimeout = "2s"
-		ForcedBatchDeadlineTimeout = "5s"
-		SleepDuration = "100ms"
-		ResourcePercentageToCloseBatch = 10
-		GERFinalityNumberOfBlocks = 0
-		ClosingSignalsManagerWaitForCheckingL1Timeout = "1s"
-		ClosingSignalsManagerWaitForCheckingGER = "1s"
-		ClosingSignalsManagerWaitForCheckingForcedBatches = "1s"
-		ForcedBatchesFinalityNumberOfBlocks = 0
-		TimestampResolution = "10s"
-		StopSequencerOnBatchNum = 0
-	[Sequencer.DBManager]
-		PoolRetrievalInterval = "500ms"
-		L2ReorgRetrievalInterval = "5s"
+		NewTxsWaitInterval = "100ms"
+		ForcedBatchesTimeout = "5s"
+		ForcedBatchesL1BlockConfirmations = 1
+		ForcedBatchesCheckInterval = "10s"
+		L1InfoTreeL1BlockConfirmations = 1
+		L1InfoTreeCheckInterval = "10s"
+		BatchMaxDeltaTimestamp = "20s"
+		L2BlockMaxDeltaTimestamp = "4s"
+		ResourceExhaustedMarginPct = 10
+		HaltOnBatchNumber = 0
+		SequentialBatchSanityCheck = false
+		SequentialProcessL2Block = true
 	[Sequencer.StreamServer]
 		Port = 6900
 		Filename = "/datastreamer/datastream.bin"
@@ -123,6 +125,7 @@ MaxTxLifetime = "3h"
 [SequenceSender]
 WaitPeriodSendSequence = "15s"
 LastBatchVirtualizationTimeMaxWaitPeriod = "10s"
+L1BlockTimestampMargin = "5s"
 MaxTxSizeForL1 = 131072
 L2Coinbase = "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266"
 PrivateKey = {Path = "/pk/keystore.sequencer", Password = "testonly"}
@@ -130,8 +133,8 @@ PrivateKey = {Path = "/pk/keystore.sequencer", Password = "testonly"}
 [Aggregator]
 Host = "0.0.0.0"
 Port = 50081
-RetryTime = "3s"
-VerifyProofInterval = "5s"
+RetryTime = "5s"
+VerifyProofInterval = "10s"
 TxProfitabilityCheckerType = "acceptall"
 TxProfitabilityMinReward = "1.1"
 ProofStatePollingInterval = "5s"
@@ -139,6 +142,7 @@ SenderAddress = "0x70997970c51812dc3a010c7d01b50e0d17dc79c8"
 CleanupLockedProofsInterval = "2m"
 GeneratingProofCleanupThreshold = "10m"
 UpgradeEtrogBatchNumber = 0
+BatchProofL1BlockConfirmations = 2
 
 [EthTxManager]
 ForcedGas = 0
@@ -148,7 +152,7 @@ PrivateKeys = [
 ]
 
 [L2GasPriceSuggester]
-Type = "follower"
+Type = "default"
 UpdatePeriod = "10s"
 Factor = 0.5
 DefaultGasPriceWei = 1000000000

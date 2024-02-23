@@ -56,7 +56,7 @@
 
     "aggregatorServerPort": 50081,
     "aggregatorClientPort": 50081,
-    "aggregatorClientHost": "zkevm-node",
+    "aggregatorClientHost": "zkevm-node-1",
 
     "mapConstPolsFile": false,
     "mapConstantsTreeFile": false,

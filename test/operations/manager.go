@@ -2,6 +2,7 @@ package operations
 
 import (
 	"context"
+	"errors"
 	"math/big"
 	"os"
 	"os/exec"
@@ -128,12 +129,9 @@ func NewManager(ctx context.Context, cfg *Config) (*Manager, error) {
 	if err != nil {
 		return nil, err
 	}
-	l2Ethman, err := etherman.NewL1Client(
-		cfg.L1NetworkURL,
+	l2Ethman, err := etherman.NewL2Client(
+		cfg.L2NetworkURL,
 		common.HexToAddress(l1BridgeAddr),
-		common.HexToAddress("0x00"), // TODO
-		common.HexToAddress("0x00"), // TODO
-		common.HexToAddress("0x00"), // TODO
 	)
 	if err != nil {
 		return nil, err
@@ -748,21 +746,36 @@ func (m *Manager) GetRollupNativeToken() common.Address {
 	return m.l2NativeToken
 }
 
-func (m *Manager) GetBalances(ctx context.Context, l1TokenAddr, l1Holder, l2Holder common.Address) (l1Balance, l2Balance *big.Int, err error) {
+func (m *Manager) GetBalances(
+	ctx context.Context,
+	originNet uint32,
+	originAddr, l1Holder, l2Holder common.Address,
+) (l1Balance, l2Balance *big.Int, err error) {
 	zeroAddrr := common.Address{}
-	if l1TokenAddr == zeroAddrr {
+	if originNet == 0 && originAddr == zeroAddrr {
 		l1Balance, err = m.CheckAccountBalance(ctx, L1, &l1Holder)
 	} else {
-		l1Balance, err = m.CheckAccountTokenBalance(ctx, L1, l1TokenAddr, &l1Holder)
+		tokenWrapped, errToken := m.l1Ethman.GetTokenWrappedAddress(0, originAddr)
+		err = errToken
+		if err == etherman.ErrTokenNotCreated {
+			l1Balance = big.NewInt(0)
+			err = nil
+			return
+		}
+		if err != nil {
+			return
+		}
+		l1Balance, err = m.CheckAccountTokenBalance(ctx, L1, tokenWrapped, &l1Holder)
+		return
 	}
 	if err != nil {
 		return
 	}
-	if l1TokenAddr == m.GetRollupNativeToken() {
+	if originAddr == m.GetRollupNativeToken() {
 		l2Balance, err = m.CheckAccountBalance(ctx, L2, &l2Holder)
 		return
 	} else {
-		tokenWrapped, errToken := m.l2Ethman.GetTokenWrappedAddress(0, l1TokenAddr)
+		tokenWrapped, errToken := m.l2Ethman.GetTokenWrappedAddress(0, originAddr)
 		err = errToken
 		if err == etherman.ErrTokenNotCreated {
 			l2Balance = big.NewInt(0)
@@ -774,5 +787,30 @@ func (m *Manager) GetBalances(ctx context.Context, l1TokenAddr, l1Holder, l2Hold
 		}
 		l2Balance, err = m.CheckAccountTokenBalance(ctx, L2, tokenWrapped, &l2Holder)
 		return
+	}
+}
+
+func (m *Manager) GetTokenAddr(network NetworkSID, originNetwork uint32, originAddr common.Address) (common.Address, error) {
+	zeroAddr := common.Address{}
+	if network == L1 {
+		if originNetwork == 0 && originAddr == zeroAddr {
+			return zeroAddr, nil
+		}
+		return m.l1Ethman.GetTokenWrappedAddress(originNetwork, originAddr)
+	} else if network == L2 {
+		rollupID := m.l2Ethman.GetRollupID()
+		nativeToken, err := m.l2Ethman.GasTokenAddress()
+		if err != nil {
+			return common.Address{}, err
+		}
+		if originNetwork == 0 && originAddr == nativeToken {
+			return zeroAddr, nil
+		}
+		if originNetwork == uint32(rollupID) {
+			return originAddr, nil
+		}
+		return m.l2Ethman.GetTokenWrappedAddress(originNetwork, originAddr)
+	} else {
+		return common.Address{}, errors.New("unexpected network")
 	}
 }
