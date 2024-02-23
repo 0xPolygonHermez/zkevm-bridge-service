@@ -159,6 +159,7 @@ func (c *Client) MintERC20(ctx context.Context, erc20Addr common.Address, amount
 func (c *Client) SendBridgeAsset(ctx context.Context, tokenAddr common.Address, amount *big.Int, destNetwork uint32,
 	destAddr *common.Address, metadata []byte, auth *bind.TransactOpts,
 ) error {
+	logger := log.LoggerFromCtx(ctx)
 	emptyAddr := common.Address{}
 	if tokenAddr == emptyAddr {
 		auth.Value = amount
@@ -168,7 +169,7 @@ func (c *Client) SendBridgeAsset(ctx context.Context, tokenAddr common.Address, 
 	}
 	tx, err := c.bridge.BridgeAsset(auth, destNetwork, *destAddr, amount, tokenAddr, true, metadata)
 	if err != nil {
-		log.Error("Error: ", err)
+		logger.Error("Error: ", err)
 		return err
 	}
 	// wait transfer to be included in a batch
@@ -180,9 +181,10 @@ func (c *Client) SendBridgeAsset(ctx context.Context, tokenAddr common.Address, 
 func (c *Client) SendBridgeMessage(ctx context.Context, destNetwork uint32, destAddr common.Address, metadata []byte,
 	auth *bind.TransactOpts,
 ) error {
+	logger := log.LoggerFromCtx(ctx)
 	tx, err := c.bridge.BridgeMessage(auth, destNetwork, destAddr, true, metadata)
 	if err != nil {
-		log.Error("Error: ", err)
+		logger.Error("Error: ", err)
 		return err
 	}
 	// wait transfer to be included in a batch
@@ -192,6 +194,7 @@ func (c *Client) SendBridgeMessage(ctx context.Context, destNetwork uint32, dest
 
 // BuildSendClaim builds a tx data to be sent to the bridge method SendClaim.
 func (c *Client) BuildSendClaim(ctx context.Context, deposit *etherman.Deposit, smtProof [mtHeight][keyLen]byte, smtRollupProof [mtHeight][keyLen]byte, globalExitRoot *etherman.GlobalExitRoot, nonce, gasPrice int64, gasLimit uint64, rollupID uint, auth *bind.TransactOpts) (*types.Transaction, error) {
+	logger := log.LoggerFromCtx(ctx)
 	opts := *auth
 	opts.NoSend = true
 	// force nonce, gas limit and gas price to avoid querying it from the chain
@@ -217,7 +220,7 @@ func (c *Client) BuildSendClaim(ctx context.Context, deposit *etherman.Deposit, 
 		if tx != nil {
 			txHash = tx.Hash().String()
 		}
-		log.Error("Error: ", err, ". Tx Hash: ", txHash)
+		logger.Error("Error: ", err, ". Tx Hash: ", txHash)
 		return nil, fmt.Errorf("failed to build SendClaim tx, err: %v", err)
 	}
 
@@ -226,6 +229,7 @@ func (c *Client) BuildSendClaim(ctx context.Context, deposit *etherman.Deposit, 
 
 // SendClaim sends a claim transaction.
 func (c *Client) SendClaim(ctx context.Context, deposit *pb.Deposit, smtProof [mtHeight][keyLen]byte, smtRollupProof [mtHeight][keyLen]byte, globalExitRoot *etherman.GlobalExitRoot, auth *bind.TransactOpts) error {
+	logger := log.LoggerFromCtx(ctx)
 	amount, _ := new(big.Int).SetString(deposit.Amount, encoding.Base10)
 	var (
 		tx  *types.Transaction
@@ -242,7 +246,7 @@ func (c *Client) SendClaim(ctx context.Context, deposit *pb.Deposit, smtProof [m
 		if tx != nil {
 			txHash = tx.Hash().String()
 		}
-		log.Error("Error: ", err, ". Tx Hash: ", txHash)
+		logger.Error("Error: ", err, ". Tx Hash: ", txHash)
 		return err
 	}
 

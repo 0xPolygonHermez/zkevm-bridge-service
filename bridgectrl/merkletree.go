@@ -187,6 +187,7 @@ func buildIntermediate(leaves [][KeyLen]byte) ([][][]byte, [][32]byte) {
 }
 
 func (mt *MerkleTree) updateLeaf(ctx context.Context, depositID uint64, leaves [][KeyLen]byte, dbTx pgx.Tx) error {
+	logger := log.LoggerFromCtx(ctx)
 	var (
 		nodes [][][][]byte
 		ns    [][][]byte
@@ -206,7 +207,7 @@ func (mt *MerkleTree) updateLeaf(ctx context.Context, depositID uint64, leaves [
 	if len(ns) != 1 {
 		return fmt.Errorf("error: more than one root detected: %+v", nodes)
 	}
-	log.Debug("Root calculated: ", common.Bytes2Hex(ns[0][0]))
+	logger.Debug("Root calculated: ", common.Bytes2Hex(ns[0][0]))
 	err := mt.store.SetRoot(ctx, ns[0][0], depositID, mt.network, dbTx)
 	if err != nil {
 		return err
@@ -260,7 +261,8 @@ func (mt *MerkleTree) getLeaves(ctx context.Context, dbTx pgx.Tx) ([][KeyLen]byt
 	return result, nil
 }
 
-func (mt *MerkleTree) buildMTRoot(leaves [][KeyLen]byte) (common.Hash, error) {
+func (mt *MerkleTree) buildMTRoot(ctx context.Context, leaves [][KeyLen]byte) (common.Hash, error) {
+	logger := log.LoggerFromCtx(ctx)
 	var (
 		nodes [][][][]byte
 		ns    [][][]byte
@@ -279,13 +281,13 @@ func (mt *MerkleTree) buildMTRoot(leaves [][KeyLen]byte) (common.Hash, error) {
 	if len(ns) != 1 {
 		return common.Hash{}, fmt.Errorf("error: more than one root detected: %+v", nodes)
 	}
-	log.Debug("Root calculated: ", common.Bytes2Hex(ns[0][0]))
+	logger.Debug("Root calculated: ", common.Bytes2Hex(ns[0][0]))
 
 	return common.BytesToHash(ns[0][0]), nil
 }
 
 func (mt MerkleTree) storeLeaves(ctx context.Context, leaves [][KeyLen]byte, blockID uint64, dbTx pgx.Tx) error {
-	root, err := mt.buildMTRoot(leaves)
+	root, err := mt.buildMTRoot(ctx, leaves)
 	if err != nil {
 		return err
 	}
@@ -311,9 +313,10 @@ func (mt MerkleTree) storeLeaves(ctx context.Context, leaves [][KeyLen]byte, blo
 // }
 
 func (mt MerkleTree) addRollupExitLeaf(ctx context.Context, rollupLeaf etherman.RollupExitLeaf, dbTx pgx.Tx) error {
+	logger := log.LoggerFromCtx(ctx)
 	storedRollupLeaves, err := mt.store.GetLatestRollupExitLeaves(ctx, dbTx)
 	if err != nil {
-		log.Error("error getting latest rollup exit leaves. Error: ", err)
+		logger.Error("error getting latest rollup exit leaves. Error: ", err)
 		return err
 	}
 	// If rollupLeaf.RollupId is lower or equal than len(storedRollupLeaves), we can add it in the proper position of the array
@@ -346,7 +349,7 @@ func (mt MerkleTree) addRollupExitLeaf(ctx context.Context, rollupLeaf etherman.
 	}
 	err = mt.storeLeaves(ctx, leaves, rollupLeaf.BlockID, dbTx)
 	if err != nil {
-		log.Error("error storing leaves. Error: ", err)
+		logger.Error("error storing leaves. Error: ", err)
 		return err
 	}
 	return nil

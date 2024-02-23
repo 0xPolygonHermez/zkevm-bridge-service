@@ -158,3 +158,5 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	rsc.io/tmplfunc v0.0.3 // indirect
 )
+
+replace github.com/0xPolygonHermez/zkevm-node => github.com/okx/x1-node v0.2.0-RC1.0.20240223065502-1389c1b4fe32

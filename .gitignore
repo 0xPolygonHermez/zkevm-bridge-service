@@ -15,6 +15,7 @@
 # vendor/
 /dist/
 .vscode
+.idea
 
 config/config.mainnet.toml
 config/config.testnet.toml
