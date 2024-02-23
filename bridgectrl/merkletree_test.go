@@ -326,7 +326,7 @@ func TestBuildMTRootAndStore(t *testing.T) {
 		}
 
 		if len(leaves) != 0 {
-			root, err := mt.buildMTRoot(leaves)
+			root, err := mt.buildMTRoot(ctx, leaves)
 			require.NoError(t, err)
 			require.Equal(t, testVector.CurrentRoot, root.String())
 		}
@@ -334,7 +334,7 @@ func TestBuildMTRootAndStore(t *testing.T) {
 		var res [KeyLen]byte
 		copy(res[:], common.Hex2Bytes(testVector.NewLeaf.CurrentHash[2:]))
 		leaves = append(leaves, res)
-		newRoot, err := mt.buildMTRoot(leaves)
+		newRoot, err := mt.buildMTRoot(ctx, leaves)
 		require.NoError(t, err)
 		require.Equal(t, testVector.NewRoot, newRoot.String())
 
@@ -452,7 +452,7 @@ func TestPerformanceComputeRoot(t *testing.T) {
 	log.Debug("End creating leaves: ", time.Now().Unix()-initTime)
 	initTime = time.Now().Unix()
 	log.Debug("Init computing root: ", initTime)
-	_, err = mt.buildMTRoot(leaves)
+	_, err = mt.buildMTRoot(ctx, leaves)
 	require.NoError(t, err)
 	log.Debug("End creating leaves: ", time.Now().Unix()-initTime)
 }
