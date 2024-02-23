@@ -18,24 +18,40 @@ func TestMultipleRollups(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-
-	ctx, opsman, err := getOpsman()
+	const (
+		rollupID1 uint32 = 1
+	)
+	var (
+		// This addressess are hardcoded on opsman. Would be nice to make it more flexible
+		// to be able to operate multiple accounts
+		l1Addr = common.HexToAddress("0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC")
+		l2Addr = common.HexToAddress("0xc949254d682d8c9ad5682521675b8f43b102aec4")
+	)
+	ctx, opsman, err := getOpsman("http://localhost:8123", common.Address{})
+	require.NoError(t, err)
+	nativeToken := common.Address{}
+	hugeAmount := big.NewInt(999999999999999999)
+	sendAmount := big.NewInt(999999999999999999)
+	l1TokenAddr, _, err := opsman.DeployERC20(ctx, "CREATED ON L1", "CL1", operations.L1)
+	require.NoError(t, err)
+	err = opsman.MintERC20(ctx, l1TokenAddr, hugeAmount, operations.L1)
 	require.NoError(t, err)
 
-	t.Run("L1 -> RollupID1 eth bridge", func(t *testing.T) {
-		var destNetwork uint32 = 1
-		amount := new(big.Int).SetUint64(4206900000000000)
-		tokenAddr := common.Address{} // This means is eth
-		destAddr := common.HexToAddress("0xc949254d682d8c9ad5682521675b8f43b102aec4")
-		l1Tol2(t, ctx, opsman, tokenAddr, destAddr, amount, destNetwork)
-	})
+	log.Info("L1 -> RollupID1 eth bridge")
+	l1Tol2(t, ctx, opsman, nativeToken, l2Addr, sendAmount, rollupID1)
 
-	t.Run("RollupID1 -> L1 eth bridge", func(t *testing.T) {
-		amount := new(big.Int).SetUint64(42069)
-		tokenAddr := common.Address{} // This means is eth
-		destAddr := common.HexToAddress("0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC")
-		l2Tol1(t, ctx, opsman, tokenAddr, destAddr, amount)
-	})
+	log.Info("RollupID1 -> L1 eth bridge")
+	sendAmount = big.NewInt(42069)
+	l2Tol1(t, ctx, opsman, nativeToken, l1Addr, sendAmount)
+
+	log.Info("L1 -> RollupID1 token bridge")
+	l1Tol2(t, ctx, opsman, l1TokenAddr, l2Addr, sendAmount, rollupID1)
+
+	// log.Debug("RollupID1 -> L1 token bridge")
+	// 	amount := new(big.Int).SetUint64(42069)
+	// 	tokenAddr := common.Address{} // This means is eth
+	// 	destAddr := common.HexToAddress("0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC")
+	// 	l2Tol1(t, ctx, opsman, tokenAddr, destAddr, amount)
 
 }
 
@@ -49,15 +65,14 @@ func l1Tol2(
 	destNetwork uint32,
 ) {
 	origAddr := common.HexToAddress("0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC")
-	initialL1Balance, err := opsman.CheckAccountBalance(ctx, operations.L1, &origAddr)
+	initialL1Balance, initialL2Balance, err := opsman.GetBalances(ctx, tokenAddr, origAddr, destAddr)
 	require.NoError(t, err)
-	initialL2Balance, err := opsman.CheckAccountBalance(ctx, operations.L2, &destAddr)
-	require.NoError(t, err)
-
 	log.Debugf(
 		"sending deosit L1 to RollupID %d. initial balance on L1: %d, initial balance on L2: %d",
 		destNetwork, initialL1Balance.Int64(), initialL2Balance.Int64(),
 	)
+	// TODO: it takes too long for L2 to update GER, try to tweak l2 node config to speed-up
+	// operations/manager.go:721	WaitExitRootToBeSynced
 	err = opsman.SendL1Deposit(ctx, tokenAddr, amount, destNetwork, &destAddr)
 	require.NoError(t, err)
 	log.Debug("deposit sent")
@@ -68,11 +83,9 @@ func l1Tol2(
 	log.Debug("waiting for claim tx to be sent on behalf of the user by bridges service...")
 	err = opsman.CheckL2Claim(ctx, deposits[0])
 	require.NoError(t, err)
+	log.Debug("deposit claimed on L2")
 
-	// Check L2 funds to see if the account balance is increased by amount
-	afterClaimL1Balance, err := opsman.CheckAccountBalance(ctx, operations.L1, &origAddr)
-	require.NoError(t, err)
-	afterClaimL2Balance, err := opsman.CheckAccountBalance(ctx, operations.L2, &destAddr)
+	afterClaimL1Balance, afterClaimL2Balance, err := opsman.GetBalances(ctx, tokenAddr, origAddr, destAddr)
 	require.NoError(t, err)
 	log.Debugf(
 		"deosit claimed on RollupID %d. final balance on L1: %d, final balance on L2: %d",
@@ -136,9 +149,11 @@ func l2Tol1(
 	require.NotEqual(t, 0, initialL2Balance.Cmp(afterClaimL2Balance))
 }
 
-func getOpsman() (context.Context, *operations.Manager, error) {
+func getOpsman(l2NetworkURL string, l2NativeToken common.Address) (context.Context, *operations.Manager, error) {
 	ctx := context.Background()
 	opsCfg := &operations.Config{
+		L1NetworkURL: "http://localhost:8545",
+		L2NetworkURL: l2NetworkURL,
 		Storage: db.Config{
 			Database: "postgres",
 			Name:     "bridge_db_1",

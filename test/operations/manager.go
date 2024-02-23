@@ -39,9 +39,6 @@ const (
 )
 
 const (
-	l1NetworkURL = "http://localhost:8545"
-	l2NetworkURL = "http://localhost:8123"
-
 	// PolTokenAddress token address
 	PolTokenAddress = "0x5FbDB2315678afecb367f032d93F642f64180aa3" //nolint:gosec
 	l1BridgeAddr    = "0xCca6ECD73932e49633B9307e1aa0fC174525F424"
@@ -68,9 +65,11 @@ var (
 
 // Config is the main Manager configuration.
 type Config struct {
-	Storage db.Config
-	BT      bridgectrl.Config
-	BS      server.Config
+	Storage      db.Config
+	BT           bridgectrl.Config
+	BS           server.Config
+	L1NetworkURL string
+	L2NetworkURL string
 }
 
 // Manager controls operations and has knowledge about how to set up and tear
@@ -83,22 +82,15 @@ type Manager struct {
 	bridgetree    *bridgectrl.BridgeController
 	bridgeService BridgeServiceInterface
 
-	clients map[NetworkSID]*utils.Client
+	clients       map[NetworkSID]*utils.Client
+	l1Ethman      *etherman.Client
+	l2Ethman      *etherman.Client
+	l2NativeToken common.Address
 }
 
 // NewManager returns a manager ready to be used and a potential error caused
 // during its creation (which can come from the setup of the db connection).
 func NewManager(ctx context.Context, cfg *Config) (*Manager, error) {
-	opsman := &Manager{
-		cfg: cfg,
-		ctx: ctx,
-	}
-	//Init storage and mt
-	// err := pgstorage.InitOrReset(dbConfig)
-	// if err != nil {
-	// 	return nil, err
-	// }
-
 	pgst, err := pgstorage.NewPostgresStorage(pgstorage.Config{
 		Name:     cfg.Storage.Name,
 		User:     cfg.Storage.User,
@@ -117,22 +109,53 @@ func NewManager(ctx context.Context, cfg *Config) (*Manager, error) {
 	if err != nil {
 		return nil, err
 	}
-	l1Client, err := utils.NewClient(ctx, l1NetworkURL, common.HexToAddress(l1BridgeAddr))
+	l1Client, err := utils.NewClient(ctx, cfg.L1NetworkURL, common.HexToAddress(l1BridgeAddr))
 	if err != nil {
 		return nil, err
 	}
-	l2Client, err := utils.NewClient(ctx, l2NetworkURL, common.HexToAddress(l2BridgeAddr))
+	l2Client, err := utils.NewClient(ctx, cfg.L2NetworkURL, common.HexToAddress(l2BridgeAddr))
 	if err != nil {
 		return nil, err
 	}
 	bService := server.NewBridgeService(cfg.BS, cfg.BT.Height, []uint{0, 1}, pgst, rollupID)
-	opsman.storage = st.(StorageInterface)
-	opsman.bridgetree = bt
-	opsman.bridgeService = bService
-	opsman.clients = make(map[NetworkSID]*utils.Client)
-	opsman.clients[L1] = l1Client
-	opsman.clients[L2] = l2Client
-	return opsman, err
+	l1Ethman, err := etherman.NewL1Client(
+		cfg.L1NetworkURL,
+		common.HexToAddress(l1BridgeAddr),
+		common.HexToAddress("0x00"), // TODO
+		common.HexToAddress("0x00"), // TODO
+		common.HexToAddress("0x00"), // TODO
+	)
+	if err != nil {
+		return nil, err
+	}
+	l2Ethman, err := etherman.NewL1Client(
+		cfg.L1NetworkURL,
+		common.HexToAddress(l1BridgeAddr),
+		common.HexToAddress("0x00"), // TODO
+		common.HexToAddress("0x00"), // TODO
+		common.HexToAddress("0x00"), // TODO
+	)
+	if err != nil {
+		return nil, err
+	}
+	l2NativeToken, err := l2Ethman.GasTokenAddress()
+	if err != nil {
+		return nil, err
+	}
+	clients := make(map[NetworkSID]*utils.Client)
+	clients[L1] = l1Client
+	clients[L2] = l2Client
+	return &Manager{
+		cfg:           cfg,
+		ctx:           ctx,
+		storage:       st.(StorageInterface),
+		bridgetree:    bt,
+		bridgeService: bService,
+		clients:       clients,
+		l1Ethman:      l1Ethman,
+		l2Ethman:      l2Ethman,
+		l2NativeToken: l2NativeToken,
+	}, nil
 }
 
 // CheckL2Claim checks if the claim is already in the L2 network.
@@ -400,7 +423,7 @@ func (m *Manager) startNetwork() error {
 		return err
 	}
 	// Wait network to be ready
-	return poll(defaultInterval, defaultDeadline, networkUpCondition)
+	return poll(defaultInterval, defaultDeadline, m.networkUpCondition)
 }
 
 func stopNetwork() error {
@@ -418,7 +441,7 @@ func (m *Manager) startZKEVMNode() error {
 		return err
 	}
 	// Wait zkevm node to be ready
-	return poll(defaultInterval, defaultDeadline, zkevmNodeUpCondition)
+	return poll(defaultInterval, defaultDeadline, m.zkevmNodeUpCondition)
 }
 
 func stopZKEVMNode() error {
@@ -719,4 +742,37 @@ func (m *Manager) WaitExitRootToBeSynced(ctx context.Context, orgExitRoot *ether
 
 func (m *Manager) GetRollupID() (uint32, error) {
 	return m.clients[L2].GetRollupID()
+}
+
+func (m *Manager) GetRollupNativeToken() common.Address {
+	return m.l2NativeToken
+}
+
+func (m *Manager) GetBalances(ctx context.Context, l1TokenAddr, l1Holder, l2Holder common.Address) (l1Balance, l2Balance *big.Int, err error) {
+	zeroAddrr := common.Address{}
+	if l1TokenAddr == zeroAddrr {
+		l1Balance, err = m.CheckAccountBalance(ctx, L1, &l1Holder)
+	} else {
+		l1Balance, err = m.CheckAccountTokenBalance(ctx, L1, l1TokenAddr, &l1Holder)
+	}
+	if err != nil {
+		return
+	}
+	if l1TokenAddr == m.GetRollupNativeToken() {
+		l2Balance, err = m.CheckAccountBalance(ctx, L2, &l2Holder)
+		return
+	} else {
+		tokenWrapped, errToken := m.l2Ethman.GetTokenWrappedAddress(0, l1TokenAddr)
+		err = errToken
+		if err == etherman.ErrTokenNotCreated {
+			l2Balance = big.NewInt(0)
+			err = nil
+			return
+		}
+		if err != nil {
+			return
+		}
+		l2Balance, err = m.CheckAccountTokenBalance(ctx, L2, tokenWrapped, &l2Holder)
+		return
+	}
 }

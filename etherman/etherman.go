@@ -124,12 +124,12 @@ type Client struct {
 	SCAddresses                []common.Address
 }
 
-// NewClient creates a new etherman.
-func NewClient(cfg Config, polygonBridgeAddr, polygonZkEVMGlobalExitRootAddress, polygonRollupManagerAddress, polygonZkEvmAddress common.Address) (*Client, error) {
+// NewL1Client creates a new etherman.
+func NewL1Client(l1URL string, polygonBridgeAddr, polygonZkEVMGlobalExitRootAddress, polygonRollupManagerAddress, polygonZkEvmAddress common.Address) (*Client, error) {
 	// Connect to ethereum node
-	ethClient, err := ethclient.Dial(cfg.L1URL)
+	ethClient, err := ethclient.Dial(l1URL)
 	if err != nil {
-		log.Errorf("error connecting to %s: %+v", cfg.L1URL, err)
+		log.Errorf("error connecting to %s: %+v", l1URL, err)
 		return nil, err
 	}
 	// Create smc clients
@@ -752,4 +752,20 @@ func (etherMan *Client) AddExistingRollupEvent(ctx context.Context, vLog types.L
 	}
 	(*blocksOrder)[(*blocks)[len(*blocks)-1].BlockHash] = append((*blocksOrder)[(*blocks)[len(*blocks)-1].BlockHash], or)
 	return nil
+}
+
+func (etherMan *Client) GasTokenAddress() (common.Address, error) {
+	return etherMan.PolygonBridge.GasTokenAddress(nil)
+}
+
+func (etherMan *Client) GetTokenWrappedAddress(originNetwork uint32, originTokenAddr common.Address) (common.Address, error) {
+	addr, err := etherMan.PolygonBridge.GetTokenWrappedAddress(nil, originNetwork, originTokenAddr)
+	if err != nil {
+		return addr, err
+	}
+	zeroAddr := common.Address{}
+	if addr == zeroAddr {
+		return addr, ErrTokenNotCreated
+	}
+	return addr, err
 }
