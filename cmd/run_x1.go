@@ -81,10 +81,6 @@ func startServer(ctx *cli.Context, opts ...runOptionFunc) error {
 		return err
 	}
 
-	if err != nil {
-		log.Infof("init sentinel error[%v]; ignored and proceed with no sentinel config", err)
-	}
-
 	err = db.RunMigrations(c.SyncDB)
 	if err != nil {
 		log.Error(err)
@@ -209,6 +205,9 @@ func startServer(ctx *cli.Context, opts ...runOptionFunc) error {
 			err = sentinel.InitApolloDataSource(c.Apollo)
 		} else {
 			err = sentinel.InitFileDataSource(c.BridgeServer.SentinelConfigFilePath)
+		}
+		if err != nil {
+			log.Infof("init sentinel error[%v]; ignored and proceed with no sentinel config", err)
 		}
 		server.RegisterNacos(c.NacosConfig)
 
