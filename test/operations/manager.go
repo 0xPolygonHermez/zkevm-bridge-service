@@ -57,7 +57,6 @@ const (
 )
 
 var (
-	dbConfig          = pgstorage.NewConfigFromEnv()
 	accHexPrivateKeys = map[NetworkSID]string{
 		L1: "0x5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a", //0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC
 		L2: "0xdfd01798f92667dbf91df722434e8fbe96af0211d4d1b82bbbbc8f1def7a814f", //0xc949254d682d8c9ad5682521675b8f43b102aec4
@@ -159,14 +158,28 @@ func NewManager(ctx context.Context, cfg *Config) (*Manager, error) {
 // CheckL2Claim checks if the claim is already in the L2 network.
 func (m *Manager) CheckL2Claim(ctx context.Context, deposit *pb.Deposit) error {
 	return operations.Poll(defaultInterval, defaultDeadline, func() (bool, error) {
-		_, err := m.storage.GetClaim(ctx, uint(deposit.DepositCnt), uint(deposit.OrigNet), uint(deposit.DestNet), nil)
+		req := pb.GetClaimsRequest{
+			DestAddr: deposit.DestAddr,
+		}
+		claims, err := m.bridgeService.GetClaims(ctx, &req)
 		if err != nil {
-			if err == gerror.ErrStorageNotFound {
-				return false, nil
-			}
 			return false, err
 		}
-		return true, nil
+		idx, succ := big.NewInt(0).SetString(deposit.GlobalIndex, 10)
+		if !succ {
+			return false, errors.New("error setting big int")
+		}
+		mainnetFlag, rollupIndex, _, err := etherman.DecodeGlobalIndex(idx)
+		if err != nil {
+			return false, err
+		}
+		for _, c := range claims.Claims {
+			// TODO: check with J if claim index (local exit root index from global index) and deposit count are equivalent
+			if c.Index == deposit.DepositCnt && c.MainnetFlag == mainnetFlag && c.RollupIndex == rollupIndex {
+				return true, nil
+			}
+		}
+		return false, nil
 	})
 }
 
@@ -561,11 +574,11 @@ func (m *Manager) GetClaimData(ctx context.Context, networkID, depositCount uint
 
 // GetBridgeInfoByDestAddr gets the bridge info
 func (m *Manager) GetBridgeInfoByDestAddr(ctx context.Context, addr *common.Address) ([]*pb.Deposit, error) {
-	auth, err := m.clients[L2].GetSigner(ctx, accHexPrivateKeys[L2])
-	if err != nil {
-		return []*pb.Deposit{}, err
-	}
 	if addr == nil {
+		auth, err := m.clients[L2].GetSigner(ctx, accHexPrivateKeys[L2])
+		if err != nil {
+			return []*pb.Deposit{}, err
+		}
 		addr = &auth.From
 	}
 	req := pb.GetBridgesRequest{
@@ -751,50 +764,71 @@ func (m *Manager) GetBalances(
 	originNet uint32,
 	originAddr, l1Holder, l2Holder common.Address,
 ) (l1Balance, l2Balance *big.Int, err error) {
-	zeroAddrr := common.Address{}
-	if originNet == 0 && originAddr == zeroAddrr {
-		l1Balance, err = m.CheckAccountBalance(ctx, L1, &l1Holder)
-	} else {
-		tokenWrapped, errToken := m.l1Ethman.GetTokenWrappedAddress(0, originAddr)
-		err = errToken
-		if err == etherman.ErrTokenNotCreated {
-			l1Balance = big.NewInt(0)
-			err = nil
-			return
-		}
-		if err != nil {
-			return
-		}
-		l1Balance, err = m.CheckAccountTokenBalance(ctx, L1, tokenWrapped, &l1Holder)
-		return
-	}
+	l1Balance, err = m.GetL1Balance(ctx, originNet, originAddr, l1Holder)
 	if err != nil {
 		return
 	}
-	if originAddr == m.GetRollupNativeToken() {
-		l2Balance, err = m.CheckAccountBalance(ctx, L2, &l2Holder)
-		return
+	l2Balance, err = m.GetL2Balance(ctx, originNet, originAddr, l2Holder)
+	return
+}
+
+func (m *Manager) GetL1Balance(
+	ctx context.Context,
+	originNet uint32,
+	originAddr, holder common.Address,
+) (*big.Int, error) {
+	zeroAddrr := common.Address{}
+	if originNet == 0 {
+		if originAddr == zeroAddrr {
+			return m.CheckAccountBalance(ctx, L1, &holder)
+		} else {
+			return m.CheckAccountTokenBalance(ctx, L1, originAddr, &holder)
+		}
 	} else {
-		tokenWrapped, errToken := m.l2Ethman.GetTokenWrappedAddress(0, originAddr)
-		err = errToken
+		tokenWrapped, err := m.l1Ethman.GetTokenWrappedAddress(originNet, originAddr)
 		if err == etherman.ErrTokenNotCreated {
-			l2Balance = big.NewInt(0)
-			err = nil
-			return
+			return big.NewInt(0), nil
+		} else if err != nil {
+			return nil, err
 		}
-		if err != nil {
-			return
+		return m.CheckAccountTokenBalance(ctx, L1, tokenWrapped, &holder)
+	}
+}
+
+func (m *Manager) GetL2Balance(
+	ctx context.Context,
+	originNet uint32,
+	originAddr, holder common.Address,
+) (*big.Int, error) {
+	if originNet == 0 && originAddr == m.l2NativeToken {
+		// Token was created on L1, and it's also the native token on L2
+		// Ether is a special case where the addr is 0x00...0, but in this case it's also 0x00...0 on L2
+		return m.CheckAccountBalance(ctx, L2, &holder)
+	} else {
+		var rollupAddr common.Address
+		rollupID := m.l2Ethman.GetRollupID()
+		if originNet == uint32(rollupID) {
+			rollupAddr = originAddr
+		} else {
+			// If the token is not created on L1 or in this rollup, it's needed to calculate
+			// the addr of the token on the rollup
+			tokenWrapped, err := m.l2Ethman.GetTokenWrappedAddress(0, originAddr)
+			if err == etherman.ErrTokenNotCreated {
+				return big.NewInt(0), nil
+			} else if err != nil {
+				return nil, err
+			}
+			rollupAddr = tokenWrapped
 		}
-		l2Balance, err = m.CheckAccountTokenBalance(ctx, L2, tokenWrapped, &l2Holder)
-		return
+		return m.CheckAccountTokenBalance(ctx, L2, rollupAddr, &holder)
 	}
 }
 
 func (m *Manager) GetTokenAddr(network NetworkSID, originNetwork uint32, originAddr common.Address) (common.Address, error) {
 	zeroAddr := common.Address{}
 	if network == L1 {
-		if originNetwork == 0 && originAddr == zeroAddr {
-			return zeroAddr, nil
+		if originNetwork == 0 {
+			return originAddr, nil
 		}
 		return m.l1Ethman.GetTokenWrappedAddress(originNetwork, originAddr)
 	} else if network == L2 {

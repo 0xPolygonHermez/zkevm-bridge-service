@@ -478,7 +478,7 @@ func (etherMan *Client) newClaimEvent(ctx context.Context, vLog types.Log, block
 	if err != nil {
 		return err
 	}
-	mainnetFlag, rollupIndex, localExitRootIndex, err := decodeGlobalIndex(c.GlobalIndex)
+	mainnetFlag, rollupIndex, localExitRootIndex, err := DecodeGlobalIndex(c.GlobalIndex)
 	if err != nil {
 		return err
 	}
@@ -655,7 +655,7 @@ func (etherMan *Client) GetRollupID() uint {
 	return uint(etherMan.rollupID)
 }
 
-func decodeGlobalIndex(globalIndex *big.Int) (bool, uint64, uint64, error) {
+func DecodeGlobalIndex(globalIndex *big.Int) (bool, uint64, uint64, error) {
 	const lengthGlobalIndexInBytes = 32
 	var buf [32]byte
 	gIBytes := globalIndex.FillBytes(buf[:])

@@ -140,7 +140,7 @@ func TestDecodeGlobalIndex(t *testing.T) {
 	for _, n := range gi {
 		t.Logf("%08b ", n)
 	}
-	mainnetFlag, rollupIndex, localExitRootIndex, err := decodeGlobalIndex(globalIndex)
+	mainnetFlag, rollupIndex, localExitRootIndex, err := DecodeGlobalIndex(globalIndex)
 	require.NoError(t, err)
 	assert.Equal(t, false, mainnetFlag)
 	assert.Equal(t, uint64(1), rollupIndex)
@@ -152,7 +152,7 @@ func TestDecodeGlobalIndex(t *testing.T) {
 	for _, n := range gi {
 		t.Logf("%08b ", n)
 	}
-	mainnetFlag, rollupIndex, localExitRootIndex, err = decodeGlobalIndex(globalIndex)
+	mainnetFlag, rollupIndex, localExitRootIndex, err = DecodeGlobalIndex(globalIndex)
 	require.NoError(t, err)
 	assert.Equal(t, false, mainnetFlag)
 	assert.Equal(t, uint64(2), rollupIndex)
@@ -164,7 +164,7 @@ func TestDecodeGlobalIndex(t *testing.T) {
 	for _, n := range gi {
 		t.Logf("%08b ", n)
 	}
-	mainnetFlag, rollupIndex, localExitRootIndex, err = decodeGlobalIndex(globalIndex)
+	mainnetFlag, rollupIndex, localExitRootIndex, err = DecodeGlobalIndex(globalIndex)
 	require.NoError(t, err)
 	assert.Equal(t, true, mainnetFlag)
 	assert.Equal(t, uint64(0), rollupIndex)
@@ -176,7 +176,7 @@ func TestDecodeGlobalIndex(t *testing.T) {
 	for _, n := range gi {
 		t.Logf("%08b ", n)
 	}
-	mainnetFlag, rollupIndex, localExitRootIndex, err = decodeGlobalIndex(globalIndex)
+	mainnetFlag, rollupIndex, localExitRootIndex, err = DecodeGlobalIndex(globalIndex)
 	require.NoError(t, err)
 	assert.Equal(t, true, mainnetFlag)
 	assert.Equal(t, uint64(0), rollupIndex)

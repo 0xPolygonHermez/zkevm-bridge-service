@@ -1,3 +1,6 @@
+//go:build multirollup
+// +build multirollup
+
 package e2e
 
 import (
@@ -20,48 +23,70 @@ func TestMultipleRollups(t *testing.T) {
 	}
 	const (
 		mainnetID uint32 = 0
-		rollupID1 uint32 = 1
+		rollup1ID uint32 = 1
 	)
 	ctx, opsman, err := getOpsman("http://localhost:8123", common.Address{})
 	require.NoError(t, err)
-	l1TokenAddr, _, err := opsman.DeployERC20(ctx, "CREATED ON L1", "CL1", operations.L1)
-	require.NoError(t, err)
-	err = opsman.MintERC20(ctx, l1TokenAddr, big.NewInt(999999999999999999), operations.L1)
-	require.NoError(t, err)
 
-	log.Info("L1 -> RollupID1 eth bridge")
+	log.Info("L1 -- eth --> R1")
 	bridge(t, ctx, opsman, bridgeData{
 		originNet:       mainnetID,
-		destNet:         rollupID1,
+		destNet:         rollup1ID,
 		originTokenNet:  mainnetID,
 		originTokenAddr: common.Address{},
 		amount:          big.NewInt(999999999999999999),
 	})
 
-	log.Info("RollupID1 -> L1 eth bridge")
+	log.Info("R1 -- eth --> L1")
 	bridge(t, ctx, opsman, bridgeData{
-		originNet:       1,
-		destNet:         0,
+		originNet:       rollup1ID,
+		destNet:         mainnetID,
 		originTokenNet:  mainnetID,
 		originTokenAddr: common.Address{},
 		amount:          big.NewInt(42069),
 	})
 
-	log.Info("L1 -> RollupID1 token from L1 bridge")
+	l1TokenAddr, _, err := opsman.DeployERC20(ctx, "CREATED ON L1", "CL1", operations.L1)
+	require.NoError(t, err)
+	err = opsman.MintERC20(ctx, l1TokenAddr, big.NewInt(999999999999999999), operations.L1)
+	require.NoError(t, err)
+	log.Info("L1 -- token from L1 --> R1")
 	bridge(t, ctx, opsman, bridgeData{
 		originNet:       mainnetID,
-		destNet:         rollupID1,
+		destNet:         rollup1ID,
 		originTokenNet:  mainnetID,
 		originTokenAddr: l1TokenAddr,
 		amount:          big.NewInt(42069),
 	})
 
-	log.Info("RollupID1 -> L1 token from L1 bridge")
+	log.Info("R1 -- token from L1 --> L1")
 	bridge(t, ctx, opsman, bridgeData{
-		originNet:       1,
-		destNet:         0,
+		originNet:       rollup1ID,
+		destNet:         mainnetID,
 		originTokenNet:  mainnetID,
 		originTokenAddr: l1TokenAddr,
+		amount:          big.NewInt(42069),
+	})
+
+	rollup1TokenAddr, _, err := opsman.DeployERC20(ctx, "CREATED ON Rollup 1", "CR1", operations.L2)
+	require.NoError(t, err)
+	err = opsman.MintERC20(ctx, rollup1TokenAddr, big.NewInt(999999999999999999), operations.L2)
+	require.NoError(t, err)
+	log.Info("R1 -- token from R1 --> L1")
+	bridge(t, ctx, opsman, bridgeData{
+		originNet:       rollup1ID,
+		destNet:         mainnetID,
+		originTokenNet:  rollup1ID,
+		originTokenAddr: rollup1TokenAddr,
+		amount:          big.NewInt(42069),
+	})
+
+	log.Info("L1 -- token from R1 --> R1")
+	bridge(t, ctx, opsman, bridgeData{
+		originNet:       mainnetID,
+		destNet:         rollup1ID,
+		originTokenNet:  rollup1ID,
+		originTokenAddr: rollup1TokenAddr,
 		amount:          big.NewInt(42069),
 	})
 }
@@ -83,21 +108,22 @@ func bridge(
 	// Sanity check that opsman support involved networks
 	rID, err := opsman.GetRollupID()
 	require.NoError(t, err)
-	require.False(t, bd.originNet != 0 && bd.originNet != rID, "opsman deosnt support all the networks involved")
-	require.False(t, bd.destNet != 0 && bd.destNet != rID, "opsman deosnt support all the networks involved")
+	require.False(
+		t, bd.originNet != 0 && bd.originNet != rID,
+		"opsman deosnt support all the networks involved",
+	)
+	require.False(
+		t, bd.destNet != 0 && bd.destNet != rID,
+		"opsman deosnt support all the networks involved",
+	)
 
 	var (
 		// This addressess are hardcoded on opsman. Would be nice to make it more flexible
 		// to be able to operate multiple accounts
-		originAddr, destAddr common.Address
-		l1Addr               = common.HexToAddress("0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC")
-		l2Addr               = common.HexToAddress("0xc949254d682d8c9ad5682521675b8f43b102aec4")
+		destAddr common.Address
+		l1Addr   = common.HexToAddress("0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC")
+		l2Addr   = common.HexToAddress("0xc949254d682d8c9ad5682521675b8f43b102aec4")
 	)
-	if bd.originNet == 0 {
-		originAddr = l1Addr
-	} else {
-		originAddr = l2Addr
-	}
 	if bd.destNet == 0 {
 		destAddr = l1Addr
 	} else {
@@ -107,13 +133,13 @@ func bridge(
 		ctx,
 		bd.originTokenNet,
 		bd.originTokenAddr,
-		originAddr,
-		destAddr,
+		l1Addr,
+		l2Addr,
 	)
 	require.NoError(t, err)
 	log.Debugf(
 		"initial balance on L1: %d, initial balance on L2: %d",
-		bd.destNet, initialL1Balance.Int64(), initialL2Balance.Int64(),
+		initialL1Balance.Int64(), initialL2Balance.Int64(),
 	)
 	if bd.originNet == 0 {
 		tokenAddr, err := opsman.GetTokenAddr(operations.L1, bd.originTokenNet, bd.originTokenAddr)
@@ -142,7 +168,7 @@ func bridge(
 	deposit := deposits[0]
 
 	if bd.originNet == 0 {
-		log.Debug("waiting for claim tx to be sent on behalf of the user by bridges service...")
+		log.Debug("waiting for claim tx to be sent on behalf of the user by bridge service...")
 		err = opsman.CheckL2Claim(ctx, deposit)
 		require.NoError(t, err)
 		log.Debug("deposit claimed on L2")
@@ -164,8 +190,8 @@ func bridge(
 		ctx,
 		bd.originTokenNet,
 		bd.originTokenAddr,
-		originAddr,
-		destAddr,
+		l1Addr,
+		l2Addr,
 	)
 	require.NoError(t, err)
 	log.Debugf(
