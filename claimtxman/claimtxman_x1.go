@@ -326,7 +326,7 @@ func (tm *ClaimTxManager) processDepositStatusX1(ger *etherman.GlobalExitRoot, d
 				return err
 			}
 			log.Debugf("claimTx for deposit %d build successfully %d", deposit.DepositCount)
-			if err = tm.addClaimTx(deposit.DepositCount, tm.auth.From, tx.To(), nil, tx.Data(), dbTx); err != nil {
+			if err = tm.addClaimTxX1(deposit.DepositCount, tm.auth.From, tx.To(), nil, tx.Data(), dbTx); err != nil {
 				log.Errorf("error adding claim tx for deposit %d. Error: %v", deposit.DepositCount, err)
 				return err
 			}
