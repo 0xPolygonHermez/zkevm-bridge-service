@@ -8,11 +8,12 @@ on:
       - update-external-dependencies
   pull_request:
 jobs:
-  test-e2e:
+  test-edge:
     strategy:
       matrix:
         go-version: [ 1.21.x ]
         goarch: [ "amd64" ]
+        test: ["e2e", "edge", "multirollup"]
     runs-on: ubuntu-latest
     steps:
     - name: Checkout code
@@ -24,4 +25,4 @@ jobs:
       env:
         GOARCH: ${{ matrix.goarch }}
     - name: Test
-      run: make test-full
+      run: make test-${{ matrix.go-version }}

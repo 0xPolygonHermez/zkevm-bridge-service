@@ -42,8 +42,8 @@ const (
 const (
 	// PolTokenAddress token address
 	PolTokenAddress = "0x5FbDB2315678afecb367f032d93F642f64180aa3" //nolint:gosec
-	l1BridgeAddr    = "0xCca6ECD73932e49633B9307e1aa0fC174525F424"
-	l2BridgeAddr    = "0xCca6ECD73932e49633B9307e1aa0fC174525F424"
+	L1BridgeAddr    = "0xB7098a13a48EcE087d3DA15b2D28eCE0f89819B8"
+	L2BridgeAddr    = "0xB7098a13a48EcE087d3DA15b2D28eCE0f89819B8"
 
 	l1AccHexAddress = "0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC"
 
@@ -53,7 +53,6 @@ const (
 	cmdDir  = "../.."
 
 	mtHeight = 32
-	rollupID = 1
 )
 
 var (
@@ -82,10 +81,12 @@ type Manager struct {
 	bridgetree    *bridgectrl.BridgeController
 	bridgeService BridgeServiceInterface
 
-	clients       map[NetworkSID]*utils.Client
+	Clients       map[NetworkSID]*utils.Client
 	l1Ethman      *etherman.Client
 	l2Ethman      *etherman.Client
 	l2NativeToken common.Address
+	wETH          common.Address
+	rollupID      uint32
 }
 
 // NewManager returns a manager ready to be used and a potential error caused
@@ -105,37 +106,42 @@ func NewManager(ctx context.Context, cfg *Config) (*Manager, error) {
 	if err != nil {
 		return nil, err
 	}
-	bt, err := bridgectrl.NewBridgeController(ctx, cfg.BT, []uint{0, 1}, pgst)
+	l1Client, err := utils.NewClient(ctx, cfg.L1NetworkURL, common.HexToAddress(L1BridgeAddr))
 	if err != nil {
 		return nil, err
 	}
-	l1Client, err := utils.NewClient(ctx, cfg.L1NetworkURL, common.HexToAddress(l1BridgeAddr))
-	if err != nil {
-		return nil, err
-	}
-	l2Client, err := utils.NewClient(ctx, cfg.L2NetworkURL, common.HexToAddress(l2BridgeAddr))
-	if err != nil {
-		return nil, err
-	}
-	bService := server.NewBridgeService(cfg.BS, cfg.BT.Height, []uint{0, 1}, pgst, rollupID)
-	l1Ethman, err := etherman.NewL1Client(
-		cfg.L1NetworkURL,
-		common.HexToAddress(l1BridgeAddr),
-		common.HexToAddress("0x00"), // TODO
-		common.HexToAddress("0x00"), // TODO
-		common.HexToAddress("0x00"), // TODO
-	)
+	l2Client, err := utils.NewClient(ctx, cfg.L2NetworkURL, common.HexToAddress(L2BridgeAddr))
 	if err != nil {
 		return nil, err
 	}
 	l2Ethman, err := etherman.NewL2Client(
 		cfg.L2NetworkURL,
-		common.HexToAddress(l1BridgeAddr),
+		common.HexToAddress(L1BridgeAddr),
+	)
+	if err != nil {
+		return nil, err
+	}
+	rollupID := l2Ethman.GetRollupID()
+	bt, err := bridgectrl.NewBridgeController(ctx, cfg.BT, []uint{0, rollupID}, pgst)
+	if err != nil {
+		return nil, err
+	}
+	bService := server.NewBridgeService(cfg.BS, cfg.BT.Height, []uint{0, rollupID}, pgst, rollupID)
+	l1Ethman, err := etherman.NewL1Client(
+		cfg.L1NetworkURL,
+		common.HexToAddress(L1BridgeAddr),
+		common.HexToAddress("0x00"), // TODO
+		common.HexToAddress("0x00"), // TODO
+		common.HexToAddress("0x00"), // TODO
 	)
 	if err != nil {
 		return nil, err
 	}
 	l2NativeToken, err := l2Ethman.GasTokenAddress()
+	if err != nil {
+		return nil, err
+	}
+	wETH, err := l2Ethman.WETHToken()
 	if err != nil {
 		return nil, err
 	}
@@ -148,10 +154,12 @@ func NewManager(ctx context.Context, cfg *Config) (*Manager, error) {
 		storage:       st.(StorageInterface),
 		bridgetree:    bt,
 		bridgeService: bService,
-		clients:       clients,
+		Clients:       clients,
 		l1Ethman:      l1Ethman,
 		l2Ethman:      l2Ethman,
 		l2NativeToken: l2NativeToken,
+		rollupID:      uint32(rollupID),
+		wETH:          wETH,
 	}, nil
 }
 
@@ -187,7 +195,7 @@ func (m *Manager) CheckL2Claim(ctx context.Context, deposit *pb.Deposit) error {
 func (m *Manager) SendL1Deposit(ctx context.Context, tokenAddr common.Address, amount *big.Int,
 	destNetwork uint32, destAddr *common.Address,
 ) error {
-	client := m.clients[L1]
+	client := m.Clients[L1]
 	auth, err := client.GetSigner(ctx, accHexPrivateKeys[L1])
 	if err != nil {
 		return err
@@ -211,7 +219,7 @@ func (m *Manager) SendL1Deposit(ctx context.Context, tokenAddr common.Address, a
 func (m *Manager) SendL2Deposit(ctx context.Context, tokenAddr common.Address, amount *big.Int,
 	destNetwork uint32, destAddr *common.Address,
 ) error {
-	client := m.clients[L2]
+	client := m.Clients[L2]
 	auth, err := client.GetSigner(ctx, accHexPrivateKeys[L2])
 	if err != nil {
 		return err
@@ -233,7 +241,7 @@ func (m *Manager) SendL2Deposit(ctx context.Context, tokenAddr common.Address, a
 
 // SendL1BridgeMessage bridges a message from l1 to l2.
 func (m *Manager) SendL1BridgeMessage(ctx context.Context, destAddr common.Address, destNetwork uint32, amount *big.Int, metadata []byte, privKey *string) error {
-	client := m.clients[L1]
+	client := m.Clients[L1]
 	auth, err := client.GetSigner(ctx, accHexPrivateKeys[L1])
 	if err != nil {
 		return err
@@ -262,7 +270,7 @@ func (m *Manager) SendL1BridgeMessage(ctx context.Context, destAddr common.Addre
 
 // SendL2BridgeMessage bridges a message from l2 to l1.
 func (m *Manager) SendL2BridgeMessage(ctx context.Context, destAddr common.Address, destNetwork uint32, amount *big.Int, metadata []byte) error {
-	client := m.clients[L2]
+	client := m.Clients[L2]
 	auth, err := client.GetSigner(ctx, accHexPrivateKeys[L2])
 	if err != nil {
 		return err
@@ -336,7 +344,7 @@ func (m *Manager) Setup() error {
 func (m *Manager) AddFunds(ctx context.Context) error {
 	// Eth client
 	log.Infof("Connecting to l1")
-	client := m.clients[L1]
+	client := m.Clients[L1]
 	auth, err := client.GetSigner(ctx, accHexPrivateKeys[L1])
 	if err != nil {
 		return err
@@ -507,7 +515,7 @@ func StopBridge() error {
 
 // CheckAccountBalance checks the balance by address
 func (m *Manager) CheckAccountBalance(ctx context.Context, network NetworkSID, account *common.Address) (*big.Int, error) {
-	client := m.clients[network]
+	client := m.Clients[network]
 	auth, err := client.GetSigner(ctx, accHexPrivateKeys[network])
 	if err != nil {
 		return nil, err
@@ -525,7 +533,7 @@ func (m *Manager) CheckAccountBalance(ctx context.Context, network NetworkSID, a
 
 // CheckAccountTokenBalance checks the balance by address
 func (m *Manager) CheckAccountTokenBalance(ctx context.Context, network NetworkSID, tokenAddr common.Address, account *common.Address) (*big.Int, error) {
-	client := m.clients[network]
+	client := m.Clients[network]
 	auth, err := client.GetSigner(ctx, accHexPrivateKeys[network])
 	if err != nil {
 		return big.NewInt(0), nil
@@ -575,7 +583,7 @@ func (m *Manager) GetClaimData(ctx context.Context, networkID, depositCount uint
 // GetBridgeInfoByDestAddr gets the bridge info
 func (m *Manager) GetBridgeInfoByDestAddr(ctx context.Context, addr *common.Address) ([]*pb.Deposit, error) {
 	if addr == nil {
-		auth, err := m.clients[L2].GetSigner(ctx, accHexPrivateKeys[L2])
+		auth, err := m.Clients[L2].GetSigner(ctx, accHexPrivateKeys[L2])
 		if err != nil {
 			return []*pb.Deposit{}, err
 		}
@@ -593,7 +601,7 @@ func (m *Manager) GetBridgeInfoByDestAddr(ctx context.Context, addr *common.Addr
 
 // SendL1Claim send an L1 claim
 func (m *Manager) SendL1Claim(ctx context.Context, deposit *pb.Deposit, smtProof, smtRollupProof [mtHeight][32]byte, globalExitRoot *etherman.GlobalExitRoot) error {
-	client := m.clients[L1]
+	client := m.Clients[L1]
 	auth, err := client.GetSigner(ctx, accHexPrivateKeys[L1])
 	if err != nil {
 		return err
@@ -604,7 +612,7 @@ func (m *Manager) SendL1Claim(ctx context.Context, deposit *pb.Deposit, smtProof
 
 // SendL2Claim send an L2 claim
 func (m *Manager) SendL2Claim(ctx context.Context, deposit *pb.Deposit, smtProof, smtRollupProof [mtHeight][32]byte, globalExitRoot *etherman.GlobalExitRoot) error {
-	client := m.clients[L2]
+	client := m.Clients[L2]
 	auth, err := client.GetSigner(ctx, accHexPrivateKeys[L2])
 	if err != nil {
 		return err
@@ -626,8 +634,8 @@ func (m *Manager) GetLatestGlobalExitRootFromL1(ctx context.Context) (*etherman.
 
 // GetCurrentGlobalExitRootFromSmc reads the globalexitroot from the smc
 func (m *Manager) GetCurrentGlobalExitRootFromSmc(ctx context.Context) (*etherman.GlobalExitRoot, error) {
-	client := m.clients[L1]
-	br, err := polygonzkevmbridge.NewPolygonzkevmbridge(common.HexToAddress(l1BridgeAddr), client)
+	client := m.Clients[L1]
+	br, err := polygonzkevmbridge.NewPolygonzkevmbridge(common.HexToAddress(L1BridgeAddr), client)
 	if err != nil {
 		return nil, err
 	}
@@ -655,7 +663,7 @@ func (m *Manager) GetCurrentGlobalExitRootFromSmc(ctx context.Context) (*etherma
 
 // DeployERC20 deploys erc20 smc
 func (m *Manager) DeployERC20(ctx context.Context, name, symbol string, network NetworkSID) (common.Address, *ERC20.ERC20, error) {
-	client := m.clients[network]
+	client := m.Clients[network]
 	auth, err := client.GetSigner(ctx, accHexPrivateKeys[network])
 	if err != nil {
 		return common.Address{}, nil, err
@@ -666,7 +674,7 @@ func (m *Manager) DeployERC20(ctx context.Context, name, symbol string, network 
 
 // DeployBridgeMessageReceiver deploys the brdige message receiver smc.
 func (m *Manager) DeployBridgeMessageReceiver(ctx context.Context, network NetworkSID) (common.Address, error) {
-	client := m.clients[network]
+	client := m.Clients[network]
 	auth, err := client.GetSigner(ctx, accHexPrivateKeys[network])
 	if err != nil {
 		return common.Address{}, err
@@ -677,15 +685,15 @@ func (m *Manager) DeployBridgeMessageReceiver(ctx context.Context, network Netwo
 
 // MintERC20 mint erc20 tokens
 func (m *Manager) MintERC20(ctx context.Context, erc20Addr common.Address, amount *big.Int, network NetworkSID) error {
-	client := m.clients[network]
+	client := m.Clients[network]
 	auth, err := client.GetSigner(ctx, accHexPrivateKeys[network])
 	if err != nil {
 		return err
 	}
 
-	var bridgeAddress = l1BridgeAddr
+	var bridgeAddress = L1BridgeAddr
 	if network == L2 {
-		bridgeAddress = l2BridgeAddr
+		bridgeAddress = L2BridgeAddr
 	}
 
 	err = client.ApproveERC20(ctx, erc20Addr, common.HexToAddress(bridgeAddress), amount, auth)
@@ -696,9 +704,30 @@ func (m *Manager) MintERC20(ctx context.Context, erc20Addr common.Address, amoun
 	return client.MintERC20(ctx, erc20Addr, amount, auth)
 }
 
+// MintPOL mint POL tokens
+func (m *Manager) MintPOL(ctx context.Context, erc20Addr common.Address, amount *big.Int, network NetworkSID) error {
+	client := m.Clients[network]
+	auth, err := client.GetSigner(ctx, accHexPrivateKeys[network])
+	if err != nil {
+		return err
+	}
+
+	var bridgeAddress = L1BridgeAddr
+	if network == L2 {
+		bridgeAddress = L2BridgeAddr
+	}
+
+	err = client.ApproveERC20(ctx, erc20Addr, common.HexToAddress(bridgeAddress), amount, auth)
+	if err != nil {
+		return err
+	}
+
+	return client.MintPOL(ctx, erc20Addr, amount, auth)
+}
+
 // ApproveERC20 approves erc20 tokens
 func (m *Manager) ApproveERC20(ctx context.Context, erc20Addr, bridgeAddr common.Address, amount *big.Int, network NetworkSID) error {
-	client := m.clients[network]
+	client := m.Clients[network]
 	auth, err := client.GetSigner(ctx, accHexPrivateKeys[network])
 	if err != nil {
 		return err
@@ -752,7 +781,7 @@ func (m *Manager) WaitExitRootToBeSynced(ctx context.Context, orgExitRoot *ether
 }
 
 func (m *Manager) GetRollupID() (uint32, error) {
-	return m.clients[L2].GetRollupID()
+	return m.Clients[L2].GetRollupID()
 }
 
 func (m *Manager) GetRollupNativeToken() common.Address {
@@ -800,28 +829,33 @@ func (m *Manager) GetL2Balance(
 	originNet uint32,
 	originAddr, holder common.Address,
 ) (*big.Int, error) {
-	if originNet == 0 && originAddr == m.l2NativeToken {
-		// Token was created on L1, and it's also the native token on L2
-		// Ether is a special case where the addr is 0x00...0, but in this case it's also 0x00...0 on L2
-		return m.CheckAccountBalance(ctx, L2, &holder)
-	} else {
-		var rollupAddr common.Address
-		rollupID := m.l2Ethman.GetRollupID()
-		if originNet == uint32(rollupID) {
-			rollupAddr = originAddr
-		} else {
-			// If the token is not created on L1 or in this rollup, it's needed to calculate
-			// the addr of the token on the rollup
-			tokenWrapped, err := m.l2Ethman.GetTokenWrappedAddress(0, originAddr)
-			if err == etherman.ErrTokenNotCreated {
-				return big.NewInt(0), nil
-			} else if err != nil {
-				return nil, err
-			}
-			rollupAddr = tokenWrapped
+	zeroAddr := common.Address{}
+	if originNet == 0 {
+		if originAddr == m.l2NativeToken {
+			// Token was created on L1, and it's also the native token on L2
+			// Ether is a special case where the addr is 0x00...0, but in this case it's also 0x00...0 on L2
+			return m.CheckAccountBalance(ctx, L2, &holder)
+		} else if originAddr == zeroAddr {
+			// ETH is not the native token on L2, special wETH case
+			return m.CheckAccountTokenBalance(ctx, L2, m.wETH, &holder)
 		}
-		return m.CheckAccountTokenBalance(ctx, L2, rollupAddr, &holder)
 	}
+	var rollupAddr common.Address
+	rollupID := m.l2Ethman.GetRollupID()
+	if originNet == uint32(rollupID) {
+		rollupAddr = originAddr
+	} else {
+		// If the token is not created on L1 or in this rollup, it's needed to calculate
+		// the addr of the token on the rollup
+		tokenWrapped, err := m.l2Ethman.GetTokenWrappedAddress(originNet, originAddr)
+		if err == etherman.ErrTokenNotCreated {
+			return big.NewInt(0), nil
+		} else if err != nil {
+			return nil, err
+		}
+		rollupAddr = tokenWrapped
+	}
+	return m.CheckAccountTokenBalance(ctx, L2, rollupAddr, &holder)
 }
 
 func (m *Manager) GetTokenAddr(network NetworkSID, originNetwork uint32, originAddr common.Address) (common.Address, error) {
@@ -833,12 +867,12 @@ func (m *Manager) GetTokenAddr(network NetworkSID, originNetwork uint32, originA
 		return m.l1Ethman.GetTokenWrappedAddress(originNetwork, originAddr)
 	} else if network == L2 {
 		rollupID := m.l2Ethman.GetRollupID()
-		nativeToken, err := m.l2Ethman.GasTokenAddress()
-		if err != nil {
-			return common.Address{}, err
-		}
-		if originNetwork == 0 && originAddr == nativeToken {
-			return zeroAddr, nil
+		if originNetwork == 0 {
+			if originAddr == m.l2NativeToken {
+				return zeroAddr, nil
+			} else if originAddr == zeroAddr && m.l2NativeToken != zeroAddr {
+				return m.wETH, nil
+			}
 		}
 		if originNetwork == uint32(rollupID) {
 			return originAddr, nil
@@ -847,4 +881,15 @@ func (m *Manager) GetTokenAddr(network NetworkSID, originNetwork uint32, originA
 	} else {
 		return common.Address{}, errors.New("unexpected network")
 	}
+}
+
+// ERC20Transfer send tokens
+func (m *Manager) ERC20Transfer(ctx context.Context, erc20Addr, to common.Address, amount *big.Int, network NetworkSID) error {
+	client := m.Clients[network]
+	auth, err := client.GetSigner(ctx, accHexPrivateKeys[network])
+	if err != nil {
+		return err
+	}
+
+	return client.ERC20Transfer(ctx, erc20Addr, to, amount, auth)
 }

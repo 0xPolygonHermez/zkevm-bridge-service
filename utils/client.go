@@ -13,6 +13,7 @@ import (
 	"github.com/0xPolygonHermez/zkevm-bridge-service/bridgectrl/pb"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/test/mocksmartcontracts/BridgeMessageReceiver"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/test/mocksmartcontracts/erc20permitmock"
 	zkevmtypes "github.com/0xPolygonHermez/zkevm-node/config/types"
 	"github.com/0xPolygonHermez/zkevm-node/encoding"
 	"github.com/0xPolygonHermez/zkevm-node/etherman/smartcontracts/polygonzkevmbridge"
@@ -148,6 +149,34 @@ func (c *Client) MintERC20(ctx context.Context, erc20Addr common.Address, amount
 		return err
 	}
 	tx, err := erc20sc.Mint(auth, amount)
+	if err != nil {
+		return err
+	}
+	const txMinedTimeoutLimit = 60 * time.Second
+	return WaitTxToBeMined(ctx, c.Client, tx, txMinedTimeoutLimit)
+}
+
+// ERC20Transfer send tokens.
+func (c *Client) ERC20Transfer(ctx context.Context, erc20Addr, to common.Address, amount *big.Int, auth *bind.TransactOpts) error {
+	erc20sc, err := ERC20.NewERC20(erc20Addr, c.Client)
+	if err != nil {
+		return err
+	}
+	tx, err := erc20sc.Transfer(auth, to, amount)
+	if err != nil {
+		return err
+	}
+	const txMinedTimeoutLimit = 60 * time.Second
+	return WaitTxToBeMined(ctx, c.Client, tx, txMinedTimeoutLimit)
+}
+
+// MintPOL mint POL tokens.
+func (c *Client) MintPOL(ctx context.Context, polAddr common.Address, amount *big.Int, auth *bind.TransactOpts) error {
+	pol, err := erc20permitmock.NewErc20permitmock(polAddr, c.Client)
+	if err != nil {
+		return err
+	}
+	tx, err := pol.Mint(auth, auth.From, amount)
 	if err != nil {
 		return err
 	}

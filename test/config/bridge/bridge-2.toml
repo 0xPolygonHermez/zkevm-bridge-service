@@ -21,7 +21,7 @@ AuthorizedClaimMessageAddresses = ["0x90F79bf6EB2c4f870365E785982E1f101E93b906"]
 
 [Etherman]
 L1URL = "http://zkevm-mock-l1-network:8545"
-L2URLs = ["http://zkevm-node-1:8123"]
+L2URLs = ["http://zkevm-node-2:8123"]
 
 [Synchronizer]
 SyncInterval = "1s"

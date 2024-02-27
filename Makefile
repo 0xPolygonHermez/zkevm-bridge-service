@@ -227,8 +227,8 @@ bench-full: ## benchmark full test
 	go test -run=NOTEST -bench=Medium . && \
 	go test -run=NOTEST -timeout=30m -bench=Large .
 
-.PHONY: test-full
-test-full: build-docker stop run ## Runs all tests checking race conditions
+.PHONY: test-e2e
+test-e2e: build-docker stop run ## Runs all tests checking race conditions
 	sleep 3
 	trap '$(STOP)' EXIT; MallocNanoZone=0 go test -race -p 1 -timeout 2400s ./test/e2e/... -count 1 -tags='e2e'
 

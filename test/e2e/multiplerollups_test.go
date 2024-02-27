@@ -1,6 +1,3 @@
-//go:build multirollup
-// +build multirollup
-
 package e2e
 
 import (
@@ -24,10 +21,24 @@ func TestMultipleRollups(t *testing.T) {
 	const (
 		mainnetID uint32 = 0
 		rollup1ID uint32 = 1
+		rollup2ID uint32 = 2
 	)
-	ctx, opsman1, err := getOpsman("http://localhost:8123", common.Address{})
+	ctx, opsman1, err := getOpsman("http://localhost:8123", "bridge_db_1", "8080", "9090")
+	require.NoError(t, err)
+	_, opsman2, err := getOpsman("http://localhost:8124", "bridge_db_2", "8081", "9091")
 	require.NoError(t, err)
 
+	// Fund L2 sequencer for rollup 2. This is super dirty, but have no better way to do this at the moment
+	polAddr := common.HexToAddress("0x5FbDB2315678afecb367f032d93F642f64180aa3")
+	rollup2Sequencer := common.HexToAddress("0x15d34AAf54267DB7D7c367839AAf71A00a2C6A65")
+	polAmount, ok := big.NewInt(0).SetString("10000000000000000000000", 10)
+	require.True(t, ok)
+	err = opsman2.MintPOL(ctx, polAddr, polAmount, operations.L1)
+	require.NoError(t, err)
+	err = opsman2.ERC20Transfer(ctx, polAddr, rollup2Sequencer, polAmount, operations.L1)
+	require.NoError(t, err)
+
+	// L1 and R1 interactions
 	log.Info("L1 -- eth --> R1")
 	bridge(t, ctx, opsman1, bridgeData{
 		originNet:       mainnetID,
@@ -89,6 +100,86 @@ func TestMultipleRollups(t *testing.T) {
 		originTokenAddr: rollup1TokenAddr,
 		amount:          big.NewInt(42069),
 	})
+
+	// L1 and R2 interactions
+	nativeTokenR2 := opsman2.GetRollupNativeToken()
+	err = opsman2.MintPOL(ctx, nativeTokenR2, big.NewInt(999999999999999999), operations.L1)
+	require.NoError(t, err)
+	log.Info("L1 -- native token @ R2 --> R2")
+	bridge(t, ctx, opsman2, bridgeData{
+		originNet:       mainnetID,
+		destNet:         rollup2ID,
+		originTokenNet:  mainnetID,
+		originTokenAddr: nativeTokenR2,
+		amount:          big.NewInt(999999999999999999),
+	})
+
+	log.Info("R2 -- native token @ R2 --> L1")
+	bridge(t, ctx, opsman2, bridgeData{
+		originNet:       rollup2ID,
+		destNet:         mainnetID,
+		originTokenNet:  mainnetID,
+		originTokenAddr: nativeTokenR2,
+		amount:          big.NewInt(42069),
+	})
+
+	log.Info("L1 -- eth --> R2")
+	bridge(t, ctx, opsman2, bridgeData{
+		originNet:       mainnetID,
+		destNet:         rollup2ID,
+		originTokenNet:  mainnetID,
+		originTokenAddr: common.Address{},
+		amount:          big.NewInt(999999999999999999),
+	})
+
+	log.Info("R2 -- eth --> L1")
+	bridge(t, ctx, opsman2, bridgeData{
+		originNet:       rollup2ID,
+		destNet:         mainnetID,
+		originTokenNet:  mainnetID,
+		originTokenAddr: common.Address{},
+		amount:          big.NewInt(42069),
+	})
+
+	log.Info("L1 -- token from L1 --> R2")
+	bridge(t, ctx, opsman2, bridgeData{
+		originNet:       mainnetID,
+		destNet:         rollup2ID,
+		originTokenNet:  mainnetID,
+		originTokenAddr: l1TokenAddr,
+		amount:          big.NewInt(42069),
+	})
+
+	log.Info("R2 -- token from L1 --> L1")
+	bridge(t, ctx, opsman2, bridgeData{
+		originNet:       rollup2ID,
+		destNet:         mainnetID,
+		originTokenNet:  mainnetID,
+		originTokenAddr: l1TokenAddr,
+		amount:          big.NewInt(42069),
+	})
+
+	rollup2TokenAddr, _, err := opsman2.DeployERC20(ctx, "CREATED ON Rollup 2", "CR2", operations.L2)
+	require.NoError(t, err)
+	err = opsman2.MintERC20(ctx, rollup2TokenAddr, big.NewInt(999999999999999999), operations.L2)
+	require.NoError(t, err)
+	log.Info("R2 -- token from R2 --> L1")
+	bridge(t, ctx, opsman2, bridgeData{
+		originNet:       rollup2ID,
+		destNet:         mainnetID,
+		originTokenNet:  rollup2ID,
+		originTokenAddr: rollup2TokenAddr,
+		amount:          big.NewInt(42069),
+	})
+
+	log.Info("L1 -- token from R2 --> R2")
+	bridge(t, ctx, opsman2, bridgeData{
+		originNet:       mainnetID,
+		destNet:         rollup2ID,
+		originTokenNet:  rollup2ID,
+		originTokenAddr: rollup2TokenAddr,
+		amount:          big.NewInt(42069),
+	})
 }
 
 type bridgeData struct {
@@ -145,7 +236,7 @@ func bridge(
 		tokenAddr, err := opsman.GetTokenAddr(operations.L1, bd.originTokenNet, bd.originTokenAddr)
 		require.NoError(t, err)
 		log.Debugf(
-			"depositing %d tokens of addr %s on L1 to %d",
+			"depositing %d tokens of addr %s on L1 to network %d",
 			bd.amount.Uint64(), tokenAddr, bd.destNet,
 		)
 		err = opsman.SendL1Deposit(ctx, tokenAddr, bd.amount, bd.destNet, &destAddr)
@@ -204,14 +295,19 @@ func bridge(
 	require.NotEqual(t, 0, initialL2Balance.Cmp(afterClaimL2Balance))
 }
 
-func getOpsman(l2NetworkURL string, l2NativeToken common.Address) (context.Context, *operations.Manager, error) {
+func getOpsman(
+	l2NetworkURL string,
+	dbName string,
+	bridgeServiceHTTPPort string,
+	bridgeServiceGRPCPort string,
+) (context.Context, *operations.Manager, error) {
 	ctx := context.Background()
 	opsCfg := &operations.Config{
 		L1NetworkURL: "http://localhost:8545",
 		L2NetworkURL: l2NetworkURL,
 		Storage: db.Config{
 			Database: "postgres",
-			Name:     "bridge_db_1",
+			Name:     dbName,
 			User:     "user",
 			Password: "pass",
 			Host:     "localhost",
@@ -223,8 +319,8 @@ func getOpsman(l2NetworkURL string, l2NativeToken common.Address) (context.Conte
 			Height: uint8(32),
 		},
 		BS: server.Config{
-			GRPCPort:         "9090",
-			HTTPPort:         "8080",
+			GRPCPort:         bridgeServiceGRPCPort,
+			HTTPPort:         bridgeServiceHTTPPort,
 			CacheSize:        100000,
 			DefaultPageLimit: 25,
 			MaxPageLimit:     100,

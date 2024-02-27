@@ -758,6 +758,10 @@ func (etherMan *Client) GasTokenAddress() (common.Address, error) {
 	return etherMan.PolygonBridge.GasTokenAddress(nil)
 }
 
+func (etherMan *Client) WETHToken() (common.Address, error) {
+	return etherMan.PolygonBridge.WETHToken(nil)
+}
+
 func (etherMan *Client) GetTokenWrappedAddress(originNetwork uint32, originTokenAddr common.Address) (common.Address, error) {
 	addr, err := etherMan.PolygonBridge.GetTokenWrappedAddress(nil, originNetwork, originTokenAddr)
 	if err != nil {
