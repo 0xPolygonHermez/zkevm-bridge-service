@@ -25,11 +25,11 @@ func TestMultipleRollups(t *testing.T) {
 		mainnetID uint32 = 0
 		rollup1ID uint32 = 1
 	)
-	ctx, opsman, err := getOpsman("http://localhost:8123", common.Address{})
+	ctx, opsman1, err := getOpsman("http://localhost:8123", common.Address{})
 	require.NoError(t, err)
 
 	log.Info("L1 -- eth --> R1")
-	bridge(t, ctx, opsman, bridgeData{
+	bridge(t, ctx, opsman1, bridgeData{
 		originNet:       mainnetID,
 		destNet:         rollup1ID,
 		originTokenNet:  mainnetID,
@@ -38,7 +38,7 @@ func TestMultipleRollups(t *testing.T) {
 	})
 
 	log.Info("R1 -- eth --> L1")
-	bridge(t, ctx, opsman, bridgeData{
+	bridge(t, ctx, opsman1, bridgeData{
 		originNet:       rollup1ID,
 		destNet:         mainnetID,
 		originTokenNet:  mainnetID,
@@ -46,12 +46,12 @@ func TestMultipleRollups(t *testing.T) {
 		amount:          big.NewInt(42069),
 	})
 
-	l1TokenAddr, _, err := opsman.DeployERC20(ctx, "CREATED ON L1", "CL1", operations.L1)
+	l1TokenAddr, _, err := opsman1.DeployERC20(ctx, "CREATED ON L1", "CL1", operations.L1)
 	require.NoError(t, err)
-	err = opsman.MintERC20(ctx, l1TokenAddr, big.NewInt(999999999999999999), operations.L1)
+	err = opsman1.MintERC20(ctx, l1TokenAddr, big.NewInt(999999999999999999), operations.L1)
 	require.NoError(t, err)
 	log.Info("L1 -- token from L1 --> R1")
-	bridge(t, ctx, opsman, bridgeData{
+	bridge(t, ctx, opsman1, bridgeData{
 		originNet:       mainnetID,
 		destNet:         rollup1ID,
 		originTokenNet:  mainnetID,
@@ -60,7 +60,7 @@ func TestMultipleRollups(t *testing.T) {
 	})
 
 	log.Info("R1 -- token from L1 --> L1")
-	bridge(t, ctx, opsman, bridgeData{
+	bridge(t, ctx, opsman1, bridgeData{
 		originNet:       rollup1ID,
 		destNet:         mainnetID,
 		originTokenNet:  mainnetID,
@@ -68,12 +68,12 @@ func TestMultipleRollups(t *testing.T) {
 		amount:          big.NewInt(42069),
 	})
 
-	rollup1TokenAddr, _, err := opsman.DeployERC20(ctx, "CREATED ON Rollup 1", "CR1", operations.L2)
+	rollup1TokenAddr, _, err := opsman1.DeployERC20(ctx, "CREATED ON Rollup 1", "CR1", operations.L2)
 	require.NoError(t, err)
-	err = opsman.MintERC20(ctx, rollup1TokenAddr, big.NewInt(999999999999999999), operations.L2)
+	err = opsman1.MintERC20(ctx, rollup1TokenAddr, big.NewInt(999999999999999999), operations.L2)
 	require.NoError(t, err)
 	log.Info("R1 -- token from R1 --> L1")
-	bridge(t, ctx, opsman, bridgeData{
+	bridge(t, ctx, opsman1, bridgeData{
 		originNet:       rollup1ID,
 		destNet:         mainnetID,
 		originTokenNet:  rollup1ID,
@@ -82,7 +82,7 @@ func TestMultipleRollups(t *testing.T) {
 	})
 
 	log.Info("L1 -- token from R1 --> R1")
-	bridge(t, ctx, opsman, bridgeData{
+	bridge(t, ctx, opsman1, bridgeData{
 		originNet:       mainnetID,
 		destNet:         rollup1ID,
 		originTokenNet:  rollup1ID,

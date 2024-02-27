@@ -1,10 +1,11 @@
 version: '3.5'
 services:
 
+# Shared for all rollups
 
   zkevm-mock-l1-network:
     container_name: zkevm-local-l1-network
-    image: hermeznetwork/geth-zkevm-contracts:v2.1.1-fork.7-geth1.12.0
+    image: hermeznetwork/geth-zkevm-contracts:2rollups
     ports:
       - 8545:8545
 
@@ -28,6 +29,8 @@ services:
       - POSTGRES_PASSWORD=pass
       - POSTGRES_DB=state_db_1
     command: ["postgres", "-N", "500"]
+
+# Rollup 1
 
   zkevm-prover-1:
     container_name: zkevm-prover-1
@@ -72,6 +75,8 @@ services:
       - "/bin/sh"
       - "-c"
       - "/app/zkevm-bridge run --cfg /app/config.toml"
+
+# Rollup 2
 
   zkevm-prover-2:
     container_name: zkevm-prover-2
