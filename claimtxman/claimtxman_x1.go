@@ -646,18 +646,6 @@ func (tm *ClaimTxManager) setTxNonce(mTx *ctmtypes.MonitoredTx) error {
 	return nil
 }
 
-func (tm *ClaimTxManager) ResetL2NodeNonce(mTx *ctmtypes.MonitoredTx) error {
-	mTxLog := log.WithFields("monitoredTx", mTx.DepositID)
-	mTxLog.Debug("ResetL2NodeNonce")
-	nonce, err := tm.l2Node.NonceAt(tm.ctx, mTx.From, nil)
-	if err != nil {
-		return err
-	}
-	mTxLog.Debugf("ResetL2NodeNonce mtxNonce:%d, new nonce:%d", mTx.Nonce, nonce)
-	mTx.Nonce = nonce
-	return nil
-}
-
 // Push message to FE to notify about tx status change
 func (tm *ClaimTxManager) pushTransactionUpdate(deposit *etherman.Deposit, status uint32) {
 	if tm.messagePushProducer == nil {
