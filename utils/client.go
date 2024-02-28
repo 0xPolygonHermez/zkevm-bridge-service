@@ -278,6 +278,8 @@ func (c *Client) SendClaim(ctx context.Context, deposit *pb.Deposit, smtProof [m
 	// wait transfer to be mined
 	const txTimeout = 60 * time.Second
 	return WaitTxToBeMined(ctx, c.Client, tx, txTimeout)
+
+	// TODO: assert that bridge service adds the claim as expected to the DB
 }
 
 // WaitTxToBeMined waits until a tx is mined or forged.

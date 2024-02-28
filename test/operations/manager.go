@@ -184,6 +184,7 @@ func (m *Manager) CheckL2Claim(ctx context.Context, deposit *pb.Deposit) error {
 		for _, c := range claims.Claims {
 			// TODO: check with J if claim index (local exit root index from global index) and deposit count are equivalent
 			if c.Index == deposit.DepositCnt && c.MainnetFlag == mainnetFlag && c.RollupIndex == rollupIndex {
+				log.Debugf("deposit claimed with th hash: %s", c.TxHash)
 				return true, nil
 			}
 		}
