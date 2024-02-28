@@ -173,7 +173,7 @@ func (m *Manager) CheckL2Claim(ctx context.Context, deposit *pb.Deposit) error {
 		if err != nil {
 			return false, err
 		}
-		idx, succ := big.NewInt(0).SetString(deposit.GlobalIndex, 10)
+		idx, succ := big.NewInt(0).SetString(deposit.GlobalIndex, 10) //nolint:gomnd
 		if !succ {
 			return false, errors.New("error setting big int")
 		}
@@ -185,6 +185,7 @@ func (m *Manager) CheckL2Claim(ctx context.Context, deposit *pb.Deposit) error {
 			// TODO: check with J if claim index (local exit root index from global index) and deposit count are equivalent
 			if c.Index == deposit.DepositCnt && c.MainnetFlag == mainnetFlag && c.RollupIndex == rollupIndex {
 				log.Debugf("deposit claimed with th hash: %s", c.TxHash)
+				// TODO: get tx from RPC to assert that this is correct
 				return true, nil
 			}
 		}

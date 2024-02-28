@@ -209,7 +209,7 @@ func bridge(
 	)
 
 	var (
-		// This addressess are hardcoded on opsman. Would be nice to make it more flexible
+		// This addresses are hardcoded on opsman. Would be nice to make it more flexible
 		// to be able to operate multiple accounts
 		destAddr common.Address
 		l1Addr   = common.HexToAddress("0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC")
