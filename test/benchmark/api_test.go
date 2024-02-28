@@ -120,8 +120,8 @@ func initServer(b *testing.B, bench benchmark) *bridgectrl.BridgeController {
 			Amount:             deposit.Amount,
 			NetworkID:          deposit.DestinationNetwork,
 			DestinationAddress: deposit.DestinationAddress,
-			RollupIndex:        1,
-			MainnetFlag:        false,
+			RollupIndex:        0,
+			MainnetFlag:        networkID == 0,
 			BlockID:            id,
 		}, dbTx)
 		require.NoError(b, err)
