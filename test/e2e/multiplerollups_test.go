@@ -1,3 +1,6 @@
+//go:build multirollup
+// +build multirollup
+
 package e2e
 
 import (
