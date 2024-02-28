@@ -8,7 +8,7 @@ on:
       - update-external-dependencies
   pull_request:
 jobs:
-  test-edge:
+  test-e2e:
     strategy:
       matrix:
         go-version: [ 1.21.x ]
@@ -25,4 +25,4 @@ jobs:
       env:
         GOARCH: ${{ matrix.goarch }}
     - name: Test
-      run: make test-${{ matrix.go-version }}
+      run: make test-${{ matrix.test }}
