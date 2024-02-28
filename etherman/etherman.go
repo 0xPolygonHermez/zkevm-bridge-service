@@ -754,14 +754,18 @@ func (etherMan *Client) AddExistingRollupEvent(ctx context.Context, vLog types.L
 	return nil
 }
 
+// GasTokenAddress returns the token used to pay gas of the network
 func (etherMan *Client) GasTokenAddress() (common.Address, error) {
 	return etherMan.PolygonBridge.GasTokenAddress(nil)
 }
 
+// WETHToken returns the address were ETH is mapped as an ERC20 when the network
+// doesn't use ETH as native token
 func (etherMan *Client) WETHToken() (common.Address, error) {
 	return etherMan.PolygonBridge.WETHToken(nil)
 }
 
+// GetTokenWrappedAddress return the address of a token from another network in this network
 func (etherMan *Client) GetTokenWrappedAddress(originNetwork uint32, originTokenAddr common.Address) (common.Address, error) {
 	addr, err := etherMan.PolygonBridge.GetTokenWrappedAddress(nil, originNetwork, originTokenAddr)
 	if err != nil {
