@@ -33,13 +33,7 @@ func StartMetricsHttpServer(c Config) {
 	}
 
 	// Init metrics registry
-	if !initialized {
-		registerer = prometheus.DefaultRegisterer
-		gauges = make(map[string]*prometheus.GaugeVec)
-		counters = make(map[string]*prometheus.CounterVec)
-		histograms = make(map[string]*prometheus.HistogramVec)
-		initialized = true
-	}
+	initMetrics()
 
 	// Start metrics HTTP server
 	mux := http.NewServeMux()
@@ -99,7 +93,7 @@ func registerGauge(opt prometheus.GaugeOpts, labelNames ...string) {
 	logger.Debugf("metrics register successfully")
 }
 
-func gaugeSet(name string, value float64, labelValues ...string) {
+func gaugeSet(name string, value float64, labelValues map[string]string) {
 	if !initialized {
 		return
 	}
@@ -108,10 +102,10 @@ func gaugeSet(name string, value float64, labelValues ...string) {
 	if !ok {
 		return
 	}
-	c.WithLabelValues(labelValues...).Set(value)
+	c.With(labelValues).Set(value)
 }
 
-func gaugeInc(name string, labelValues ...string) {
+func gaugeInc(name string, labelValues map[string]string) {
 	if !initialized {
 		return
 	}
@@ -120,10 +114,10 @@ func gaugeInc(name string, labelValues ...string) {
 	if !ok {
 		return
 	}
-	c.WithLabelValues(labelValues...).Inc()
+	c.With(labelValues).Inc()
 }
 
-func gaugeDec(name string, labelValues ...string) {
+func gaugeDec(name string, labelValues map[string]string) {
 	if !initialized {
 		return
 	}
@@ -132,10 +126,10 @@ func gaugeDec(name string, labelValues ...string) {
 	if !ok {
 		return
 	}
-	c.WithLabelValues(labelValues...).Dec()
+	c.With(labelValues).Dec()
 }
 
-func gaugeAdd(name string, value float64, labelValues ...string) {
+func gaugeAdd(name string, value float64, labelValues map[string]string) {
 	if !initialized {
 		return
 	}
@@ -144,10 +138,10 @@ func gaugeAdd(name string, value float64, labelValues ...string) {
 	if !ok {
 		return
 	}
-	c.WithLabelValues(labelValues...).Add(value)
+	c.With(labelValues).Add(value)
 }
 
-func gaugeSub(name string, value float64, labelValues ...string) {
+func gaugeSub(name string, value float64, labelValues map[string]string) {
 	if !initialized {
 		return
 	}
@@ -156,7 +150,7 @@ func gaugeSub(name string, value float64, labelValues ...string) {
 	if !ok {
 		return
 	}
-	c.WithLabelValues(labelValues...).Sub(value)
+	c.With(labelValues).Sub(value)
 }
 
 /*
@@ -185,7 +179,7 @@ func registerCounter(opt prometheus.CounterOpts, labelNames ...string) {
 	logger.Debugf("metrics register successfully")
 }
 
-func counterInc(name string, labelValues ...string) {
+func counterInc(name string, labelValues map[string]string) {
 	if !initialized {
 		return
 	}
@@ -194,10 +188,10 @@ func counterInc(name string, labelValues ...string) {
 	if !ok {
 		return
 	}
-	c.WithLabelValues(labelValues...).Inc()
+	c.With(labelValues).Inc()
 }
 
-func counterAdd(name string, value float64, labelValues ...string) {
+func counterAdd(name string, value float64, labelValues map[string]string) {
 	if !initialized {
 		return
 	}
@@ -206,7 +200,7 @@ func counterAdd(name string, value float64, labelValues ...string) {
 	if !ok {
 		return
 	}
-	c.WithLabelValues(labelValues...).Add(value)
+	c.With(labelValues).Add(value)
 }
 
 /*
@@ -235,7 +229,7 @@ func registerHistogram(opt prometheus.HistogramOpts, labelNames ...string) {
 	logger.Debugf("metrics register successfully")
 }
 
-func histogramObserve(name string, value float64, labelNames ...string) {
+func histogramObserve(name string, value float64, labelValues map[string]string) {
 	if !initialized {
 		return
 	}
@@ -244,5 +238,5 @@ func histogramObserve(name string, value float64, labelNames ...string) {
 	if !ok {
 		return
 	}
-	c.WithLabelValues(labelNames...).Observe(value)
+	c.With(labelValues).Observe(value)
 }

@@ -100,7 +100,9 @@ func runGRPCServer(ctx context.Context, bridgeServer pb.BridgeServiceServer, por
 
 	server := grpc.NewServer(grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(
 		sentinelGrpc.NewUnaryServerInterceptor(sentinelGrpc.WithUnaryServerBlockFallback(blockErrFallbackFn)),
-		NewRequestLogInterceptor())))
+		NewRequestMetricsInterceptor(),
+		NewRequestLogInterceptor(),
+	)))
 	pb.RegisterBridgeServiceServer(server, bridgeServer)
 
 	healthService := newHealthChecker()
