@@ -87,6 +87,8 @@ var (
 
 	// ErrNotFound is used when the object is not found
 	ErrNotFound = errors.New("Not found")
+	// ErrTokenNotCreated is used when a token doesn't exist on a given network
+	ErrTokenNotCreated = errors.New("token does not exist on the network")
 )
 
 // EventOrder is the the type used to identify the events order
@@ -124,12 +126,12 @@ type Client struct {
 	SCAddresses                []common.Address
 }
 
-// NewClient creates a new etherman.
-func NewClient(cfg Config, polygonBridgeAddr, polygonZkEVMGlobalExitRootAddress, polygonRollupManagerAddress, polygonZkEvmAddress common.Address) (*Client, error) {
+// NewL1Client creates a new etherman.
+func NewL1Client(l1URL string, polygonBridgeAddr, polygonZkEVMGlobalExitRootAddress, polygonRollupManagerAddress, polygonZkEvmAddress common.Address) (*Client, error) {
 	// Connect to ethereum node
-	ethClient, err := ethclient.Dial(cfg.L1URL)
+	ethClient, err := ethclient.Dial(l1URL)
 	if err != nil {
-		log.Errorf("error connecting to %s: %+v", cfg.L1URL, err)
+		log.Errorf("error connecting to %s: %+v", l1URL, err)
 		return nil, err
 	}
 	// Create smc clients
@@ -478,7 +480,7 @@ func (etherMan *Client) newClaimEvent(ctx context.Context, vLog types.Log, block
 	if err != nil {
 		return err
 	}
-	mainnetFlag, rollupIndex, localExitRootIndex, err := decodeGlobalIndex(c.GlobalIndex)
+	mainnetFlag, rollupIndex, localExitRootIndex, err := DecodeGlobalIndex(c.GlobalIndex)
 	if err != nil {
 		return err
 	}
@@ -655,7 +657,7 @@ func (etherMan *Client) GetRollupID() uint {
 	return uint(etherMan.rollupID)
 }
 
-func decodeGlobalIndex(globalIndex *big.Int) (bool, uint64, uint64, error) {
+func DecodeGlobalIndex(globalIndex *big.Int) (bool, uint64, uint64, error) {
 	const lengthGlobalIndexInBytes = 32
 	var buf [32]byte
 	gIBytes := globalIndex.FillBytes(buf[:])
@@ -752,4 +754,28 @@ func (etherMan *Client) AddExistingRollupEvent(ctx context.Context, vLog types.L
 	}
 	(*blocksOrder)[(*blocks)[len(*blocks)-1].BlockHash] = append((*blocksOrder)[(*blocks)[len(*blocks)-1].BlockHash], or)
 	return nil
+}
+
+// GasTokenAddress returns the token used to pay gas of the network
+func (etherMan *Client) GasTokenAddress() (common.Address, error) {
+	return etherMan.PolygonBridge.GasTokenAddress(nil)
+}
+
+// WETHToken returns the address were ETH is mapped as an ERC20 when the network
+// doesn't use ETH as native token
+func (etherMan *Client) WETHToken() (common.Address, error) {
+	return etherMan.PolygonBridge.WETHToken(nil)
+}
+
+// GetTokenWrappedAddress return the address of a token from another network in this network
+func (etherMan *Client) GetTokenWrappedAddress(originNetwork uint32, originTokenAddr common.Address) (common.Address, error) {
+	addr, err := etherMan.PolygonBridge.GetTokenWrappedAddress(nil, originNetwork, originTokenAddr)
+	if err != nil {
+		return addr, err
+	}
+	zeroAddr := common.Address{}
+	if addr == zeroAddr {
+		return addr, ErrTokenNotCreated
+	}
+	return addr, err
 }

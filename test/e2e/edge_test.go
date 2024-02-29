@@ -61,13 +61,15 @@ func TestEdgeCase(t *testing.T) {
 
 	ctx := context.Background()
 	opsCfg := &operations.Config{
+		L1NetworkURL: "http://localhost:8545",
+		L2NetworkURL: "http://localhost:8123",
 		Storage: db.Config{
 			Database: "postgres",
-			Name:     "test_db",
-			User:     "test_user",
-			Password: "test_password",
+			Name:     "bridge_db_1",
+			User:     "user",
+			Password: "pass",
 			Host:     "localhost",
-			Port:     "5435",
+			Port:     "5432",
 			MaxConns: 10,
 		},
 		BT: bridgectrl.Config{
@@ -81,15 +83,6 @@ func TestEdgeCase(t *testing.T) {
 			DefaultPageLimit: 25,
 			MaxPageLimit:     100,
 			BridgeVersion:    "v1",
-			DB: db.Config{
-				Database: "postgres",
-				Name:     "test_db",
-				User:     "test_user",
-				Password: "test_password",
-				Host:     "localhost",
-				Port:     "5435",
-				MaxConns: 10,
-			},
 		},
 	}
 

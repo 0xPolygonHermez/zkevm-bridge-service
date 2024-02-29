@@ -84,11 +84,11 @@ func InitOrReset(cfg Config) error {
 func NewConfigFromEnv() Config {
 	maxConns, _ := strconv.Atoi(getEnv("ZKEVM_BRIDGE_DATABASE_MAXCONNS", "500"))
 	return Config{
-		User:     getEnv("ZKEVM_BRIDGE_DATABASE_USER", "test_user"),
-		Password: getEnv("ZKEVM_BRIDGE_DATABASE_PASSWORD", "test_password"),
-		Name:     getEnv("ZKEVM_BRIDGE_DATABASE_NAME", "test_db"),
+		User:     getEnv("ZKEVM_BRIDGE_DATABASE_USER", "user"),
+		Password: getEnv("ZKEVM_BRIDGE_DATABASE_PASSWORD", "pass"),
+		Name:     getEnv("ZKEVM_BRIDGE_DATABASE_NAME", "bridge_db_1"),
 		Host:     getEnv("ZKEVM_BRIDGE_DATABASE_HOST", "localhost"),
-		Port:     getEnv("ZKEVM_BRIDGE_DATABASE_PORT", "5435"),
+		Port:     getEnv("ZKEVM_BRIDGE_DATABASE_PORT", "5432"),
 		MaxConns: maxConns,
 	}
 }

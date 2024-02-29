@@ -1,0 +1,56 @@
+[Log]
+Level = "warn"
+Outputs = ["stdout"]
+
+[SyncDB]
+Database = "postgres"
+User = "user"
+Password = "pass"
+Name = "bridge_db_1"
+Host = "zkevm-db"
+Port = "5432"
+MaxConns = 20
+
+[ClaimTxManager]
+Enabled = true
+FrequencyToMonitorTxs = "1s"
+PrivateKey = {Path = "/pk/keystore.claimtxmanager", Password = "testonly"}
+RetryInterval = "1s"
+RetryNumber = 10
+AuthorizedClaimMessageAddresses = ["0x90F79bf6EB2c4f870365E785982E1f101E93b906"]
+
+[Etherman]
+L1URL = "http://zkevm-mock-l1-network:8545"
+L2URLs = ["http://zkevm-node-1:8123"]
+
+[Synchronizer]
+SyncInterval = "1s"
+SyncChunkSize = 100
+
+[BridgeController]
+Store = "postgres"
+Height = 32
+
+[BridgeServer]
+GRPCPort = "9090"
+HTTPPort = "8080"
+CacheSize = 100000
+DefaultPageLimit = 25
+MaxPageLimit = 100
+BridgeVersion = "v1"
+    [BridgeServer.DB]
+    Database = "postgres"
+    User = "user"
+    Password = "pass"
+    Name = "bridge_db_1"
+    Host = "zkevm-db"
+    Port = "5432"
+    MaxConns = 20
+
+[NetworkConfig]
+GenBlockNumber = 1
+PolygonBridgeAddress = "0xB7098a13a48EcE087d3DA15b2D28eCE0f89819B8"
+PolygonZkEVMGlobalExitRootAddress = "0x8A791620dd6260079BF849Dc5567aDC3F2FdC318"
+PolygonRollupManagerAddress = "0xB7f8BC63BbcaD18155201308C8f3540b07f84F5e"
+PolygonZkEvmAddress = "0x8A791620dd6260079BF849Dc5567aDC3F2FdC318"
+L2PolygonBridgeAddresses = ["0xB7098a13a48EcE087d3DA15b2D28eCE0f89819B8"]

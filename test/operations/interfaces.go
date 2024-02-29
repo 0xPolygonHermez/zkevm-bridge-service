@@ -35,6 +35,7 @@ type StorageInterface interface {
 
 // BridgeServiceInterface is an interface for the bridge service.
 type BridgeServiceInterface interface {
+	GetClaims(ctx context.Context, req *pb.GetClaimsRequest) (*pb.GetClaimsResponse, error)
 	GetBridges(ctx context.Context, req *pb.GetBridgesRequest) (*pb.GetBridgesResponse, error)
 	GetProof(ctx context.Context, req *pb.GetProofRequest) (*pb.GetProofResponse, error)
 }
