@@ -2,6 +2,8 @@ package migrations_test
 
 import (
 	"database/sql"
+	"errors"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -29,10 +31,10 @@ func (m migrationTest0009) InsertData(db *sql.DB) error {
 	if _, err := db.Exec(originalDepositSQL); err != nil {
 		return err
 	}
-	// _, err := db.Exec(conflictingDeposit)
-	// if err == nil || !strings.Contains(err.Error(), "ERROR: duplicate key value violates unique constraint \"claim_pkey\" (SQLSTATE 23505)") {
-	// 	return errors.New("should violate primary key")
-	// }
+	_, err := db.Exec(conflictingDeposit)
+	if err == nil || !strings.Contains(err.Error(), "ERROR: duplicate key value violates unique constraint \"claim_pkey\" (SQLSTATE 23505)") {
+		return errors.New("should violate primary key")
+	}
 
 	return nil
 }
