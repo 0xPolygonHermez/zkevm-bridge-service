@@ -87,6 +87,8 @@ var (
 
 	// ErrNotFound is used when the object is not found
 	ErrNotFound = errors.New("Not found")
+	// ErrTokenNotCreated is used when a token doesn't exist on a given network
+	ErrTokenNotCreated = errors.New("token does not exist on the network")
 )
 
 // EventOrder is the the type used to identify the events order

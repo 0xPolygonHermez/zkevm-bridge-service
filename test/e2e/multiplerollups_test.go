@@ -204,11 +204,11 @@ func bridge(
 	require.NoError(t, err)
 	require.False(
 		t, bd.originNet != 0 && bd.originNet != rID,
-		"opsman deosnt support all the networks involved",
+		"opsman doesn't support all the networks involved",
 	)
 	require.False(
 		t, bd.destNet != 0 && bd.destNet != rID,
-		"opsman deosnt support all the networks involved",
+		"opsman doesn't support all the networks involved",
 	)
 
 	var (
