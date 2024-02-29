@@ -14,6 +14,7 @@ import (
 	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/localcache"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/messagepush"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/metrics"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/pushtask"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/redisstorage"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/sentinel"
@@ -189,6 +190,11 @@ func startServer(ctx *cli.Context, opts ...runOptionFunc) error {
 				log.Errorf("close kafka producer error: %v", err)
 			}
 		}()
+	}
+
+	// Start metrics
+	if c.Metrics.Enabled {
+		go metrics.StartMetricsHttpServer(c.Metrics)
 	}
 
 	// Initialize chainId manager

@@ -14,6 +14,7 @@ import (
 	"github.com/0xPolygonHermez/zkevm-bridge-service/db"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/messagepush"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/metrics"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/nacos"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/server"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/synchronizer"
@@ -37,6 +38,7 @@ type Config struct {
 	NetworkConfig       `apollo:"NetworkConfig"`
 	NacosConfig         nacos.Config
 	BusinessConfig      businessconfig.Config `apollo:"BusinessConfig"`
+	Metrics             metrics.Config        `apollo:"Metrics"`
 }
 
 // Load loads the configuration

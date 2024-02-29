@@ -296,6 +296,7 @@ services:
     ports:
       - 8080:8080
       - 9090:9090
+      - 9300:9091
     environment:
       - ZKEVM_BRIDGE_DATABASE_USER=test_user
       - ZKEVM_BRIDGE_DATABASE_PASSWORD=test_password
@@ -318,6 +319,7 @@ services:
     ports:
       - 8080:8080
       - 9090:9090
+      - 9300:9091
     environment:
       - ZKEVM_BRIDGE_DATABASE_USER=test_user
       - ZKEVM_BRIDGE_DATABASE_PASSWORD=test_password
