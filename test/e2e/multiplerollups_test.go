@@ -399,7 +399,7 @@ func bridge(
 			err = opsman.SendL1Claim(ctx, deposit, smtProof, smtRollupProof, globaExitRoot)
 			require.NoError(t, err)
 		} else { // L2 => L2
-			// TODO: wait for destination L2 network to have the GER updated
+			// TODO: wait for destination L2 network to have the GER updated!
 			log.Debugf("sending claim tx to network %d", rollupIDOpsmanDest)
 			err = opsmanDest.SendL2Claim(ctx, deposit, smtProof, smtRollupProof, globaExitRoot)
 			require.NoError(t, err)
