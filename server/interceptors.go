@@ -57,8 +57,8 @@ func checkRespIsSuccess(resp any, err error) bool {
 		return true
 	}
 	// Check the `code` field in the response body
-	v := reflect.ValueOf(resp)
-	codeField := v.FieldByName("code")
+	v := reflect.Indirect(reflect.ValueOf(resp))
+	codeField := v.FieldByName("Code")
 	if codeField.CanInt() && codeField.Int() != 0 {
 		return false
 	}
