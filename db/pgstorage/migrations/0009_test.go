@@ -61,7 +61,6 @@ func (m migrationTest0009) RunAssertsAfterMigrationUp(t *testing.T, db *sql.DB) 
 	// Remove conflicting deposit so it's possible to run the migration down
 	_, err = db.Exec("DELETE FROM sync.claim WHERE rollup_index = 1;")
 	assert.NoError(t, err)
-
 }
 
 func (m migrationTest0009) RunAssertsAfterMigrationDown(t *testing.T, db *sql.DB) {
