@@ -256,6 +256,7 @@ func (s *bridgeService) GetBridges(ctx context.Context, req *pb.GetBridgesReques
 
 	var pbDeposits []*pb.Deposit
 	for _, deposit := range deposits {
+		// TODO: bug detected here! deposit.OriginRollupID == deposit.NetworkID
 		claimTxHash, err := s.GetDepositStatus(ctx, deposit.DepositCount, deposit.OriginRollupID, deposit.NetworkID)
 		if err != nil {
 			return nil, err

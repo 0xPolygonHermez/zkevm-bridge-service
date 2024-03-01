@@ -1,5 +1,7 @@
 -- +migrate Up
 
+-- origin_rollup_id == network_id !!!!
+
 ALTER TABLE sync.deposit
 ADD COLUMN IF NOT EXISTS origin_rollup_id BIGINT DEFAULT 0;
 
