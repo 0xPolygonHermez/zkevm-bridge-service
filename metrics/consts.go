@@ -20,4 +20,10 @@ const (
 	metricRequestLatency = prefixRequest + "latency"
 	labelIsSuccess       = "is_success"
 	labelMethod          = "method"
+
+	prefixOrder            = prefix + "order_"
+	metricOrderCount       = prefixOrder + "count"
+	metricOrderTotalAmount = prefixOrder + "total_amount"
+	labelNetworkID         = "network_id"
+	labelToken             = "token"
 )

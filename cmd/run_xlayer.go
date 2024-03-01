@@ -164,7 +164,7 @@ func startServer(ctx *cli.Context, opts ...runOptionFunc) error {
 		return err
 	}
 
-	mainCoinsCache, err := localcache.NewMainCoinsCache(apiStorage)
+	err = localcache.InitDefaultCache(apiStorage)
 	if err != nil {
 		log.Error(err)
 		return err
@@ -202,7 +202,7 @@ func startServer(ctx *cli.Context, opts ...runOptionFunc) error {
 
 	rollupID := l1Etherman.GetRollupID()
 	bridgeService := server.NewBridgeService(c.BridgeServer, c.BridgeController.Height, networkIDs, l2NodeClients, l2Auths, apiStorage, rollupID).
-		WithRedisStorage(redisStorage).WithMainCoinsCache(mainCoinsCache).WithMessagePushProducer(messagePushProducer)
+		WithRedisStorage(redisStorage).WithMainCoinsCache(localcache.GetDefaultCache()).WithMessagePushProducer(messagePushProducer)
 
 	// Initialize inner chain id conf
 	utils.InnitOkInnerChainIdMapper(c.BusinessConfig)

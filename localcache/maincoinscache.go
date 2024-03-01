@@ -6,7 +6,9 @@ import (
 	"time"
 
 	"github.com/0xPolygonHermez/zkevm-bridge-service/bridgectrl/pb"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/utils/gerror"
 	"github.com/0xPolygonHermez/zkevm-node/log"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/jackc/pgx/v4"
 	"github.com/pkg/errors"
 )
@@ -17,8 +19,13 @@ const (
 	maxRetries           = 5
 )
 
+var (
+	defaultCache MainCoinsCache
+)
+
 type MainCoinsCache interface {
 	GetMainCoinsByNetwork(ctx context.Context, networkID uint32) ([]*pb.CoinInfo, error)
+	GetCoinInfoByAddress(ctx context.Context, networkID uint32, address common.Address) (*pb.CoinInfo, error)
 }
 
 type MainCoinsDBStorage interface {
@@ -30,6 +37,19 @@ type mainCoinsCacheImpl struct {
 	lock    sync.RWMutex
 	data    map[uint32][]*pb.CoinInfo // networkID -> list of coins
 	storage MainCoinsDBStorage
+}
+
+func InitDefaultCache(storage interface{}) error {
+	cache, err := NewMainCoinsCache(storage)
+	if err != nil {
+		return nil
+	}
+	defaultCache = cache
+	return nil
+}
+
+func GetDefaultCache() MainCoinsCache {
+	return defaultCache
 }
 
 func NewMainCoinsCache(storage interface{}) (MainCoinsCache, error) {
@@ -105,4 +125,20 @@ func (c *mainCoinsCacheImpl) GetMainCoinsByNetwork(ctx context.Context, networkI
 	defer c.lock.RUnlock()
 
 	return c.data[networkID], nil
+}
+
+func (c *mainCoinsCacheImpl) GetCoinInfoByAddress(ctx context.Context, networkID uint32, address common.Address) (*pb.CoinInfo, error) {
+	coins, err := c.GetMainCoinsByNetwork(ctx, networkID)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, coin := range coins {
+		coinAddr := common.HexToAddress(coin.Address)
+		if coinAddr == address {
+			return coin, nil
+		}
+	}
+
+	return nil, gerror.ErrStorageNotFound
 }
