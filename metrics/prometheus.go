@@ -23,6 +23,10 @@ var (
 	histograms map[string]*prometheus.HistogramVec
 )
 
+func getLogger(metricName, metricType string) *log.Logger {
+	return log.WithFields("metricName", metricName, "metricType", metricType)
+}
+
 // StartMetricsHttpServer initializes the metrics registry and starts the prometheus metrics HTTP server
 func StartMetricsHttpServer(c Config) {
 	ctx, cancel := context.WithCancel(context.Background())
@@ -72,7 +76,7 @@ func StartMetricsHttpServer(c Config) {
  */
 
 func registerGauge(opt prometheus.GaugeOpts, labelNames ...string) {
-	logger := log.WithFields("metricName", opt.Name).WithFields("metricType", "gauge")
+	logger := getLogger(opt.Name, typeGauge)
 	if !initialized {
 		return
 	}
@@ -100,6 +104,7 @@ func gaugeSet(name string, value float64, labelValues map[string]string) {
 
 	c, ok := gauges[name]
 	if !ok {
+		getLogger(name, typeGauge).Errorf("collector not found")
 		return
 	}
 	c.With(labelValues).Set(value)
@@ -112,6 +117,7 @@ func gaugeInc(name string, labelValues map[string]string) {
 
 	c, ok := gauges[name]
 	if !ok {
+		getLogger(name, typeGauge).Errorf("collector not found")
 		return
 	}
 	c.With(labelValues).Inc()
@@ -124,6 +130,7 @@ func gaugeDec(name string, labelValues map[string]string) {
 
 	c, ok := gauges[name]
 	if !ok {
+		getLogger(name, typeGauge).Errorf("collector not found")
 		return
 	}
 	c.With(labelValues).Dec()
@@ -136,6 +143,7 @@ func gaugeAdd(name string, value float64, labelValues map[string]string) {
 
 	c, ok := gauges[name]
 	if !ok {
+		getLogger(name, typeGauge).Errorf("collector not found")
 		return
 	}
 	c.With(labelValues).Add(value)
@@ -148,6 +156,7 @@ func gaugeSub(name string, value float64, labelValues map[string]string) {
 
 	c, ok := gauges[name]
 	if !ok {
+		getLogger(name, typeGauge).Errorf("collector not found")
 		return
 	}
 	c.With(labelValues).Sub(value)
@@ -158,7 +167,7 @@ func gaugeSub(name string, value float64, labelValues map[string]string) {
  */
 
 func registerCounter(opt prometheus.CounterOpts, labelNames ...string) {
-	logger := log.WithFields("metricName", opt.Name).WithFields("metricType", "counter")
+	logger := getLogger(opt.Name, typeCounter)
 	if !initialized {
 		return
 	}
@@ -186,6 +195,7 @@ func counterInc(name string, labelValues map[string]string) {
 
 	c, ok := counters[name]
 	if !ok {
+		getLogger(name, typeCounter).Errorf("collector not found")
 		return
 	}
 	c.With(labelValues).Inc()
@@ -198,6 +208,7 @@ func counterAdd(name string, value float64, labelValues map[string]string) {
 
 	c, ok := counters[name]
 	if !ok {
+		getLogger(name, typeCounter).Errorf("collector not found")
 		return
 	}
 	c.With(labelValues).Add(value)
@@ -208,7 +219,7 @@ func counterAdd(name string, value float64, labelValues map[string]string) {
  */
 
 func registerHistogram(opt prometheus.HistogramOpts, labelNames ...string) {
-	logger := log.WithFields("metricName", opt.Name).WithFields("metricType", "histogram")
+	logger := getLogger(opt.Name, typeHistogram)
 	if !initialized {
 		return
 	}
@@ -236,6 +247,7 @@ func histogramObserve(name string, value float64, labelValues map[string]string)
 
 	c, ok := histograms[name]
 	if !ok {
+		getLogger(name, typeHistogram).Errorf("collector not found")
 		return
 	}
 	c.With(labelValues).Observe(value)

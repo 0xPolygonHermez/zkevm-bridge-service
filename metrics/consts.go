@@ -4,9 +4,16 @@ const (
 	endpointMetrics = "/metrics"
 )
 
+// Metric types
+const (
+	typeGauge     = "gauge"
+	typeCounter   = "counter"
+	typeHistogram = "histogram"
+)
+
 // Metric names and labels
 const (
-	prefix = "x1_bridge_"
+	prefix = "bridge_"
 
 	prefixRequest        = prefix + "request_"
 	metricRequestCount   = prefixRequest + "count"
