@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-type migrationTest0009 struct{}
+type migrationTest0010 struct{}
 
 const (
 	originalDepositSQL = `
@@ -22,7 +22,7 @@ const (
 	` // Rollup 2 to L1
 )
 
-func (m migrationTest0009) InsertData(db *sql.DB) error {
+func (m migrationTest0010) InsertData(db *sql.DB) error {
 	block := "INSERT INTO sync.block (id, block_num, block_hash, parent_hash, network_id, received_at) VALUES(69, 2803824, decode('27474F16174BBE50C294FE13C190B92E42B2368A6D4AEB8A4A015F52816296C3','hex'), decode('C9B5033799ADF3739383A0489EFBE8A0D4D5E4478778A4F4304562FD51AE4C07','hex'), 1, '0001-01-01 01:00:00.000');"
 	if _, err := db.Exec(block); err != nil {
 		return err
@@ -39,7 +39,7 @@ func (m migrationTest0009) InsertData(db *sql.DB) error {
 	return nil
 }
 
-func (m migrationTest0009) RunAssertsAfterMigrationUp(t *testing.T, db *sql.DB) {
+func (m migrationTest0010) RunAssertsAfterMigrationUp(t *testing.T, db *sql.DB) {
 	// check that original row still in there
 	selectClaim := `SELECT block_id, network_id, index, mainnet_flag, rollup_index FROM sync.claim;`
 	row := db.QueryRow(selectClaim)
@@ -63,7 +63,7 @@ func (m migrationTest0009) RunAssertsAfterMigrationUp(t *testing.T, db *sql.DB) 
 	assert.NoError(t, err)
 }
 
-func (m migrationTest0009) RunAssertsAfterMigrationDown(t *testing.T, db *sql.DB) {
+func (m migrationTest0010) RunAssertsAfterMigrationDown(t *testing.T, db *sql.DB) {
 	// check that original row still in there
 	selectClaim := `SELECT block_id, network_id, index, mainnet_flag, rollup_index FROM sync.claim;`
 	row := db.QueryRow(selectClaim)
@@ -79,6 +79,6 @@ func (m migrationTest0009) RunAssertsAfterMigrationDown(t *testing.T, db *sql.DB
 	assert.Equal(t, 0, rollup_index)
 }
 
-func TestMigration0009(t *testing.T) {
-	runMigrationTest(t, 9, migrationTest0009{})
+func TestMigration0010(t *testing.T) {
+	runMigrationTest(t, 10, migrationTest0010{})
 }
