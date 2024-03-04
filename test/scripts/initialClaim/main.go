@@ -91,18 +91,18 @@ func main() {
 		log.Fatal("error converting metadata to bytes. Error: ", err)
 	}
 	e := etherman.Deposit{
-		LeafType:           uint8(bridgeData.LeafType),
-		OriginalNetwork:    uint(bridgeData.OrigNet),
-		OriginalAddress:    common.HexToAddress(bridgeData.OrigAddr),
-		Amount:             a,
-		DestinationNetwork: uint(bridgeData.DestNet),
-		DestinationAddress: common.HexToAddress(bridgeData.DestAddr),
-		DepositCount:       uint(bridgeData.DepositCnt),
-		BlockNumber:        bridgeData.BlockNum,
-		NetworkID:          uint(bridgeData.NetworkId),
-		TxHash:             common.HexToHash(bridgeData.TxHash),
-		Metadata:           metadata,
-		ReadyForClaim:      bridgeData.ReadyForClaim,
+		LeafType:             uint8(bridgeData.LeafType),
+		OriginalTokenNetwork: uint(bridgeData.OrigNet),
+		OriginalTokenAddress: common.HexToAddress(bridgeData.OrigAddr),
+		Amount:               a,
+		DestinationNetwork:   uint(bridgeData.DestNet),
+		DestinationAddress:   common.HexToAddress(bridgeData.DestAddr),
+		DepositCount:         uint(bridgeData.DepositCnt),
+		BlockNumber:          bridgeData.BlockNum,
+		OriginNetwork:        uint(bridgeData.NetworkId),
+		TxHash:               common.HexToHash(bridgeData.TxHash),
+		Metadata:             metadata,
+		ReadyForClaim:        bridgeData.ReadyForClaim,
 	}
 	// Connect to ethereum node
 	ethClient, err := ethclient.Dial(l1NetworkURL)

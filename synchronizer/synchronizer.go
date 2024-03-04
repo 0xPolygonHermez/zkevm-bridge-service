@@ -49,10 +49,7 @@ func NewSynchronizer(
 	chSynced chan uint,
 	cfg Config) (Synchronizer, error) {
 	ctx, cancel := context.WithCancel(ctx)
-	networkID, err := ethMan.GetNetworkID(ctx)
-	if err != nil {
-		log.Fatal("error getting networkID. Error: ", err)
-	}
+	networkID := ethMan.GetRollupID()
 	ger, err := storage.(storageInterface).GetLatestL1SyncedExitRoot(ctx, nil)
 	if err != nil {
 		if err == gerror.ErrStorageNotFound {
@@ -567,7 +564,6 @@ func (s *ClientSynchronizer) processGlobalExitRoot(globalExitRoot etherman.Globa
 
 func (s *ClientSynchronizer) processDeposit(deposit etherman.Deposit, blockID uint64, dbTx pgx.Tx) error {
 	deposit.BlockID = blockID
-	deposit.NetworkID = s.networkID
 	depositID, err := s.storage.AddDeposit(s.ctx, &deposit, dbTx)
 	if err != nil {
 		log.Errorf("networkID: %d, failed to store new deposit locally, BlockNumber: %d, Deposit: %+v err: %v", s.networkID, deposit.BlockNumber, deposit, err)
@@ -601,7 +597,7 @@ func (s *ClientSynchronizer) processClaim(claim etherman.Claim, blockID uint64, 
 	// 	return nil
 	// }
 	claim.BlockID = blockID
-	claim.NetworkID = s.networkID
+	claim.DestinationNetwork = s.networkID
 	err := s.storage.AddClaim(s.ctx, &claim, dbTx)
 	if err != nil {
 		log.Errorf("networkID: %d, error storing new Claim in Block:  %d, Claim: %+v, err: %v", s.networkID, claim.BlockNumber, claim, err)

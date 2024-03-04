@@ -232,14 +232,14 @@ func (c *Client) BuildSendClaim(ctx context.Context, deposit *etherman.Deposit, 
 		tx  *types.Transaction
 		err error
 	)
-	mainnetFlag := deposit.NetworkID == 0
+	mainnetFlag := deposit.OriginNetwork == 0
 	rollupIndex := rollupID - 1
 	localExitRootIndex := deposit.DepositCount
 	globalIndex := etherman.GenerateGlobalIndex(mainnetFlag, rollupIndex, localExitRootIndex)
 	if deposit.LeafType == uint8(LeafTypeAsset) {
-		tx, err = c.bridge.ClaimAsset(&opts, smtProof, smtRollupProof, globalIndex, globalExitRoot.ExitRoots[0], globalExitRoot.ExitRoots[1], uint32(deposit.OriginalNetwork), deposit.OriginalAddress, uint32(deposit.DestinationNetwork), deposit.DestinationAddress, deposit.Amount, deposit.Metadata)
+		tx, err = c.bridge.ClaimAsset(&opts, smtProof, smtRollupProof, globalIndex, globalExitRoot.ExitRoots[0], globalExitRoot.ExitRoots[1], uint32(deposit.OriginalTokenNetwork), deposit.OriginalTokenAddress, uint32(deposit.DestinationNetwork), deposit.DestinationAddress, deposit.Amount, deposit.Metadata)
 	} else if deposit.LeafType == uint8(LeafTypeMessage) {
-		tx, err = c.bridge.ClaimMessage(&opts, smtProof, smtRollupProof, globalIndex, globalExitRoot.ExitRoots[0], globalExitRoot.ExitRoots[1], uint32(deposit.OriginalNetwork), deposit.OriginalAddress, uint32(deposit.DestinationNetwork), deposit.DestinationAddress, deposit.Amount, deposit.Metadata)
+		tx, err = c.bridge.ClaimMessage(&opts, smtProof, smtRollupProof, globalIndex, globalExitRoot.ExitRoots[0], globalExitRoot.ExitRoots[1], uint32(deposit.OriginalTokenNetwork), deposit.OriginalTokenAddress, uint32(deposit.DestinationNetwork), deposit.DestinationAddress, deposit.Amount, deposit.Metadata)
 	}
 	if err != nil {
 		txHash := ""

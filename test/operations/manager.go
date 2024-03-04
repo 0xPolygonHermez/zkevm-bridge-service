@@ -79,7 +79,7 @@ type Manager struct {
 
 	storage       StorageInterface
 	bridgetree    *bridgectrl.BridgeController
-	bridgeService BridgeServiceInterface
+	bridgeService pb.BridgeServiceClient
 
 	Clients       map[NetworkSID]*utils.Client
 	l1Ethman      *etherman.Client
@@ -126,7 +126,8 @@ func NewManager(ctx context.Context, cfg *Config) (*Manager, error) {
 	if err != nil {
 		return nil, err
 	}
-	bService := server.NewBridgeService(cfg.BS, cfg.BT.Height, []uint{0, rollupID}, pgst, rollupID)
+	bService := pb.NewBridgeServiceClient(nil)
+	// bService := server.NewBridgeService(cfg.BS, cfg.BT.Height, []uint{0, rollupID}, pgst, rollupID)
 	l1Ethman, err := etherman.NewL1Client(
 		cfg.L1NetworkURL,
 		common.HexToAddress(L1BridgeAddr),
@@ -163,9 +164,10 @@ func NewManager(ctx context.Context, cfg *Config) (*Manager, error) {
 	}, nil
 }
 
-// CheckL2Claim checks if the claim is already in the L2 network.
-func (m *Manager) CheckL2Claim(ctx context.Context, deposit *pb.Deposit) error {
+// CheckClaim checks if the claim is already in the network
+func (m *Manager) CheckClaim(ctx context.Context, deposit *pb.Deposit) error {
 	return operations.Poll(defaultInterval, defaultDeadline, func() (bool, error) {
+		// Check that claim exist on GetClaims endpoint
 		req := pb.GetClaimsRequest{
 			DestAddr: deposit.DestAddr,
 		}
@@ -181,15 +183,49 @@ func (m *Manager) CheckL2Claim(ctx context.Context, deposit *pb.Deposit) error {
 		if err != nil {
 			return false, err
 		}
+		claimFound := false
+		var claimTxHash string
 		for _, c := range claims.Claims {
-			// TODO: check with J if claim index (local exit root index from global index) and deposit count are equivalent
 			if c.Index == deposit.DepositCnt && c.MainnetFlag == mainnetFlag && c.RollupIndex == rollupIndex {
 				log.Debugf("deposit claimed with th hash: %s", c.TxHash)
-				// TODO: get tx from RPC to assert that this is correct
-				return true, nil
+				claimFound = true
+				claimTxHash = c.TxHash
+				break
 			}
 		}
-		return false, nil
+		if !claimFound {
+			return false, nil
+		}
+
+		// Check that claim tx has been added on GetBridges response
+		reqB := &pb.GetBridgesRequest{
+			DestAddr: deposit.DestAddr,
+		}
+		bridges, err := m.bridgeService.GetBridges(ctx, reqB)
+		if err != nil {
+			return false, err
+		}
+		claimFound = false
+		for _, d := range bridges.Deposits {
+			dIdx, succ := big.NewInt(0).SetString(deposit.GlobalIndex, 10) //nolint:gomnd
+			if !succ {
+				return false, errors.New("error setting big int")
+			}
+			dMainnetFlag, dRollupIndex, _, err := etherman.DecodeGlobalIndex(dIdx)
+			if err != nil {
+				return false, err
+			}
+			if d.DepositCnt == deposit.DepositCnt && dMainnetFlag == mainnetFlag && dRollupIndex == rollupIndex {
+				if d.ClaimTxHash == claimTxHash {
+					claimFound = true
+					break
+				} else {
+					return false, errors.New("claim tx not linked to the deposit")
+				}
+			}
+		}
+		return claimFound, nil
+		// TODO: get tx from RPC to assert that this is correct
 	})
 }
 
@@ -609,7 +645,12 @@ func (m *Manager) SendL1Claim(ctx context.Context, deposit *pb.Deposit, smtProof
 		return err
 	}
 
-	return client.SendClaim(ctx, deposit, smtProof, smtRollupProof, globalExitRoot, auth)
+	err = client.SendClaim(ctx, deposit, smtProof, smtRollupProof, globalExitRoot, auth)
+	if err != nil {
+		return err
+	}
+
+	return m.CheckClaim(ctx, deposit)
 }
 
 // SendL2Claim send an L2 claim
@@ -741,7 +782,11 @@ func (m *Manager) ApproveERC20(ctx context.Context, erc20Addr, bridgeAddr common
 func (m *Manager) GetTokenWrapped(ctx context.Context, originNetwork uint, originalTokenAddr common.Address, isCreated bool) (*etherman.TokenWrapped, error) {
 	if isCreated {
 		if err := operations.Poll(defaultInterval, defaultDeadline, func() (bool, error) {
-			wrappedToken, err := m.storage.GetTokenWrapped(ctx, originNetwork, originalTokenAddr, nil)
+			req := &pb.GetTokenWrappedRequest{
+				OrigTokenAddr: originalTokenAddr.Hex(),
+				OrigNet:       uint32(originNetwork),
+			}
+			wrappedToken, err := m.bridgeService.GetTokenWrapped(ctx, req)
 			if err != nil {
 				return false, err
 			}

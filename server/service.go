@@ -256,25 +256,24 @@ func (s *bridgeService) GetBridges(ctx context.Context, req *pb.GetBridgesReques
 
 	var pbDeposits []*pb.Deposit
 	for _, deposit := range deposits {
-		// TODO: bug detected here! deposit.OriginRollupID == deposit.NetworkID
-		claimTxHash, err := s.GetDepositStatus(ctx, deposit.DepositCount, deposit.OriginRollupID, deposit.NetworkID)
+		claimTxHash, err := s.GetDepositStatus(ctx, deposit.DepositCount, deposit.OriginNetwork, deposit.DestinationNetwork)
 		if err != nil {
 			return nil, err
 		}
-		mainnetFlag := deposit.NetworkID == 0
+		mainnetFlag := deposit.OriginNetwork == 0
 		rollupIndex := s.rollupID - 1
 		localExitRootIndex := deposit.DepositCount
 		pbDeposits = append(
 			pbDeposits, &pb.Deposit{
 				LeafType:      uint32(deposit.LeafType),
-				OrigNet:       uint32(deposit.OriginalNetwork),
-				OrigAddr:      deposit.OriginalAddress.Hex(),
+				OrigNet:       uint32(deposit.OriginalTokenNetwork),
+				OrigAddr:      deposit.OriginalTokenAddress.Hex(),
 				Amount:        deposit.Amount.String(),
 				DestNet:       uint32(deposit.DestinationNetwork),
 				DestAddr:      deposit.DestinationAddress.Hex(),
 				BlockNum:      deposit.BlockNumber,
 				DepositCnt:    uint64(deposit.DepositCount),
-				NetworkId:     uint32(deposit.NetworkID),
+				NetworkId:     uint32(deposit.OriginNetwork),
 				TxHash:        deposit.TxHash.String(),
 				ClaimTxHash:   claimTxHash,
 				Metadata:      "0x" + hex.EncodeToString(deposit.Metadata),
@@ -312,11 +311,11 @@ func (s *bridgeService) GetClaims(ctx context.Context, req *pb.GetClaimsRequest)
 	var pbClaims []*pb.Claim
 	for _, claim := range claims {
 		pbClaims = append(pbClaims, &pb.Claim{
-			Index:       uint64(claim.Index),
-			OrigNet:     uint32(claim.OriginalNetwork),
-			OrigAddr:    claim.OriginalAddress.Hex(),
+			Index:       uint64(claim.DepositCount),
+			OrigNet:     uint32(claim.OriginalTokenNetwork),
+			OrigAddr:    claim.OriginalTokenAddress.Hex(),
 			Amount:      claim.Amount.String(),
-			NetworkId:   uint32(claim.NetworkID),
+			NetworkId:   uint32(claim.DestinationNetwork),
 			DestAddr:    claim.DestinationAddress.Hex(),
 			BlockNum:    claim.BlockNumber,
 			TxHash:      claim.TxHash.String(),
@@ -368,7 +367,7 @@ func (s *bridgeService) GetBridge(ctx context.Context, req *pb.GetBridgeRequest)
 		return nil, err
 	}
 
-	claimTxHash, err := s.GetDepositStatus(ctx, uint(req.DepositCnt), deposit.OriginRollupID, deposit.DestinationNetwork)
+	claimTxHash, err := s.GetDepositStatus(ctx, uint(req.DepositCnt), deposit.OriginNetwork, deposit.DestinationNetwork)
 	if err != nil {
 		return nil, err
 	}
@@ -376,14 +375,14 @@ func (s *bridgeService) GetBridge(ctx context.Context, req *pb.GetBridgeRequest)
 	return &pb.GetBridgeResponse{
 		Deposit: &pb.Deposit{
 			LeafType:      uint32(deposit.LeafType),
-			OrigNet:       uint32(deposit.OriginalNetwork),
-			OrigAddr:      deposit.OriginalAddress.Hex(),
+			OrigNet:       uint32(deposit.OriginalTokenNetwork),
+			OrigAddr:      deposit.OriginalTokenAddress.Hex(),
 			Amount:        deposit.Amount.String(),
 			DestNet:       uint32(deposit.DestinationNetwork),
 			DestAddr:      deposit.DestinationAddress.Hex(),
 			BlockNum:      deposit.BlockNumber,
 			DepositCnt:    uint64(deposit.DepositCount),
-			NetworkId:     uint32(deposit.NetworkID),
+			NetworkId:     uint32(deposit.OriginNetwork),
 			TxHash:        deposit.TxHash.String(),
 			ClaimTxHash:   claimTxHash,
 			Metadata:      "0x" + hex.EncodeToString(deposit.Metadata),

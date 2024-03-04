@@ -430,18 +430,19 @@ func (etherMan *Client) depositEvent(ctx context.Context, vLog types.Log, blocks
 	if err != nil {
 		return err
 	}
-	var deposit Deposit
-	deposit.Amount = d.Amount
-	deposit.BlockNumber = vLog.BlockNumber
-	deposit.OriginalNetwork = uint(d.OriginNetwork)
-	deposit.DestinationAddress = d.DestinationAddress
-	deposit.DestinationNetwork = uint(d.DestinationNetwork)
-	deposit.OriginalAddress = d.OriginAddress
-	deposit.DepositCount = uint(d.DepositCount)
-	deposit.TxHash = vLog.TxHash
-	deposit.Metadata = d.Metadata
-	deposit.LeafType = d.LeafType
-	deposit.OriginRollupID = etherMan.GetRollupID()
+	deposit := Deposit{
+		Amount:               d.Amount,
+		BlockNumber:          vLog.BlockNumber,
+		OriginalTokenNetwork: uint(d.OriginNetwork),
+		DestinationAddress:   d.DestinationAddress,
+		DestinationNetwork:   uint(d.DestinationNetwork),
+		OriginalTokenAddress: d.OriginAddress,
+		DepositCount:         uint(d.DepositCount),
+		TxHash:               vLog.TxHash,
+		Metadata:             d.Metadata,
+		LeafType:             d.LeafType,
+		OriginNetwork:        etherMan.GetRollupID(),
+	}
 
 	if len(*blocks) == 0 || ((*blocks)[len(*blocks)-1].BlockHash != vLog.BlockHash || (*blocks)[len(*blocks)-1].BlockNumber != vLog.BlockNumber) {
 		fullBlock, err := etherMan.EtherClient.BlockByHash(ctx, vLog.BlockHash)
@@ -491,9 +492,9 @@ func (etherMan *Client) claimEvent(ctx context.Context, vLog types.Log, blocks *
 	var claim Claim
 	claim.Amount = amount
 	claim.DestinationAddress = destinationAddress
-	claim.Index = Index
-	claim.OriginalNetwork = originNetwork
-	claim.OriginalAddress = originAddress
+	claim.DepositCount = Index
+	claim.OriginalTokenNetwork = originNetwork
+	claim.OriginalTokenAddress = originAddress
 	claim.BlockNumber = vLog.BlockNumber
 	claim.TxHash = vLog.TxHash
 	claim.RollupIndex = rollupIndex
@@ -592,12 +593,6 @@ func (etherMan *Client) EthBlockByNumber(ctx context.Context, blockNumber uint64
 	return block, nil
 }
 
-// GetNetworkID gets the network ID of the dedicated chain.
-func (etherMan *Client) GetNetworkID(ctx context.Context) (uint, error) {
-	// TODO: this is redundant with GetRollupID
-	return uint(etherMan.rollupID), nil
-}
-
 func (etherMan *Client) verifyBatchesTrustedAggregatorEvent(ctx context.Context, vLog types.Log, blocks *[]Block, blocksOrder *map[common.Hash][]Order) error {
 	log.Debug("VerifyBatchesTrustedAggregator event detected. Processing...")
 	vb, err := etherMan.PolygonRollupManager.ParseVerifyBatchesTrustedAggregator(vLog)
@@ -653,7 +648,6 @@ func (etherMan *Client) verifyBatches(ctx context.Context, vLog types.Log, block
 // GetRollupID returns the ID of the rollup that this etherman is connected to through the RPC.
 // So this will return 0 in case is the etherman for L1
 func (etherMan *Client) GetRollupID() uint {
-	// TODO: this is redundant with GetNetworkID
 	return uint(etherMan.rollupID)
 }
 

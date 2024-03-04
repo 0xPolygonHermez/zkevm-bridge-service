@@ -113,17 +113,17 @@ func (p *PostgresStorage) AddGlobalExitRoot(ctx context.Context, exitRoot *ether
 func (p *PostgresStorage) AddDeposit(ctx context.Context, deposit *etherman.Deposit, dbTx pgx.Tx) (uint64, error) {
 	const addDepositSQL = `
 	INSERT INTO sync.deposit (
-		leaf_type, network_id, orig_net, orig_addr, amount, dest_net, dest_addr, block_id, deposit_cnt, tx_hash, metadata, origin_rollup_id
-	) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING id`
+		leaf_type, network_id, orig_net, orig_addr, amount, dest_net, dest_addr, block_id, deposit_cnt, tx_hash, metadata
+	) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING id`
 	e := p.getExecQuerier(dbTx)
 	var depositID uint64
 	err := e.QueryRow(
 		ctx,
 		addDepositSQL,
 		deposit.LeafType,
-		deposit.NetworkID,
-		deposit.OriginalNetwork,
-		deposit.OriginalAddress,
+		deposit.OriginNetwork,
+		deposit.OriginalTokenNetwork,
+		deposit.OriginalTokenAddress,
 		deposit.Amount.String(),
 		deposit.DestinationNetwork,
 		deposit.DestinationAddress,
@@ -131,7 +131,6 @@ func (p *PostgresStorage) AddDeposit(ctx context.Context, deposit *etherman.Depo
 		deposit.DepositCount,
 		deposit.TxHash,
 		deposit.Metadata,
-		deposit.OriginRollupID,
 	).Scan(&depositID)
 	return depositID, err
 }
@@ -140,7 +139,7 @@ func (p *PostgresStorage) AddDeposit(ctx context.Context, deposit *etherman.Depo
 func (p *PostgresStorage) AddClaim(ctx context.Context, claim *etherman.Claim, dbTx pgx.Tx) error {
 	const addClaimSQL = "INSERT INTO sync.claim (network_id, index, orig_net, orig_addr, amount, dest_addr, block_id, tx_hash, rollup_index, mainnet_flag) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)"
 	e := p.getExecQuerier(dbTx)
-	_, err := e.Exec(ctx, addClaimSQL, claim.NetworkID, claim.Index, claim.OriginalNetwork, claim.OriginalAddress, claim.Amount.String(), claim.DestinationAddress, claim.BlockID, claim.TxHash, claim.RollupIndex, claim.MainnetFlag)
+	_, err := e.Exec(ctx, addClaimSQL, claim.DestinationNetwork, claim.DepositCount, claim.OriginalTokenNetwork, claim.OriginalTokenAddress, claim.Amount.String(), claim.DestinationAddress, claim.BlockID, claim.TxHash, claim.RollupIndex, claim.MainnetFlag)
 	return err
 }
 
@@ -250,13 +249,13 @@ func (p *PostgresStorage) GetClaim(ctx context.Context, depositCount, originNetw
 	}
 
 	err := row.Scan(
-		&claim.Index,
-		&claim.OriginalNetwork,
-		&claim.OriginalAddress,
+		&claim.DepositCount,
+		&claim.OriginalTokenNetwork,
+		&claim.OriginalTokenAddress,
 		&amount,
 		&claim.DestinationAddress,
 		&claim.BlockID,
-		&claim.NetworkID,
+		&claim.DestinationNetwork,
 		&claim.TxHash,
 		&claim.RollupIndex,
 	)
@@ -274,26 +273,25 @@ func (p *PostgresStorage) GetDeposit(ctx context.Context, depositCounterUser uin
 		amount  string
 	)
 	const getDepositSQL = `
-	SELECT leaf_type, orig_net, orig_addr, amount, dest_net, dest_addr, deposit_cnt, block_id, b.block_num, d.network_id, tx_hash, metadata, ready_for_claim, origin_rollup_id 
+	SELECT leaf_type, orig_net, orig_addr, amount, dest_net, dest_addr, deposit_cnt, block_id, b.block_num, d.network_id, tx_hash, metadata, ready_for_claim 
 	FROM sync.deposit as d INNER JOIN sync.block as b ON d.network_id = b.network_id AND d.block_id = b.id 
 	WHERE d.network_id = $1 AND deposit_cnt = $2`
 	err := p.getExecQuerier(dbTx).
 		QueryRow(ctx, getDepositSQL, networkID, depositCounterUser).
 		Scan(
 			&deposit.LeafType,
-			&deposit.OriginalNetwork,
-			&deposit.OriginalAddress,
+			&deposit.OriginalTokenNetwork,
+			&deposit.OriginalTokenAddress,
 			&amount,
 			&deposit.DestinationNetwork,
 			&deposit.DestinationAddress,
 			&deposit.DepositCount,
 			&deposit.BlockID,
 			&deposit.BlockNumber,
-			&deposit.NetworkID,
+			&deposit.OriginNetwork,
 			&deposit.TxHash,
 			&deposit.Metadata,
 			&deposit.ReadyForClaim,
-			&deposit.OriginRollupID,
 		)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, gerror.ErrStorageNotFound
@@ -579,7 +577,7 @@ func (p *PostgresStorage) GetClaims(ctx context.Context, destAddr string, limit 
 			claim  etherman.Claim
 			amount string
 		)
-		err = rows.Scan(&claim.Index, &claim.OriginalNetwork, &claim.OriginalAddress, &amount, &claim.DestinationAddress, &claim.BlockID, &claim.NetworkID, &claim.TxHash, &claim.RollupIndex, &claim.MainnetFlag)
+		err = rows.Scan(&claim.DepositCount, &claim.OriginalTokenNetwork, &claim.OriginalTokenAddress, &amount, &claim.DestinationAddress, &claim.BlockID, &claim.DestinationNetwork, &claim.TxHash, &claim.RollupIndex, &claim.MainnetFlag)
 		if err != nil {
 			return nil, err
 		}
@@ -592,7 +590,7 @@ func (p *PostgresStorage) GetClaims(ctx context.Context, destAddr string, limit 
 // GetDeposits gets the deposit list which be smaller than depositCount.
 func (p *PostgresStorage) GetDeposits(ctx context.Context, destAddr string, limit uint, offset uint, dbTx pgx.Tx) ([]*etherman.Deposit, error) {
 	const getDepositsSQL = `
-	SELECT leaf_type, orig_net, orig_addr, amount, dest_net, dest_addr, deposit_cnt, block_id, b.block_num, d.network_id, tx_hash, metadata, ready_for_claim, origin_rollup_id
+	SELECT leaf_type, orig_net, orig_addr, amount, dest_net, dest_addr, deposit_cnt, block_id, b.block_num, d.network_id, tx_hash, metadata, ready_for_claim
 	FROM sync.deposit as d INNER JOIN sync.block as b ON d.network_id = b.network_id AND d.block_id = b.id 
 	WHERE dest_addr = $1 ORDER BY d.block_id DESC, d.deposit_cnt DESC LIMIT $2 OFFSET $3
 	`
@@ -610,19 +608,18 @@ func (p *PostgresStorage) GetDeposits(ctx context.Context, destAddr string, limi
 		)
 		err = rows.Scan(
 			&deposit.LeafType,
-			&deposit.OriginalNetwork,
-			&deposit.OriginalAddress,
+			&deposit.OriginalTokenNetwork,
+			&deposit.OriginalTokenAddress,
 			&amount,
 			&deposit.DestinationNetwork,
 			&deposit.DestinationAddress,
 			&deposit.DepositCount,
 			&deposit.BlockID,
 			&deposit.BlockNumber,
-			&deposit.NetworkID,
+			&deposit.OriginNetwork,
 			&deposit.TxHash,
 			&deposit.Metadata,
 			&deposit.ReadyForClaim,
-			&deposit.OriginRollupID,
 		)
 		if err != nil {
 			return nil, err
@@ -667,7 +664,7 @@ func (p *PostgresStorage) UpdateL1DepositsStatus(ctx context.Context, exitRoot [
 			deposit etherman.Deposit
 			amount  string
 		)
-		err = rows.Scan(&deposit.LeafType, &deposit.OriginalNetwork, &deposit.OriginalAddress, &amount, &deposit.DestinationNetwork, &deposit.DestinationAddress, &deposit.DepositCount, &deposit.BlockID, &deposit.NetworkID, &deposit.TxHash, &deposit.Metadata, &deposit.ReadyForClaim)
+		err = rows.Scan(&deposit.LeafType, &deposit.OriginalTokenNetwork, &deposit.OriginalTokenAddress, &amount, &deposit.DestinationNetwork, &deposit.DestinationAddress, &deposit.DepositCount, &deposit.BlockID, &deposit.OriginNetwork, &deposit.TxHash, &deposit.Metadata, &deposit.ReadyForClaim)
 		if err != nil {
 			return nil, err
 		}

@@ -3,7 +3,6 @@ package operations
 import (
 	"context"
 
-	"github.com/0xPolygonHermez/zkevm-bridge-service/bridgectrl/pb"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/jackc/pgx/v4"
@@ -31,11 +30,4 @@ type StorageInterface interface {
 	Rollback(ctx context.Context, dbTx pgx.Tx) error
 	BeginDBTransaction(ctx context.Context) (pgx.Tx, error)
 	Commit(ctx context.Context, dbTx pgx.Tx) error
-}
-
-// BridgeServiceInterface is an interface for the bridge service.
-type BridgeServiceInterface interface {
-	GetClaims(ctx context.Context, req *pb.GetClaimsRequest) (*pb.GetClaimsResponse, error)
-	GetBridges(ctx context.Context, req *pb.GetBridgesRequest) (*pb.GetBridgesResponse, error)
-	GetProof(ctx context.Context, req *pb.GetProofRequest) (*pb.GetProofResponse, error)
 }

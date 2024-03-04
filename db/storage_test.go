@@ -30,16 +30,16 @@ func TestInsertDeposit(t *testing.T) {
 	}, tx)
 	require.NoError(t, err)
 	deposit := &etherman.Deposit{
-		NetworkID:          1,
-		OriginalNetwork:    4294967295,
-		OriginalAddress:    common.HexToAddress("0x6B175474E89094C44Da98b954EedeAC495271d0F"),
-		Amount:             big.NewInt(1000000),
-		DestinationNetwork: 4294967295,
-		DestinationAddress: common.HexToAddress("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"),
-		BlockNumber:        1,
-		BlockID:            1,
-		DepositCount:       1,
-		Metadata:           common.FromHex("0x00"),
+		OriginNetwork:        1,
+		OriginalTokenNetwork: 4294967295,
+		OriginalTokenAddress: common.HexToAddress("0x6B175474E89094C44Da98b954EedeAC495271d0F"),
+		Amount:               big.NewInt(1000000),
+		DestinationNetwork:   4294967295,
+		DestinationAddress:   common.HexToAddress("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"),
+		BlockNumber:          1,
+		BlockID:              1,
+		DepositCount:         1,
+		Metadata:             common.FromHex("0x00"),
 	}
 	_, err = pg.AddDeposit(ctx, deposit, tx)
 	require.NoError(t, err)
@@ -311,32 +311,32 @@ func TestBSStorage(t *testing.T) {
 	require.NoError(t, err)
 
 	deposit := &etherman.Deposit{
-		NetworkID:          0,
-		OriginalNetwork:    0,
-		OriginalAddress:    common.HexToAddress("0x6B175474E89094C44Da98b954EedeAC495271d0F"),
-		Amount:             big.NewInt(1000000),
-		DestinationNetwork: 1,
-		DestinationAddress: common.HexToAddress("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"),
-		BlockNumber:        1,
-		BlockID:            1,
-		DepositCount:       1,
-		Metadata:           common.FromHex("0x000000000000000000000000000000000000000000000000000000000000006000000000000000000000000000000000000000000000000000000000000000a0000000000000000000000000000000000000000000000000000000000000000c0000000000000000000000000000000000000000000000000000000000000005436f696e410000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000003434f410000000000000000000000000000000000000000000000000000000000"),
+		OriginNetwork:        0,
+		OriginalTokenNetwork: 0,
+		OriginalTokenAddress: common.HexToAddress("0x6B175474E89094C44Da98b954EedeAC495271d0F"),
+		Amount:               big.NewInt(1000000),
+		DestinationNetwork:   1,
+		DestinationAddress:   common.HexToAddress("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"),
+		BlockNumber:          1,
+		BlockID:              1,
+		DepositCount:         1,
+		Metadata:             common.FromHex("0x000000000000000000000000000000000000000000000000000000000000006000000000000000000000000000000000000000000000000000000000000000a0000000000000000000000000000000000000000000000000000000000000000c0000000000000000000000000000000000000000000000000000000000000005436f696e410000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000003434f410000000000000000000000000000000000000000000000000000000000"),
 	}
 	_, err = pg.AddDeposit(ctx, deposit, tx)
 	require.NoError(t, err)
 
 	claim := &etherman.Claim{
-		Index:              1,
-		OriginalNetwork:    0,
-		OriginalAddress:    common.HexToAddress("0x6B175474E89094C44Da98b954EedeAC495271d0F"),
-		Amount:             big.NewInt(1000000),
-		DestinationAddress: common.HexToAddress("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"),
-		BlockID:            1,
-		BlockNumber:        2,
-		NetworkID:          1,
-		TxHash:             common.HexToHash("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9f2"),
-		RollupIndex:        0,
-		MainnetFlag:        true,
+		DepositCount:         1,
+		OriginalTokenNetwork: 0,
+		OriginalTokenAddress: common.HexToAddress("0x6B175474E89094C44Da98b954EedeAC495271d0F"),
+		Amount:               big.NewInt(1000000),
+		DestinationAddress:   common.HexToAddress("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"),
+		BlockID:              1,
+		BlockNumber:          2,
+		DestinationNetwork:   1,
+		TxHash:               common.HexToHash("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9f2"),
+		RollupIndex:          0,
+		MainnetFlag:          true,
 	}
 	err = pg.AddClaim(ctx, claim, tx)
 	require.NoError(t, err)
@@ -368,8 +368,8 @@ func TestBSStorage(t *testing.T) {
 	rClaim, err := pg.GetClaim(ctx, 1, 0, 1, tx)
 	require.NoError(t, err)
 	require.Equal(t, rClaim.DestinationAddress, claim.DestinationAddress)
-	require.Equal(t, rClaim.NetworkID, claim.NetworkID)
-	require.Equal(t, rClaim.Index, claim.Index)
+	require.Equal(t, rClaim.DestinationNetwork, claim.DestinationNetwork)
+	require.Equal(t, rClaim.DepositCount, claim.DepositCount)
 	require.Equal(t, rClaim.RollupIndex, claim.RollupIndex)
 	require.Equal(t, rClaim.MainnetFlag, claim.MainnetFlag)
 
@@ -379,7 +379,7 @@ func TestBSStorage(t *testing.T) {
 
 	wrappedToken := &etherman.TokenWrapped{
 		OriginalNetwork:      0,
-		OriginalTokenAddress: deposit.OriginalAddress,
+		OriginalTokenAddress: deposit.OriginalTokenAddress,
 		WrappedTokenAddress:  common.HexToAddress("0x187Bd40226A7073b49163b1f6c2b73d8F2aa8478"),
 		BlockID:              1,
 		BlockNumber:          1,

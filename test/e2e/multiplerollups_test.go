@@ -263,7 +263,7 @@ func bridge(
 
 	if bd.originNet == 0 {
 		log.Debug("waiting for claim tx to be sent on behalf of the user by bridge service...")
-		err = opsman.CheckL2Claim(ctx, deposit)
+		err = opsman.CheckClaim(ctx, deposit)
 		require.NoError(t, err)
 		log.Debug("deposit claimed on L2")
 	} else {

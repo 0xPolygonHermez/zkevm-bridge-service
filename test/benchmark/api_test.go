@@ -53,16 +53,16 @@ func initAddresses(count int) []common.Address {
 
 func randDeposit(r *rand.Rand, depositCnt uint, blockID uint64, networkID int) *etherman.Deposit {
 	return &etherman.Deposit{
-		LeafType:           0,
-		OriginalNetwork:    networks[0],
-		OriginalAddress:    common.Address{},
-		Amount:             big.NewInt(1000000000000),
-		DestinationNetwork: networks[1-networkID],
-		DestinationAddress: addresses[rand.Intn(len(addresses))], //nolint: gosec
-		DepositCount:       depositCnt,
-		BlockID:            blockID,
-		NetworkID:          networks[networkID],
-		Metadata:           randBytes(r, 20),
+		LeafType:             0,
+		OriginalTokenNetwork: networks[0],
+		OriginalTokenAddress: common.Address{},
+		Amount:               big.NewInt(1000000000000),
+		DestinationNetwork:   networks[1-networkID],
+		DestinationAddress:   addresses[rand.Intn(len(addresses))], //nolint: gosec
+		DepositCount:         depositCnt,
+		BlockID:              blockID,
+		OriginNetwork:        networks[networkID],
+		Metadata:             randBytes(r, 20),
 	}
 }
 
@@ -115,14 +115,14 @@ func initServer(b *testing.B, bench benchmark) *bridgectrl.BridgeController {
 		}
 		require.NoError(b, err)
 		err = store.AddClaim(context.TODO(), &etherman.Claim{
-			Index:              deposit.DepositCount,
-			OriginalNetwork:    deposit.OriginalNetwork,
-			Amount:             deposit.Amount,
-			NetworkID:          deposit.DestinationNetwork,
-			DestinationAddress: deposit.DestinationAddress,
-			RollupIndex:        0,
-			MainnetFlag:        networkID == 0,
-			BlockID:            id,
+			DepositCount:         deposit.DepositCount,
+			OriginalTokenNetwork: deposit.OriginalTokenNetwork,
+			Amount:               deposit.Amount,
+			DestinationNetwork:   deposit.DestinationNetwork,
+			DestinationAddress:   deposit.DestinationAddress,
+			RollupIndex:          0,
+			MainnetFlag:          networkID == 0,
+			BlockID:              id,
 		}, dbTx)
 		require.NoError(b, err)
 		require.NoError(b, store.Commit(context.TODO(), dbTx))

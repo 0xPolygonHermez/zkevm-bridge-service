@@ -53,20 +53,12 @@ func start(ctx *cli.Context) error {
 		return err
 	}
 
-	networkID, err := l1Etherman.GetNetworkID(ctx.Context)
+	networkID := l1Etherman.GetRollupID()
 	log.Infof("main network id: %d", networkID)
-	if err != nil {
-		log.Error(err)
-		return err
-	}
 
 	var networkIDs = []uint{networkID}
 	for _, client := range l2Ethermans {
-		networkID, err := client.GetNetworkID(ctx.Context)
-		if err != nil {
-			log.Error(err)
-			return err
-		}
+		networkID := client.GetRollupID()
 		log.Infof("l2 network id: %d", networkID)
 		networkIDs = append(networkIDs, networkID)
 	}
