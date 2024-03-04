@@ -421,6 +421,10 @@ func (s *bridgeService) GetTokenWrapped(ctx context.Context, req *pb.GetTokenWra
 // GetCoinPrice returns the price for each coin symbol in the request
 // Bridge rest API endpoint
 func (s *bridgeService) GetCoinPrice(ctx context.Context, req *pb.GetCoinPriceRequest) (*pb.CommonCoinPricesResponse, error) {
+	// convert inner chainId to standard chain id
+	for _, symbol := range req.SymbolInfos {
+		symbol.ChainId = utils.GetStandardChainIdByInnerId(symbol.ChainId)
+	}
 	priceList, err := s.redisStorage.GetCoinPrice(ctx, req.SymbolInfos)
 	if err != nil {
 		log.Errorf("get coin price from redis failed for symbol: %v, error: %v", req.SymbolInfos, err)
@@ -429,6 +433,10 @@ func (s *bridgeService) GetCoinPrice(ctx context.Context, req *pb.GetCoinPriceRe
 			Data: nil,
 			Msg:  gerror.ErrInternalErrorForRpcCall.Error(),
 		}, nil
+	}
+	// convert standard chainId to ok inner chainId
+	for _, priceInfo := range priceList {
+		priceInfo.ChainId = utils.GetInnerChainIdByStandardId(priceInfo.ChainId)
 	}
 	return &pb.CommonCoinPricesResponse{
 		Code: defaultSuccessCode,
@@ -447,6 +455,10 @@ func (s *bridgeService) GetMainCoins(ctx context.Context, req *pb.GetMainCoinsRe
 			Data: nil,
 			Msg:  gerror.ErrInternalErrorForRpcCall.Error(),
 		}, nil
+	}
+	// use ok inner chain id
+	for _, coinInfo := range coins {
+		coinInfo.ChainId = utils.GetInnerChainIdByStandardId(coinInfo.ChainId)
 	}
 	return &pb.CommonCoinsResponse{
 		Code: defaultSuccessCode,
@@ -514,6 +526,13 @@ func (s *bridgeService) GetPendingTransactions(ctx context.Context, req *pb.GetP
 				}
 				s.setDurationForL2Deposit(ctx, l2AvgCommitDuration, l2AvgVerifyDuration, currTime, transaction, deposit.Time)
 			}
+		}
+		// chain id convert to ok inner chain id
+		if transaction.FromChainId != 0 {
+			transaction.FromChainId = uint32(utils.GetInnerChainIdByStandardId(uint64(transaction.FromChainId)))
+		}
+		if transaction.ToChainId != 0 {
+			transaction.ToChainId = uint32(utils.GetInnerChainIdByStandardId(uint64(transaction.ToChainId)))
 		}
 		pbTransactions = append(pbTransactions, transaction)
 	}
@@ -614,6 +633,13 @@ func (s *bridgeService) GetAllTransactions(ctx context.Context, req *pb.GetAllTr
 				}
 				s.setDurationForL2Deposit(ctx, l2AvgCommitDuration, l2AvgVerifyDuration, currTime, transaction, deposit.Time)
 			}
+		}
+		// chain id convert to ok inner chain id
+		if transaction.FromChainId != 0 {
+			transaction.FromChainId = uint32(utils.GetInnerChainIdByStandardId(uint64(transaction.FromChainId)))
+		}
+		if transaction.ToChainId != 0 {
+			transaction.ToChainId = uint32(utils.GetInnerChainIdByStandardId(uint64(transaction.ToChainId)))
 		}
 		pbTransactions = append(pbTransactions, transaction)
 	}

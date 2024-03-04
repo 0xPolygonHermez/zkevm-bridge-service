@@ -139,6 +139,13 @@ func (p *kafkaProducerImpl) PushTransactionUpdate(tx *pb.Transaction, optFns ...
 	if tx == nil {
 		return nil
 	}
+	// chain id convert to ok inner chain id
+	if tx.FromChainId != 0 {
+		tx.FromChainId = uint32(utils.GetInnerChainIdByStandardId(uint64(tx.FromChainId)))
+	}
+	if tx.ToChainId != 0 {
+		tx.ToChainId = uint32(utils.GetInnerChainIdByStandardId(uint64(tx.ToChainId)))
+	}
 	var b []byte
 	var err error
 	if tx.Status == uint32(pb.TransactionStatus_TX_CREATED) {
