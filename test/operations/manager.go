@@ -132,7 +132,7 @@ func NewManager(ctx context.Context, cfg *Config) (*Manager, error) {
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithBlock(),
 	}
-	ctx, _ = context.WithTimeout(ctx, 5*time.Second)
+	ctx, _ = context.WithTimeout(ctx, 5*time.Second) //nolint:gomnd,govet
 	bridgeConn, err := grpc.DialContext(ctx, "127.0.0.1:"+cfg.BS.GRPCPort, opts...)
 	if err != nil {
 		return nil, err
