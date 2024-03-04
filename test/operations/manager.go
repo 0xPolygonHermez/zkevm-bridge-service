@@ -26,6 +26,8 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 // NetworkSID is used to identify the network.
@@ -126,8 +128,16 @@ func NewManager(ctx context.Context, cfg *Config) (*Manager, error) {
 	if err != nil {
 		return nil, err
 	}
-	bService := pb.NewBridgeServiceClient(nil)
-	// bService := server.NewBridgeService(cfg.BS, cfg.BT.Height, []uint{0, rollupID}, pgst, rollupID)
+	opts := []grpc.DialOption{
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithBlock(),
+	}
+	ctx, _ = context.WithTimeout(ctx, 5*time.Second)
+	bridgeConn, err := grpc.DialContext(ctx, "127.0.0.1:"+cfg.BS.GRPCPort, opts...)
+	if err != nil {
+		return nil, err
+	}
+	bService := pb.NewBridgeServiceClient(bridgeConn)
 	l1Ethman, err := etherman.NewL1Client(
 		cfg.L1NetworkURL,
 		common.HexToAddress(L1BridgeAddr),
