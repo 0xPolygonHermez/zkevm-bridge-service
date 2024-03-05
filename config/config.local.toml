@@ -19,7 +19,6 @@ Name = "test_db"
 Host = "x1-bridge-db"
 Port = "5432"
 MaxConns = 20
-TableSuffix = ""
 
 [ClaimTxManager]
 Enabled = true

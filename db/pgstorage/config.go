@@ -19,7 +19,4 @@ type Config struct {
 
 	// MaxConns is the maximum number of connections in the pool.
 	MaxConns int `mapstructure:"MaxConns"`
-
-	// TableSuffix will be added to all table names, e.g. sync.root -> sync.root_test
-	TableSuffix string `mapstructure:"TableSuffix"`
 }

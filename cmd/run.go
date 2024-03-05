@@ -6,17 +6,11 @@ import (
 
 	"github.com/0xPolygonHermez/zkevm-bridge-service/bridgectrl"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/claimtxman"
-	"github.com/0xPolygonHermez/zkevm-bridge-service/coinmiddleware"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/config"
-	"github.com/0xPolygonHermez/zkevm-bridge-service/config/apolloconfig"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/db"
-	"github.com/0xPolygonHermez/zkevm-bridge-service/estimatetime"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman"
-	"github.com/0xPolygonHermez/zkevm-bridge-service/localcache"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/messagepush"
-	"github.com/0xPolygonHermez/zkevm-bridge-service/pushtask"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/redisstorage"
-	"github.com/0xPolygonHermez/zkevm-bridge-service/sentinel"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/server"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/synchronizer"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/utils"
@@ -27,79 +21,21 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-func runAPI(ctx *cli.Context) error {
-	return startServer(ctx, withAPI())
-}
+func start(ctx *cli.Context) error {
+	configFilePath := ctx.String(flagCfg)
+	network := ctx.String(flagNetwork)
 
-func runTask(ctx *cli.Context) error {
-	return startServer(ctx, withTasks())
-}
-
-func runPushTask(ctx *cli.Context) error {
-	return startServer(ctx, withPushTasks())
-}
-
-func runAll(ctx *cli.Context) error {
-	return startServer(ctx, withAPI(), withTasks(), withPushTasks())
-}
-
-type runOption struct {
-	runAPI       bool
-	runTasks     bool
-	runPushTasks bool
-}
-
-type runOptionFunc func(opt *runOption)
-
-func withAPI() runOptionFunc {
-	return func(opt *runOption) {
-		opt.runAPI = true
-	}
-}
-
-func withTasks() runOptionFunc {
-	return func(opt *runOption) {
-		opt.runTasks = true
-	}
-}
-
-func withPushTasks() runOptionFunc {
-	return func(opt *runOption) {
-		opt.runPushTasks = true
-	}
-}
-
-func startServer(ctx *cli.Context, opts ...runOptionFunc) error {
-	opt := &runOption{}
-	for _, f := range opts {
-		f(opt)
-	}
-
-	c, err := initCommon(ctx)
+	c, err := config.Load(configFilePath, network)
 	if err != nil {
 		return err
 	}
-
-	// Init sentinel
-	if c.Apollo.Enabled {
-		err = sentinel.InitApolloDataSource(c.Apollo)
-	} else {
-		err = sentinel.InitFileDataSource(c.BridgeServer.SentinelConfigFilePath)
-	}
-	if err != nil {
-		log.Infof("init sentinel error[%v]; ignored and proceed with no sentinel config", err)
-	}
-
+	setupLog(c.Log)
 	err = db.RunMigrations(c.SyncDB)
 	if err != nil {
 		log.Error(err)
 		return err
 	}
 
-	l1ChainId := c.Etherman.L1ChainId
-	l2ChainIds := c.Etherman.L2ChainIds
-	var chainIDs = []uint{l1ChainId}
-	chainIDs = append(chainIDs, l2ChainIds...)
 	l1Etherman, l2Ethermans, err := newEthermans(c)
 	if err != nil {
 		log.Error(err)
@@ -114,31 +50,14 @@ func startServer(ctx *cli.Context, opts ...runOptionFunc) error {
 	}
 
 	var networkIDs = []uint{networkID}
-	for _, cl := range l2Ethermans {
-		networkID, err := cl.GetNetworkID(ctx.Context)
+	for _, client := range l2Ethermans {
+		networkID, err := client.GetNetworkID(ctx.Context)
 		if err != nil {
 			log.Error(err)
 			return err
 		}
 		log.Infof("l2 network id: %d", networkID)
 		networkIDs = append(networkIDs, networkID)
-	}
-
-	l2NodeClients := make([]*utils.Client, len(c.Etherman.L2URLs))
-	l2Auths := make([]*bind.TransactOpts, len(c.Etherman.L2URLs))
-	for i := range c.Etherman.L2URLs {
-		nodeClient, err := utils.NewClient(ctx.Context, c.Etherman.L2URLs[i], c.NetworkConfig.L2PolygonBridgeAddresses[i])
-		if err != nil {
-			log.Error(err)
-			return err
-		}
-		auth, err := nodeClient.GetSignerFromKeystore(ctx.Context, c.ClaimTxManager.PrivateKey)
-		if err != nil {
-			log.Error(err)
-			return err
-		}
-		l2NodeClients[i] = nodeClient
-		l2Auths[i] = auth
 	}
 
 	storage, err := db.NewStorage(c.SyncDB)
@@ -165,139 +84,45 @@ func startServer(ctx *cli.Context, opts ...runOptionFunc) error {
 		log.Error(err)
 		return err
 	}
-
-	redisStorage, err := redisstorage.NewRedisStorage(c.BridgeServer.Redis)
+	bridgeService := server.NewBridgeService(c.BridgeServer, c.BridgeController.Height, networkIDs, []*utils.Client{nil}, []*bind.TransactOpts{nil}, apiStorage)
+	err = server.RunServer(c.BridgeServer, bridgeService)
 	if err != nil {
 		log.Error(err)
 		return err
 	}
 
-	mainCoinsCache, err := localcache.NewMainCoinsCache(apiStorage)
-	if err != nil {
-		log.Error(err)
-		return err
+	log.Debug("trusted sequencer URL ", c.Etherman.L2URLs[0])
+	zkEVMClient := client.NewClient(c.Etherman.L2URLs[0])
+	chExitRootEvent := make(chan *etherman.GlobalExitRoot)
+	chSynced := make(chan uint)
+	go runSynchronizer(c.NetworkConfig.GenBlockNumber, bridgeController, l1Etherman, c.Synchronizer, storage, zkEVMClient, chExitRootEvent, chSynced, nil, nil)
+	for _, client := range l2Ethermans {
+		go runSynchronizer(0, bridgeController, client, c.Synchronizer, storage, zkEVMClient, chExitRootEvent, chSynced, nil, nil)
 	}
 
-	err = estimatetime.InitDefaultCalculator(apiStorage)
-	if err != nil {
-		log.Error(err)
-		return err
-	}
-
-	var messagePushProducer messagepush.KafkaProducer
-	if c.MessagePushProducer.Enabled {
-		log.Infof("message push producer's switch is open, so init producer!")
-		messagePushProducer, err = messagepush.NewKafkaProducer(c.MessagePushProducer)
-		if err != nil {
-			log.Error(err)
-			return err
-		}
-		defer func() {
-			err := messagePushProducer.Close()
+	if c.ClaimTxManager.Enabled {
+		for i := 0; i < len(c.Etherman.L2URLs); i++ {
+			// we should match the orders of L2URLs between etherman and claimtxman
+			// since we are using the networkIDs in the same order
+			claimTxManager, err := claimtxman.NewClaimTxManager(c.ClaimTxManager, chExitRootEvent, chSynced, c.Etherman.L2URLs[i], networkIDs[i+1], c.NetworkConfig.L2PolygonBridgeAddresses[i], bridgeService, storage, nil, nil)
 			if err != nil {
-				log.Errorf("close kafka producer error: %v", err)
+				log.Fatalf("error creating claim tx manager for L2 %s. Error: %v", c.Etherman.L2URLs[i], err)
 			}
-		}()
-	}
-
-	// Initialize chainId manager
-	utils.InitChainIdManager(networkIDs, chainIDs)
-
-	bridgeService := server.NewBridgeService(c.BridgeServer, c.BridgeController.Height, networkIDs, l2NodeClients, l2Auths, apiStorage, redisStorage, mainCoinsCache, estimatetime.GetDefaultCalculator()).
-		WithMessagePushProducer(messagePushProducer)
-
-	// Initialize inner chain id conf
-	utils.InnitOkInnerChainIdMapper(c.BusinessConfig)
-
-	// ---------- Run API ----------
-	if opt.runAPI {
-		server.RegisterNacos(c.NacosConfig)
-
-		err = server.RunServer(c.BridgeServer, bridgeService)
-		if err != nil {
-			log.Error(err)
-			return err
+			go claimTxManager.Start()
 		}
-	}
-
-	// ---------- Run push tasks ----------
-	if opt.runPushTasks {
-		// Initialize the push task for L1 block num change
-		l1BlockNumTask, err := pushtask.NewL1BlockNumTask(c.Etherman.L1URL, apiStorage, redisStorage, messagePushProducer)
-		if err != nil {
-			log.Error(err)
-			return err
-		}
-		go l1BlockNumTask.Start(ctx.Context)
-
-		// Initialize the push task for sync l2 commit batch
-		syncCommitBatchTask, err := pushtask.NewCommittedBatchHandler(c.Etherman.L2URLs[0], apiStorage, redisStorage, messagePushProducer)
-		if err != nil {
-			log.Error(err)
-			return err
-		}
-		go syncCommitBatchTask.Start(ctx.Context)
-
-		// Initialize the push task for sync verify batch
-		syncVerifyBatchTask, err := pushtask.NewVerifiedBatchHandler(c.Etherman.L2URLs[0], redisStorage)
-		if err != nil {
-			log.Error(err)
-			return err
-		}
-		go syncVerifyBatchTask.Start(ctx.Context)
-	}
-
-	// ---------- Run synchronizer tasks ----------
-	if opt.runTasks {
-		log.Debug("trusted sequencer URL ", c.Etherman.L2URLs[0])
-		zkEVMClient := client.NewClient(c.Etherman.L2URLs[0])
-		chExitRootEvent := make(chan *etherman.GlobalExitRoot)
-		chSynced := make(chan uint)
-		go runSynchronizer(c.NetworkConfig.GenBlockNumber, bridgeController, l1Etherman, c.Synchronizer, storage, zkEVMClient, chExitRootEvent, chSynced, messagePushProducer, redisStorage)
-		for _, cl := range l2Ethermans {
-			go runSynchronizer(0, bridgeController, cl, c.Synchronizer, storage, zkEVMClient, chExitRootEvent, chSynced, messagePushProducer, redisStorage)
-		}
-
-		if c.ClaimTxManager.Enabled {
-			for i := 0; i < len(c.Etherman.L2URLs); i++ {
-				// we should match the orders of L2URLs between etherman and claimtxman
-				// since we are using the networkIDs in the same order
-				claimTxManager, err := claimtxman.NewClaimTxManager(c.ClaimTxManager, chExitRootEvent, chSynced, c.Etherman.L2URLs[i], networkIDs[i+1], c.NetworkConfig.L2PolygonBridgeAddresses[i], bridgeService, storage, messagePushProducer, redisStorage)
-				if err != nil {
-					log.Fatalf("error creating claim tx manager for L2 %s. Error: %v", c.Etherman.L2URLs[i], err)
+	} else {
+		log.Warn("ClaimTxManager not configured")
+		go func() {
+			for {
+				select {
+				case <-chExitRootEvent:
+					log.Debug("New GER received")
+				case netID := <-chSynced:
+					log.Debug("NetworkID synced: ", netID)
+				case <-ctx.Context.Done():
+					log.Debug("Stopping goroutine that listen new GER updates")
+					return
 				}
-				go claimTxManager.Start()
-			}
-		} else {
-			log.Warn("ClaimTxManager not configured")
-			go func() {
-				for {
-					select {
-					case <-chExitRootEvent:
-						log.Debug("New GER received")
-					case netID := <-chSynced:
-						log.Debug("NetworkID synced: ", netID)
-					case <-ctx.Context.Done():
-						log.Debug("Stopping goroutine that listen new GER updates")
-						return
-					}
-				}
-			}()
-		}
-
-		// Start the coin middleware kafka consumer
-		log.Debugf("start initializing kafka consumer...")
-		coinKafkaConsumer, err := coinmiddleware.NewKafkaConsumer(c.CoinKafkaConsumer, redisStorage)
-		if err != nil {
-			log.Error(err)
-			return err
-		}
-		log.Debugf("finish initializing kafka consumer")
-		go coinKafkaConsumer.Start(ctx.Context)
-		defer func() {
-			err := coinKafkaConsumer.Close()
-			if err != nil {
-				log.Errorf("close kafka consumer error: %v", err)
 			}
 		}()
 	}
@@ -308,19 +133,6 @@ func startServer(ctx *cli.Context, opts ...runOptionFunc) error {
 	<-ch
 
 	return nil
-}
-
-func initCommon(ctx *cli.Context) (*config.Config, error) {
-	configFilePath := ctx.String(flagCfg)
-	network := ctx.String(flagNetwork)
-
-	c, err := config.Load(configFilePath, network)
-	if err != nil {
-		return nil, err
-	}
-	setupLog(c.Log)
-	apolloconfig.SetLogger()
-	return c, nil
 }
 
 func setupLog(c log.Config) {

@@ -2,8 +2,10 @@ package etherman
 
 // Config represents the configuration of the etherman
 type Config struct {
-	L1URL      string   `mapstructure:"L1URL"`
-	L2URLs     []string `mapstructure:"L2URLs"`
-	L1ChainId  uint     `mapstructure:"L1ChainId"`
-	L2ChainIds []uint   `mapstructure:"L2ChainIds"`
+	L1URL  string   `mapstructure:"L1URL"`
+	L2URLs []string `mapstructure:"L2URLs"`
+
+	// X1
+	L1ChainId  uint   `mapstructure:"L1ChainId"`
+	L2ChainIds []uint `mapstructure:"L2ChainIds"`
 }

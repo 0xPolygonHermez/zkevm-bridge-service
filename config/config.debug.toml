@@ -19,7 +19,6 @@ Name = "test_db"
 Host = "localhost"
 Port = "5435"
 MaxConns = 20
-TableSuffix = ""
 
 [ClaimTxManager]
 Enabled = true
