@@ -174,14 +174,24 @@ func (tm *ClaimTxManager) processDepositStatusL1(newGer *etherman.GlobalExitRoot
 			tm.rollbackStore(dbTx)
 			return err
 		}
-		claimHash, err := tm.bridgeService.GetDepositStatus(tm.ctx, deposit.DepositCount, deposit.DestinationNetwork)
-		if err != nil {
-			log.Errorf("error getting deposit status for deposit %d. Error: %v", deposit.DepositCount, err)
-			tm.rollbackStore(dbTx)
-			return err
+		ignore := false
+		if tm.l2NetworkID != deposit.DestinationNetwork {
+			log.Infof("Ignoring deposit: %d: dest_net: %d, we are:%d", deposit.DepositCount, deposit.DestinationNetwork, tm.l2NetworkID)
+			ignore = true
+		} else {
+			claimHash, err := tm.bridgeService.GetDepositStatus(tm.ctx, deposit.DepositCount, deposit.DestinationNetwork)
+			if err != nil {
+				log.Errorf("error getting deposit status for deposit %d. Error: %v", deposit.DepositCount, err)
+				tm.rollbackStore(dbTx)
+				return err
+			}
+			if len(claimHash) > 0 || (deposit.LeafType == LeafTypeMessage && !tm.isDepositMessageAllowed(deposit)) {
+				log.Infof("Ignoring deposit: %d, leafType: %d, claimHash: %s", deposit.DepositCount, deposit.LeafType, claimHash)
+				ignore = true
+			}
 		}
-		if len(claimHash) > 0 || (deposit.LeafType == LeafTypeMessage && !tm.isDepositMessageAllowed(deposit)) {
-			log.Infof("Ignoring deposit: %d, leafType: %d, claimHash: %s", deposit.DepositCount, deposit.LeafType, claimHash)
+
+		if ignore {
 			// todo: optimize it
 			err = tm.storage.Commit(tm.ctx, dbTx)
 			if err != nil {
@@ -290,6 +300,11 @@ func (tm *ClaimTxManager) processDepositStatusX1(ger *etherman.GlobalExitRoot, d
 		}
 		log.Debugf("Mainnet deposits count %d", len(deposits))
 		for _, deposit := range deposits {
+			if tm.l2NetworkID != deposit.DestinationNetwork {
+				log.Infof("Ignoring deposit: %d: dest_net: %d, we are:%d", deposit.DepositCount, deposit.DestinationNetwork, tm.l2NetworkID)
+				continue
+			}
+
 			claimHash, err := tm.bridgeService.GetDepositStatus(tm.ctx, deposit.DepositCount, deposit.DestinationNetwork)
 			if err != nil {
 				log.Errorf("error getting deposit status for deposit %d. Error: %v", deposit.DepositCount, err)
