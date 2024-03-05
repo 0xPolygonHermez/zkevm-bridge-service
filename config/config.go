@@ -10,6 +10,7 @@ import (
 	"github.com/0xPolygonHermez/zkevm-bridge-service/claimtxman"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/coinmiddleware"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/config/apolloconfig"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/config/businessconfig"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/db"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/messagepush"
@@ -35,6 +36,7 @@ type Config struct {
 	MessagePushProducer messagepush.Config    `apollo:"MessagePushProducer"`
 	NetworkConfig       `apollo:"NetworkConfig"`
 	NacosConfig         nacos.Config
+	BusinessConfig      businessconfig.Config `apollo:"BusinessConfig"`
 }
 
 // Load loads the configuration

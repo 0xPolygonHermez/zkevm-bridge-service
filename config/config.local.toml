@@ -93,3 +93,7 @@ NacosUrls = ""
 NamespaceId = "public"
 ApplicationName = ""
 ExternalListenAddr = "127.0.0.1:26659"
+
+[BusinessConfig]
+StandardChainIds = [195]
+InnerChainIds = [19500]
