@@ -60,14 +60,14 @@ func TestLeafHash(t *testing.T) {
 			require.True(t, err)
 
 			deposit := &etherman.Deposit{
-				OriginalNetwork:    testVector.OriginalNetwork,
-				OriginalAddress:    common.HexToAddress(testVector.TokenAddress),
-				Amount:             amount,
-				DestinationNetwork: testVector.DestinationNetwork,
-				DestinationAddress: common.HexToAddress(testVector.DestinationAddress),
-				BlockNumber:        0,
-				DepositCount:       uint(ti + 1),
-				Metadata:           common.FromHex(testVector.Metadata),
+				OriginalTokenNetwork: testVector.OriginalNetwork,
+				OriginalTokenAddress: common.HexToAddress(testVector.TokenAddress),
+				Amount:               amount,
+				DestinationNetwork:   testVector.DestinationNetwork,
+				DestinationAddress:   common.HexToAddress(testVector.DestinationAddress),
+				BlockNumber:          0,
+				DepositCount:         uint(ti + 1),
+				Metadata:             common.FromHex(testVector.Metadata),
 			}
 			leafHash := hashDeposit(deposit)
 			assert.Equal(t, testVector.ExpectedHash[2:], hex.EncodeToString(leafHash[:]))
@@ -105,14 +105,14 @@ func TestMTAddLeaf(t *testing.T) {
 			)
 			for i := 0; i <= ti; i++ {
 				deposit = &etherman.Deposit{
-					OriginalNetwork:    testVector.NewLeaf.OriginalNetwork,
-					OriginalAddress:    common.HexToAddress(testVector.NewLeaf.TokenAddress),
-					Amount:             amount,
-					DestinationNetwork: testVector.NewLeaf.DestinationNetwork,
-					DestinationAddress: common.HexToAddress(testVector.NewLeaf.DestinationAddress),
-					BlockNumber:        0,
-					DepositCount:       uint(i),
-					Metadata:           common.FromHex(testVector.NewLeaf.Metadata),
+					OriginalTokenNetwork: testVector.NewLeaf.OriginalNetwork,
+					OriginalTokenAddress: common.HexToAddress(testVector.NewLeaf.TokenAddress),
+					Amount:               amount,
+					DestinationNetwork:   testVector.NewLeaf.DestinationNetwork,
+					DestinationAddress:   common.HexToAddress(testVector.NewLeaf.DestinationAddress),
+					BlockNumber:          0,
+					DepositCount:         uint(i),
+					Metadata:             common.FromHex(testVector.NewLeaf.Metadata),
 				}
 				depositID, err := store.AddDeposit(ctx, deposit, nil)
 				require.NoError(t, err)
@@ -173,14 +173,14 @@ func TestMTGetProof(t *testing.T) {
 				blockID, err := store.AddBlock(context.TODO(), block, nil)
 				require.NoError(t, err)
 				deposit := &etherman.Deposit{
-					OriginalNetwork:    leaf.OriginalNetwork,
-					OriginalAddress:    common.HexToAddress(leaf.TokenAddress),
-					Amount:             amount,
-					DestinationNetwork: leaf.DestinationNetwork,
-					DestinationAddress: common.HexToAddress(leaf.DestinationAddress),
-					BlockID:            blockID,
-					DepositCount:       uint(li),
-					Metadata:           common.FromHex(leaf.Metadata),
+					OriginalTokenNetwork: leaf.OriginalNetwork,
+					OriginalTokenAddress: common.HexToAddress(leaf.TokenAddress),
+					Amount:               amount,
+					DestinationNetwork:   leaf.DestinationNetwork,
+					DestinationAddress:   common.HexToAddress(leaf.DestinationAddress),
+					BlockID:              blockID,
+					DepositCount:         uint(li),
+					Metadata:             common.FromHex(leaf.Metadata),
 				}
 				depositID, err := store.AddDeposit(ctx, deposit, nil)
 				require.NoError(t, err)
@@ -233,14 +233,14 @@ func TestUpdateMT(t *testing.T) {
 		require.True(t, result)
 		for i := 0; i <= ti; i++ {
 			deposit := &etherman.Deposit{
-				OriginalNetwork:    testVector.NewLeaf.OriginalNetwork,
-				OriginalAddress:    common.HexToAddress(testVector.NewLeaf.TokenAddress),
-				Amount:             amount,
-				DestinationNetwork: testVector.NewLeaf.DestinationNetwork,
-				DestinationAddress: common.HexToAddress(testVector.NewLeaf.DestinationAddress),
-				BlockNumber:        0,
-				DepositCount:       uint(i),
-				Metadata:           common.FromHex(testVector.NewLeaf.Metadata),
+				OriginalTokenNetwork: testVector.NewLeaf.OriginalNetwork,
+				OriginalTokenAddress: common.HexToAddress(testVector.NewLeaf.TokenAddress),
+				Amount:               amount,
+				DestinationNetwork:   testVector.NewLeaf.DestinationNetwork,
+				DestinationAddress:   common.HexToAddress(testVector.NewLeaf.DestinationAddress),
+				BlockNumber:          0,
+				DepositCount:         uint(i),
+				Metadata:             common.FromHex(testVector.NewLeaf.Metadata),
 			}
 			_, err := store.AddDeposit(ctx, deposit, nil)
 			require.NoError(t, err)
@@ -386,14 +386,14 @@ func TestCheckMerkleProof(t *testing.T) {
 	var height uint8 = 32
 	amount, _ := big.NewInt(0).SetString("10000000000000000000", 0)
 	deposit := &etherman.Deposit{
-		OriginalNetwork:    0,
-		OriginalAddress:    common.Address{},
-		Amount:             amount,
-		DestinationNetwork: 1,
-		DestinationAddress: common.HexToAddress("0xc949254d682d8c9ad5682521675b8f43b102aec4"),
-		BlockNumber:        0,
-		DepositCount:       0,
-		Metadata:           []byte{},
+		OriginalTokenNetwork: 0,
+		OriginalTokenAddress: common.Address{},
+		Amount:               amount,
+		DestinationNetwork:   1,
+		DestinationAddress:   common.HexToAddress("0xc949254d682d8c9ad5682521675b8f43b102aec4"),
+		BlockNumber:          0,
+		DepositCount:         0,
+		Metadata:             []byte{},
 	}
 	leafHash := hashDeposit(deposit)
 	smtProof := [][KeyLen]byte{

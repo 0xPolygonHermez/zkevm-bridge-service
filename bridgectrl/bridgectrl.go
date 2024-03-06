@@ -61,7 +61,7 @@ func (bt *BridgeController) GetNetworkID(networkID uint) (uint8, error) {
 // AddDeposit adds deposit information to the bridge tree.
 func (bt *BridgeController) AddDeposit(ctx context.Context, deposit *etherman.Deposit, depositID uint64, dbTx pgx.Tx) error {
 	leaf := hashDeposit(deposit)
-	tID, err := bt.GetNetworkID(deposit.NetworkID)
+	tID, err := bt.GetNetworkID(deposit.OriginNetwork)
 	if err != nil {
 		return err
 	}

@@ -44,6 +44,6 @@ func RunMockServer(dbType string, height uint8, networks []uint) (*bridgectrl.Br
 		MaxPageLimit:     100,    //nolint:gomnd
 		BridgeVersion:    "v1",
 	}
-	bridgeService := server.NewBridgeService(cfg, btCfg.Height, networks, store, rollupID)
+	bridgeService := server.NewBridgeService(cfg, btCfg.Height, networks, store, 1)
 	return bt, store, server.RunServer(cfg, bridgeService)
 }

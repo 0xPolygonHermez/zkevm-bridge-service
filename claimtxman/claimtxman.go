@@ -85,6 +85,7 @@ func (tm *ClaimTxManager) Start() {
 	for {
 		select {
 		case <-tm.ctx.Done():
+			ticker.Stop()
 			return
 		case netID := <-tm.chSynced:
 			if netID == tm.l2NetworkID && !tm.synced {
@@ -154,35 +155,39 @@ func (tm *ClaimTxManager) processDepositStatus(ger *etherman.GlobalExitRoot, dbT
 			return err
 		}
 		for _, deposit := range deposits {
-			if tm.l2NetworkID != deposit.DestinationNetwork {
-				log.Infof("Ignoring deposit: %d: dest_net: %d, we are:%d", deposit.DepositCount, deposit.DestinationNetwork, tm.l2NetworkID)
-				continue
-			}
-
-			claimHash, err := tm.bridgeService.GetDepositStatus(tm.ctx, deposit.DepositCount, deposit.DestinationNetwork)
+			claimHash, err := tm.bridgeService.GetDepositStatus(tm.ctx, deposit.DepositCount, deposit.OriginalTokenNetwork, deposit.DestinationNetwork)
 			if err != nil {
 				log.Errorf("error getting deposit status for deposit %d. Error: %v", deposit.DepositCount, err)
 				return err
 			}
+
 			if len(claimHash) > 0 || deposit.LeafType == LeafTypeMessage && !tm.isDepositMessageAllowed(deposit) {
-				log.Infof("Ignoring deposit: %d, leafType: %d, claimHash: %s, deposit.OriginalAddress: %s", deposit.DepositCount, deposit.LeafType, claimHash, deposit.OriginalAddress.String())
+				log.Infof("Ignoring deposit: %d, leafType: %d, claimHash: %s, deposit.OriginalAddress: %s", deposit.DepositCount, deposit.LeafType, claimHash, deposit.OriginalTokenAddress.String())
+				continue
+			}
+
+			if tm.l2NetworkID != deposit.DestinationNetwork {
+				log.Debugf("Ignoring deposit: %d", deposit.DepositCount)
 				continue
 			}
 
 			log.Infof("create the claim tx for the deposit %d", deposit.DepositCount)
-			ger, proof, rollupProof, err := tm.bridgeService.GetClaimProof(deposit.DepositCount, deposit.NetworkID, dbTx)
+			ger, proof, rollupProof, err := tm.bridgeService.GetClaimProof(deposit.DepositCount, deposit.OriginNetwork, dbTx)
 			if err != nil {
 				log.Errorf("error getting Claim Proof for deposit %d. Error: %v", deposit.DepositCount, err)
 				return err
 			}
+
 			var (
 				mtProof       [mtHeight][keyLen]byte
 				mtRollupProof [mtHeight][keyLen]byte
 			)
+
 			for i := 0; i < mtHeight; i++ {
 				mtProof[i] = proof[i]
 				mtRollupProof[i] = rollupProof[i]
 			}
+
 			tx, err := tm.l2Node.BuildSendClaim(tm.ctx, deposit, mtProof, mtRollupProof,
 				&etherman.GlobalExitRoot{
 					ExitRoots: []common.Hash{
@@ -190,10 +195,12 @@ func (tm *ClaimTxManager) processDepositStatus(ger *etherman.GlobalExitRoot, dbT
 						ger.ExitRoots[1],
 					}}, 1, 1, 1, tm.rollupID,
 				tm.auth)
+
 			if err != nil {
 				log.Errorf("error BuildSendClaim tx for deposit %d. Error: %v", deposit.DepositCount, err)
 				return err
 			}
+
 			if err = tm.addClaimTx(deposit.DepositCount, tm.auth.From, tx.To(), nil, tx.Data(), dbTx); err != nil {
 				log.Errorf("error adding claim tx for deposit %d. Error: %v", deposit.DepositCount, err)
 				return err
@@ -205,7 +212,7 @@ func (tm *ClaimTxManager) processDepositStatus(ger *etherman.GlobalExitRoot, dbT
 
 func (tm *ClaimTxManager) isDepositMessageAllowed(deposit *etherman.Deposit) bool {
 	for _, addr := range tm.cfg.AuthorizedClaimMessageAddresses {
-		if deposit.OriginalAddress == addr {
+		if deposit.OriginalTokenAddress == addr {
 			log.Infof("MessageBridge from authorized account detected: %+v, account: %s", deposit, addr.String())
 			return true
 		}

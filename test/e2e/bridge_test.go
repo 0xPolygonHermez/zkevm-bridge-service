@@ -30,13 +30,15 @@ func TestE2E(t *testing.T) {
 
 	ctx := context.Background()
 	opsCfg := &operations.Config{
+		L1NetworkURL: "http://localhost:8545",
+		L2NetworkURL: "http://localhost:8123",
 		Storage: db.Config{
 			Database: "postgres",
-			Name:     "test_db",
-			User:     "test_user",
-			Password: "test_password",
+			Name:     "bridge_db_1",
+			User:     "user",
+			Password: "pass",
 			Host:     "localhost",
-			Port:     "5435",
+			Port:     "5432",
 			MaxConns: 10,
 		},
 		BT: bridgectrl.Config{
@@ -50,15 +52,6 @@ func TestE2E(t *testing.T) {
 			DefaultPageLimit: 25,
 			MaxPageLimit:     100,
 			BridgeVersion:    "v1",
-			DB: db.Config{
-				Database: "postgres",
-				Name:     "test_db",
-				User:     "test_user",
-				Password: "test_password",
-				Host:     "localhost",
-				Port:     "5435",
-				MaxConns: 10,
-			},
 		},
 	}
 	opsman, err := operations.NewManager(ctx, opsCfg)
@@ -101,7 +94,7 @@ func TestE2E(t *testing.T) {
 		require.Equal(t, 0, balance.Cmp(initL2Balance))
 		t.Log("Deposit: ", deposits[0])
 		// Check the claim tx
-		err = opsman.CheckL2Claim(ctx, uint(deposits[0].DestNet), uint(deposits[0].DepositCnt))
+		err = opsman.CheckClaim(ctx, deposits[0])
 		require.NoError(t, err)
 		// Check L2 funds to see if the amount has been increased
 		balance2, err := opsman.CheckAccountBalance(ctx, operations.L2, &destAddr)
@@ -188,7 +181,7 @@ func TestE2E(t *testing.T) {
 		t.Log("Deposit: ", deposits[0])
 		t.Log("Before getClaimData: ", deposits[0].NetworkId, deposits[0].DepositCnt)
 		// Check the claim tx
-		err = opsman.CheckL2Claim(ctx, uint(deposits[0].DestNet), uint(deposits[0].DepositCnt))
+		err = opsman.CheckClaim(ctx, deposits[0])
 		require.NoError(t, err)
 		time.Sleep(3 * time.Second) // wait for sync token_wrapped event
 		tokenWrapped, err := opsman.GetTokenWrapped(ctx, 0, tokenAddr, false)
@@ -230,7 +223,7 @@ func TestE2E(t *testing.T) {
 		require.NoError(t, err)
 		t.Log("deposit: ", deposits[0])
 		// Check the claim tx
-		err = opsman.CheckL2Claim(ctx, uint(deposits[0].DestNet), uint(deposits[0].DepositCnt))
+		err = opsman.CheckClaim(ctx, deposits[0])
 		require.NoError(t, err)
 		// Check L2 funds to see if the amount has been increased
 		balance, err = opsman.CheckAccountTokenBalance(ctx, "l2", tokenWrapped.WrappedTokenAddress, &destAddr)
@@ -321,7 +314,7 @@ func TestE2E(t *testing.T) {
 		require.Equal(t, 0, big.NewInt(0).Cmp(balance))
 		t.Log("deposits[0]: ", deposits[0])
 		// Check the claim tx
-		err = opsman.CheckL2Claim(ctx, uint(deposits[0].DestNet), uint(deposits[0].DepositCnt))
+		err = opsman.CheckClaim(ctx, deposits[0])
 		require.NoError(t, err)
 		// Check L2 funds to see if the amount has been increased
 		balance, err = opsman.CheckAccountTokenBalance(ctx, operations.L2, tokenAddr, &destAddr)
@@ -365,7 +358,7 @@ func TestE2E(t *testing.T) {
 		t.Log("Deposit: ", deposits[0])
 		t.Log("Before getClaimData: ", deposits[0].NetworkId, deposits[0].DepositCnt)
 		// Check the claim tx
-		err = opsman.CheckL2Claim(ctx, uint(deposits[0].DestNet), uint(deposits[0].DepositCnt))
+		err = opsman.CheckClaim(ctx, deposits[0])
 		require.NoError(t, err)
 		time.Sleep(3 * time.Second) // wait for sync token_wrapped event
 		tokenWrapped, err := opsman.GetTokenWrapped(ctx, 0, tokenAddr, false)
@@ -470,7 +463,7 @@ func TestE2E(t *testing.T) {
 		err = opsman.SendL1Deposit(ctx, tokenAddr, amount2, destNetwork, &origAddr)
 		require.NoError(t, err)
 		// Check the claim tx
-		err = opsman.CheckL2Claim(ctx, uint(deposits[0].DestNet), uint(deposits[0].DepositCnt))
+		err = opsman.CheckClaim(ctx, deposits[0])
 		require.NoError(t, err)
 		time.Sleep(3 * time.Second) // wait for sync token_wrapped event
 		tokenWrapped, err := opsman.GetTokenWrapped(ctx, 0, tokenAddr, false)
@@ -482,13 +475,13 @@ func TestE2E(t *testing.T) {
 		t.Log("Balance tokenWrapped: ", balance)
 
 		// Check the claim tx
-		err = opsman.CheckL2Claim(ctx, uint(deposits[0].DestNet), uint(deposits[0].DepositCnt))
+		err = opsman.CheckClaim(ctx, deposits[0])
 		require.NoError(t, err)
 		balance, err = opsman.CheckAccountTokenBalance(ctx, "l2", tokenWrapped.WrappedTokenAddress, &destAddr)
 		require.NoError(t, err)
 
 		// Check the claim tx
-		err = opsman.CheckL2Claim(ctx, uint(deposits[0].DestNet), uint(deposits[0].DepositCnt))
+		err = opsman.CheckClaim(ctx, deposits[0])
 		require.NoError(t, err)
 		// Check L2 funds to see if the amount has been increased
 		balance, err = opsman.CheckAccountTokenBalance(ctx, "l2", tokenWrapped.WrappedTokenAddress, &destAddr)
@@ -559,7 +552,7 @@ func TestE2E(t *testing.T) {
 		require.NoError(t, err)
 
 		// Check the claim tx
-		err = opsman.CheckL2Claim(ctx, uint(deposits[0].DestNet), uint(deposits[0].DepositCnt))
+		err = opsman.CheckClaim(ctx, deposits[0])
 		require.NoError(t, err)
 
 		// Test L2 Bridge Message

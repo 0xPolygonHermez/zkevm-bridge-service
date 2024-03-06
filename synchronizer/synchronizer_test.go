@@ -32,7 +32,7 @@ func TestSyncGer(t *testing.T) {
 			SyncChunkSize: 10,
 		}
 		ctx := mock.MatchedBy(func(ctx context.Context) bool { return ctx != nil })
-		m.Etherman.On("GetNetworkID", ctx).Return(uint(0), nil)
+		m.Etherman.On("GetRollupID").Return(uint(0), nil)
 		m.Storage.On("GetLatestL1SyncedExitRoot", ctx, nil).Return(&etherman.GlobalExitRoot{}, gerror.ErrStorageNotFound).Once()
 		m.Storage.On("IsLxLyActivated", ctx, nil).Return(true, nil).Once()
 		chEvent := make(chan *etherman.GlobalExitRoot)

@@ -33,35 +33,43 @@ type GlobalExitRoot struct {
 
 // Deposit struct
 type Deposit struct {
-	LeafType           uint8
-	OriginalNetwork    uint
-	OriginalAddress    common.Address
-	Amount             *big.Int
-	DestinationNetwork uint
-	DestinationAddress common.Address
-	DepositCount       uint
-	BlockID            uint64
-	BlockNumber        uint64
-	NetworkID          uint
-	TxHash             common.Hash
-	Metadata           []byte
+	LeafType             uint8
+	OriginalTokenNetwork uint
+	OriginalTokenAddress common.Address
+	Amount               *big.Int
+	DestinationNetwork   uint
+	DestinationAddress   common.Address
+	DepositCount         uint
+	BlockID              uint64
+	BlockNumber          uint64
+	OriginNetwork        uint
+	TxHash               common.Hash
+	Metadata             []byte
 	// it is only used for the bridge service
 	ReadyForClaim bool
 }
 
 // Claim struct
 type Claim struct {
-	MainnetFlag        bool
-	RollupIndex        uint64
-	Index              uint
-	OriginalNetwork    uint
-	OriginalAddress    common.Address
-	Amount             *big.Int
-	DestinationAddress common.Address
-	BlockID            uint64
-	BlockNumber        uint64
-	NetworkID          uint
-	TxHash             common.Hash
+	MainnetFlag          bool
+	RollupIndex          uint64
+	DepositCount         uint
+	OriginalTokenNetwork uint
+	OriginalTokenAddress common.Address
+	Amount               *big.Int
+	DestinationAddress   common.Address
+	BlockID              uint64
+	BlockNumber          uint64
+	DestinationNetwork   uint
+	TxHash               common.Hash
+}
+
+// OriginNetwork returns the rollup ID of the claim
+func (c *Claim) OriginNetwork() uint {
+	if c.MainnetFlag {
+		return 0
+	}
+	return uint(c.RollupIndex + 1)
 }
 
 // TokenWrapped struct

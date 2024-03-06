@@ -3,7 +3,6 @@ package operations
 import (
 	"context"
 
-	"github.com/0xPolygonHermez/zkevm-bridge-service/bridgectrl/pb"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/jackc/pgx/v4"
@@ -18,7 +17,7 @@ type StorageInterface interface {
 	GetTokenWrapped(ctx context.Context, originalNetwork uint, originalTokenAddress common.Address, dbTx pgx.Tx) (*etherman.TokenWrapped, error)
 	GetDepositCountByRoot(ctx context.Context, root []byte, network uint8, dbTx pgx.Tx) (uint, error)
 	UpdateBlocksForTesting(ctx context.Context, networkID uint, blockNum uint64, dbTx pgx.Tx) error
-	GetClaim(ctx context.Context, depositCount, networkID uint, dbTx pgx.Tx) (*etherman.Claim, error)
+	GetClaim(ctx context.Context, depositCount, origNetworkID, destNetworkID uint, dbTx pgx.Tx) (*etherman.Claim, error)
 	UpdateDepositsStatusForTesting(ctx context.Context, dbTx pgx.Tx) error
 	// synchronizer
 	AddBlock(ctx context.Context, block *etherman.Block, dbTx pgx.Tx) (uint64, error)
@@ -31,10 +30,4 @@ type StorageInterface interface {
 	Rollback(ctx context.Context, dbTx pgx.Tx) error
 	BeginDBTransaction(ctx context.Context) (pgx.Tx, error)
 	Commit(ctx context.Context, dbTx pgx.Tx) error
-}
-
-// BridgeServiceInterface is an interface for the bridge service.
-type BridgeServiceInterface interface {
-	GetBridges(ctx context.Context, req *pb.GetBridgesRequest) (*pb.GetBridgesResponse, error)
-	GetProof(ctx context.Context, req *pb.GetProofRequest) (*pb.GetProofResponse, error)
 }

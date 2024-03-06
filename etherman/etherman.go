@@ -87,6 +87,8 @@ var (
 
 	// ErrNotFound is used when the object is not found
 	ErrNotFound = errors.New("Not found")
+	// ErrTokenNotCreated is used when a token doesn't exist on a given network
+	ErrTokenNotCreated = errors.New("token does not exist on the network")
 )
 
 // EventOrder is the the type used to identify the events order
@@ -120,16 +122,16 @@ type Client struct {
 	OldPolygonBridge           *oldpolygonzkevmbridge.Oldpolygonzkevmbridge
 	PolygonZkEVMGlobalExitRoot *polygonzkevmglobalexitroot.Polygonzkevmglobalexitroot
 	PolygonRollupManager       *polygonrollupmanager.Polygonrollupmanager
-	RollupID                   uint32
+	rollupID                   uint32
 	SCAddresses                []common.Address
 }
 
-// NewClient creates a new etherman.
-func NewClient(cfg Config, polygonBridgeAddr, polygonZkEVMGlobalExitRootAddress, polygonRollupManagerAddress, polygonZkEvmAddress common.Address) (*Client, error) {
+// NewL1Client creates a new etherman.
+func NewL1Client(l1URL string, polygonBridgeAddr, polygonZkEVMGlobalExitRootAddress, polygonRollupManagerAddress, polygonZkEvmAddress common.Address) (*Client, error) {
 	// Connect to ethereum node
-	ethClient, err := ethclient.Dial(cfg.L1URL)
+	ethClient, err := ethclient.Dial(l1URL)
 	if err != nil {
-		log.Errorf("error connecting to %s: %+v", cfg.L1URL, err)
+		log.Errorf("error connecting to %s: %+v", l1URL, err)
 		return nil, err
 	}
 	// Create smc clients
@@ -149,12 +151,6 @@ func NewClient(cfg Config, polygonBridgeAddr, polygonZkEVMGlobalExitRootAddress,
 	if err != nil {
 		return nil, err
 	}
-	// Get RollupID
-	rollupID, err := polygonRollupManager.RollupAddressToID(&bind.CallOpts{Pending: false}, polygonZkEvmAddress)
-	if err != nil {
-		return nil, err
-	}
-	log.Debug("rollupID: ", rollupID)
 	var scAddresses []common.Address
 	scAddresses = append(scAddresses, polygonZkEVMGlobalExitRootAddress, polygonBridgeAddr, polygonRollupManagerAddress)
 
@@ -164,7 +160,7 @@ func NewClient(cfg Config, polygonBridgeAddr, polygonZkEVMGlobalExitRootAddress,
 		OldPolygonBridge:           oldpolygonBridge,
 		PolygonZkEVMGlobalExitRoot: polygonZkEVMGlobalExitRoot,
 		PolygonRollupManager:       polygonRollupManager,
-		RollupID:                   rollupID,
+		rollupID:                   0,
 		SCAddresses:                scAddresses}, nil
 }
 
@@ -187,7 +183,18 @@ func NewL2Client(url string, polygonBridgeAddr common.Address) (*Client, error) 
 	}
 	scAddresses := []common.Address{polygonBridgeAddr}
 
-	return &Client{EtherClient: ethClient, PolygonBridge: bridge, OldPolygonBridge: oldpolygonBridge, SCAddresses: scAddresses}, nil
+	rollupID, err := bridge.NetworkID(&bind.CallOpts{Pending: false})
+	if err != nil {
+		return nil, err
+	}
+
+	return &Client{
+		EtherClient:      ethClient,
+		PolygonBridge:    bridge,
+		OldPolygonBridge: oldpolygonBridge,
+		SCAddresses:      scAddresses,
+		rollupID:         rollupID,
+	}, nil
 }
 
 // GetRollupInfoByBlockRange function retrieves the Rollup information that are included in all this ethereum blocks
@@ -418,22 +425,24 @@ func (etherMan *Client) processUpdateGlobalExitRootEvent(ctx context.Context, ma
 }
 
 func (etherMan *Client) depositEvent(ctx context.Context, vLog types.Log, blocks *[]Block, blocksOrder *map[common.Hash][]Order) error {
-	log.Debug("Deposit event detected. Processing...")
+	log.Debugf("Deposit event detected. From RollupID %d Processing...", etherMan.GetRollupID())
 	d, err := etherMan.PolygonBridge.ParseBridgeEvent(vLog)
 	if err != nil {
 		return err
 	}
-	var deposit Deposit
-	deposit.Amount = d.Amount
-	deposit.BlockNumber = vLog.BlockNumber
-	deposit.OriginalNetwork = uint(d.OriginNetwork)
-	deposit.DestinationAddress = d.DestinationAddress
-	deposit.DestinationNetwork = uint(d.DestinationNetwork)
-	deposit.OriginalAddress = d.OriginAddress
-	deposit.DepositCount = uint(d.DepositCount)
-	deposit.TxHash = vLog.TxHash
-	deposit.Metadata = d.Metadata
-	deposit.LeafType = d.LeafType
+	deposit := Deposit{
+		Amount:               d.Amount,
+		BlockNumber:          vLog.BlockNumber,
+		OriginalTokenNetwork: uint(d.OriginNetwork),
+		DestinationAddress:   d.DestinationAddress,
+		DestinationNetwork:   uint(d.DestinationNetwork),
+		OriginalTokenAddress: d.OriginAddress,
+		DepositCount:         uint(d.DepositCount),
+		TxHash:               vLog.TxHash,
+		Metadata:             d.Metadata,
+		LeafType:             d.LeafType,
+		OriginNetwork:        etherMan.GetRollupID(),
+	}
 
 	if len(*blocks) == 0 || ((*blocks)[len(*blocks)-1].BlockHash != vLog.BlockHash || (*blocks)[len(*blocks)-1].BlockNumber != vLog.BlockNumber) {
 		fullBlock, err := etherMan.EtherClient.BlockByHash(ctx, vLog.BlockHash)
@@ -472,7 +481,7 @@ func (etherMan *Client) newClaimEvent(ctx context.Context, vLog types.Log, block
 	if err != nil {
 		return err
 	}
-	mainnetFlag, rollupIndex, localExitRootIndex, err := decodeGlobalIndex(c.GlobalIndex)
+	mainnetFlag, rollupIndex, localExitRootIndex, err := DecodeGlobalIndex(c.GlobalIndex)
 	if err != nil {
 		return err
 	}
@@ -483,9 +492,9 @@ func (etherMan *Client) claimEvent(ctx context.Context, vLog types.Log, blocks *
 	var claim Claim
 	claim.Amount = amount
 	claim.DestinationAddress = destinationAddress
-	claim.Index = Index
-	claim.OriginalNetwork = originNetwork
-	claim.OriginalAddress = originAddress
+	claim.DepositCount = Index
+	claim.OriginalTokenNetwork = originNetwork
+	claim.OriginalTokenAddress = originAddress
 	claim.BlockNumber = vLog.BlockNumber
 	claim.TxHash = vLog.TxHash
 	claim.RollupIndex = rollupIndex
@@ -584,15 +593,6 @@ func (etherMan *Client) EthBlockByNumber(ctx context.Context, blockNumber uint64
 	return block, nil
 }
 
-// GetNetworkID gets the network ID of the dedicated chain.
-func (etherMan *Client) GetNetworkID(ctx context.Context) (uint, error) {
-	networkID, err := etherMan.PolygonBridge.NetworkID(&bind.CallOpts{Pending: false})
-	if err != nil {
-		return 0, err
-	}
-	return uint(networkID), nil
-}
-
 func (etherMan *Client) verifyBatchesTrustedAggregatorEvent(ctx context.Context, vLog types.Log, blocks *[]Block, blocksOrder *map[common.Hash][]Order) error {
 	log.Debug("VerifyBatchesTrustedAggregator event detected. Processing...")
 	vb, err := etherMan.PolygonRollupManager.ParseVerifyBatchesTrustedAggregator(vLog)
@@ -645,11 +645,13 @@ func (etherMan *Client) verifyBatches(ctx context.Context, vLog types.Log, block
 	return nil
 }
 
+// GetRollupID returns the ID of the rollup that this etherman is connected to through the RPC.
+// So this will return 0 in case is the etherman for L1
 func (etherMan *Client) GetRollupID() uint {
-	return uint(etherMan.RollupID)
+	return uint(etherMan.rollupID)
 }
 
-func decodeGlobalIndex(globalIndex *big.Int) (bool, uint64, uint64, error) {
+func DecodeGlobalIndex(globalIndex *big.Int) (bool, uint64, uint64, error) {
 	const lengthGlobalIndexInBytes = 32
 	var buf [32]byte
 	gIBytes := globalIndex.FillBytes(buf[:])
@@ -686,7 +688,9 @@ func (etherMan *Client) createNewRollupEvent(ctx context.Context, vLog types.Log
 	if err != nil {
 		return err
 	}
-	if rollup.RollupID != etherMan.RollupID {
+	// TODO: this is broken. Should have an array of rollup IDs that the bridge service cares about
+	// as GetRollupID will always return 0 in this case. Leaving it as it is since this event is basically ignored
+	if rollup.RollupID != uint32(etherMan.GetRollupID()) {
 		return nil
 	}
 
@@ -718,7 +722,9 @@ func (etherMan *Client) AddExistingRollupEvent(ctx context.Context, vLog types.L
 	if err != nil {
 		return err
 	}
-	if rollup.RollupID != etherMan.RollupID {
+	// TODO: this is broken. Should have an array of rollup IDs that the bridge service cares about
+	// as GetRollupID will always return 0 in this case. Leaving it as it is since this event is basically ignored
+	if rollup.RollupID != uint32(etherMan.GetRollupID()) {
 		return nil
 	}
 
@@ -742,4 +748,28 @@ func (etherMan *Client) AddExistingRollupEvent(ctx context.Context, vLog types.L
 	}
 	(*blocksOrder)[(*blocks)[len(*blocks)-1].BlockHash] = append((*blocksOrder)[(*blocks)[len(*blocks)-1].BlockHash], or)
 	return nil
+}
+
+// GasTokenAddress returns the token used to pay gas of the network
+func (etherMan *Client) GasTokenAddress() (common.Address, error) {
+	return etherMan.PolygonBridge.GasTokenAddress(nil)
+}
+
+// WETHToken returns the address were ETH is mapped as an ERC20 when the network
+// doesn't use ETH as native token
+func (etherMan *Client) WETHToken() (common.Address, error) {
+	return etherMan.PolygonBridge.WETHToken(nil)
+}
+
+// GetTokenWrappedAddress return the address of a token from another network in this network
+func (etherMan *Client) GetTokenWrappedAddress(originNetwork uint32, originTokenAddr common.Address) (common.Address, error) {
+	addr, err := etherMan.PolygonBridge.GetTokenWrappedAddress(nil, originNetwork, originTokenAddr)
+	if err != nil {
+		return addr, err
+	}
+	zeroAddr := common.Address{}
+	if addr == zeroAddr {
+		return addr, ErrTokenNotCreated
+	}
+	return addr, err
 }

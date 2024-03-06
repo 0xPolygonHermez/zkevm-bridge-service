@@ -123,12 +123,12 @@ func TestBridgeEvents(t *testing.T) {
 	assert.Equal(t, ClaimsOrder, order[block[0].BlockHash][1].Name)
 	assert.Equal(t, big.NewInt(1000000000000000000), block[0].Claims[0].Amount)
 	assert.Equal(t, uint64(5), block[0].BlockNumber)
-	assert.NotEqual(t, common.Address{}, block[0].Claims[0].OriginalAddress)
+	assert.NotEqual(t, common.Address{}, block[0].Claims[0].OriginalTokenAddress)
 	assert.Equal(t, auth.From, block[0].Claims[0].DestinationAddress)
-	assert.Equal(t, uint(34), block[0].Claims[0].Index)
+	assert.Equal(t, uint(34), block[0].Claims[0].DepositCount)
 	assert.Equal(t, uint64(0), block[0].Claims[0].RollupIndex)
 	assert.Equal(t, true, block[0].Claims[0].MainnetFlag)
-	assert.Equal(t, uint(0), block[0].Claims[0].OriginalNetwork)
+	assert.Equal(t, uint(0), block[0].Claims[0].OriginalTokenNetwork)
 	assert.Equal(t, uint64(5), block[0].Claims[0].BlockNumber)
 }
 
@@ -140,7 +140,7 @@ func TestDecodeGlobalIndex(t *testing.T) {
 	for _, n := range gi {
 		t.Logf("%08b ", n)
 	}
-	mainnetFlag, rollupIndex, localExitRootIndex, err := decodeGlobalIndex(globalIndex)
+	mainnetFlag, rollupIndex, localExitRootIndex, err := DecodeGlobalIndex(globalIndex)
 	require.NoError(t, err)
 	assert.Equal(t, false, mainnetFlag)
 	assert.Equal(t, uint64(1), rollupIndex)
@@ -152,7 +152,7 @@ func TestDecodeGlobalIndex(t *testing.T) {
 	for _, n := range gi {
 		t.Logf("%08b ", n)
 	}
-	mainnetFlag, rollupIndex, localExitRootIndex, err = decodeGlobalIndex(globalIndex)
+	mainnetFlag, rollupIndex, localExitRootIndex, err = DecodeGlobalIndex(globalIndex)
 	require.NoError(t, err)
 	assert.Equal(t, false, mainnetFlag)
 	assert.Equal(t, uint64(2), rollupIndex)
@@ -164,7 +164,7 @@ func TestDecodeGlobalIndex(t *testing.T) {
 	for _, n := range gi {
 		t.Logf("%08b ", n)
 	}
-	mainnetFlag, rollupIndex, localExitRootIndex, err = decodeGlobalIndex(globalIndex)
+	mainnetFlag, rollupIndex, localExitRootIndex, err = DecodeGlobalIndex(globalIndex)
 	require.NoError(t, err)
 	assert.Equal(t, true, mainnetFlag)
 	assert.Equal(t, uint64(0), rollupIndex)
@@ -176,7 +176,7 @@ func TestDecodeGlobalIndex(t *testing.T) {
 	for _, n := range gi {
 		t.Logf("%08b ", n)
 	}
-	mainnetFlag, rollupIndex, localExitRootIndex, err = decodeGlobalIndex(globalIndex)
+	mainnetFlag, rollupIndex, localExitRootIndex, err = DecodeGlobalIndex(globalIndex)
 	require.NoError(t, err)
 	assert.Equal(t, true, mainnetFlag)
 	assert.Equal(t, uint64(0), rollupIndex)

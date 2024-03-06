@@ -17,5 +17,6 @@ compilegen() {
     abigen --bin ${package}/${package}.bin --abi ${package}/${package}.abi --pkg=${package} --out=${package}/${package}.go
 }
 
+gen erc20permitmock
 gen polygonzkevmbridge
 compilegen BridgeMessageReceiver

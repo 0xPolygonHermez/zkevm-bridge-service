@@ -28,15 +28,15 @@ func TestMonitoredTxStorage(t *testing.T) {
 	require.NoError(t, err)
 
 	deposit := &etherman.Deposit{
-		NetworkID:          0,
-		OriginalNetwork:    0,
-		OriginalAddress:    common.HexToAddress("0x6B175474E89094C44Da98b954EedeAC495271d0F"),
-		Amount:             big.NewInt(1000000),
-		DestinationNetwork: 1,
-		DestinationAddress: common.HexToAddress("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"),
-		BlockNumber:        1,
-		DepositCount:       1,
-		Metadata:           common.FromHex("0x0"),
+		OriginNetwork:        0,
+		OriginalTokenNetwork: 0,
+		OriginalTokenAddress: common.HexToAddress("0x6B175474E89094C44Da98b954EedeAC495271d0F"),
+		Amount:               big.NewInt(1000000),
+		DestinationNetwork:   1,
+		DestinationAddress:   common.HexToAddress("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"),
+		BlockNumber:          1,
+		DepositCount:         1,
+		Metadata:             common.FromHex("0x0"),
 	}
 	_, err = pg.AddDeposit(ctx, deposit, tx)
 	require.NoError(t, err)
@@ -111,21 +111,21 @@ func TestUpdateDepositStatus(t *testing.T) {
 	require.NoError(t, err)
 
 	deposit := &etherman.Deposit{
-		NetworkID:          0,
-		OriginalNetwork:    0,
-		OriginalAddress:    common.HexToAddress("0x6B175474E89094C44Da98b954EedeAC495271d0F"),
-		Amount:             big.NewInt(1000000),
-		DestinationNetwork: 1,
-		DestinationAddress: common.HexToAddress("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"),
-		BlockNumber:        1,
-		BlockID:            blockID,
-		DepositCount:       1,
-		Metadata:           common.FromHex("0x0"),
+		OriginNetwork:        0,
+		OriginalTokenNetwork: 0,
+		OriginalTokenAddress: common.HexToAddress("0x6B175474E89094C44Da98b954EedeAC495271d0F"),
+		Amount:               big.NewInt(1000000),
+		DestinationNetwork:   1,
+		DestinationAddress:   common.HexToAddress("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"),
+		BlockNumber:          1,
+		BlockID:              blockID,
+		DepositCount:         1,
+		Metadata:             common.FromHex("0x0"),
 	}
 	depositID, err := pg.AddDeposit(ctx, deposit, nil)
 	require.NoError(t, err)
 	l1Root := common.FromHex("0x838c5655cb21c6cb83313b5a631175dff4963772cce9108188b34ac87c81c41e")
-	require.NoError(t, pg.SetRoot(ctx, l1Root, depositID, deposit.NetworkID, nil))
+	require.NoError(t, pg.SetRoot(ctx, l1Root, depositID, deposit.OriginNetwork, nil))
 
 	block = &etherman.Block{
 		BlockNumber: 1,
@@ -139,47 +139,47 @@ func TestUpdateDepositStatus(t *testing.T) {
 
 	destAdr := "0x4d5Cf5032B2a844602278b01199ED191A86c93ff"
 	deposit = &etherman.Deposit{
-		NetworkID:          1,
-		OriginalNetwork:    0,
-		OriginalAddress:    common.HexToAddress("0x6B175474E89094C44Da98b954EedeAC495271d0F"),
-		Amount:             big.NewInt(1000000),
-		DestinationNetwork: 1,
-		DestinationAddress: common.HexToAddress(destAdr),
-		BlockNumber:        1,
-		BlockID:            blockID,
-		DepositCount:       1,
-		Metadata:           common.FromHex("0x0"),
+		OriginNetwork:        1,
+		OriginalTokenNetwork: 0,
+		OriginalTokenAddress: common.HexToAddress("0x6B175474E89094C44Da98b954EedeAC495271d0F"),
+		Amount:               big.NewInt(1000000),
+		DestinationNetwork:   1,
+		DestinationAddress:   common.HexToAddress(destAdr),
+		BlockNumber:          1,
+		BlockID:              blockID,
+		DepositCount:         1,
+		Metadata:             common.FromHex("0x0"),
 	}
 	depositID, err = pg.AddDeposit(ctx, deposit, nil)
 	require.NoError(t, err)
 	l2Root := common.FromHex("0xb4c11951957c6f8f642c4af61cd6b24640fec6dc7fc607ee8206a99e92410d30")
-	require.NoError(t, pg.SetRoot(ctx, l2Root, depositID, deposit.NetworkID, nil))
+	require.NoError(t, pg.SetRoot(ctx, l2Root, depositID, deposit.OriginNetwork, nil))
 	_, err = pg.Exec(ctx, "INSERT INTO mt.rollup_exit (leaf, rollup_id, root, block_id) VALUES ($1, $2, $3, $4)", l2Root, 1, l2Root, blockID)
 	require.NoError(t, err)
 
 	deposit = &etherman.Deposit{
-		NetworkID:          1,
-		OriginalNetwork:    0,
-		OriginalAddress:    common.HexToAddress("0x6B175474E89094C44Da98b954EedeAC495271d0F"),
-		Amount:             big.NewInt(1000000),
-		DestinationNetwork: 1,
-		DestinationAddress: common.HexToAddress(destAdr),
-		BlockNumber:        1,
-		BlockID:            blockID,
-		DepositCount:       2,
-		Metadata:           common.FromHex("0x0"),
+		OriginNetwork:        1,
+		OriginalTokenNetwork: 0,
+		OriginalTokenAddress: common.HexToAddress("0x6B175474E89094C44Da98b954EedeAC495271d0F"),
+		Amount:               big.NewInt(1000000),
+		DestinationNetwork:   1,
+		DestinationAddress:   common.HexToAddress(destAdr),
+		BlockNumber:          1,
+		BlockID:              blockID,
+		DepositCount:         2,
+		Metadata:             common.FromHex("0x0"),
 	}
 	depositID, err = pg.AddDeposit(ctx, deposit, nil)
 	require.NoError(t, err)
 	l2Root1 := common.FromHex("0xda7bce9f4e8618b6bd2f4132ce798cdc7a60e7e1460a7299e3c6342a579626d2")
-	require.NoError(t, pg.SetRoot(ctx, l2Root1, depositID, deposit.NetworkID, nil))
+	require.NoError(t, pg.SetRoot(ctx, l2Root1, depositID, deposit.OriginNetwork, nil))
 
 	deposits, err := pg.UpdateL1DepositsStatus(ctx, l1Root, nil)
 	require.NoError(t, err)
 	require.Len(t, deposits, 1)
 	require.True(t, deposits[0].ReadyForClaim)
 	require.Equal(t, uint(1), deposits[0].DepositCount)
-	require.Equal(t, uint(0), deposits[0].NetworkID)
+	require.Equal(t, uint(0), deposits[0].OriginNetwork)
 
 	require.NoError(t, pg.UpdateL2DepositsStatus(ctx, l2Root, 1, 1, nil))
 	deposits, err = pg.GetDeposits(ctx, destAdr, 10, 0, nil)
@@ -210,21 +210,21 @@ func TestUpdateL2DepositStatusMultipleRollups(t *testing.T) {
 	require.NoError(t, err)
 
 	deposit1 := &etherman.Deposit{
-		NetworkID:          1,
-		OriginalNetwork:    0,
-		OriginalAddress:    common.HexToAddress("0x6B175474E89094C44Da98b954EedeAC495271d0F"),
-		Amount:             big.NewInt(1000000),
-		DestinationNetwork: 1,
-		DestinationAddress: common.HexToAddress(destAdr),
-		BlockNumber:        1,
-		BlockID:            blockID1,
-		DepositCount:       1,
-		Metadata:           common.FromHex("0x0"),
+		OriginNetwork:        1,
+		OriginalTokenNetwork: 0,
+		OriginalTokenAddress: common.HexToAddress("0x6B175474E89094C44Da98b954EedeAC495271d0F"),
+		Amount:               big.NewInt(1000000),
+		DestinationNetwork:   1,
+		DestinationAddress:   common.HexToAddress(destAdr),
+		BlockNumber:          1,
+		BlockID:              blockID1,
+		DepositCount:         1,
+		Metadata:             common.FromHex("0x0"),
 	}
 	depositID1, err := pg.AddDeposit(ctx, deposit1, nil)
 	require.NoError(t, err)
 	l2Root1 := common.FromHex("0xb4c11951957c6f8f642c4af61cd6b24640fec6dc7fc607ee8206a99e92410d30")
-	require.NoError(t, pg.SetRoot(ctx, l2Root1, depositID1, deposit1.NetworkID, nil))
+	require.NoError(t, pg.SetRoot(ctx, l2Root1, depositID1, deposit1.OriginNetwork, nil))
 	_, err = pg.Exec(ctx, "INSERT INTO mt.rollup_exit (leaf, rollup_id, root, block_id) VALUES ($1, $2, $3, $4)", l2Root1, 1, l2Root1, blockID1)
 	require.NoError(t, err)
 
@@ -239,21 +239,21 @@ func TestUpdateL2DepositStatusMultipleRollups(t *testing.T) {
 	require.NoError(t, err)
 
 	deposit2 := &etherman.Deposit{
-		NetworkID:          2,
-		OriginalNetwork:    0,
-		OriginalAddress:    common.HexToAddress("0x6B175474E89094C44Da98b954EedeAC495271d0F"),
-		Amount:             big.NewInt(1000000),
-		DestinationNetwork: 2,
-		DestinationAddress: common.HexToAddress(destAdr),
-		BlockNumber:        1,
-		BlockID:            blockID2,
-		DepositCount:       1,
-		Metadata:           common.FromHex("0x0"),
+		OriginNetwork:        2,
+		OriginalTokenNetwork: 0,
+		OriginalTokenAddress: common.HexToAddress("0x6B175474E89094C44Da98b954EedeAC495271d0F"),
+		Amount:               big.NewInt(1000000),
+		DestinationNetwork:   2,
+		DestinationAddress:   common.HexToAddress(destAdr),
+		BlockNumber:          1,
+		BlockID:              blockID2,
+		DepositCount:         1,
+		Metadata:             common.FromHex("0x0"),
 	}
 	depositID2, err := pg.AddDeposit(ctx, deposit2, nil)
 	require.NoError(t, err)
 	l2Root2 := common.FromHex("0x90c89934975cc71a021a11dbe78cb2008d77e018dfffcc629b8d6d4dc905ac5c")
-	require.NoError(t, pg.SetRoot(ctx, l2Root2, depositID2, deposit2.NetworkID, nil))
+	require.NoError(t, pg.SetRoot(ctx, l2Root2, depositID2, deposit2.OriginNetwork, nil))
 	_, err = pg.Exec(ctx, "INSERT INTO mt.rollup_exit (leaf, rollup_id, root, block_id) VALUES ($1, $2, $3, $4)", l2Root2, 1, l2Root2, blockID2)
 	require.NoError(t, err)
 

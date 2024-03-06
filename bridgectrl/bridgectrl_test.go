@@ -64,15 +64,15 @@ func TestBridgeTree(t *testing.T) {
 			require.NoError(t, err)
 			amount, _ := new(big.Int).SetString(testVector.Amount, 0)
 			deposit := &etherman.Deposit{
-				LeafType:           0,
-				OriginalNetwork:    testVector.OriginalNetwork,
-				OriginalAddress:    common.HexToAddress(testVector.TokenAddress),
-				Amount:             amount,
-				DestinationNetwork: testVector.DestinationNetwork,
-				DestinationAddress: common.HexToAddress(testVector.DestinationAddress),
-				BlockID:            blockID,
-				DepositCount:       uint(i),
-				Metadata:           common.FromHex(testVector.Metadata),
+				LeafType:             0,
+				OriginalTokenNetwork: testVector.OriginalNetwork,
+				OriginalTokenAddress: common.HexToAddress(testVector.TokenAddress),
+				Amount:               amount,
+				DestinationNetwork:   testVector.DestinationNetwork,
+				DestinationAddress:   common.HexToAddress(testVector.DestinationAddress),
+				BlockID:              blockID,
+				DepositCount:         uint(i),
+				Metadata:             common.FromHex(testVector.Metadata),
 			}
 			leafHash := hashDeposit(deposit)
 			assert.Equal(t, testVector.ExpectedHash, hex.EncodeToString(leafHash[:]))
@@ -84,7 +84,7 @@ func TestBridgeTree(t *testing.T) {
 			// test reorg
 			orgRoot, err := bt.exitTrees[0].store.GetRoot(ctx, uint(i), 0, nil)
 			require.NoError(t, err)
-			require.NoError(t, store.Reset(ctx, uint64(i), deposit.NetworkID, nil))
+			require.NoError(t, store.Reset(ctx, uint64(i), deposit.OriginNetwork, nil))
 			err = bt.ReorgMT(ctx, uint(i), testVectors[i].OriginalNetwork, nil)
 			require.NoError(t, err)
 			blockID, err = store.AddBlock(context.TODO(), block, nil)
