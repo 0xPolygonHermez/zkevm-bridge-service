@@ -57,7 +57,6 @@ func NewSynchronizer(
 	chSynced chan uint,
 	messagePushProducer messagepush.KafkaProducer,
 	redisStorage redisstorage.RedisStorage,
-	rollupID uint,
 	cfg Config) (Synchronizer, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	networkID, err := ethMan.GetNetworkID(ctx)
@@ -81,6 +80,7 @@ func NewSynchronizer(
 	if isActivated {
 		log.Info("LxLyEtrog already activated")
 	}
+	rollupID := ethMan.GetRollupID()
 	if networkID == 0 {
 		return &ClientSynchronizer{
 			bridgeCtrl:          bridge,
