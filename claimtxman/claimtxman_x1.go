@@ -683,6 +683,7 @@ func (tm *ClaimTxManager) pushTransactionUpdate(deposit *etherman.Deposit, statu
 		Status:       status,
 		DestAddr:     deposit.DestinationAddress.Hex(),
 		EstimateTime: uint32(estimateTime),
+		GlobalIndex:  etherman.GenerateGlobalIndex(false, tm.rollupID-1, deposit.DepositCount).String(),
 	})
 	if err != nil {
 		log.Errorf("PushTransactionUpdate error: %v", err)

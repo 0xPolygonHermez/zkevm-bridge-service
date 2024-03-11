@@ -42,6 +42,7 @@ type ClientSynchronizer struct {
 	// Producer to push the transaction status change to front end
 	messagePushProducer messagepush.KafkaProducer
 	redisStorage        redisstorage.RedisStorage
+	rollupID            uint
 }
 
 // NewSynchronizer creates and initializes an instance of Synchronizer
@@ -56,6 +57,7 @@ func NewSynchronizer(
 	chSynced chan uint,
 	messagePushProducer messagepush.KafkaProducer,
 	redisStorage redisstorage.RedisStorage,
+	rollupID uint,
 	cfg Config) (Synchronizer, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	networkID, err := ethMan.GetNetworkID(ctx)
@@ -95,6 +97,7 @@ func NewSynchronizer(
 			l1RollupExitRoot:    ger.ExitRoots[1],
 			messagePushProducer: messagePushProducer,
 			redisStorage:        redisStorage,
+			rollupID:            rollupID,
 		}, nil
 	}
 	return &ClientSynchronizer{
@@ -109,6 +112,7 @@ func NewSynchronizer(
 		networkID:           networkID,
 		messagePushProducer: messagePushProducer,
 		redisStorage:        redisStorage,
+		rollupID:            rollupID,
 	}, nil
 }
 

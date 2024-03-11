@@ -25,9 +25,10 @@ type L1BlockNumTask struct {
 	redisStorage        redisstorage.RedisStorage
 	client              *ethclient.Client
 	messagePushProducer messagepush.KafkaProducer
+	rollupID            uint
 }
 
-func NewL1BlockNumTask(rpcURL string, storage interface{}, redisStorage redisstorage.RedisStorage, producer messagepush.KafkaProducer) (*L1BlockNumTask, error) {
+func NewL1BlockNumTask(rpcURL string, storage interface{}, redisStorage redisstorage.RedisStorage, producer messagepush.KafkaProducer, rollupID uint) (*L1BlockNumTask, error) {
 	ctx := context.Background()
 	client, err := ethclient.DialContext(ctx, rpcURL)
 	if err != nil {
@@ -39,6 +40,7 @@ func NewL1BlockNumTask(rpcURL string, storage interface{}, redisStorage redissto
 		redisStorage:        redisStorage,
 		client:              client,
 		messagePushProducer: producer,
+		rollupID:            rollupID,
 	}, nil
 }
 
@@ -132,12 +134,13 @@ func (t *L1BlockNumTask) doTask(ctx context.Context) {
 					return
 				}
 				err := t.messagePushProducer.PushTransactionUpdate(&pb.Transaction{
-					FromChain: uint32(deposit.NetworkID),
-					ToChain:   uint32(deposit.DestinationNetwork),
-					TxHash:    deposit.TxHash.String(),
-					Index:     uint64(deposit.DepositCount),
-					Status:    uint32(pb.TransactionStatus_TX_PENDING_AUTO_CLAIM),
-					DestAddr:  deposit.DestinationAddress.Hex(),
+					FromChain:   uint32(deposit.NetworkID),
+					ToChain:     uint32(deposit.DestinationNetwork),
+					TxHash:      deposit.TxHash.String(),
+					Index:       uint64(deposit.DepositCount),
+					Status:      uint32(pb.TransactionStatus_TX_PENDING_AUTO_CLAIM),
+					DestAddr:    deposit.DestinationAddress.Hex(),
+					GlobalIndex: etherman.GenerateGlobalIndex(true, t.rollupID-1, deposit.DepositCount).String(),
 				})
 				if err != nil {
 					log.Errorf("PushTransactionUpdate error: %v", err)

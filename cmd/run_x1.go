@@ -224,7 +224,7 @@ func startServer(ctx *cli.Context, opts ...runOptionFunc) error {
 	// ---------- Run push tasks ----------
 	if opt.runPushTasks {
 		// Initialize the push task for L1 block num change
-		l1BlockNumTask, err := pushtask.NewL1BlockNumTask(c.Etherman.L1URL, apiStorage, redisStorage, messagePushProducer)
+		l1BlockNumTask, err := pushtask.NewL1BlockNumTask(c.Etherman.L1URL, apiStorage, redisStorage, messagePushProducer, rollupID)
 		if err != nil {
 			log.Error(err)
 			return err
@@ -232,7 +232,7 @@ func startServer(ctx *cli.Context, opts ...runOptionFunc) error {
 		go l1BlockNumTask.Start(ctx.Context)
 
 		// Initialize the push task for sync l2 commit batch
-		syncCommitBatchTask, err := pushtask.NewCommittedBatchHandler(c.Etherman.L2URLs[0], apiStorage, redisStorage, messagePushProducer)
+		syncCommitBatchTask, err := pushtask.NewCommittedBatchHandler(c.Etherman.L2URLs[0], apiStorage, redisStorage, messagePushProducer, rollupID)
 		if err != nil {
 			log.Error(err)
 			return err

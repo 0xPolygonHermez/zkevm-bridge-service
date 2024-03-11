@@ -2,6 +2,7 @@ package synchronizer
 
 import (
 	"context"
+	"math/big"
 
 	"github.com/0xPolygonHermez/zkevm-bridge-service/bridgectrl/pb"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/estimatetime"
@@ -53,6 +54,7 @@ func (s *ClientSynchronizer) afterProcessDeposit(deposit *etherman.Deposit, depo
 			DestAddr:     deposit.DestinationAddress.Hex(),
 			FromChainId:  utils.GetChainIdByNetworkId(deposit.NetworkID),
 			ToChainId:    utils.GetChainIdByNetworkId(deposit.DestinationNetwork),
+			GlobalIndex:  s.getGlobalIndex(deposit).String(),
 		})
 		if err != nil {
 			log.Errorf("PushTransactionUpdate error: %v", err)
@@ -99,10 +101,17 @@ func (s *ClientSynchronizer) afterProcessClaim(claim *etherman.Claim) error {
 			ClaimTxHash: claim.TxHash.Hex(),
 			ClaimTime:   uint64(claim.Time.UnixMilli()),
 			DestAddr:    deposit.DestinationAddress.Hex(),
+			GlobalIndex: s.getGlobalIndex(deposit).String(),
 		})
 		if err != nil {
 			log.Errorf("PushTransactionUpdate error: %v", err)
 		}
 	}()
 	return nil
+}
+
+func (s *ClientSynchronizer) getGlobalIndex(deposit *etherman.Deposit) *big.Int {
+	isMainnet := deposit.NetworkID == 0
+	rollupIndex := s.rollupID - 1
+	return etherman.GenerateGlobalIndex(isMainnet, rollupIndex, deposit.DepositCount)
 }

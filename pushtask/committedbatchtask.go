@@ -35,9 +35,10 @@ type CommittedBatchHandler struct {
 	storage             DBStorage
 	redisStorage        redisstorage.RedisStorage
 	messagePushProducer messagepush.KafkaProducer
+	rollupID            uint
 }
 
-func NewCommittedBatchHandler(rpcUrl string, storage interface{}, redisStorage redisstorage.RedisStorage, producer messagepush.KafkaProducer) (*CommittedBatchHandler, error) {
+func NewCommittedBatchHandler(rpcUrl string, storage interface{}, redisStorage redisstorage.RedisStorage, producer messagepush.KafkaProducer, rollupID uint) (*CommittedBatchHandler, error) {
 	ctx := context.Background()
 	client, err := ethclient.DialContext(ctx, rpcUrl)
 	if err != nil {
@@ -49,6 +50,7 @@ func NewCommittedBatchHandler(rpcUrl string, storage interface{}, redisStorage r
 		storage:             storage.(DBStorage),
 		redisStorage:        redisStorage,
 		messagePushProducer: producer,
+		rollupID:            rollupID,
 	}, nil
 }
 
@@ -284,6 +286,7 @@ func (ins *CommittedBatchHandler) pushMsgForDeposit(deposit *etherman.Deposit, l
 			Status:       uint32(pb.TransactionStatus_TX_PENDING_VERIFICATION),
 			DestAddr:     deposit.DestinationAddress.Hex(),
 			EstimateTime: uint32(l2AvgVerifyDuration),
+			GlobalIndex:  etherman.GenerateGlobalIndex(false, ins.rollupID-1, deposit.DepositCount).String(),
 		})
 		if err != nil {
 			log.Errorf("PushTransactionUpdate for pending-verify error: %v", err)
