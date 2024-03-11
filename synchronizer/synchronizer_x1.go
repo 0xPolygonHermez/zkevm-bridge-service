@@ -78,9 +78,10 @@ func (s *ClientSynchronizer) afterProcessClaim(claim *etherman.Claim) error {
 			return
 		}
 
-		// WARNING: This logic will be wrong if we have more than one L2 networks
-		// We cannot use claim.OriginalNetwork because that value is not the same with the network id that create the bridge tx...
-		originNetwork := 1 - s.networkID
+		originNetwork := uint(0)
+		if !claim.MainnetFlag {
+			originNetwork = uint(claim.RollupIndex + 1)
+		}
 
 		// Retrieve deposit transaction info
 		deposit, err := s.storage.GetDeposit(s.ctx, claim.Index, originNetwork, nil)
