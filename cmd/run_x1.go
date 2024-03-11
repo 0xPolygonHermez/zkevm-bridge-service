@@ -254,9 +254,9 @@ func startServer(ctx *cli.Context, opts ...runOptionFunc) error {
 		zkEVMClient := client.NewClient(c.Etherman.L2URLs[0])
 		chExitRootEvent := make(chan *etherman.GlobalExitRoot)
 		chSynced := make(chan uint)
-		go runSynchronizer(ctx.Context, c.NetworkConfig.GenBlockNumber, bridgeController, l1Etherman, c.Synchronizer, storage, zkEVMClient, chExitRootEvent, chSynced, messagePushProducer, redisStorage)
+		go runSynchronizer(ctx.Context, c.NetworkConfig.GenBlockNumber, bridgeController, l1Etherman, c.Synchronizer, storage, zkEVMClient, chExitRootEvent, chSynced, messagePushProducer, redisStorage, rollupID)
 		for _, cl := range l2Ethermans {
-			go runSynchronizer(ctx.Context, 0, bridgeController, cl, c.Synchronizer, storage, zkEVMClient, chExitRootEvent, chSynced, messagePushProducer, redisStorage)
+			go runSynchronizer(ctx.Context, 0, bridgeController, cl, c.Synchronizer, storage, zkEVMClient, chExitRootEvent, chSynced, messagePushProducer, redisStorage, rollupID)
 		}
 
 		if c.ClaimTxManager.Enabled {

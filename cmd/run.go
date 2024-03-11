@@ -97,9 +97,9 @@ func start(ctx *cli.Context) error {
 	zkEVMClient := client.NewClient(c.Etherman.L2URLs[0])
 	chExitRootEvent := make(chan *etherman.GlobalExitRoot)
 	chSynced := make(chan uint)
-	go runSynchronizer(ctx.Context, c.NetworkConfig.GenBlockNumber, bridgeController, l1Etherman, c.Synchronizer, storage, zkEVMClient, chExitRootEvent, chSynced, nil, nil)
+	go runSynchronizer(ctx.Context, c.NetworkConfig.GenBlockNumber, bridgeController, l1Etherman, c.Synchronizer, storage, zkEVMClient, chExitRootEvent, chSynced, nil, nil, rollupID)
 	for _, client := range l2Ethermans {
-		go runSynchronizer(ctx.Context, 0, bridgeController, client, c.Synchronizer, storage, zkEVMClient, chExitRootEvent, chSynced, nil, nil)
+		go runSynchronizer(ctx.Context, 0, bridgeController, client, c.Synchronizer, storage, zkEVMClient, chExitRootEvent, chSynced, nil, nil, rollupID)
 	}
 
 	if c.ClaimTxManager.Enabled {
@@ -164,8 +164,8 @@ func newEthermans(c *config.Config) (*etherman.Client, []*etherman.Client, error
 
 func runSynchronizer(ctx context.Context, genBlockNumber uint64, brdigeCtrl *bridgectrl.BridgeController, etherman *etherman.Client, cfg synchronizer.Config,
 	storage db.Storage, zkEVMClient *client.Client, chExitRootEvent chan *etherman.GlobalExitRoot, chSynced chan uint,
-	messagePushProducer messagepush.KafkaProducer, redisStorage redisstorage.RedisStorage) {
-	sy, err := synchronizer.NewSynchronizer(ctx, storage, brdigeCtrl, etherman, zkEVMClient, genBlockNumber, chExitRootEvent, chSynced, messagePushProducer, redisStorage, cfg)
+	messagePushProducer messagepush.KafkaProducer, redisStorage redisstorage.RedisStorage, rollupID uint) {
+	sy, err := synchronizer.NewSynchronizer(ctx, storage, brdigeCtrl, etherman, zkEVMClient, genBlockNumber, chExitRootEvent, chSynced, messagePushProducer, redisStorage, rollupID, cfg)
 	if err != nil {
 		log.Fatal(err)
 	}
