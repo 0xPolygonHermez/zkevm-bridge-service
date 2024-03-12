@@ -679,7 +679,7 @@ func decodeGlobalIndex(globalIndex *big.Int) (bool, uint64, uint64, error) {
 
 func GenerateGlobalIndex(mainnetFlag bool, rollupIndex uint, localExitRootIndex uint) *big.Int {
 	// TODO: remove this
-	log.Debug("GenerateGlobalIndex: mainnetFlag[%v] rollupIndex[%v] localExitRootIndex[%v]", mainnetFlag, rollupIndex, localExitRootIndex)
+	log.Debugf("GenerateGlobalIndex: mainnetFlag[%v] rollupIndex[%v] localExitRootIndex[%v]", mainnetFlag, rollupIndex, localExitRootIndex)
 	var (
 		globalIndexBytes []byte
 		buf              [4]byte
