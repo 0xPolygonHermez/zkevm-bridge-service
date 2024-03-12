@@ -152,7 +152,7 @@ func newEthermans(c *config.Config) (*etherman.Client, []*etherman.Client, error
 	}
 	var l2Ethermans []*etherman.Client
 	for i, addr := range c.L2PolygonBridgeAddresses {
-		l2Etherman, err := etherman.NewL2Client(c.Etherman.L2URLs[i], addr)
+		l2Etherman, err := etherman.NewL2Client(c.Etherman.L2URLs[i], addr, l1Etherman.GetRollupID())
 		if err != nil {
 			log.Error("L2 etherman ", i, c.Etherman.L2URLs[i], ", error: ", err)
 			return l1Etherman, nil, err

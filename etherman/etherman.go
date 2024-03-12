@@ -169,7 +169,7 @@ func NewClient(cfg Config, polygonBridgeAddr, polygonZkEVMGlobalExitRootAddress,
 }
 
 // NewL2Client creates a new etherman for L2.
-func NewL2Client(url string, polygonBridgeAddr common.Address) (*Client, error) {
+func NewL2Client(url string, polygonBridgeAddr common.Address, rollupID uint) (*Client, error) {
 	// Connect to ethereum node
 	ethClient, err := ethclient.Dial(url)
 	if err != nil {
@@ -187,7 +187,7 @@ func NewL2Client(url string, polygonBridgeAddr common.Address) (*Client, error) 
 	}
 	scAddresses := []common.Address{polygonBridgeAddr}
 
-	return &Client{EtherClient: ethClient, PolygonBridge: bridge, OldPolygonBridge: oldpolygonBridge, SCAddresses: scAddresses}, nil
+	return &Client{EtherClient: ethClient, PolygonBridge: bridge, OldPolygonBridge: oldpolygonBridge, SCAddresses: scAddresses, RollupID: uint32(rollupID)}, nil
 }
 
 // GetRollupInfoByBlockRange function retrieves the Rollup information that are included in all this ethereum blocks
@@ -678,8 +678,6 @@ func decodeGlobalIndex(globalIndex *big.Int) (bool, uint64, uint64, error) {
 }
 
 func GenerateGlobalIndex(mainnetFlag bool, rollupIndex uint, localExitRootIndex uint) *big.Int {
-	// TODO: remove this
-	log.Debugf("GenerateGlobalIndex: mainnetFlag[%v] rollupIndex[%v] localExitRootIndex[%v]", mainnetFlag, rollupIndex, localExitRootIndex)
 	var (
 		globalIndexBytes []byte
 		buf              [4]byte
