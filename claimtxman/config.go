@@ -21,3 +21,12 @@ type Config struct {
 	// AuthorizedClaimMessageAddresses are the allowed address to bridge message with autoClaim
 	AuthorizedClaimMessageAddresses []common.Address `mapstructure:"AuthorizedClaimMessageAddresses"`
 }
+
+type ConfigGroupingClaims struct {
+	//Enabled whether to enable this module
+	Enabled bool `mapstructure:"Enabled"`
+	// TriggerNumberOfClaims is the number of claims to trigger sending the grouped claim tx
+	TriggerNumberOfClaims int `mapstructure:"TriggerNumberOfClaims"`
+	// TriggerElapsedPeriod is the elapsed period to trigger sending the grouped claim tx
+	TriggerElapsedPeriod types.Duration `mapstructure:"TriggerElapsedPeriod"`
+}

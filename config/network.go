@@ -12,6 +12,7 @@ type NetworkConfig struct {
 	PolygonZkEVMGlobalExitRootAddress common.Address
 	PolygonRollupManagerAddress       common.Address
 	PolygonZkEvmAddress               common.Address
+	ClaimCompressorAdress             common.Address
 	L2PolygonBridgeAddresses          []common.Address
 }
 

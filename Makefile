@@ -267,3 +267,10 @@ generate-mocks: ## Generates mocks for the tests, using mockery tool
 	mockery --name=bridgectrlInterface --dir=synchronizer --output=synchronizer --outpkg=synchronizer --structname=bridgectrlMock --filename=mock_bridgectrl.go
 	mockery --name=Tx --srcpkg=github.com/jackc/pgx/v4 --output=synchronizer --outpkg=synchronizer --structname=dbTxMock --filename=mock_dbtx.go
 	mockery --name=zkEVMClientInterface --dir=synchronizer --output=synchronizer --outpkg=synchronizer --structname=zkEVMClientMock --filename=mock_zkevmclient.go
+
+.PHONY: generate-smart-contracts-bindings
+generate-smartcontracts-bindings:	## Generates the smart contracts bindings
+	@for contract in `ls -1 etherman/smartcontracts/json/*.json | xargs -l basename`; do \
+		 ./scripts/generate-smartcontracts-bindings.sh $${contract%.*}; \
+	done
+	
