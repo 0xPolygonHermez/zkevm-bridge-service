@@ -158,7 +158,7 @@ func newEthermans(c *config.Config) (*etherman.Client, []*etherman.Client, error
 		c.NetworkConfig.PolygonZkEVMGlobalExitRootAddress,
 		c.NetworkConfig.PolygonRollupManagerAddress,
 		c.NetworkConfig.PolygonZkEvmAddress,
-		c.NetworkConfig.claimCompressorAdress)
+		c.NetworkConfig.ClaimCompressorAdress)
 	if err != nil {
 		log.Error("L1 etherman error: ", err)
 		return nil, nil, err

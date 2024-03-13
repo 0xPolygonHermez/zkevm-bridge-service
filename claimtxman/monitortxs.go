@@ -71,8 +71,6 @@ func (tm *MonitorTxs) monitorTxs(ctx context.Context) error {
 		mTxLog := log.WithFields("monitoredTx", mTx.DepositID)
 		mTxLog.Infof("processing tx with nonce %d", mTx.Nonce)
 
-		// check if any of the txs in the history was mined
-		mined := false
 		var receipt *types.Receipt
 
 		// if the tx is not mined yet, check that not all the tx were mined and go to the next
@@ -82,7 +80,7 @@ func (tm *MonitorTxs) monitorTxs(ctx context.Context) error {
 		// update monitored tx changes into storage
 		// if the tx was mined but failed, we continue to consider it was not mined
 		// and store the failed receipt to be used to check if nonce needs to be reviewed
-		hasFailedReceipts, allHistoryTxMined, receiptSuccessful := tm.checkTxHistory(ctx, mTx, mTxLog, mined, receipt, dbTx)
+		hasFailedReceipts, allHistoryTxMined, receiptSuccessful := tm.checkTxHistory(ctx, mTx, mTxLog, receipt, dbTx)
 
 		if receiptSuccessful {
 			//mTxLog.Infof("tx %s was mined successfully", txHash.String())
@@ -212,10 +210,11 @@ func (tm *MonitorTxs) monitorTxs(ctx context.Context) error {
 }
 
 // returns hasFailedReceipts, allHistoryTxMined, receiptSuccessful
-func (tm *MonitorTxs) checkTxHistory(ctx context.Context, mTx ctmtypes.MonitoredTx, mTxLog *log.Logger, mined bool, receipt *types.Receipt, dbTx pgx.Tx) (bool, bool, bool) {
+func (tm *MonitorTxs) checkTxHistory(ctx context.Context, mTx ctmtypes.MonitoredTx, mTxLog *log.Logger, receipt *types.Receipt, dbTx pgx.Tx) (bool, bool, bool) {
 	hasFailedReceipts := false
 	allHistoryTxMined := true
 	receiptSuccessful := false
+	mined := false
 	var err error
 	for txHash := range mTx.History {
 		mTxLog.Infof("Checking if tx %s is mined", txHash.String())
@@ -256,8 +255,6 @@ func (tm *MonitorTxs) checkTxHistory(ctx context.Context, mTx ctmtypes.Monitored
 
 			break
 		}
-
-		mined = false
 		hasFailedReceipts = true
 	}
 	return hasFailedReceipts, allHistoryTxMined, receiptSuccessful
