@@ -43,6 +43,7 @@ type MonitorTxs struct {
 	claimCompressorSMC    *ClaimCompressor.ClaimCompressor
 	compressClaimComposer *ComposeCompressClaim
 	timeProvider          utils.TimeProvider
+	triggerGroups         *GroupsTrigger
 }
 
 func NewMonitorTxs(ctx context.Context,
@@ -67,6 +68,7 @@ func NewMonitorTxs(ctx context.Context,
 		claimCompressorSMC:    claimCompressorSMC,
 		compressClaimComposer: composer,
 		timeProvider:          timeProvider,
+		triggerGroups:         NewGroupsTrigger(cfg.GroupingClaims),
 	}
 }
 
@@ -336,6 +338,11 @@ func (tm *MonitorTxs) createNewGroups(pendingTx *PendingTxs) error {
 	if len(pendingTx.TxCandidatesForGroup) < MinTxPerGroup {
 		return nil
 	}
+	groupTxs := tm.triggerGroups.ChooseTxs(tm.timeProvider.Now(), pendingTx.TxCandidatesForGroup)
+	if len(groupTxs) == 0 {
+		log.Infof("pending claims: %d, not yet trigged", len(pendingTx.TxCandidatesForGroup))
+		return nil
+	}
 	group := ctmtypes.NewMonitoredTxGroup(
 		ctmtypes.MonitoredTxGroupDBEntry{
 			GroupID: pendingTx.GenerateNewGroupID(),
@@ -343,7 +350,7 @@ func (tm *MonitorTxs) createNewGroups(pendingTx *PendingTxs) error {
 			//To:      pendingTx.TxCandidatesForGroup[0].To,
 			//From:    pendingTx.TxCandidatesForGroup[0].From,
 			CreatedAt: tm.timeProvider.Now(),
-		}, pendingTx.TxCandidatesForGroup[:MinTxPerGroup])
+		}, groupTxs)
 
 	// Group createdTx and generate compress calls
 	compressClaimParams, err := tm.compressClaimComposer.GetCompressClaimParametersFromMonitoredTx(group.Txs)
