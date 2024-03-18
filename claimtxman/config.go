@@ -20,6 +20,9 @@ type Config struct {
 	RetryNumber int `mapstructure:"RetryNumber"`
 	// AuthorizedClaimMessageAddresses are the allowed address to bridge message with autoClaim
 	AuthorizedClaimMessageAddresses []common.Address `mapstructure:"AuthorizedClaimMessageAddresses"`
+
+	// GroupingClaims is the configuration for grouping claims
+	GroupingClaims ConfigGroupingClaims `mapstructure:"GroupingClaims"`
 }
 
 type ConfigGroupingClaims struct {
@@ -27,6 +30,14 @@ type ConfigGroupingClaims struct {
 	Enabled bool `mapstructure:"Enabled"`
 	// TriggerNumberOfClaims is the number of claims to trigger sending the grouped claim tx
 	TriggerNumberOfClaims int `mapstructure:"TriggerNumberOfClaims"`
-	// TriggerElapsedPeriod is the elapsed period to trigger sending the grouped claim tx
-	TriggerElapsedPeriod types.Duration `mapstructure:"TriggerElapsedPeriod"`
+	// MaxNumberOfClaimsPerGroup is the maximum number of claims per group
+	MaxNumberOfClaimsPerGroup int `mapstructure:"MaxNumberOfClaimsPerGroup"`
+	// TriggerRetainedClaimPeriod is maximum time that a claim can be retainer before creating a group
+	TriggerRetainedClaimPeriod types.Duration `mapstructure:"TriggerElapsedPeriod"`
+	// MaxRetries is the maximum number of retries to send a compressed claim tx
+	MaxRetries int `mapstructure:"MaxRetries"`
+	// RetryInterval is time between each retry
+	RetryInterval types.Duration `mapstructure:"RetryInterval"`
+	// RetryTimeout is the maximum time to wait for a claim tx to be mined
+	RetryTimeout types.Duration `mapstructure:"RetryTimeout"`
 }

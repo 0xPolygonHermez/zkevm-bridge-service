@@ -10,12 +10,17 @@ import (
 	zkevmbridgeservice "github.com/0xPolygonHermez/zkevm-bridge-service"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/bridgectrl"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/claimtxman"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/claimtxman/txcompressor"
+	ctmtypes "github.com/0xPolygonHermez/zkevm-bridge-service/claimtxman/types"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/config"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/db"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/db/pgstorage"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman/smartcontracts/generated_binding/ClaimCompressor"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/log"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/server"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/synchronizer"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/utils"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/utils/gerror"
 	"github.com/0xPolygonHermez/zkevm-node/jsonrpc/client"
 	"github.com/urfave/cli/v2"
@@ -76,6 +81,7 @@ func start(ctx *cli.Context) error {
 		log.Error(err)
 		return err
 	}
+	pgstorage := storage.(*pgstorage.PostgresStorage)
 
 	var bridgeController *bridgectrl.BridgeController
 
@@ -117,7 +123,33 @@ func start(ctx *cli.Context) error {
 		for i := 0; i < len(c.Etherman.L2URLs); i++ {
 			// we should match the orders of L2URLs between etherman and claimtxman
 			// since we are using the networkIDs in the same order
-			claimTxManager, err := claimtxman.NewClaimTxManager(c.ClaimTxManager, chExitRootEvent, chSynced, c.Etherman.L2URLs[i], networkIDs[i+1], c.NetworkConfig.L2PolygonBridgeAddresses[i], bridgeService, storage, rollupID)
+			ctx := context.Background()
+			client, err := utils.NewClient(ctx, c.Etherman.L2URLs[i], c.NetworkConfig.L2PolygonBridgeAddresses[i])
+			if err != nil {
+				log.Fatalf("error creating client for L2 %s. Error: %v", c.Etherman.L2URLs[i], err)
+			}
+			nonceCache, err := claimtxman.NewNonceCache(ctx, client)
+			if err != nil {
+				log.Fatalf("error creating nonceCache for L2 %s. Error: %v", c.Etherman.L2URLs[i], err)
+			}
+			auth, err := client.GetSignerFromKeystore(ctx, c.ClaimTxManager.PrivateKey)
+			if err != nil {
+				log.Fatalf("error creating signer for L2 %s. Error: %v", c.Etherman.L2URLs[i], err)
+			}
+			var monitorTx ctmtypes.TxMonitorer
+			if c.ClaimTxManager.GroupingClaims.Enabled {
+				log.Info("ClaimTxManager grouping claims enabled, claimCompressor=%s", c.ClaimCompressorAddress.String())
+				claimCompressor, err := ClaimCompressor.NewClaimCompressor(c.ClaimCompressorAddress, client)
+				if err != nil {
+					log.Fatalf("error creating claim compressor for L2 %s. Error: %v", c.Etherman.L2URLs[i], err)
+				}
+				monitorTx = txcompressor.NewMonitorTxs(ctx, pgstorage, client, c.ClaimTxManager, nonceCache, auth, claimCompressor, utils.NewTimeProviderSystemLocalTime())
+			} else {
+				monitorTx = claimtxman.NewMonitorTxs(ctx, storage, client, c.ClaimTxManager, nonceCache, auth)
+			}
+
+			claimTxManager, err := claimtxman.NewClaimTxManager(ctx, c.ClaimTxManager, chExitRootEvent, chSynced,
+				c.Etherman.L2URLs[i], networkIDs[i+1], c.NetworkConfig.L2PolygonBridgeAddresses[i], bridgeService, storage, monitorTx, rollupID, nonceCache, auth)
 			if err != nil {
 				log.Fatalf("error creating claim tx manager for L2 %s. Error: %v", c.Etherman.L2URLs[i], err)
 			}
@@ -158,7 +190,7 @@ func newEthermans(c *config.Config) (*etherman.Client, []*etherman.Client, error
 		c.NetworkConfig.PolygonZkEVMGlobalExitRootAddress,
 		c.NetworkConfig.PolygonRollupManagerAddress,
 		c.NetworkConfig.PolygonZkEvmAddress,
-		c.NetworkConfig.ClaimCompressorAdress)
+		c.NetworkConfig.ClaimCompressorAddress)
 	if err != nil {
 		log.Error("L1 etherman error: ", err)
 		return nil, nil, err

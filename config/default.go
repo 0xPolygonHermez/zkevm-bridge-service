@@ -22,6 +22,15 @@ PrivateKey = {Path = "./test/test.keystore", Password = "testonly"}
 RetryInterval = "1s"
 RetryNumber = 10
 AuthorizedClaimMessageAddresses = []
+[ClaimTxManager.GroupingClaims]
+    Enabled = true
+    TriggerNumberOfClaims = 10
+    MaxNumberOfClaimsPerGroup = 10
+    TriggerRetainedClaimPeriod = "30s"
+    MaxRetries = 2
+    RetryInterval = "10s"
+    RetryTimeout = "30s"
+
 
 [Etherman]
 L1URL = "http://localhost:8545"

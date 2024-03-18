@@ -20,7 +20,7 @@ import (
 )
 
 type MonitorTxs struct {
-	storage storageInterface
+	storage StorageInterface
 	ctx     context.Context
 	// client is the ethereum client
 	l2Node     *utils.Client
@@ -30,13 +30,13 @@ type MonitorTxs struct {
 }
 
 func NewMonitorTxs(ctx context.Context,
-	storage storageInterface,
+	storage interface{},
 	l2Node *utils.Client,
 	cfg Config,
 	nonceCache *NonceCache,
 	auth *bind.TransactOpts) *MonitorTxs {
 	return &MonitorTxs{
-		storage:    storage,
+		storage:    storage.(StorageInterface),
 		ctx:        ctx,
 		l2Node:     l2Node,
 		cfg:        cfg,
@@ -45,8 +45,8 @@ func NewMonitorTxs(ctx context.Context,
 	}
 }
 
-// monitorTxs process all pending monitored tx
-func (tm *MonitorTxs) monitorTxs(ctx context.Context) error {
+// MonitorTxs process all pending monitored tx
+func (tm *MonitorTxs) MonitorTxs(ctx context.Context) error {
 	dbTx, err := tm.storage.BeginDBTransaction(tm.ctx)
 	if err != nil {
 		return err
@@ -71,8 +71,6 @@ func (tm *MonitorTxs) monitorTxs(ctx context.Context) error {
 		mTxLog := log.WithFields("monitoredTx", mTx.DepositID)
 		mTxLog.Infof("processing tx with nonce %d", mTx.Nonce)
 
-		var receipt *types.Receipt
-
 		// if the tx is not mined yet, check that not all the tx were mined and go to the next
 		// check if the tx is in the pending pool
 		// Retry if the tx has not appeared in the pool yet.
@@ -80,7 +78,7 @@ func (tm *MonitorTxs) monitorTxs(ctx context.Context) error {
 		// update monitored tx changes into storage
 		// if the tx was mined but failed, we continue to consider it was not mined
 		// and store the failed receipt to be used to check if nonce needs to be reviewed
-		hasFailedReceipts, allHistoryTxMined, receiptSuccessful := tm.checkTxHistory(ctx, mTx, mTxLog, receipt, dbTx)
+		hasFailedReceipts, allHistoryTxMined, receiptSuccessful := tm.checkTxHistory(ctx, mTx, mTxLog, dbTx)
 
 		if receiptSuccessful {
 			//mTxLog.Infof("tx %s was mined successfully", txHash.String())
@@ -210,7 +208,8 @@ func (tm *MonitorTxs) monitorTxs(ctx context.Context) error {
 }
 
 // returns hasFailedReceipts, allHistoryTxMined, receiptSuccessful
-func (tm *MonitorTxs) checkTxHistory(ctx context.Context, mTx ctmtypes.MonitoredTx, mTxLog *log.Logger, receipt *types.Receipt, dbTx pgx.Tx) (bool, bool, bool) {
+func (tm *MonitorTxs) checkTxHistory(ctx context.Context, mTx ctmtypes.MonitoredTx, mTxLog *log.Logger, dbTx pgx.Tx) (bool, bool, bool) {
+	var receipt *types.Receipt
 	hasFailedReceipts := false
 	allHistoryTxMined := true
 	receiptSuccessful := false

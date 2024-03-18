@@ -6,6 +6,7 @@ import (
 	"math/big"
 	"time"
 
+	"github.com/0xPolygonHermez/zkevm-bridge-service/claimtxman/types"
 	ctmtypes "github.com/0xPolygonHermez/zkevm-bridge-service/claimtxman/types"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/log"
@@ -36,28 +37,33 @@ type ClaimTxManager struct {
 	cfg             Config
 	chExitRootEvent chan *etherman.GlobalExitRoot
 	chSynced        chan uint
-	storage         storageInterface
+	storage         StorageInterface
 	auth            *bind.TransactOpts
 	rollupID        uint
 	synced          bool
 	nonceCache      *NonceCache
-	monitorTxs      *MonitorTxs
+	monitorTxs      types.TxMonitorer
 }
 
 // NewClaimTxManager creates a new claim transaction manager.
-func NewClaimTxManager(cfg Config, chExitRootEvent chan *etherman.GlobalExitRoot, chSynced chan uint, l2NodeURL string, l2NetworkID uint, l2BridgeAddr common.Address, bridgeService bridgeServiceInterface, storage interface{}, rollupID uint) (*ClaimTxManager, error) {
-	ctx := context.Background()
+func NewClaimTxManager(ctx context.Context, cfg Config, chExitRootEvent chan *etherman.GlobalExitRoot,
+	chSynced chan uint,
+	l2NodeURL string,
+	l2NetworkID uint,
+	l2BridgeAddr common.Address,
+	bridgeService bridgeServiceInterface,
+	storage interface{},
+	TxMonitorer ctmtypes.TxMonitorer,
+	rollupID uint,
+	nonceCache *NonceCache,
+	auth *bind.TransactOpts) (*ClaimTxManager, error) {
 	client, err := utils.NewClient(ctx, l2NodeURL, l2BridgeAddr)
-	if err != nil {
-		return nil, err
-	}
-	nonceCache, err := NewNonceCache(ctx, client)
 	if err != nil {
 		return nil, err
 	}
 
 	ctx, cancel := context.WithCancel(ctx)
-	auth, err := client.GetSignerFromKeystore(ctx, cfg.PrivateKey)
+
 	return &ClaimTxManager{
 		ctx:             ctx,
 		cancel:          cancel,
@@ -67,11 +73,11 @@ func NewClaimTxManager(cfg Config, chExitRootEvent chan *etherman.GlobalExitRoot
 		cfg:             cfg,
 		chExitRootEvent: chExitRootEvent,
 		chSynced:        chSynced,
-		storage:         storage.(storageInterface),
+		storage:         storage.(StorageInterface),
 		auth:            auth,
 		rollupID:        rollupID,
 		nonceCache:      nonceCache,
-		monitorTxs:      NewMonitorTxs(ctx, storage.(storageInterface), client, cfg, nonceCache, auth),
+		monitorTxs:      TxMonitorer,
 	}, err
 }
 
@@ -102,7 +108,7 @@ func (tm *ClaimTxManager) Start() {
 				log.Infof("Waiting for networkID %d to be synced before processing deposits", tm.l2NetworkID)
 			}
 		case <-ticker.C:
-			err := tm.monitorTxs.monitorTxs(tm.ctx)
+			err := tm.monitorTxs.MonitorTxs(tm.ctx)
 			if err != nil {
 				log.Errorf("failed to monitor txs: %v", err)
 			}
