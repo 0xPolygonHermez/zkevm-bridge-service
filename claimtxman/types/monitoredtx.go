@@ -168,6 +168,15 @@ func NewMonitoredTxGroup(entry MonitoredTxGroupDBEntry, txs []MonitoredTx) Monit
 	return res
 }
 
+func (m MonitoredTxGroup) GetTxByDipositID(depositID uint) *MonitoredTx {
+	for idx := range m.Txs {
+		if m.Txs[idx].DepositID == depositID {
+			return &m.Txs[idx]
+		}
+	}
+	return nil
+}
+
 func (m *MonitoredTxGroup) AddTx(tx MonitoredTx) {
 	tx.GroupID = &m.DbEntry.GroupID
 	m.Txs = append(m.Txs, tx)

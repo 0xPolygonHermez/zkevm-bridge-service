@@ -111,9 +111,12 @@ func GenerateStoreUpdate(oldState, newState PendingTxs, timeProvider utils.TimeP
 		if oldGroup, ok := oldState.GroupTx[groupID]; ok {
 			// Check if the txs are the same, if not add the txs to the update list
 			for _, tx := range group.Txs {
-				oldTx := oldGroup.Txs[tx.DepositID]
+				oldTx := oldGroup.GetTxByDipositID(tx.DepositID)
+				if oldTx == nil {
+					return nil, fmt.Errorf("tx with depositID %d not found in old state", tx.DepositID)
+				}
 				newTx := tx
-				if !cmp.Equal(oldTx, newTx) {
+				if !cmp.Equal(*oldTx, newTx) {
 					result.UpdateTx(tx)
 				}
 			}

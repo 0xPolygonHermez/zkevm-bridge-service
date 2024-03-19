@@ -335,9 +335,6 @@ func (tm *MonitorTxs) createNewGroups(pendingTx *PendingTxs) error {
 	if pendingTx == nil || pendingTx.TxCandidatesForGroup == nil {
 		return nil
 	}
-	if len(pendingTx.TxCandidatesForGroup) < MinTxPerGroup {
-		return nil
-	}
 	groupTxs := tm.triggerGroups.ChooseTxs(tm.timeProvider.Now(), pendingTx.TxCandidatesForGroup)
 	if len(groupTxs) == 0 {
 		log.Infof("pending claims: %d, not yet trigged", len(pendingTx.TxCandidatesForGroup))
@@ -364,7 +361,7 @@ func (tm *MonitorTxs) createNewGroups(pendingTx *PendingTxs) error {
 	if err != nil {
 		return fmt.Errorf("fails call to claimCompressorSMC for new group_id  with deposits %s err:%w ", group.GetTxsDepositIDString(), err)
 	}
-	log.Infof("Compressed data len %s", len(compressedData))
+	log.Infof("Compressed data len %d", len(compressedData))
 	group.DbEntry.CompressedTxData = compressedData
 
 	pendingTx.AddGroup(group)
