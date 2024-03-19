@@ -190,6 +190,11 @@ func (c *Client) SendBridgeMessage(ctx context.Context, destNetwork uint32, dest
 	return WaitTxToBeMined(ctx, c.Client, tx, txTimeout)
 }
 
+// BuildClaim serialize a claim transaction but don't send in
+func (c *Client) BuildClaim(ctx context.Context, deposit *etherman.Deposit, smtProof [mtHeight][keyLen]byte, smtRollupProof [mtHeight][keyLen]byte, globalExitRoot *etherman.GlobalExitRoot, nonce, gasPrice int64, gasLimit uint64, rollupID uint, auth *bind.TransactOpts) ([]byte, error) {
+	return nil, nil
+}
+
 // BuildSendClaim builds a tx data to be sent to the bridge method SendClaim.
 func (c *Client) BuildSendClaim(ctx context.Context, deposit *etherman.Deposit, smtProof [mtHeight][keyLen]byte, smtRollupProof [mtHeight][keyLen]byte, globalExitRoot *etherman.GlobalExitRoot, nonce, gasPrice int64, gasLimit uint64, rollupID uint, auth *bind.TransactOpts) (*types.Transaction, error) {
 	opts := *auth

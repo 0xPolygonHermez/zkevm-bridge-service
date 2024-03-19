@@ -23,7 +23,7 @@ func TestMonitoredTxStorage(t *testing.T) {
 	pg, err := pgstorage.NewPostgresStorage(dbCfg)
 	require.NoError(t, err)
 
-	var _ storageInterface = pg
+	var _ StorageInterface = pg
 	tx, err := pg.BeginDBTransaction(ctx)
 	require.NoError(t, err)
 
