@@ -50,7 +50,7 @@ type ClaimTxManager struct {
 	nonceCache      *lru.Cache[string, uint64]
 	synced          bool
 
-	// X1
+	// XLayer
 	updateDepositsL1Mutex sync.Mutex
 	updateDepositsL2Mutex sync.Mutex
 	isDone                bool

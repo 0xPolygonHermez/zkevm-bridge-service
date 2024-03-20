@@ -30,6 +30,6 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: true
           tags: |
-            okx/x1-bridge-service:${{ github.ref_name }}
+            okx/xlayer-bridge-service:${{ github.ref_name }}
           build-args: |
             PRIVATE_TOKEN=${{secrets.GIT_TOKEN}}

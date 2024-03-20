@@ -21,8 +21,8 @@ The current version of the environment requires `go`, `docker` and `docker-compo
 - <https://www.docker.com/get-started>
 - <https://docs.docker.com/compose/install/>
 
-The `x1-bridge-service` docker image must be built at least once and every time a change is made to the code.
-If you haven't build the `x1-bridge-service` image yet, you must run:
+The `xlayer-bridge-service` docker image must be built at least once and every time a change is made to the code.
+If you haven't build the `xlayer-bridge-service` image yet, you must run:
 
 ```bash
 make build-docker

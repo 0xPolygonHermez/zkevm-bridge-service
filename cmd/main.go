@@ -15,7 +15,7 @@ const (
 
 const (
 	// App name
-	appName = "x1-bridge"
+	appName = "xlayer-bridge"
 )
 
 func main() {
@@ -47,28 +47,28 @@ func main() {
 		{
 			Name:    "run",
 			Aliases: []string{},
-			Usage:   "Run the x1 bridge, including API, synchronizer, claimtxman, kafka consumer, etc.",
+			Usage:   "Run the xlayer bridge, including API, synchronizer, claimtxman, kafka consumer, etc.",
 			Action:  runAll,
 			Flags:   flags,
 		},
 		{
 			Name:    "runAPI",
 			Aliases: []string{},
-			Usage:   "Run the x1 bridge API server",
+			Usage:   "Run the xlayer bridge API server",
 			Action:  runAPI,
 			Flags:   flags,
 		},
 		{
 			Name:    "runTask",
 			Aliases: []string{},
-			Usage:   "Run the x1 bridge tasks, including synchronizer, claimtxman, kafka consumer",
+			Usage:   "Run the xlayer bridge tasks, including synchronizer, claimtxman, kafka consumer",
 			Action:  runTask,
 			Flags:   flags,
 		},
 		{
 			Name:    "runPushTask",
 			Aliases: []string{},
-			Usage:   "Run the x1 bridge push tasks (monitor the block/batch number and push change event to FE)",
+			Usage:   "Run the xlayer bridge push tasks (monitor the block/batch number and push change event to FE)",
 			Action:  runPushTask,
 			Flags:   flags,
 		},

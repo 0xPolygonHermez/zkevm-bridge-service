@@ -54,7 +54,7 @@ service BridgeService {
     }
 
     /*
-     * ---------- X1 endpoints ----------
+     * ---------- XLayer endpoints ----------
      */
 
     /// Get the latest price of the specified coins
@@ -247,7 +247,7 @@ message GetClaimsResponse {
 }
 
 /*
- * ---------- X1 protos ----------
+ * ---------- XLayer protos ----------
  */
 
 enum TransactionStatus {

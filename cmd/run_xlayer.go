@@ -267,7 +267,7 @@ func startServer(ctx *cli.Context, opts ...runOptionFunc) error {
 				if err != nil {
 					log.Fatalf("error creating claim tx manager for L2 %s. Error: %v", c.Etherman.L2URLs[i], err)
 				}
-				go claimTxManager.StartX1()
+				go claimTxManager.StartXLayer()
 			}
 		} else {
 			log.Warn("ClaimTxManager not configured")

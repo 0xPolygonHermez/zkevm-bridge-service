@@ -1,7 +1,7 @@
 version: "3.5"
 networks:
   default:
-    name: x1
+    name: xlayer
     
 services:
   zkevm-state-db:
@@ -59,8 +59,8 @@ services:
       - POSTGRES_DB=test_db
     command: ["postgres", "-N", "500"]
 
-  x1-bridge-redis:
-    container_name: x1-bridge-redis
+  xlayer-bridge-redis:
+    container_name: xlayer-bridge-redis
     image: redis
     deploy:
       resources:
@@ -85,9 +85,9 @@ services:
     expose:
       - 2181
 
-  x1-bridge-coin-kafka:
+  xlayer-bridge-coin-kafka:
     image: wurstmeister/kafka
-    container_name: x1-bridge-coin-kafka
+    container_name: xlayer-bridge-coin-kafka
     expose:
       - 9092
     environment:
@@ -98,9 +98,9 @@ services:
       KAFKA_ZOOKEEPER_CONNECT: kafka-zookeeper:2181
       KAFKA_CREATE_TOPICS: "explorer_chainAddressPrice_push:1:1"
 
-  x1-bridge-service-api:
-    container_name: x1-bridge-service-api
-    image: x1-bridge-service
+  xlayer-bridge-service-api:
+    container_name: xlayer-bridge-service-api
+    image: xlayer-bridge-service
     ports:
       - 8080:8080
       - 9090:9090
@@ -118,11 +118,11 @@ services:
     command:
       - "/bin/sh"
       - "-c"
-      - "/app/x1-bridge runAPI --cfg /app/config.toml"
+      - "/app/xlayer-bridge runAPI --cfg /app/config.toml"
 
-  x1-bridge-service-task:
-    container_name: x1-bridge-service-task
-    image: x1-bridge-service
+  xlayer-bridge-service-task:
+    container_name: xlayer-bridge-service-task
+    image: xlayer-bridge-service
     environment:
       - ZKEVM_BRIDGE_DATABASE_USER=test_user
       - ZKEVM_BRIDGE_DATABASE_PASSWORD=test_password
@@ -136,11 +136,11 @@ services:
     command:
       - "/bin/sh"
       - "-c"
-      - "/app/x1-bridge runTask --cfg /app/config.toml"
+      - "/app/xlayer-bridge runTask --cfg /app/config.toml"
 
-  x1-bridge-service-push:
-    container_name: x1-bridge-service-push
-    image: x1-bridge-service
+  xlayer-bridge-service-push:
+    container_name: xlayer-bridge-service-push
+    image: xlayer-bridge-service
     environment:
       - ZKEVM_BRIDGE_DATABASE_USER=test_user
       - ZKEVM_BRIDGE_DATABASE_PASSWORD=test_password
@@ -154,7 +154,7 @@ services:
     command:
       - "/bin/sh"
       - "-c"
-      - "/app/x1-bridge runPushTask --cfg /app/config.toml"
+      - "/app/xlayer-bridge runPushTask --cfg /app/config.toml"
 
   zkevm-node:
     container_name: zkevm-node
@@ -290,9 +290,9 @@ services:
     command: >
       zkProver -c /usr/src/app/config.json
 
-  x1-bridge-service:
-    container_name: x1-bridge-service
-    image: x1-bridge-service
+  xlayer-bridge-service:
+    container_name: xlayer-bridge-service
+    image: xlayer-bridge-service
     ports:
       - 8080:8080
       - 9090:9090
@@ -310,11 +310,11 @@ services:
     command:
       - "/bin/sh"
       - "-c"
-      - "/app/x1-bridge run --cfg /app/config.toml"
+      - "/app/xlayer-bridge run --cfg /app/config.toml"
 
-  x1-bridge-service-v1tov2:
-    container_name: x1-bridge-service-v1tov2
-    image: x1-bridge-service
+  xlayer-bridge-service-v1tov2:
+    container_name: xlayer-bridge-service-v1tov2
+    image: xlayer-bridge-service
     ports:
       - 8080:8080
       - 9090:9090
@@ -337,4 +337,4 @@ services:
     command:
       - "/bin/sh"
       - "-c"
-      - "/app/x1-bridge run --cfg /app/config.toml"
+      - "/app/xlayer-bridge run --cfg /app/config.toml"

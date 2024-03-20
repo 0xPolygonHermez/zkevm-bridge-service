@@ -22,10 +22,10 @@ import (
 	"github.com/pkg/errors"
 )
 
-// StartX1 will start the tx management, reading txs from storage,
+// StartXLayer will start the tx management, reading txs from storage,
 // send then to the blockchain and keep monitoring them until they
 // get mined
-func (tm *ClaimTxManager) StartX1() {
+func (tm *ClaimTxManager) StartXLayer() {
 	go tm.startMonitorTxs()
 	for {
 		select {
@@ -41,7 +41,7 @@ func (tm *ClaimTxManager) StartX1() {
 			if tm.synced {
 				log.Debug("UpdateDepositsStatus for ger: ", ger.GlobalExitRoot)
 				go func() {
-					err := tm.updateDepositsStatusX1(ger)
+					err := tm.updateDepositsStatusXLayer(ger)
 					if err != nil {
 						log.Errorf("failed to update deposits status: %v", err)
 					}
@@ -63,7 +63,7 @@ func (tm *ClaimTxManager) startMonitorTxs() {
 		ctx := context.WithValue(tm.ctx, utils.CtxTraceID, traceID)
 		logger := log.WithFields(utils.TraceID, traceID)
 		logger.Infof("MonitorTxs begin %d", tm.l2NetworkID)
-		err := tm.monitorTxsX1(ctx)
+		err := tm.monitorTxsXLayer(ctx)
 		if err != nil {
 			logger.Errorf("failed to monitor txs: %v", err)
 		}
@@ -71,7 +71,7 @@ func (tm *ClaimTxManager) startMonitorTxs() {
 	}
 }
 
-func (tm *ClaimTxManager) updateDepositsStatusX1(ger *etherman.GlobalExitRoot) error {
+func (tm *ClaimTxManager) updateDepositsStatusXLayer(ger *etherman.GlobalExitRoot) error {
 	if tm.cfg.OptClaim {
 		if ger.BlockID != 0 {
 			tm.updateDepositsL2Mutex.Lock()
@@ -88,7 +88,7 @@ func (tm *ClaimTxManager) updateDepositsStatusX1(ger *etherman.GlobalExitRoot) e
 	if err != nil {
 		return err
 	}
-	err = tm.processDepositStatusX1(ger, dbTx)
+	err = tm.processDepositStatusXLayer(ger, dbTx)
 	if err != nil {
 		log.Errorf("error processing ger. Error: %v", err)
 		rollbackErr := tm.storage.Rollback(tm.ctx, dbTx)
@@ -118,7 +118,7 @@ func (tm *ClaimTxManager) processDepositStatusL2(ger *etherman.GlobalExitRoot) e
 		return err
 	}
 	log.Infof("Rollup exitroot %v is updated", ger.ExitRoots[1])
-	deposits, err := tm.storage.UpdateL2DepositsStatusX1(tm.ctx, ger.ExitRoots[1][:], ger.Time, tm.rollupID, tm.l2NetworkID, dbTx)
+	deposits, err := tm.storage.UpdateL2DepositsStatusXLayer(tm.ctx, ger.ExitRoots[1][:], ger.Time, tm.rollupID, tm.l2NetworkID, dbTx)
 	if err != nil {
 		log.Errorf("error getting and updating L2DepositsStatus. Error: %v", err)
 		rollbackErr := tm.storage.Rollback(tm.ctx, dbTx)
@@ -234,7 +234,7 @@ func (tm *ClaimTxManager) processDepositStatusL1(newGer *etherman.GlobalExitRoot
 			tm.rollbackStore(dbTx)
 			return err
 		}
-		if err = tm.addClaimTxX1(deposit.DepositCount, tm.auth.From, tx.To(), nil, tx.Data(), dbTx); err != nil {
+		if err = tm.addClaimTxXLayer(deposit.DepositCount, tm.auth.From, tx.To(), nil, tx.Data(), dbTx); err != nil {
 			log.Errorf("error adding claim tx for deposit %d. Error: %v", deposit.DepositCount, err)
 			tm.rollbackStore(dbTx)
 			return err
@@ -277,10 +277,10 @@ func (tm *ClaimTxManager) rollbackStore(dbTx pgx.Tx) {
 	}
 }
 
-func (tm *ClaimTxManager) processDepositStatusX1(ger *etherman.GlobalExitRoot, dbTx pgx.Tx) error {
+func (tm *ClaimTxManager) processDepositStatusXLayer(ger *etherman.GlobalExitRoot, dbTx pgx.Tx) error {
 	if ger.BlockID != 0 { // L2 exit root is updated
 		log.Infof("Rollup exitroot %v is updated", ger.ExitRoots[1])
-		deposits, err := tm.storage.UpdateL2DepositsStatusX1(tm.ctx, ger.ExitRoots[1][:], ger.Time, tm.rollupID, tm.l2NetworkID, dbTx)
+		deposits, err := tm.storage.UpdateL2DepositsStatusXLayer(tm.ctx, ger.ExitRoots[1][:], ger.Time, tm.rollupID, tm.l2NetworkID, dbTx)
 		if err != nil {
 			log.Errorf("error getting and updating L2DepositsStatus. Error: %v", err)
 			return err
@@ -293,7 +293,7 @@ func (tm *ClaimTxManager) processDepositStatusX1(ger *etherman.GlobalExitRoot, d
 		}
 	} else { // L1 exit root is updated in the trusted state
 		log.Infof("Mainnet exitroot %v is updated", ger.ExitRoots[0])
-		deposits, err := tm.storage.UpdateL1DepositsStatusX1(tm.ctx, ger.ExitRoots[0][:], ger.Time, dbTx)
+		deposits, err := tm.storage.UpdateL1DepositsStatusXLayer(tm.ctx, ger.ExitRoots[0][:], ger.Time, dbTx)
 		if err != nil {
 			log.Errorf("error getting and updating L1DepositsStatus. Error: %v", err)
 			return err
@@ -341,7 +341,7 @@ func (tm *ClaimTxManager) processDepositStatusX1(ger *etherman.GlobalExitRoot, d
 				return err
 			}
 			log.Debugf("claimTx for deposit %d build successfully %d", deposit.DepositCount)
-			if err = tm.addClaimTxX1(deposit.DepositCount, tm.auth.From, tx.To(), nil, tx.Data(), dbTx); err != nil {
+			if err = tm.addClaimTxXLayer(deposit.DepositCount, tm.auth.From, tx.To(), nil, tx.Data(), dbTx); err != nil {
 				log.Errorf("error adding claim tx for deposit %d. Error: %v", deposit.DepositCount, err)
 				return err
 			}
@@ -364,7 +364,7 @@ func (tm *ClaimTxManager) processDepositStatusX1(ger *etherman.GlobalExitRoot, d
 	return nil
 }
 
-func (tm *ClaimTxManager) addClaimTxX1(depositCount uint, from common.Address, to *common.Address, value *big.Int, data []byte, dbTx pgx.Tx) error {
+func (tm *ClaimTxManager) addClaimTxXLayer(depositCount uint, from common.Address, to *common.Address, value *big.Int, data []byte, dbTx pgx.Tx) error {
 	// get gas
 	tx := ethereum.CallMsg{
 		From:  from,
@@ -403,8 +403,8 @@ func (tm *ClaimTxManager) addClaimTxX1(depositCount uint, from common.Address, t
 	return nil
 }
 
-// monitorTxsX1 process all pending monitored tx
-func (tm *ClaimTxManager) monitorTxsX1(ctx context.Context) error {
+// monitorTxsXLayer process all pending monitored tx
+func (tm *ClaimTxManager) monitorTxsXLayer(ctx context.Context) error {
 	mLog := log.WithFields(utils.TraceID, ctx.Value(utils.CtxTraceID))
 
 	dbTx, err := tm.storage.BeginDBTransaction(ctx)
@@ -548,7 +548,7 @@ func (tm *ClaimTxManager) monitorTxsX1(ctx context.Context) error {
 			// review the tx information
 			if hasFailedReceipts {
 				mTxLog.Infof("monitored tx needs to be updated")
-				err := tm.ReviewMonitoredTxX1(ctx, &mTx)
+				err := tm.ReviewMonitoredTxXLayer(ctx, &mTx)
 				if err != nil {
 					mTxLog.Errorf("failed to review monitored tx: %v", err)
 					continue
@@ -614,7 +614,7 @@ func (tm *ClaimTxManager) monitorTxsX1(ctx context.Context) error {
 					}
 					mTx.RemoveHistory(signedTx)
 					// we should rebuild the monitored tx to fix the nonce
-					err := tm.ReviewMonitoredTxX1(ctx, &mTx)
+					err := tm.ReviewMonitoredTxXLayer(ctx, &mTx)
 					if err != nil {
 						mTxLog.Errorf("failed to review monitored tx: %v", err)
 					}
@@ -690,10 +690,10 @@ func (tm *ClaimTxManager) pushTransactionUpdate(deposit *etherman.Deposit, statu
 	}
 }
 
-// ReviewMonitoredTxX1 checks if tx needs to be updated
+// ReviewMonitoredTxXLayer checks if tx needs to be updated
 // accordingly to the current information stored and the current
 // state of the blockchain
-func (tm *ClaimTxManager) ReviewMonitoredTxX1(ctx context.Context, mTx *ctmtypes.MonitoredTx) error {
+func (tm *ClaimTxManager) ReviewMonitoredTxXLayer(ctx context.Context, mTx *ctmtypes.MonitoredTx) error {
 	mTxLog := log.WithFields("monitoredTx", mTx.DepositID)
 	mTxLog.Debug("reviewing")
 	// get gas

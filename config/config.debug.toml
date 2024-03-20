@@ -70,7 +70,7 @@ BridgeVersion = "v1"
 [CoinKafkaConsumer]
 Brokers = ["localhost:9092"]
 Topics = ["explorer_chainAddressPrice_push"]
-ConsumerGroupID = "x1-bridge-service"
+ConsumerGroupID = "xlayer-bridge-service"
 InitialOffset = -1
 Username = ""
 Password = ""

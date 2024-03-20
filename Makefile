@@ -12,11 +12,11 @@ DOCKER_COMPOSE_L1_NETWORK := zkevm-mock-l1-network
 DOCKER_COMPOSE_L1_NETWORK_V1TOV2 := zkevm-v1tov2-l1-network
 DOCKER_COMPOSE_ZKPROVER := zkevm-prover
 DOCKER_COMPOSE_ZKPROVER_V1TOV2 := zkevm-prover-v1tov2
-DOCKER_COMPOSE_BRIDGE := x1-bridge-service
-DOCKER_COMPOSE_BRIDGE_V1TOV2 := x1-bridge-service-v1tov2
+DOCKER_COMPOSE_BRIDGE := xlayer-bridge-service
+DOCKER_COMPOSE_BRIDGE_V1TOV2 := xlayer-bridge-service-v1tov2
 
-DOCKER_COMPOSE_REDIS := x1-bridge-redis
-DOCKER_COMPOSE_COIN_KAFKA_NODE := x1-bridge-coin-kafka
+DOCKER_COMPOSE_REDIS := xlayer-bridge-redis
+DOCKER_COMPOSE_COIN_KAFKA_NODE := xlayer-bridge-coin-kafka
 DOCKER_COMPOSE_ZOOKEEPER := kafka-zookeeper
 
 RUN_STATE_DB := $(DOCKER_COMPOSE) up -d $(DOCKER_COMPOSE_STATE_DB)
@@ -58,7 +58,7 @@ LDFLAGS += -X 'github.com/0xPolygonHermez/zkevm-bridge-service.BuildDate=$(DATE)
 GO_BASE := $(shell pwd)
 GO_BIN := $(GO_BASE)/dist
 GO_ENV_VARS := GO_BIN=$(GO_BIN)
-GO_BINARY := x1-bridge
+GO_BINARY := xlayer-bridge
 GO_CMD := $(GO_BASE)/cmd
 
 LINT := $$(go env GOPATH)/bin/golangci-lint run --timeout=5m -E whitespace -E gosec -E gci -E misspell -E gomnd -E gofmt -E goimports --exclude-use-default=false --max-same-issues 0
@@ -88,7 +88,7 @@ install-linter: ## Installs the linter
 
 .PHONY: build-docker
 build-docker: ## Builds a docker image with the zkevm bridge binary
-	docker build -t x1-bridge-service -f ./Dockerfile .
+	docker build -t xlayer-bridge-service -f ./Dockerfile .
 
 .PHONY: run-db-node
 run-db-node: ## Runs the node database

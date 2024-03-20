@@ -32,7 +32,7 @@ type bridgeService struct {
 	cache            *lru.Cache[string, [][]byte]
 	pb.UnimplementedBridgeServiceServer
 
-	// X1
+	// XLayer
 	redisStorage        redisstorage.RedisStorage
 	mainCoinsCache      localcache.MainCoinsCache
 	nodeClients         map[uint]*utils.Client

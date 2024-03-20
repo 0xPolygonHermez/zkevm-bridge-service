@@ -38,7 +38,7 @@ type storageInterface interface {
 	CheckIfRootExists(ctx context.Context, root []byte, network uint8, dbTx pgx.Tx) (bool, error)
 	IsLxLyActivated(ctx context.Context, dbTx pgx.Tx) (bool, error)
 
-	// X1
+	// XLayer
 	GetDeposit(ctx context.Context, depositCounterUser uint, networkID uint, dbTx pgx.Tx) (*etherman.Deposit, error)
 }
 

@@ -194,7 +194,7 @@ func (p *PostgresStorage) UpdateL1DepositStatus(ctx context.Context, depositCoun
 }
 
 // UpdateL2DepositsStatus updates the ready_for_claim status of L2 deposits. and return deposit list
-func (p *PostgresStorage) UpdateL2DepositsStatusX1(ctx context.Context, exitRoot []byte, eventTime time.Time, rollupID, networkID uint, dbTx pgx.Tx) ([]*etherman.Deposit, error) {
+func (p *PostgresStorage) UpdateL2DepositsStatusXLayer(ctx context.Context, exitRoot []byte, eventTime time.Time, rollupID, networkID uint, dbTx pgx.Tx) ([]*etherman.Deposit, error) {
 	const updateDepositsStatusSQL = `UPDATE sync.deposit SET ready_for_claim = true, ready_time = $4
 		WHERE deposit_cnt <=
 			(SELECT d.deposit_cnt FROM mt.root as r INNER JOIN sync.deposit as d ON d.id = r.deposit_id WHERE r.root = (select leaf from mt.rollup_exit where root = $1 and rollup_id = $2) AND r.network = $3)
@@ -334,8 +334,8 @@ func (p *PostgresStorage) GetLatestReadyDeposits(ctx context.Context, networkID 
 	return deposits, nil
 }
 
-// UpdateL1DepositsStatusX1 updates the ready_for_claim status of L1 deposits.
-func (p *PostgresStorage) UpdateL1DepositsStatusX1(ctx context.Context, exitRoot []byte, eventTime time.Time, dbTx pgx.Tx) ([]*etherman.Deposit, error) {
+// UpdateL1DepositsStatusXLayer updates the ready_for_claim status of L1 deposits.
+func (p *PostgresStorage) UpdateL1DepositsStatusXLayer(ctx context.Context, exitRoot []byte, eventTime time.Time, dbTx pgx.Tx) ([]*etherman.Deposit, error) {
 	const updateDepositsStatusSQL = `WITH d AS (UPDATE sync.deposit SET ready_for_claim = true, ready_time = $1 
 		WHERE deposit_cnt <=
 			(SELECT d.deposit_cnt FROM mt.root as r INNER JOIN sync.deposit as d ON d.id = r.deposit_id WHERE r.root = $2 AND r.network = 0) 

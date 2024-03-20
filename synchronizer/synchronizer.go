@@ -38,7 +38,7 @@ type ClientSynchronizer struct {
 	synced           bool
 	l1RollupExitRoot common.Hash
 
-	// X1
+	// XLayer
 	// Producer to push the transaction status change to front end
 	messagePushProducer messagepush.KafkaProducer
 	redisStorage        redisstorage.RedisStorage

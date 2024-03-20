@@ -30,7 +30,7 @@ type GlobalExitRoot struct {
 	ExitRoots      []common.Hash
 	GlobalExitRoot common.Hash
 
-	// X1
+	// XLayer
 	Time time.Time
 }
 
@@ -51,7 +51,7 @@ type Deposit struct {
 	// it is only used for the bridge service
 	ReadyForClaim bool
 
-	// X1
+	// XLayer
 	Time      time.Time
 	Id        uint64
 	ReadyTime time.Time
@@ -71,7 +71,7 @@ type Claim struct {
 	NetworkID          uint
 	TxHash             common.Hash
 
-	// X1
+	// XLayer
 	Time time.Time
 }
 

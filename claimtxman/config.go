@@ -21,7 +21,7 @@ type Config struct {
 	// AuthorizedClaimMessageAddresses are the allowed address to bridge message with autoClaim
 	AuthorizedClaimMessageAddresses []common.Address `mapstructure:"AuthorizedClaimMessageAddresses"`
 
-	// X1
+	// XLayer
 	// FreeGas enabled whether gas price is 0
 	FreeGas bool `mapstructure:"FreeGas"`
 	// OptClaim enabled store claimTx into storage every deposit

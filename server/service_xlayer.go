@@ -474,7 +474,7 @@ func (s *bridgeService) ManualClaim(ctx context.Context, req *pb.ManualClaimRequ
 		mtRollupProves[i] = rollupProves[i]
 	}
 	// Send claim transaction to the node
-	tx, err := client.SendClaimX1(ctx, deposit, mtProves, mtRollupProves, ger, s.rollupID, s.auths[destNet])
+	tx, err := client.SendClaimXLayer(ctx, deposit, mtProves, mtRollupProves, ger, s.rollupID, s.auths[destNet])
 	if err != nil {
 		log.Errorf("failed to send claim transaction: %v", err)
 		return &pb.CommonManualClaimResponse{
