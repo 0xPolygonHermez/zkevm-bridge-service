@@ -186,21 +186,21 @@ func (p *PostgresStorage) GetL1Deposits(ctx context.Context, exitRoot []byte, db
 	return deposits, nil
 }
 
-func (p *PostgresStorage) UpdateL1DepositStatus(ctx context.Context, depositCount uint, eventTime time.Time, dbTx pgx.Tx) error {
+func (p *PostgresStorage) UpdateL1DepositStatus(ctx context.Context, depositCount uint, dbTx pgx.Tx) error {
 	const updateDepositStatusSQL = `UPDATE sync.deposit SET ready_for_claim = true, ready_time = $1 
 		WHERE deposit_cnt = $2 And network_id = 0`
-	_, err := p.getExecQuerier(dbTx).Exec(ctx, updateDepositStatusSQL, eventTime, depositCount)
+	_, err := p.getExecQuerier(dbTx).Exec(ctx, updateDepositStatusSQL, time.Now(), depositCount)
 	return err
 }
 
 // UpdateL2DepositsStatus updates the ready_for_claim status of L2 deposits. and return deposit list
-func (p *PostgresStorage) UpdateL2DepositsStatusXLayer(ctx context.Context, exitRoot []byte, eventTime time.Time, rollupID, networkID uint, dbTx pgx.Tx) ([]*etherman.Deposit, error) {
+func (p *PostgresStorage) UpdateL2DepositsStatusXLayer(ctx context.Context, exitRoot []byte, rollupID, networkID uint, dbTx pgx.Tx) ([]*etherman.Deposit, error) {
 	const updateDepositsStatusSQL = `UPDATE sync.deposit SET ready_for_claim = true, ready_time = $4
 		WHERE deposit_cnt <=
 			(SELECT d.deposit_cnt FROM mt.root as r INNER JOIN sync.deposit as d ON d.id = r.deposit_id WHERE r.root = (select leaf from mt.rollup_exit where root = $1 and rollup_id = $2) AND r.network = $3)
 			AND network_id = $3 AND ready_for_claim = false
 			RETURNING leaf_type, orig_net, orig_addr, amount, dest_net, dest_addr, deposit_cnt, block_id, network_id, tx_hash, metadata, ready_for_claim;`
-	rows, err := p.getExecQuerier(dbTx).Query(ctx, updateDepositsStatusSQL, exitRoot, rollupID, networkID, eventTime)
+	rows, err := p.getExecQuerier(dbTx).Query(ctx, updateDepositsStatusSQL, exitRoot, rollupID, networkID, time.Now())
 	if err != nil {
 		return nil, err
 	}
@@ -335,7 +335,7 @@ func (p *PostgresStorage) GetLatestReadyDeposits(ctx context.Context, networkID 
 }
 
 // UpdateL1DepositsStatusXLayer updates the ready_for_claim status of L1 deposits.
-func (p *PostgresStorage) UpdateL1DepositsStatusXLayer(ctx context.Context, exitRoot []byte, eventTime time.Time, dbTx pgx.Tx) ([]*etherman.Deposit, error) {
+func (p *PostgresStorage) UpdateL1DepositsStatusXLayer(ctx context.Context, exitRoot []byte, dbTx pgx.Tx) ([]*etherman.Deposit, error) {
 	const updateDepositsStatusSQL = `WITH d AS (UPDATE sync.deposit SET ready_for_claim = true, ready_time = $1 
 		WHERE deposit_cnt <=
 			(SELECT d.deposit_cnt FROM mt.root as r INNER JOIN sync.deposit as d ON d.id = r.deposit_id WHERE r.root = $2 AND r.network = 0) 
@@ -343,7 +343,7 @@ func (p *PostgresStorage) UpdateL1DepositsStatusXLayer(ctx context.Context, exit
 			RETURNING *)
 		SELECT d.id, leaf_type, orig_net, orig_addr, amount, dest_net, dest_addr, deposit_cnt, block_id, b.block_num, d.network_id, tx_hash, metadata, ready_for_claim, b.received_at
 		FROM d INNER JOIN sync.block as b ON d.network_id = b.network_id AND d.block_id = b.id`
-	rows, err := p.getExecQuerier(dbTx).Query(ctx, updateDepositsStatusSQL, eventTime, exitRoot)
+	rows, err := p.getExecQuerier(dbTx).Query(ctx, updateDepositsStatusSQL, time.Now(), exitRoot)
 	if err != nil {
 		return nil, err
 	}
