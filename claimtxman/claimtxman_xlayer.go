@@ -118,7 +118,7 @@ func (tm *ClaimTxManager) processDepositStatusL2(ger *etherman.GlobalExitRoot) e
 		return err
 	}
 	log.Infof("Rollup exitroot %v is updated", ger.ExitRoots[1])
-	deposits, err := tm.storage.UpdateL2DepositsStatusXLayer(tm.ctx, ger.ExitRoots[1][:], ger.Time, tm.rollupID, tm.l2NetworkID, dbTx)
+	deposits, err := tm.storage.UpdateL2DepositsStatusXLayer(tm.ctx, ger.ExitRoots[1][:], tm.rollupID, tm.l2NetworkID, dbTx)
 	if err != nil {
 		log.Errorf("error getting and updating L2DepositsStatus. Error: %v", err)
 		rollbackErr := tm.storage.Rollback(tm.ctx, dbTx)
@@ -168,7 +168,7 @@ func (tm *ClaimTxManager) processDepositStatusL1(newGer *etherman.GlobalExitRoot
 		if err != nil {
 			return err
 		}
-		err = tm.storage.UpdateL1DepositStatus(tm.ctx, deposit.DepositCount, newGer.Time, dbTx)
+		err = tm.storage.UpdateL1DepositStatus(tm.ctx, deposit.DepositCount, dbTx)
 		if err != nil {
 			log.Errorf("error update deposit %d status. Error: %v", deposit.DepositCount, err)
 			tm.rollbackStore(dbTx)
@@ -280,7 +280,7 @@ func (tm *ClaimTxManager) rollbackStore(dbTx pgx.Tx) {
 func (tm *ClaimTxManager) processDepositStatusXLayer(ger *etherman.GlobalExitRoot, dbTx pgx.Tx) error {
 	if ger.BlockID != 0 { // L2 exit root is updated
 		log.Infof("Rollup exitroot %v is updated", ger.ExitRoots[1])
-		deposits, err := tm.storage.UpdateL2DepositsStatusXLayer(tm.ctx, ger.ExitRoots[1][:], ger.Time, tm.rollupID, tm.l2NetworkID, dbTx)
+		deposits, err := tm.storage.UpdateL2DepositsStatusXLayer(tm.ctx, ger.ExitRoots[1][:], tm.rollupID, tm.l2NetworkID, dbTx)
 		if err != nil {
 			log.Errorf("error getting and updating L2DepositsStatus. Error: %v", err)
 			return err
@@ -293,7 +293,7 @@ func (tm *ClaimTxManager) processDepositStatusXLayer(ger *etherman.GlobalExitRoo
 		}
 	} else { // L1 exit root is updated in the trusted state
 		log.Infof("Mainnet exitroot %v is updated", ger.ExitRoots[0])
-		deposits, err := tm.storage.UpdateL1DepositsStatusXLayer(tm.ctx, ger.ExitRoots[0][:], ger.Time, dbTx)
+		deposits, err := tm.storage.UpdateL1DepositsStatusXLayer(tm.ctx, ger.ExitRoots[0][:], dbTx)
 		if err != nil {
 			log.Errorf("error getting and updating L1DepositsStatus. Error: %v", err)
 			return err
