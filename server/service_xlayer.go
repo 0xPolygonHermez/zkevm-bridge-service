@@ -137,7 +137,7 @@ func (s *bridgeService) GetPendingTransactions(ctx context.Context, req *pb.GetP
 		limit = s.maxPageLimit.Get()
 	}
 
-	deposits, err := s.storage.GetPendingTransactions(ctx, req.DestAddr, uint(limit+1), uint(req.Offset), uint(utils.LeafTypeAsset), nil)
+	deposits, err := s.storage.GetPendingTransactions(ctx, req.DestAddr, uint(limit+1), uint(req.Offset), nil)
 	if err != nil {
 		log.Errorf("get pending tx failed for address: %v, limit: %v, offset: %v, error: %v", req.DestAddr, limit, req.Offset, err)
 		return &pb.CommonTransactionsResponse{
@@ -230,7 +230,7 @@ func (s *bridgeService) GetAllTransactions(ctx context.Context, req *pb.GetAllTr
 		limit = s.maxPageLimit.Get()
 	}
 
-	deposits, err := s.storage.GetDepositsWithLeafType(ctx, req.DestAddr, uint(limit+1), uint(req.Offset), uint(utils.LeafTypeAsset), nil)
+	deposits, err := s.storage.GetDeposits(ctx, req.DestAddr, uint(limit+1), uint(req.Offset), nil)
 	if err != nil {
 		log.Errorf("get deposits from db failed for address: %v, limit: %v, offset: %v, error: %v", req.DestAddr, limit, req.Offset, err)
 		return &pb.CommonTransactionsResponse{
@@ -503,7 +503,7 @@ func (s *bridgeService) GetReadyPendingTransactions(ctx context.Context, req *pb
 
 	minReadyTime := time.Now().Add(time.Duration(-minReadyTimeLimitForWaitClaimSeconds.Get()) * time.Second)
 
-	deposits, err := s.storage.GetReadyPendingTransactions(ctx, uint(req.NetworkId), uint(utils.LeafTypeAsset), uint(limit+1), uint(req.Offset), minReadyTime, nil)
+	deposits, err := s.storage.GetReadyPendingTransactions(ctx, uint(req.NetworkId), uint(limit+1), uint(req.Offset), minReadyTime, nil)
 	if err != nil {
 		return &pb.CommonTransactionsResponse{
 			Code: defaultErrorCode,

@@ -26,10 +26,9 @@ type bridgeServiceStorage interface {
 
 	// XLayer
 	GetDepositByHash(ctx context.Context, destAddr string, networkID uint, txHash string, dbTx pgx.Tx) (*etherman.Deposit, error)
-	GetDepositsWithLeafType(ctx context.Context, destAddr string, limit uint, offset uint, leafType uint, dbTx pgx.Tx) ([]*etherman.Deposit, error)
-	GetPendingTransactions(ctx context.Context, destAddr string, limit uint, offset uint, leafType uint, dbTx pgx.Tx) ([]*etherman.Deposit, error)
+	GetPendingTransactions(ctx context.Context, destAddr string, limit uint, offset uint, dbTx pgx.Tx) ([]*etherman.Deposit, error)
 	GetNotReadyTransactions(ctx context.Context, limit uint, offset uint, dbTx pgx.Tx) ([]*etherman.Deposit, error)
-	GetReadyPendingTransactions(ctx context.Context, networkID uint, leafType uint, limit uint, offset uint, minReadyTime time.Time, dbTx pgx.Tx) ([]*etherman.Deposit, error)
+	GetReadyPendingTransactions(ctx context.Context, networkID uint, limit uint, offset uint, minReadyTime time.Time, dbTx pgx.Tx) ([]*etherman.Deposit, error)
 	GetClaimTxById(ctx context.Context, id uint, dbTx pgx.Tx) (*ctmtypes.MonitoredTx, error)
 	GetClaimTxsByStatusWithLimit(ctx context.Context, statuses []ctmtypes.MonitoredTxStatus, limit uint, offset uint, dbTx pgx.Tx) ([]ctmtypes.MonitoredTx, error)
 }
