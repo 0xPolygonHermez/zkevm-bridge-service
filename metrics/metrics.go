@@ -25,6 +25,7 @@ func initMetrics() {
 	registerHistogram(prometheus.HistogramOpts{Name: metricRequestLatency}, labelMethod, labelIsSuccess)
 	registerCounter(prometheus.CounterOpts{Name: metricOrderCount}, labelNetworkID, labelToken)
 	registerCounter(prometheus.CounterOpts{Name: metricOrderTotalAmount}, labelNetworkID, labelToken)
+	registerHistogram(prometheus.HistogramOpts{Name: metricOrderWaitTime}, labelNetworkID)
 }
 
 // RecordRequest increments the request count for the method
@@ -59,4 +60,8 @@ func RecordOrder(networkID, tokenOriginNetwork uint32, tokenAddress common.Addre
 
 	counterInc(metricOrderCount, labels)
 	counterAdd(metricOrderTotalAmount, floatAmount, labels)
+}
+
+func RecordOrderWaitTime(networkID uint32, dur time.Duration) {
+	histogramObserve(metricOrderWaitTime, float64(dur/time.Second), map[string]string{labelNetworkID: strconv.Itoa(int(networkID))})
 }

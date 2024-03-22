@@ -195,11 +195,13 @@ func (p *PostgresStorage) UpdateL1DepositStatus(ctx context.Context, depositCoun
 
 // UpdateL2DepositsStatus updates the ready_for_claim status of L2 deposits. and return deposit list
 func (p *PostgresStorage) UpdateL2DepositsStatusXLayer(ctx context.Context, exitRoot []byte, rollupID, networkID uint, dbTx pgx.Tx) ([]*etherman.Deposit, error) {
-	const updateDepositsStatusSQL = `UPDATE sync.deposit SET ready_for_claim = true, ready_time = $4
+	const updateDepositsStatusSQL = `WITH d AS (UPDATE sync.deposit SET ready_for_claim = true, ready_time = $4
 		WHERE deposit_cnt <=
 			(SELECT d.deposit_cnt FROM mt.root as r INNER JOIN sync.deposit as d ON d.id = r.deposit_id WHERE r.root = (select leaf from mt.rollup_exit where root = $1 and rollup_id = $2) AND r.network = $3)
 			AND network_id = $3 AND ready_for_claim = false
-			RETURNING leaf_type, orig_net, orig_addr, amount, dest_net, dest_addr, deposit_cnt, block_id, network_id, tx_hash, metadata, ready_for_claim;`
+			RETURNING *)
+		SELECT d.id, leaf_type, orig_net, orig_addr, amount, dest_net, dest_addr, deposit_cnt, block_id, b.block_num, d.network_id, tx_hash, metadata, ready_for_claim, b.received_at
+		FROM d INNER JOIN sync.block as b ON d.network_id = b.network_id AND d.block_id = b.id`
 	rows, err := p.getExecQuerier(dbTx).Query(ctx, updateDepositsStatusSQL, exitRoot, rollupID, networkID, time.Now())
 	if err != nil {
 		return nil, err
@@ -210,8 +212,8 @@ func (p *PostgresStorage) UpdateL2DepositsStatusXLayer(ctx context.Context, exit
 			deposit etherman.Deposit
 			amount  string
 		)
-		err = rows.Scan(&deposit.LeafType, &deposit.OriginalNetwork, &deposit.OriginalAddress, &amount, &deposit.DestinationNetwork, &deposit.DestinationAddress,
-			&deposit.DepositCount, &deposit.BlockID, &deposit.NetworkID, &deposit.TxHash, &deposit.Metadata, &deposit.ReadyForClaim)
+		err = rows.Scan(&deposit.Id, &deposit.LeafType, &deposit.OriginalNetwork, &deposit.OriginalAddress, &amount, &deposit.DestinationNetwork, &deposit.DestinationAddress,
+			&deposit.DepositCount, &deposit.BlockID, &deposit.BlockNumber, &deposit.NetworkID, &deposit.TxHash, &deposit.Metadata, &deposit.ReadyForClaim, &deposit.Time)
 		if err != nil {
 			return nil, err
 		}

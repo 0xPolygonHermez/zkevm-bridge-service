@@ -9,6 +9,7 @@ import (
 	"github.com/0xPolygonHermez/zkevm-bridge-service/bridgectrl/pb"
 	ctmtypes "github.com/0xPolygonHermez/zkevm-bridge-service/claimtxman/types"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/metrics"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/pushtask"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/utils"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/utils/gerror"
@@ -142,6 +143,8 @@ func (tm *ClaimTxManager) processDepositStatusL2(ger *etherman.GlobalExitRoot) e
 	for _, deposit := range deposits {
 		// Notify FE that tx is pending auto claim
 		go tm.pushTransactionUpdate(deposit, uint32(pb.TransactionStatus_TX_PENDING_USER_CLAIM))
+		// Record order waiting time metric
+		metrics.RecordOrderWaitTime(uint32(deposit.NetworkID), time.Since(deposit.Time))
 	}
 	return nil
 }
@@ -266,6 +269,8 @@ func (tm *ClaimTxManager) processDepositStatusL1(newGer *etherman.GlobalExitRoot
 
 		// Notify FE that tx is pending auto claim
 		go tm.pushTransactionUpdate(deposit, uint32(pb.TransactionStatus_TX_PENDING_AUTO_CLAIM))
+		// Record order waiting time metric
+		metrics.RecordOrderWaitTime(uint32(deposit.NetworkID), time.Since(deposit.Time))
 	}
 	return nil
 }
@@ -290,6 +295,8 @@ func (tm *ClaimTxManager) processDepositStatusXLayer(ger *etherman.GlobalExitRoo
 		for _, deposit := range deposits {
 			// Notify FE that tx is pending auto claim
 			go tm.pushTransactionUpdate(deposit, uint32(pb.TransactionStatus_TX_PENDING_USER_CLAIM))
+			// Record order waiting time metric
+			metrics.RecordOrderWaitTime(uint32(deposit.NetworkID), time.Since(deposit.Time))
 		}
 	} else { // L1 exit root is updated in the trusted state
 		log.Infof("Mainnet exitroot %v is updated", ger.ExitRoots[0])
@@ -359,6 +366,8 @@ func (tm *ClaimTxManager) processDepositStatusXLayer(ger *etherman.GlobalExitRoo
 
 			// Notify FE that tx is pending auto claim
 			go tm.pushTransactionUpdate(deposit, uint32(pb.TransactionStatus_TX_PENDING_AUTO_CLAIM))
+			// Record order waiting time metric
+			metrics.RecordOrderWaitTime(uint32(deposit.NetworkID), time.Since(deposit.Time))
 		}
 	}
 	return nil
