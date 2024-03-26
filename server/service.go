@@ -33,11 +33,12 @@ type bridgeService struct {
 	pb.UnimplementedBridgeServiceServer
 
 	// XLayer
-	redisStorage        redisstorage.RedisStorage
-	mainCoinsCache      localcache.MainCoinsCache
-	nodeClients         map[uint]*utils.Client
-	auths               map[uint]*bind.TransactOpts
-	messagePushProducer messagepush.KafkaProducer
+	redisStorage                  redisstorage.RedisStorage
+	mainCoinsCache                localcache.MainCoinsCache
+	nodeClients                   map[uint]*utils.Client
+	auths                         map[uint]*bind.TransactOpts
+	messagePushProducer           messagepush.KafkaProducer
+	messageBridgeAddressAllowlist []common.Address
 }
 
 // NewBridgeService creates new bridge service.
@@ -67,6 +68,8 @@ func NewBridgeService(cfg Config, height uint8, networks []uint, l2Clients []*ut
 		maxPageLimit:     apolloconfig.NewIntEntry("BridgeServer.MaxPageLimit", cfg.MaxPageLimit),
 		version:          cfg.BridgeVersion,
 		cache:            cache,
+
+		messageBridgeAddressAllowlist: cfg.MessageBridgeAddressAllowlist,
 	}
 }
 

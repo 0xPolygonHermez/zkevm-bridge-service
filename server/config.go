@@ -3,6 +3,7 @@ package server
 import (
 	"github.com/0xPolygonHermez/zkevm-bridge-service/db"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/redisstorage"
+	"github.com/ethereum/go-ethereum/common"
 )
 
 // Config struct
@@ -25,4 +26,7 @@ type Config struct {
 	Redis redisstorage.Config `mapstructure:"Redis" apollo:"Redis"`
 	// SentinelConfigFilePath is the file path to store the sentinel config
 	SentinelConfigFilePath string `mapstructure:"SentinelConfigFilePath"`
+
+	// XLayer
+	MessageBridgeAddressAllowlist []common.Address `mapstructure:"MessageBridgeAddressAllowlist"`
 }
