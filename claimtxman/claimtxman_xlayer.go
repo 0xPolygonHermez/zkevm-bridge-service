@@ -612,6 +612,14 @@ func (tm *ClaimTxManager) monitorTxsXLayer(ctx context.Context) error {
 							mTxLog.Infof("nonce cache cleared for address %v", mTx.From.Hex())
 						}
 					}
+					if err.Error() == pool.ErrNonceTooHigh.Error() {
+						mTxLog.Infof("nonce error detected, Nonce used: %d", signedTx.Nonce())
+						if !isResetNonce {
+							isResetNonce = true
+							tm.nonceCache.Remove(mTx.From.Hex())
+							mTxLog.Infof("nonce cache cleared for address %v", mTx.From.Hex())
+						}
+					}
 					mTx.RemoveHistory(signedTx)
 					// we should rebuild the monitored tx to fix the nonce
 					err := tm.ReviewMonitoredTxXLayer(ctx, &mTx)
