@@ -55,7 +55,7 @@ func RecordOrder(networkID, tokenOriginNetwork uint32, tokenAddress common.Addre
 	}
 
 	// This is inflated amount, e.g.: 1 ETH is stored as 1000000000000000000
-	floatAmount, err := strconv.ParseFloat(amount.String(), 10) //nolint:gomnd
+	floatAmount, err := strconv.ParseFloat(amount.String(), 64) //nolint:gomnd
 	if err != nil {
 		log.Warnf("cannot convert [%v] to float", amount.String())
 	}
