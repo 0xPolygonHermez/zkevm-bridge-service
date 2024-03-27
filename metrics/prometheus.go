@@ -110,57 +110,57 @@ func gaugeSet(name string, value float64, labelValues map[string]string) {
 	c.With(labelValues).Set(value)
 }
 
-func gaugeInc(name string, labelValues map[string]string) {
-	if !initialized {
-		return
-	}
-
-	c, ok := gauges[name]
-	if !ok {
-		getLogger(name, typeGauge).Errorf("collector not found")
-		return
-	}
-	c.With(labelValues).Inc()
-}
-
-func gaugeDec(name string, labelValues map[string]string) {
-	if !initialized {
-		return
-	}
-
-	c, ok := gauges[name]
-	if !ok {
-		getLogger(name, typeGauge).Errorf("collector not found")
-		return
-	}
-	c.With(labelValues).Dec()
-}
-
-func gaugeAdd(name string, value float64, labelValues map[string]string) {
-	if !initialized {
-		return
-	}
-
-	c, ok := gauges[name]
-	if !ok {
-		getLogger(name, typeGauge).Errorf("collector not found")
-		return
-	}
-	c.With(labelValues).Add(value)
-}
-
-func gaugeSub(name string, value float64, labelValues map[string]string) {
-	if !initialized {
-		return
-	}
-
-	c, ok := gauges[name]
-	if !ok {
-		getLogger(name, typeGauge).Errorf("collector not found")
-		return
-	}
-	c.With(labelValues).Sub(value)
-}
+//func gaugeInc(name string, labelValues map[string]string) {
+//	if !initialized {
+//		return
+//	}
+//
+//	c, ok := gauges[name]
+//	if !ok {
+//		getLogger(name, typeGauge).Errorf("collector not found")
+//		return
+//	}
+//	c.With(labelValues).Inc()
+//}
+//
+//func gaugeDec(name string, labelValues map[string]string) {
+//	if !initialized {
+//		return
+//	}
+//
+//	c, ok := gauges[name]
+//	if !ok {
+//		getLogger(name, typeGauge).Errorf("collector not found")
+//		return
+//	}
+//	c.With(labelValues).Dec()
+//}
+//
+//func gaugeAdd(name string, value float64, labelValues map[string]string) {
+//	if !initialized {
+//		return
+//	}
+//
+//	c, ok := gauges[name]
+//	if !ok {
+//		getLogger(name, typeGauge).Errorf("collector not found")
+//		return
+//	}
+//	c.With(labelValues).Add(value)
+//}
+//
+//func gaugeSub(name string, value float64, labelValues map[string]string) {
+//	if !initialized {
+//		return
+//	}
+//
+//	c, ok := gauges[name]
+//	if !ok {
+//		getLogger(name, typeGauge).Errorf("collector not found")
+//		return
+//	}
+//	c.With(labelValues).Sub(value)
+//}
 
 /*
  * -------------------- Counter functions --------------------

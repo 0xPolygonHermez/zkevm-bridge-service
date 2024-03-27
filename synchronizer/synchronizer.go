@@ -9,6 +9,7 @@ import (
 
 	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/messagepush"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/metrics"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/redisstorage"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/utils/gerror"
 	"github.com/0xPolygonHermez/zkevm-node/log"
@@ -394,6 +395,8 @@ func (s *ClientSynchronizer) processBlockRange(blocks []etherman.Block, order ma
 				// this is activated when the bridge detects the CreateNewRollup or the AddExistingRollup event from the rollupManager
 				log.Info("Event received. Activating LxLyEtrog...")
 			}
+
+			metrics.RecordSynchronizerEvent(uint32(s.networkID), string(element.Name))
 		}
 		log.Infof("NetworkID: %d. block %d element number %d", s.networkID, blocks[i].BlockNumber, counter)
 		err = s.storage.Commit(s.ctx, dbTx)

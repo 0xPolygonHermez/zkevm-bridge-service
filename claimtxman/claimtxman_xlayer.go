@@ -434,6 +434,7 @@ func (tm *ClaimTxManager) monitorTxsXLayer(ctx context.Context) error {
 		return fmt.Errorf("failed to get created monitored txs: %v", err)
 	}
 	mLog.Infof("found %v monitored tx to process", len(mTxs))
+	metrics.RecordPendingMonitoredTxsCount(len(mTxs))
 
 	isResetNonce := false // it will reset the nonce in one cycle
 	for _, mTx := range mTxs {
@@ -454,6 +455,8 @@ func (tm *ClaimTxManager) monitorTxsXLayer(ctx context.Context) error {
 			if err != nil {
 				mTxLog.Errorf("failed to update tx status to confirmed: %v", err)
 			}
+			metrics.RecordMonitoredTxsResult(string(mTx.Status))
+			metrics.RecordAutoClaimDuration(time.Since(mTx.CreatedAt))
 			continue
 		}
 
@@ -509,6 +512,8 @@ func (tm *ClaimTxManager) monitorTxsXLayer(ctx context.Context) error {
 				if err != nil {
 					mTxLog.Errorf("failed to update monitored tx when confirmed: %v", err)
 				}
+				metrics.RecordMonitoredTxsResult(string(mTx.Status))
+				metrics.RecordAutoClaimDuration(time.Since(mTx.CreatedAt))
 				break
 			}
 
@@ -534,6 +539,7 @@ func (tm *ClaimTxManager) monitorTxsXLayer(ctx context.Context) error {
 			if err != nil {
 				mTxLog.Errorf("failed to update monitored tx when max history size limit reached: %v", err)
 			}
+			metrics.RecordMonitoredTxsResult(string(mTx.Status))
 
 			// Notify FE that tx is pending user claim
 			go func() {
