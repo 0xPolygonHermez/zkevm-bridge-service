@@ -372,6 +372,10 @@ func (s *bridgeService) GetBridge(ctx context.Context, req *pb.GetBridgeRequest)
 		return nil, err
 	}
 
+	mainnetFlag := deposit.NetworkID == 0
+	rollupIndex := s.rollupID - 1
+	localExitRootIndex := deposit.DepositCount
+
 	return &pb.GetBridgeResponse{
 		Deposit: &pb.Deposit{
 			LeafType:      uint32(deposit.LeafType),
@@ -387,6 +391,7 @@ func (s *bridgeService) GetBridge(ctx context.Context, req *pb.GetBridgeRequest)
 			ClaimTxHash:   claimTxHash,
 			Metadata:      "0x" + hex.EncodeToString(deposit.Metadata),
 			ReadyForClaim: deposit.ReadyForClaim,
+			GlobalIndex:   etherman.GenerateGlobalIndex(mainnetFlag, rollupIndex, localExitRootIndex).String(),
 		},
 	}, nil
 }
