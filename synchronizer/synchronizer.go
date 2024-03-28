@@ -8,8 +8,8 @@ import (
 	"time"
 
 	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/log"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/utils/gerror"
-	"github.com/0xPolygonHermez/zkevm-node/log"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/jackc/pgx/v4"
 )
@@ -34,7 +34,6 @@ type ClientSynchronizer struct {
 	chSynced         chan uint
 	zkEVMClient      zkEVMClientInterface
 	synced           bool
-	isLxLy           bool
 	l1RollupExitRoot common.Hash
 }
 
@@ -66,11 +65,13 @@ func NewSynchronizer(
 	// Read db to see if the LxLy is already activated
 	isActivated, err := storage.(storageInterface).IsLxLyActivated(ctx, nil)
 	if err != nil {
-		log.Fatal("error checking id LxLy is activated. Error: ", err)
+		log.Fatal("error checking if LxLyEtrog is activated. Error: ", err)
+	}
+	if isActivated {
+		log.Info("LxLyEtrog already activated")
 	}
 	if networkID == 0 {
 		return &ClientSynchronizer{
-			isLxLy:           isActivated,
 			bridgeCtrl:       bridge,
 			storage:          storage.(storageInterface),
 			etherMan:         ethMan,
@@ -185,21 +186,29 @@ func (s *ClientSynchronizer) Stop() {
 }
 
 func (s *ClientSynchronizer) syncTrustedState() error {
-	lastBatchNumber, err := s.zkEVMClient.BatchNumber(s.ctx)
+	lastGER, err := s.zkEVMClient.GetLatestGlobalExitRoot(s.ctx)
 	if err != nil {
-		log.Errorf("networkID: %d, error getting latest batch number from rpc. Error: %v", s.networkID, err)
+		log.Warnf("networkID: %d, failed to get latest ger from trusted state. Error: %v", s.networkID, err)
 		return err
 	}
-	lastBatch, err := s.zkEVMClient.BatchByNumber(s.ctx, big.NewInt(0).SetUint64(lastBatchNumber))
+	if lastGER == (common.Hash{}) {
+		log.Debugf("networkID: %d, syncTrustedState: skipping GlobalExitRoot because there is no result", s.networkID)
+		return nil
+	}
+	exitRoots, err := s.zkEVMClient.ExitRootsByGER(s.ctx, lastGER)
 	if err != nil {
-		log.Warnf("networkID: %d, failed to get batch %v from trusted state. Error: %v", s.networkID, lastBatchNumber, err)
+		log.Warnf("networkID: %d, failed to get exitRoots from trusted state. Error: %v", s.networkID, err)
 		return err
+	}
+	if exitRoots == nil {
+		log.Debugf("networkID: %d, syncTrustedState: skipping exitRoots because there is no result", s.networkID)
+		return nil
 	}
 	ger := &etherman.GlobalExitRoot{
-		GlobalExitRoot: lastBatch.GlobalExitRoot,
+		GlobalExitRoot: lastGER,
 		ExitRoots: []common.Hash{
-			lastBatch.MainnetExitRoot,
-			lastBatch.RollupExitRoot,
+			exitRoots.MainnetExitRoot,
+			exitRoots.RollupExitRoot,
 		},
 	}
 	isUpdated, err := s.storage.AddTrustedGlobalExitRoot(s.ctx, ger, nil)
@@ -354,6 +363,9 @@ func (s *ClientSynchronizer) processBlockRange(blocks []etherman.Block, order ma
 				if err != nil {
 					return err
 				}
+			case etherman.ActivateEtrogOrder:
+				// this is activated when the bridge detects the CreateNewRollup or the AddExistingRollup event from the rollupManager
+				log.Info("Event received. Activating LxLyEtrog...")
 			}
 		}
 		err = s.storage.Commit(s.ctx, dbTx)
@@ -515,9 +527,6 @@ func (s *ClientSynchronizer) checkReorg(latestBlock *etherman.Block) (*etherman.
 }
 
 func (s *ClientSynchronizer) processVerifyBatch(verifyBatch etherman.VerifiedBatch, blockID uint64, dbTx pgx.Tx) error {
-	if !s.isLxLy { // this is activated when the bridge detects the first VerifyBatch from the rollupManager
-		s.isLxLy = true
-	}
 	if verifyBatch.RollupID == s.etherMan.GetRollupID()-1 {
 		// Just check that the calculated RollupExitRoot is fine
 		network, err := s.bridgeCtrl.GetNetworkID(s.networkID)
@@ -620,8 +629,8 @@ func (s *ClientSynchronizer) processDeposit(deposit etherman.Deposit, blockID ui
 }
 
 func (s *ClientSynchronizer) processClaim(claim etherman.Claim, blockID uint64, dbTx pgx.Tx) error {
-	if claim.RollupIndex != uint64(s.etherMan.GetRollupID()) && claim.RollupIndex != 0 {
-		log.Debugf("Claim for different Rollup (RollupID: %d, RollupIndex: %d). Ignoring...", s.etherMan.GetRollupID(), claim.RollupIndex)
+	if !claim.MainnetFlag && claim.RollupIndex != uint64(s.etherMan.GetRollupID()-1) {
+		log.Infof("Claim for different Rollup (we are RollupID: %d) incomming claim: MainnetFlag: %v  RollupIndex: %d). Ignoring...", s.etherMan.GetRollupID(), claim.MainnetFlag, claim.RollupIndex)
 		return nil
 	}
 	claim.BlockID = blockID

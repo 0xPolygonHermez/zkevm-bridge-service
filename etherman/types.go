@@ -19,6 +19,7 @@ type Block struct {
 	Claims          []Claim
 	Tokens          []TokenWrapped
 	VerifiedBatches []VerifiedBatch
+	ActivateEtrog   []bool
 	ReceivedAt      time.Time
 }
 

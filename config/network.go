@@ -1,7 +1,7 @@
 package config
 
 import (
-	"github.com/0xPolygonHermez/zkevm-node/log"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/log"
 	"github.com/ethereum/go-ethereum/common"
 )
 
@@ -49,11 +49,11 @@ var (
 		},
 		"local": {
 			GenBlockNumber:                    1,
-			PolygonBridgeAddress:              common.HexToAddress("0xaAE872C70944D40001755C3EAaE53bC4E1A78bD0"),
+			PolygonBridgeAddress:              common.HexToAddress("0xCca6ECD73932e49633B9307e1aa0fC174525F424"),
 			PolygonZkEVMGlobalExitRootAddress: common.HexToAddress("0x8A791620dd6260079BF849Dc5567aDC3F2FdC318"),
 			PolygonRollupManagerAddress:       common.HexToAddress("0xB7f8BC63BbcaD18155201308C8f3540b07f84F5e"),
 			PolygonZkEvmAddress:               common.HexToAddress("0x8dAF17A20c9DBA35f005b6324F493785D239719d"),
-			L2PolygonBridgeAddresses:          []common.Address{common.HexToAddress("0xaAE872C70944D40001755C3EAaE53bC4E1A78bD0")},
+			L2PolygonBridgeAddresses:          []common.Address{common.HexToAddress("0xCca6ECD73932e49633B9307e1aa0fC174525F424")},
 		},
 	}
 )
