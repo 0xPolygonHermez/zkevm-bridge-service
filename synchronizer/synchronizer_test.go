@@ -132,26 +132,27 @@ func TestSyncGer(t *testing.T) {
 			Return(&blocks[0].GlobalExitRoots[0], nil).
 			Once()
 
-		rpcResponse := &rpcTypes.Batch{
-			GlobalExitRoot:  common.HexToHash("0xb14c74e4dddf25627a745f46cae6ac98782e2783c3ccc28107c8210e60d58861"),
+		g := common.HexToHash("0xb14c74e4dddf25627a745f46cae6ac98782e2783c3ccc28107c8210e60d58861")
+
+		m.ZkEVMClient.
+			On("GetLatestGlobalExitRoot", ctx).
+			Return(g, nil).
+			Once()
+
+		exitRootResponse := &rpcTypes.ExitRoots{
 			MainnetExitRoot: common.HexToHash("0xc14c74e4dddf25627a745f46cae6ac98782e2783c3ccc28107c8210e60d58862"),
 			RollupExitRoot:  common.HexToHash("0xd14c74e4dddf25627a745f46cae6ac98782e2783c3ccc28107c8210e60d58863"),
 		}
 		m.ZkEVMClient.
-			On("BatchNumber", ctx).
-			Return(uint64(1), nil).
-			Once()
-
-		m.ZkEVMClient.
-			On("BatchByNumber", ctx, big.NewInt(1)).
-			Return(rpcResponse, nil).
+			On("ExitRootsByGER", ctx, g).
+			Return(exitRootResponse, nil).
 			Once()
 
 		ger := &etherman.GlobalExitRoot{
-			GlobalExitRoot: rpcResponse.GlobalExitRoot,
+			GlobalExitRoot: g,
 			ExitRoots: []common.Hash{
-				rpcResponse.MainnetExitRoot,
-				rpcResponse.RollupExitRoot,
+				exitRootResponse.MainnetExitRoot,
+				exitRootResponse.RollupExitRoot,
 			},
 		}
 

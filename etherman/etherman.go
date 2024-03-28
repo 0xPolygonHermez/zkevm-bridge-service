@@ -7,11 +7,11 @@ import (
 	"math/big"
 	"time"
 
+	"github.com/0xPolygonHermez/zkevm-bridge-service/log"
 	"github.com/0xPolygonHermez/zkevm-node/etherman/smartcontracts/oldpolygonzkevmbridge"
 	"github.com/0xPolygonHermez/zkevm-node/etherman/smartcontracts/polygonrollupmanager"
 	"github.com/0xPolygonHermez/zkevm-node/etherman/smartcontracts/polygonzkevmbridge"
 	"github.com/0xPolygonHermez/zkevm-node/etherman/smartcontracts/polygonzkevmglobalexitroot"
-	"github.com/0xPolygonHermez/zkevm-node/log"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -22,9 +22,6 @@ import (
 )
 
 var (
-	updateGlobalExitRootSignatureHash = crypto.Keccak256Hash([]byte("UpdateGlobalExitRoot(bytes32,bytes32)"))
-	transferOwnershipSignatureHash    = crypto.Keccak256Hash([]byte("OwnershipTransferred(address,address)"))
-
 	// New Ger event
 	updateL1InfoTreeSignatureHash = crypto.Keccak256Hash([]byte("UpdateL1InfoTree(bytes32,bytes32)"))
 
@@ -56,7 +53,7 @@ var (
 	rollupManagerVerifyBatchesSignatureHash        = crypto.Keccak256Hash([]byte("VerifyBatches(uint32,uint64,bytes32,bytes32,address)"))
 	onSequenceBatchesSignatureHash                 = crypto.Keccak256Hash([]byte("OnSequenceBatches(uint32,uint64)"))
 	updateRollupSignatureHash                      = crypto.Keccak256Hash([]byte("UpdateRollup(uint32,uint32,uint64)"))
-	addExistingRollupSignatureHash                 = crypto.Keccak256Hash([]byte("AddExistingRollup(uint32,uint64,address,uint64,uint8)"))
+	addExistingRollupSignatureHash                 = crypto.Keccak256Hash([]byte("AddExistingRollup(uint32,uint64,address,uint64,uint8,uint64)"))
 	createNewRollupSignatureHash                   = crypto.Keccak256Hash([]byte("CreateNewRollup(uint32,uint32,address,uint64,address)"))
 	obsoleteRollupTypeSignatureHash                = crypto.Keccak256Hash([]byte("ObsoleteRollupType(uint32)"))
 	addNewRollupTypeSignatureHash                  = crypto.Keccak256Hash([]byte("AddNewRollupType(uint32,address,address,uint64,uint8,bytes32,string)"))
@@ -68,6 +65,25 @@ var (
 	roleRevokedSignatureHash               = crypto.Keccak256Hash([]byte("RoleRevoked(bytes32,address,address)"))      // IAccessControlUpgradeable
 	emergencyStateActivatedSignatureHash   = crypto.Keccak256Hash([]byte("EmergencyStateActivated()"))                 // EmergencyManager. Used in oldZkEvm as well
 	emergencyStateDeactivatedSignatureHash = crypto.Keccak256Hash([]byte("EmergencyStateDeactivated()"))               // EmergencyManager. Used in oldZkEvm as well
+
+	// PreLxLy events
+	updateGlobalExitRootSignatureHash              = crypto.Keccak256Hash([]byte("UpdateGlobalExitRoot(bytes32,bytes32)"))
+	oldVerifyBatchesTrustedAggregatorSignatureHash = crypto.Keccak256Hash([]byte("VerifyBatchesTrustedAggregator(uint64,bytes32,address)"))
+	transferOwnershipSignatureHash                 = crypto.Keccak256Hash([]byte("OwnershipTransferred(address,address)"))
+	updateZkEVMVersionSignatureHash                = crypto.Keccak256Hash([]byte("UpdateZkEVMVersion(uint64,uint64,string)"))
+	oldConsolidatePendingStateSignatureHash        = crypto.Keccak256Hash([]byte("ConsolidatePendingState(uint64,bytes32,uint64)"))
+	oldOverridePendingStateSignatureHash           = crypto.Keccak256Hash([]byte("OverridePendingState(uint64,bytes32,address)"))
+	sequenceBatchesPreEtrogSignatureHash           = crypto.Keccak256Hash([]byte("SequenceBatches(uint64)"))
+
+	setForceBatchTimeoutSignatureHash   = crypto.Keccak256Hash([]byte("SetForceBatchTimeout(uint64)"))             // Used in oldZkEvm as well
+	setTrustedSequencerURLSignatureHash = crypto.Keccak256Hash([]byte("SetTrustedSequencerURL(string)"))           // Used in oldZkEvm as well
+	setTrustedSequencerSignatureHash    = crypto.Keccak256Hash([]byte("SetTrustedSequencer(address)"))             // Used in oldZkEvm as well
+	verifyBatchesSignatureHash          = crypto.Keccak256Hash([]byte("VerifyBatches(uint64,bytes32,address)"))    // Used in oldZkEvm as well
+	sequenceForceBatchesSignatureHash   = crypto.Keccak256Hash([]byte("SequenceForceBatches(uint64)"))             // Used in oldZkEvm as well
+	forceBatchSignatureHash             = crypto.Keccak256Hash([]byte("ForceBatch(uint64,bytes32,address,bytes)")) // Used in oldZkEvm as well
+	sequenceBatchesSignatureHash        = crypto.Keccak256Hash([]byte("SequenceBatches(uint64,bytes32)"))          // Used in oldZkEvm as well
+	acceptAdminRoleSignatureHash        = crypto.Keccak256Hash([]byte("AcceptAdminRole(address)"))                 // Used in oldZkEvm as well
+	transferAdminRoleSignatureHash      = crypto.Keccak256Hash([]byte("TransferAdminRole(address)"))               // Used in oldZkEvm as well
 
 	// ErrNotFound is used when the object is not found
 	ErrNotFound = errors.New("Not found")
@@ -87,6 +103,8 @@ const (
 	TokensOrder EventOrder = "TokenWrapped"
 	// VerifyBatchOrder identifies a VerifyBatch event
 	VerifyBatchOrder EventOrder = "VerifyBatch"
+	// ActivateEtrogOrder identifies the event to activate etrog
+	ActivateEtrogOrder EventOrder = "etrog"
 )
 
 type ethClienter interface {
@@ -151,7 +169,7 @@ func NewClient(cfg Config, polygonBridgeAddr, polygonZkEVMGlobalExitRootAddress,
 }
 
 // NewL2Client creates a new etherman for L2.
-func NewL2Client(url string, bridgeAddr common.Address) (*Client, error) {
+func NewL2Client(url string, polygonBridgeAddr common.Address) (*Client, error) {
 	// Connect to ethereum node
 	ethClient, err := ethclient.Dial(url)
 	if err != nil {
@@ -159,13 +177,17 @@ func NewL2Client(url string, bridgeAddr common.Address) (*Client, error) {
 		return nil, err
 	}
 	// Create smc clients
-	bridge, err := polygonzkevmbridge.NewPolygonzkevmbridge(bridgeAddr, ethClient)
+	bridge, err := polygonzkevmbridge.NewPolygonzkevmbridge(polygonBridgeAddr, ethClient)
 	if err != nil {
 		return nil, err
 	}
-	scAddresses := []common.Address{bridgeAddr}
+	oldpolygonBridge, err := oldpolygonzkevmbridge.NewOldpolygonzkevmbridge(polygonBridgeAddr, ethClient)
+	if err != nil {
+		return nil, err
+	}
+	scAddresses := []common.Address{polygonBridgeAddr}
 
-	return &Client{EtherClient: ethClient, PolygonBridge: bridge, SCAddresses: scAddresses}, nil
+	return &Client{EtherClient: ethClient, PolygonBridge: bridge, OldPolygonBridge: oldpolygonBridge, SCAddresses: scAddresses}, nil
 }
 
 // GetRollupInfoByBlockRange function retrieves the Rollup information that are included in all this ethereum blocks
@@ -224,86 +246,126 @@ func (etherMan *Client) processEvent(ctx context.Context, vLog types.Log, blocks
 	case newWrappedTokenEventSignatureHash:
 		return etherMan.tokenWrappedEvent(ctx, vLog, blocks, blocksOrder)
 	case initializedProxySignatureHash:
-		log.Debug("Initialized proxy event detected")
+		log.Debug("Initialized proxy event detected. Ignoring...")
 		return nil
 	case adminChangedSignatureHash:
-		log.Debug("AdminChanged event detected")
+		log.Debug("AdminChanged event detected. Ignoring...")
 		return nil
 	case beaconUpgradedSignatureHash:
-		log.Debug("BeaconUpgraded event detected")
+		log.Debug("BeaconUpgraded event detected. Ignoring...")
 		return nil
 	case upgradedSignatureHash:
-		log.Debug("Upgraded event detected")
+		log.Debug("Upgraded event detected. Ignoring...")
 		return nil
 	case transferOwnershipSignatureHash:
-		log.Debug("TransferOwnership event detected")
+		log.Debug("TransferOwnership event detected. Ignoring...")
 		return nil
 	case setBatchFeeSignatureHash:
-		log.Debug("SetBatchFee event detected")
+		log.Debug("SetBatchFee event detected. Ignoring...")
 		return nil
 	case setTrustedAggregatorSignatureHash:
-		log.Debug("SetTrustedAggregator event detected")
+		log.Debug("SetTrustedAggregator event detected. Ignoring...")
 		return nil
 	case setVerifyBatchTimeTargetSignatureHash:
-		log.Debug("SetVerifyBatchTimeTarget event detected")
+		log.Debug("SetVerifyBatchTimeTarget event detected. Ignoring...")
 		return nil
 	case setMultiplierBatchFeeSignatureHash:
-		log.Debug("SetMultiplierBatchFee event detected")
+		log.Debug("SetMultiplierBatchFee event detected. Ignoring...")
 		return nil
 	case setPendingStateTimeoutSignatureHash:
-		log.Debug("SetPendingStateTimeout event detected")
+		log.Debug("SetPendingStateTimeout event detected. Ignoring...")
 		return nil
 	case setTrustedAggregatorTimeoutSignatureHash:
-		log.Debug("SetTrustedAggregatorTimeout event detected")
+		log.Debug("SetTrustedAggregatorTimeout event detected. Ignoring...")
 		return nil
 	case overridePendingStateSignatureHash:
-		log.Debug("OverridePendingState event detected")
+		log.Debug("OverridePendingState event detected. Ignoring...")
 		return nil
 	case proveNonDeterministicPendingStateSignatureHash:
-		log.Debug("ProveNonDeterministicPendingState event detected")
+		log.Debug("ProveNonDeterministicPendingState event detected. Ignoring...")
 		return nil
 	case consolidatePendingStateSignatureHash:
-		log.Debug("ConsolidatePendingState event detected")
+		log.Debug("ConsolidatePendingState event detected. Ignoring...")
 		return nil
 	case verifyBatchesTrustedAggregatorSignatureHash:
 		return etherMan.verifyBatchesTrustedAggregatorEvent(ctx, vLog, blocks, blocksOrder)
 	case rollupManagerVerifyBatchesSignatureHash:
 		return etherMan.verifyBatchesEvent(ctx, vLog, blocks, blocksOrder)
 	case onSequenceBatchesSignatureHash:
-		log.Debug("OnSequenceBatches event detected")
+		log.Debug("OnSequenceBatches event detected. Ignoring...")
 		return nil
 	case updateRollupSignatureHash:
-		log.Debug("UpdateRollup event detected")
+		log.Debug("UpdateRollup event detected. Ignoring...")
 		return nil
 	case addExistingRollupSignatureHash:
-		log.Debug("AddExistingRollup event detected")
-		return nil
+		return etherMan.AddExistingRollupEvent(ctx, vLog, blocks, blocksOrder)
 	case createNewRollupSignatureHash:
-		log.Debug("CreateNewRollup event detected")
-		return nil
+		return etherMan.createNewRollupEvent(ctx, vLog, blocks, blocksOrder)
 	case obsoleteRollupTypeSignatureHash:
-		log.Debug("ObsoleteRollupType event detected")
+		log.Debug("ObsoleteRollupType event detected. Ignoring...")
 		return nil
 	case addNewRollupTypeSignatureHash:
-		log.Debug("AddNewRollupType event detected")
+		log.Debug("AddNewRollupType event detected. Ignoring...")
 		return nil
 	case initializedSignatureHash:
-		log.Debug("Initialized event detected")
+		log.Debug("Initialized event detected. Ignoring...")
 		return nil
 	case roleAdminChangedSignatureHash:
-		log.Debug("RoleAdminChanged event detected")
+		log.Debug("RoleAdminChanged event detected. Ignoring...")
 		return nil
 	case roleGrantedSignatureHash:
-		log.Debug("RoleGranted event detected")
+		log.Debug("RoleGranted event detected. Ignoring...")
 		return nil
 	case roleRevokedSignatureHash:
-		log.Debug("RoleRevoked event detected")
+		log.Debug("RoleRevoked event detected. Ignoring...")
 		return nil
 	case emergencyStateActivatedSignatureHash:
-		log.Debug("EmergencyStateActivated event detected")
+		log.Debug("EmergencyStateActivated event detected. Ignoring...")
 		return nil
 	case emergencyStateDeactivatedSignatureHash:
-		log.Debug("EmergencyStateDeactivated event detected")
+		log.Debug("EmergencyStateDeactivated event detected. Ignoring...")
+		return nil
+	case oldVerifyBatchesTrustedAggregatorSignatureHash:
+		log.Debug("OldVerifyBatchesTrustedAggregator event detected. Ignoring...")
+		return nil
+	case updateZkEVMVersionSignatureHash:
+		log.Debug("UpdateZkEVMVersion event detected. Ignoring...")
+		return nil
+	case oldConsolidatePendingStateSignatureHash:
+		log.Debug("OldConsolidatePendingState event detected. Ignoring...")
+		return nil
+	case oldOverridePendingStateSignatureHash:
+		log.Debug("OldOverridePendingState event detected. Ignoring...")
+		return nil
+	case sequenceBatchesPreEtrogSignatureHash:
+		log.Debug("SequenceBatchesPreEtrog event detected. Ignoring...")
+		return nil
+	case setForceBatchTimeoutSignatureHash:
+		log.Debug("SetForceBatchTimeout event detected. Ignoring...")
+		return nil
+	case setTrustedSequencerURLSignatureHash:
+		log.Debug("SetTrustedSequencerURL event detected. Ignoring...")
+		return nil
+	case setTrustedSequencerSignatureHash:
+		log.Debug("SetTrustedSequencer event detected. Ignoring...")
+		return nil
+	case verifyBatchesSignatureHash:
+		log.Debug("VerifyBatches event detected. Ignoring...")
+		return nil
+	case sequenceForceBatchesSignatureHash:
+		log.Debug("SequenceForceBatches event detected. Ignoring...")
+		return nil
+	case forceBatchSignatureHash:
+		log.Debug("ForceBatch event detected. Ignoring...")
+		return nil
+	case sequenceBatchesSignatureHash:
+		log.Debug("SequenceBatches event detected. Ignoring...")
+		return nil
+	case acceptAdminRoleSignatureHash:
+		log.Debug("AcceptAdminRole event detected. Ignoring...")
+		return nil
+	case transferAdminRoleSignatureHash:
+		log.Debug("TransferAdminRole event detected. Ignoring...")
 		return nil
 	}
 	log.Warnf("Event not registered: %+v", vLog)
@@ -312,16 +374,16 @@ func (etherMan *Client) processEvent(ctx context.Context, vLog types.Log, blocks
 
 func (etherMan *Client) updateGlobalExitRootEvent(ctx context.Context, vLog types.Log, blocks *[]Block, blocksOrder *map[common.Hash][]Order) error {
 	log.Debug("UpdateGlobalExitRoot event detected. Processing...")
-	globalExitRoot, err := etherMan.PolygonZkEVMGlobalExitRoot.ParseUpdateGlobalExitRoot(vLog)
-	if err != nil {
-		return err
-	}
-	return etherMan.processUpdateGlobalExitRootEvent(ctx, globalExitRoot.MainnetExitRoot, globalExitRoot.RollupExitRoot, vLog, blocks, blocksOrder)
+	return etherMan.processUpdateGlobalExitRootEvent(ctx, vLog.Topics[1], vLog.Topics[2], vLog, blocks, blocksOrder)
 }
 
 func (etherMan *Client) updateL1InfoTreeEvent(ctx context.Context, vLog types.Log, blocks *[]Block, blocksOrder *map[common.Hash][]Order) error {
 	log.Debug("UpdateL1InfoTree event detected")
-	return etherMan.processUpdateGlobalExitRootEvent(ctx, vLog.Topics[1], vLog.Topics[2], vLog, blocks, blocksOrder)
+	globalExitRoot, err := etherMan.PolygonZkEVMGlobalExitRoot.ParseUpdateL1InfoTree(vLog)
+	if err != nil {
+		return err
+	}
+	return etherMan.processUpdateGlobalExitRootEvent(ctx, globalExitRoot.MainnetExitRoot, globalExitRoot.RollupExitRoot, vLog, blocks, blocksOrder)
 }
 
 func (etherMan *Client) processUpdateGlobalExitRootEvent(ctx context.Context, mainnetExitRoot, rollupExitRoot common.Hash, vLog types.Log, blocks *[]Block, blocksOrder *map[common.Hash][]Order) error {
@@ -616,4 +678,68 @@ func GenerateGlobalIndex(mainnetFlag bool, rollupIndex uint, localExitRootIndex 
 	leri := big.NewInt(0).SetUint64(uint64(localExitRootIndex)).FillBytes(buf[:])
 	globalIndexBytes = append(globalIndexBytes, leri...)
 	return big.NewInt(0).SetBytes(globalIndexBytes)
+}
+
+func (etherMan *Client) createNewRollupEvent(ctx context.Context, vLog types.Log, blocks *[]Block, blocksOrder *map[common.Hash][]Order) error {
+	log.Debug("CreateNewRollup event detected. Processing...")
+	rollup, err := etherMan.PolygonRollupManager.ParseCreateNewRollup(vLog)
+	if err != nil {
+		return err
+	}
+	if rollup.RollupID != etherMan.RollupID {
+		return nil
+	}
+
+	if len(*blocks) == 0 || ((*blocks)[len(*blocks)-1].BlockHash != vLog.BlockHash || (*blocks)[len(*blocks)-1].BlockNumber != vLog.BlockNumber) {
+		fullBlock, err := etherMan.EtherClient.BlockByHash(ctx, vLog.BlockHash)
+		if err != nil {
+			return fmt.Errorf("error getting hashParent. BlockNumber: %d. Error: %v", vLog.BlockNumber, err)
+		}
+		block := prepareBlock(vLog, time.Unix(int64(fullBlock.Time()), 0), fullBlock)
+		block.ActivateEtrog = append(block.ActivateEtrog, true)
+		*blocks = append(*blocks, block)
+	} else if (*blocks)[len(*blocks)-1].BlockHash == vLog.BlockHash && (*blocks)[len(*blocks)-1].BlockNumber == vLog.BlockNumber {
+		(*blocks)[len(*blocks)-1].ActivateEtrog = append((*blocks)[len(*blocks)-1].ActivateEtrog, true)
+	} else {
+		log.Error("Error processing TokenWrapped event. BlockHash:", vLog.BlockHash, ". BlockNumber: ", vLog.BlockNumber)
+		return fmt.Errorf("error processing TokenWrapped event")
+	}
+	or := Order{
+		Name: ActivateEtrogOrder,
+		Pos:  len((*blocks)[len(*blocks)-1].ActivateEtrog) - 1,
+	}
+	(*blocksOrder)[(*blocks)[len(*blocks)-1].BlockHash] = append((*blocksOrder)[(*blocks)[len(*blocks)-1].BlockHash], or)
+	return nil
+}
+
+func (etherMan *Client) AddExistingRollupEvent(ctx context.Context, vLog types.Log, blocks *[]Block, blocksOrder *map[common.Hash][]Order) error {
+	log.Debug("AddExistingRollup event detected. Processing...")
+	rollup, err := etherMan.PolygonRollupManager.ParseAddExistingRollup(vLog)
+	if err != nil {
+		return err
+	}
+	if rollup.RollupID != etherMan.RollupID {
+		return nil
+	}
+
+	if len(*blocks) == 0 || ((*blocks)[len(*blocks)-1].BlockHash != vLog.BlockHash || (*blocks)[len(*blocks)-1].BlockNumber != vLog.BlockNumber) {
+		fullBlock, err := etherMan.EtherClient.BlockByHash(ctx, vLog.BlockHash)
+		if err != nil {
+			return fmt.Errorf("error getting hashParent. BlockNumber: %d. Error: %v", vLog.BlockNumber, err)
+		}
+		block := prepareBlock(vLog, time.Unix(int64(fullBlock.Time()), 0), fullBlock)
+		block.ActivateEtrog = append(block.ActivateEtrog, true)
+		*blocks = append(*blocks, block)
+	} else if (*blocks)[len(*blocks)-1].BlockHash == vLog.BlockHash && (*blocks)[len(*blocks)-1].BlockNumber == vLog.BlockNumber {
+		(*blocks)[len(*blocks)-1].ActivateEtrog = append((*blocks)[len(*blocks)-1].ActivateEtrog, true)
+	} else {
+		log.Error("Error processing TokenWrapped event. BlockHash:", vLog.BlockHash, ". BlockNumber: ", vLog.BlockNumber)
+		return fmt.Errorf("error processing TokenWrapped event")
+	}
+	or := Order{
+		Name: ActivateEtrogOrder,
+		Pos:  len((*blocks)[len(*blocks)-1].ActivateEtrog) - 1,
+	}
+	(*blocksOrder)[(*blocks)[len(*blocks)-1].BlockHash] = append((*blocksOrder)[(*blocks)[len(*blocks)-1].BlockHash], or)
+	return nil
 }

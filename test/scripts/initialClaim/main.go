@@ -6,12 +6,12 @@ import (
 	"time"
 
 	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/log"
 	clientUtils "github.com/0xPolygonHermez/zkevm-bridge-service/test/client"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/utils"
 	"github.com/0xPolygonHermez/zkevm-node/etherman/smartcontracts/polygonrollupmanager"
 	"github.com/0xPolygonHermez/zkevm-node/etherman/smartcontracts/polygonzkevm"
 	"github.com/0xPolygonHermez/zkevm-node/hex"
-	"github.com/0xPolygonHermez/zkevm-node/log"
 	"github.com/0xPolygonHermez/zkevm-node/state"
 	"github.com/0xPolygonHermez/zkevm-node/test/operations"
 	"github.com/ethereum/go-ethereum"
@@ -21,7 +21,7 @@ import (
 )
 
 const (
-	l2BridgeAddr      = "0xaAE872C70944D40001755C3EAaE53bC4E1A78bD0"
+	l2BridgeAddr      = "0xCca6ECD73932e49633B9307e1aa0fC174525F424"
 	zkevmAddr         = "0x8dAF17A20c9DBA35f005b6324F493785D239719d"
 	rollupManagerAddr = "0xB7f8BC63BbcaD18155201308C8f3540b07f84F5e"
 

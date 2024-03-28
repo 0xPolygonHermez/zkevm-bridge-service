@@ -6,26 +6,41 @@ DOCKER_COMPOSE_POOL_DB := zkevm-pool-db
 DOCKER_COMPOSE_RPC_DB := zkevm-rpc-db
 DOCKER_COMPOSE_BRIDGE_DB := zkevm-bridge-db
 DOCKER_COMPOSE_ZKEVM_NODE := zkevm-node
+DOCKER_COMPOSE_ZKEVM_NODE_V1TOV2 := zkevm-node-v1tov2
+DOCKER_COMPOSE_ZKEVM_AGGREGATOR_V1TOV2 := zkevm-aggregator-v1tov2
 DOCKER_COMPOSE_L1_NETWORK := zkevm-mock-l1-network
+DOCKER_COMPOSE_L1_NETWORK_V1TOV2 := zkevm-v1tov2-l1-network
 DOCKER_COMPOSE_ZKPROVER := zkevm-prover
+DOCKER_COMPOSE_ZKPROVER_V1TOV2 := zkevm-prover-v1tov2
 DOCKER_COMPOSE_BRIDGE := zkevm-bridge-service
+DOCKER_COMPOSE_BRIDGE_V1TOV2 := zkevm-bridge-service-v1tov2
 
 RUN_STATE_DB := $(DOCKER_COMPOSE) up -d $(DOCKER_COMPOSE_STATE_DB)
 RUN_POOL_DB := $(DOCKER_COMPOSE) up -d $(DOCKER_COMPOSE_POOL_DB)
 RUN_BRIDGE_DB := $(DOCKER_COMPOSE) up -d $(DOCKER_COMPOSE_BRIDGE_DB)
 RUN_DBS := ${RUN_BRIDGE_DB} && ${RUN_STATE_DB} && ${RUN_POOL_DB}
 RUN_NODE := $(DOCKER_COMPOSE) up -d $(DOCKER_COMPOSE_ZKEVM_NODE)
+RUN_NODE_V1TOV2 := $(DOCKER_COMPOSE) up -d $(DOCKER_COMPOSE_ZKEVM_NODE_V1TOV2)
+RUN_AGGREGATOR_V1TOV2 := $(DOCKER_COMPOSE) up -d $(DOCKER_COMPOSE_ZKEVM_AGGREGATOR_V1TOV2)
 RUN_L1_NETWORK := $(DOCKER_COMPOSE) up -d $(DOCKER_COMPOSE_L1_NETWORK)
+RUN_L1_NETWORK_V1TOV2 := $(DOCKER_COMPOSE) up -d $(DOCKER_COMPOSE_L1_NETWORK_V1TOV2)
 RUN_ZKPROVER := $(DOCKER_COMPOSE) up -d $(DOCKER_COMPOSE_ZKPROVER)
+RUN_ZKPROVER_V1TOV2 := $(DOCKER_COMPOSE) up -d $(DOCKER_COMPOSE_ZKPROVER_V1TOV2)
 RUN_BRIDGE := $(DOCKER_COMPOSE) up -d $(DOCKER_COMPOSE_BRIDGE)
+RUN_BRIDGE_V1TOV2 := $(DOCKER_COMPOSE) up -d $(DOCKER_COMPOSE_BRIDGE_V1TOV2)
 
 STOP_NODE_DB := $(DOCKER_COMPOSE) stop $(DOCKER_COMPOSE_NODE_DB) && $(DOCKER_COMPOSE) rm -f $(DOCKER_COMPOSE_NODE_DB)
 STOP_BRIDGE_DB := $(DOCKER_COMPOSE) stop $(DOCKER_COMPOSE_BRIDGE_DB) && $(DOCKER_COMPOSE) rm -f $(DOCKER_COMPOSE_BRIDGE_DB)
 STOP_DBS := ${STOP_NODE_DB} && ${STOP_BRIDGE_DB}
 STOP_NODE := $(DOCKER_COMPOSE) stop $(DOCKER_COMPOSE_ZKEVM_NODE) && $(DOCKER_COMPOSE) rm -f $(DOCKER_COMPOSE_ZKEVM_NODE)
+STOP_NODE_V1TOV2 := $(DOCKER_COMPOSE) stop $(DOCKER_COMPOSE_ZKEVM_NODE_V1TOV2) && $(DOCKER_COMPOSE) rm -f $(DOCKER_COMPOSE_ZKEVM_NODE_V1TOV2)
+STOP_AGGREGATOR_V1TOV2 := $(DOCKER_COMPOSE) stop $(DOCKER_COMPOSE_ZKEVM_AGGREGATOR_V1TOV2) && $(DOCKER_COMPOSE) rm -f $(DOCKER_COMPOSE_ZKEVM_AGGREGATOR_V1TOV2)
 STOP_NETWORK := $(DOCKER_COMPOSE) stop $(DOCKER_COMPOSE_L1_NETWORK) && $(DOCKER_COMPOSE) rm -f $(DOCKER_COMPOSE_L1_NETWORK)
+STOP_NETWORK_V1TOV2 := $(DOCKER_COMPOSE) stop $(DOCKER_COMPOSE_L1_NETWORK_V1TOV2) && $(DOCKER_COMPOSE) rm -f $(DOCKER_COMPOSE_L1_NETWORK_V1TOV2)
 STOP_ZKPROVER := $(DOCKER_COMPOSE) stop $(DOCKER_COMPOSE_ZKPROVER) && $(DOCKER_COMPOSE) rm -f $(DOCKER_COMPOSE_ZKPROVER)
+STOP_ZKPROVER_V1TOV2 := $(DOCKER_COMPOSE) stop $(DOCKER_COMPOSE_ZKPROVER_V1TOV2) && $(DOCKER_COMPOSE) rm -f $(DOCKER_COMPOSE_ZKPROVER_V1TOV2)
 STOP_BRIDGE := $(DOCKER_COMPOSE) stop $(DOCKER_COMPOSE_BRIDGE) && $(DOCKER_COMPOSE) rm -f $(DOCKER_COMPOSE_BRIDGE)
+STOP_BRIDGE_V1TOV2 := $(DOCKER_COMPOSE) stop $(DOCKER_COMPOSE_BRIDGE_V1TOV2) && $(DOCKER_COMPOSE) rm -f $(DOCKER_COMPOSE_BRIDGE_V1TOV2)
 STOP := $(DOCKER_COMPOSE) down --remove-orphans
 
 LDFLAGS += -X 'github.com/0xPolygonHermez/zkevm-bridge-service.Version=$(VERSION)'
@@ -108,6 +123,30 @@ run-network: ## Runs the l1 network
 stop-network: ## Stops the l1 network
 	$(STOP_NETWORK)
 
+.PHONY: run-node-v1tov2
+run-node-v1tov2: ## Runs the node
+	$(RUN_NODE_V1TOV2)
+
+.PHONY: stop-node-v1tov2
+stop-node-v1tov2: ## Stops the node
+	$(STOP_NODE_V1TOV2)
+
+.PHONY: run-aggregator-v1tov2
+run-aggregator-v1tov2: ## Runs the aggregator
+	$(RUN_AGGREGATOR_V1TOV2)
+
+.PHONY: stop-aggregator-v1tov2
+stop-aggregator-v1tov2: ## Stops the aggregator
+	$(STOP_AGGREGATOR_V1TOV2)
+
+.PHONY: run-network-v1tov2
+run-network-v1tov2: ## Runs the l1 network
+	$(RUN_L1_NETWORK_V1TOV2)
+
+.PHONY: stop-network-v1tov2
+stop-network-v1tov2: ## Stops the l1 network
+	$(STOP_NETWORK_V1TOV2)
+
 .PHONY: run-prover
 run-prover: ## Runs the zk prover
 	$(RUN_ZKPROVER)
@@ -116,6 +155,14 @@ run-prover: ## Runs the zk prover
 stop-prover: ## Stops the zk prover
 	$(STOP_ZKPROVER)
 
+.PHONY: run-prover-v1tov2
+run-prover-v1tov2: ## Runs the zk prover
+	$(RUN_ZKPROVER_V1TOV2)
+
+.PHONY: stop-prover-v1tov2
+stop-prover-v1tov2: ## Stops the zk prover
+	$(STOP_ZKPROVER_V1TOV2)	
+
 .PHONY: run-bridge
 run-bridge: ## Runs the bridge service
 	$(RUN_BRIDGE)
@@ -123,6 +170,14 @@ run-bridge: ## Runs the bridge service
 .PHONY: stop-bridge
 stop-bridge: ## Stops the bridge service
 	$(STOP_BRIDGE)
+
+.PHONY: run-bridge-v1tov2
+run-bridge-v1tov2: ## Runs the bridge service
+	$(RUN_BRIDGE_V1TOV2)
+
+.PHONY: stop-bridge-v1tov2
+stop-bridge-v1tov2: ## Stops the bridge service
+	$(STOP_BRIDGE_V1TOV2)
 
 .PHONY: stop
 stop: ## Stops all services
@@ -141,6 +196,18 @@ run: stop ## runs all services
 	$(RUN_NODE)
 	sleep 7
 	$(RUN_BRIDGE)
+
+.PHONY: run-v1tov2
+run-v1tov2: stop ## runs all services
+	$(RUN_DBS)
+	$(RUN_L1_NETWORK_V1TOV2)
+	sleep 5
+	$(RUN_ZKPROVER_V1TOV2)
+	sleep 3
+	$(RUN_NODE_V1TOV2)
+	sleep 7
+	$(RUN_AGGREGATOR_V1TOV2)
+	$(RUN_BRIDGE_V1TOV2)
 
 .PHONY: update-external-dependencies
 update-external-dependencies: ## Updates external dependencies like images, test vectors or proto files
@@ -172,12 +239,12 @@ bench-full: ## benchmark full test
 .PHONY: test-full
 test-full: build-docker stop run ## Runs all tests checking race conditions
 	sleep 3
-	trap '$(STOP)' EXIT; MallocNanoZone=0 go test -race -p 1 -timeout 2400s ./test/e2e/... -count 1 -tags='e2e'
+	trap '$(STOP)' EXIT; MallocNanoZone=0 go test -v -failfast -race -p 1 -timeout 2400s ./test/e2e/... -count 1 -tags='e2e'
 
 .PHONY: test-edge
 test-edge: build-docker stop run ## Runs all tests checking race conditions
 	sleep 3
-	trap '$(STOP)' EXIT; MallocNanoZone=0 go test -race -p 1 -timeout 2400s ./test/e2e/... -count 1 -tags='edge'
+	trap '$(STOP)' EXIT; MallocNanoZone=0 go test -v -failfast -race -p 1 -timeout 2400s ./test/e2e/... -count 1 -tags='edge'
 
 .PHONY: validate
 validate: lint build test-full ## Validates the whole integrity of the code base

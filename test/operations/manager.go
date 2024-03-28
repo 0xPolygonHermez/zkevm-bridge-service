@@ -12,6 +12,7 @@ import (
 	"github.com/0xPolygonHermez/zkevm-bridge-service/db"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/db/pgstorage"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/log"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/server"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/utils"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/utils/gerror"
@@ -19,7 +20,6 @@ import (
 	erc20 "github.com/0xPolygonHermez/zkevm-node/etherman/smartcontracts/pol"
 	"github.com/0xPolygonHermez/zkevm-node/etherman/smartcontracts/polygonzkevmbridge"
 	"github.com/0xPolygonHermez/zkevm-node/etherman/smartcontracts/polygonzkevmglobalexitroot"
-	"github.com/0xPolygonHermez/zkevm-node/log"
 	"github.com/0xPolygonHermez/zkevm-node/test/contracts/bin/ERC20"
 	"github.com/0xPolygonHermez/zkevm-node/test/operations"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -44,8 +44,8 @@ const (
 
 	// PolTokenAddress token address
 	PolTokenAddress = "0x5FbDB2315678afecb367f032d93F642f64180aa3" //nolint:gosec
-	l1BridgeAddr    = "0xaAE872C70944D40001755C3EAaE53bC4E1A78bD0"
-	l2BridgeAddr    = "0xaAE872C70944D40001755C3EAaE53bC4E1A78bD0"
+	l1BridgeAddr    = "0xCca6ECD73932e49633B9307e1aa0fC174525F424"
+	l2BridgeAddr    = "0xCca6ECD73932e49633B9307e1aa0fC174525F424"
 
 	l1AccHexAddress = "0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC"
 

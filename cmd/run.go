@@ -2,21 +2,35 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"os/signal"
+	"runtime"
 
+	zkevmbridgeservice "github.com/0xPolygonHermez/zkevm-bridge-service"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/bridgectrl"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/claimtxman"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/config"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/db"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/log"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/server"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/synchronizer"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/utils/gerror"
 	"github.com/0xPolygonHermez/zkevm-node/jsonrpc/client"
-	"github.com/0xPolygonHermez/zkevm-node/log"
 	"github.com/urfave/cli/v2"
 )
+
+func logVersion() {
+	log.Infow("Starting application",
+		// node version is already logged by default
+		"gitRevision", zkevmbridgeservice.GitRev,
+		"gitBranch", zkevmbridgeservice.GitBranch,
+		"goVersion", runtime.Version(),
+		"built", zkevmbridgeservice.BuildDate,
+		"os/arch", fmt.Sprintf("%s/%s", runtime.GOOS, runtime.GOARCH),
+	)
+}
 
 func start(ctx *cli.Context) error {
 	configFilePath := ctx.String(flagCfg)
@@ -93,6 +107,7 @@ func start(ctx *cli.Context) error {
 	zkEVMClient := client.NewClient(c.Etherman.L2URLs[0])
 	chExitRootEvent := make(chan *etherman.GlobalExitRoot)
 	chSynced := make(chan uint)
+	logVersion()
 	go runSynchronizer(ctx.Context, c.NetworkConfig.GenBlockNumber, bridgeController, l1Etherman, c.Synchronizer, storage, zkEVMClient, chExitRootEvent, chSynced)
 	for _, client := range l2Ethermans {
 		go runSynchronizer(ctx.Context, 0, bridgeController, client, c.Synchronizer, storage, zkEVMClient, chExitRootEvent, chSynced)
@@ -140,6 +155,7 @@ func setupLog(c log.Config) {
 func newEthermans(c *config.Config) (*etherman.Client, []*etherman.Client, error) {
 	l1Etherman, err := etherman.NewClient(c.Etherman, c.NetworkConfig.PolygonBridgeAddress, c.NetworkConfig.PolygonZkEVMGlobalExitRootAddress, c.NetworkConfig.PolygonRollupManagerAddress, c.NetworkConfig.PolygonZkEvmAddress)
 	if err != nil {
+		log.Error("L1 etherman error: ", err)
 		return nil, nil, err
 	}
 	if len(c.L2PolygonBridgeAddresses) != len(c.Etherman.L2URLs) {
@@ -149,6 +165,7 @@ func newEthermans(c *config.Config) (*etherman.Client, []*etherman.Client, error
 	for i, addr := range c.L2PolygonBridgeAddresses {
 		l2Etherman, err := etherman.NewL2Client(c.Etherman.L2URLs[i], addr)
 		if err != nil {
+			log.Error("L2 etherman ", i, c.Etherman.L2URLs[i], ", error: ", err)
 			return l1Etherman, nil, err
 		}
 		l2Ethermans = append(l2Ethermans, l2Etherman)
