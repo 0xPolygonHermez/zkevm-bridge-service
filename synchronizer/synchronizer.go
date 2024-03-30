@@ -8,10 +8,10 @@ import (
 	"time"
 
 	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/log"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/messagepush"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/redisstorage"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/utils/gerror"
-	"github.com/0xPolygonHermez/zkevm-node/log"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/jackc/pgx/v4"
 )
@@ -659,8 +659,8 @@ func (s *ClientSynchronizer) processDeposit(deposit etherman.Deposit, blockID ui
 }
 
 func (s *ClientSynchronizer) processClaim(claim etherman.Claim, blockID uint64, dbTx pgx.Tx) error {
-	if claim.RollupIndex != uint64(s.etherMan.GetRollupID()) && claim.RollupIndex != 0 {
-		log.Debugf("Claim for different Rollup (RollupID: %d, RollupIndex: %d). Ignoring...", s.etherMan.GetRollupID(), claim.RollupIndex)
+	if !claim.MainnetFlag && claim.RollupIndex != uint64(s.etherMan.GetRollupID()-1) {
+		log.Infof("Claim for different Rollup (we are RollupID: %d) incomming claim: MainnetFlag: %v  RollupIndex: %d). Ignoring...", s.etherMan.GetRollupID(), claim.MainnetFlag, claim.RollupIndex)
 		return nil
 	}
 	claim.BlockID = blockID

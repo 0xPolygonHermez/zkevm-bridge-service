@@ -2,7 +2,7 @@ package utils
 
 import (
 	"github.com/0xPolygonHermez/zkevm-bridge-service/config/businessconfig"
-	"github.com/0xPolygonHermez/zkevm-node/log"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/log"
 )
 
 var standardIdKeyMapper, innerIdKeyMapper map[uint64]uint64

@@ -7,7 +7,8 @@ import (
 	"time"
 
 	"github.com/0xPolygonHermez/zkevm-bridge-service/config/apolloconfig"
-	"github.com/0xPolygonHermez/zkevm-node/log"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/log"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/utils"
 	"github.com/pkg/errors"
 )
 
@@ -130,5 +131,12 @@ func (c *calculatorImpl) refresh(ctx context.Context, networkID uint) error {
 
 // Get returns the estimated deposit time for the network by networkID
 func (c *calculatorImpl) Get(networkID uint) uint32 {
-	return c.estimateTime[networkID]
+	// todo: bard optimize to map for c.estimateTime
+	var index uint
+	if networkID == utils.GetMainNetworkId() {
+		index = networkID
+	} else {
+		index = 1
+	}
+	return c.estimateTime[index]
 }

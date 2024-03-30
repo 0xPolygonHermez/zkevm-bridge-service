@@ -2,14 +2,18 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"os/signal"
+	"runtime"
 
+	zkevmbridgeservice "github.com/0xPolygonHermez/zkevm-bridge-service"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/bridgectrl"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/claimtxman"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/config"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/db"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/log"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/messagepush"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/redisstorage"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/server"
@@ -17,10 +21,20 @@ import (
 	"github.com/0xPolygonHermez/zkevm-bridge-service/utils"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/utils/gerror"
 	"github.com/0xPolygonHermez/zkevm-node/jsonrpc/client"
-	"github.com/0xPolygonHermez/zkevm-node/log"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/urfave/cli/v2"
 )
+
+func logVersion() {
+	log.Infow("Starting application",
+		// node version is already logged by default
+		"gitRevision", zkevmbridgeservice.GitRev,
+		"gitBranch", zkevmbridgeservice.GitBranch,
+		"goVersion", runtime.Version(),
+		"built", zkevmbridgeservice.BuildDate,
+		"os/arch", fmt.Sprintf("%s/%s", runtime.GOOS, runtime.GOARCH),
+	)
+}
 
 func start(ctx *cli.Context) error {
 	configFilePath := ctx.String(flagCfg)
@@ -59,6 +73,7 @@ func start(ctx *cli.Context) error {
 		}
 		log.Infof("l2 network id: %d", networkID)
 		networkIDs = append(networkIDs, networkID)
+		utils.InitRollupNetworkId(networkID)
 	}
 
 	storage, err := db.NewStorage(c.SyncDB)
@@ -97,6 +112,7 @@ func start(ctx *cli.Context) error {
 	zkEVMClient := client.NewClient(c.Etherman.L2URLs[0])
 	chExitRootEvent := make(chan *etherman.GlobalExitRoot)
 	chSynced := make(chan uint)
+	logVersion()
 	go runSynchronizer(ctx.Context, c.NetworkConfig.GenBlockNumber, bridgeController, l1Etherman, c.Synchronizer, storage, zkEVMClient, chExitRootEvent, chSynced, nil, nil)
 	for _, client := range l2Ethermans {
 		go runSynchronizer(ctx.Context, 0, bridgeController, client, c.Synchronizer, storage, zkEVMClient, chExitRootEvent, chSynced, nil, nil)
