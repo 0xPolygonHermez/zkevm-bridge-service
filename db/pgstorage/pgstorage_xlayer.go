@@ -76,7 +76,7 @@ func (p *PostgresStorage) GetReadyPendingTransactions(ctx context.Context, netwo
 			(SELECT 1 FROM sync.claim as c WHERE c.index = d.deposit_cnt AND c.network_id = d.dest_net)
 		ORDER BY d.block_id DESC, d.deposit_cnt DESC LIMIT $2 OFFSET $3`
 
-	return p.getDepositList(ctx, getDepositsSQL, dbTx, networkID, limit, offset, minReadyTime, utils.GetRollupNetworkId()))
+	return p.getDepositList(ctx, getDepositsSQL, dbTx, networkID, limit, offset, minReadyTime, utils.GetRollupNetworkId())
 }
 
 func (p *PostgresStorage) getDepositList(ctx context.Context, sql string, dbTx pgx.Tx, args ...interface{}) ([]*etherman.Deposit, error) {
