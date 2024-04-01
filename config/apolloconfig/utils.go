@@ -1,7 +1,7 @@
 package apolloconfig
 
 import (
-	"github.com/0xPolygonHermez/zkevm-node/log"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/log"
 	"github.com/apolloconfig/agollo/v4"
 )
 

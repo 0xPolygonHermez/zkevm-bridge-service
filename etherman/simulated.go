@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/0xPolygonHermez/zkevm-bridge-service/log"
 	mockbridge "github.com/0xPolygonHermez/zkevm-bridge-service/test/mocksmartcontracts/polygonzkevmbridge"
 	"github.com/0xPolygonHermez/zkevm-node/etherman/smartcontracts/mockpolygonrollupmanager"
 	"github.com/0xPolygonHermez/zkevm-node/etherman/smartcontracts/mockverifier"
@@ -14,7 +15,6 @@ import (
 	"github.com/0xPolygonHermez/zkevm-node/etherman/smartcontracts/polygonzkevmbridge"
 	"github.com/0xPolygonHermez/zkevm-node/etherman/smartcontracts/polygonzkevmglobalexitroot"
 	"github.com/0xPolygonHermez/zkevm-node/etherman/smartcontracts/proxy"
-	"github.com/0xPolygonHermez/zkevm-node/log"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
 	"github.com/ethereum/go-ethereum/common"
@@ -37,8 +37,8 @@ func NewSimulatedEtherman(cfg Config, auth *bind.TransactOpts) (*Client, *backen
 			Balance: balance,
 		},
 	}
-	//blockGasLimit := uint64(999999999999999999)                         //nolint:gomnd
-	client := backends.NewSimulatedBackend(genesisAlloc, 999999999999999999) //nolint:staticcheck,gomnd
+	blockGasLimit := uint64(999999999999999999) //nolint:gomnd
+	client := backends.NewSimulatedBackend(genesisAlloc, blockGasLimit)
 
 	// Deploy contracts
 	const polDecimalPlaces = 18

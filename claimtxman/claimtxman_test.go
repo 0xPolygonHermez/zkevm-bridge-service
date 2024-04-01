@@ -9,6 +9,7 @@ import (
 	ctmtypes "github.com/0xPolygonHermez/zkevm-bridge-service/claimtxman/types"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/db/pgstorage"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/utils"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/stretchr/testify/require"
@@ -27,6 +28,7 @@ func TestMonitoredTxStorage(t *testing.T) {
 	tx, err := pg.BeginDBTransaction(ctx)
 	require.NoError(t, err)
 
+	utils.InitRollupNetworkId(1)
 	deposit := &etherman.Deposit{
 		NetworkID:          0,
 		OriginalNetwork:    0,
@@ -110,6 +112,7 @@ func TestUpdateDepositStatus(t *testing.T) {
 	blockID, err := pg.AddBlock(ctx, block, nil)
 	require.NoError(t, err)
 
+	utils.InitRollupNetworkId(1)
 	deposit := &etherman.Deposit{
 		NetworkID:          0,
 		OriginalNetwork:    0,
@@ -182,7 +185,7 @@ func TestUpdateDepositStatus(t *testing.T) {
 	require.Equal(t, uint(0), deposits[0].NetworkID)
 
 	require.NoError(t, pg.UpdateL2DepositsStatus(ctx, l2Root, 1, 1, nil))
-	deposits, err = pg.GetDeposits(ctx, destAdr, 10, 0, nil)
+	deposits, err = pg.GetDepositsForUnitTest(ctx, destAdr, 10, 0, nil)
 	require.NoError(t, err)
 	require.Len(t, deposits, 2)
 	require.True(t, deposits[1].ReadyForClaim)
@@ -196,6 +199,8 @@ func TestUpdateL2DepositStatusMultipleRollups(t *testing.T) {
 	require.NoError(t, err)
 	pg, err := pgstorage.NewPostgresStorage(dbCfg)
 	require.NoError(t, err)
+
+	utils.InitRollupNetworkId(2)
 
 	destAdr := "0x4d5Cf5032B2a844602278b01199ED191A86c93ff"
 
@@ -259,7 +264,7 @@ func TestUpdateL2DepositStatusMultipleRollups(t *testing.T) {
 
 	// This root is for network 1, this won't upgrade anything
 	require.NoError(t, pg.UpdateL2DepositsStatus(ctx, l2Root1, 1, 2, nil))
-	deposits, err := pg.GetDeposits(ctx, destAdr, 10, 0, nil)
+	deposits, err := pg.GetDepositsForUnitTest(ctx, destAdr, 10, 0, nil)
 	require.NoError(t, err)
 	require.Len(t, deposits, 2)
 	require.False(t, deposits[1].ReadyForClaim)
@@ -267,21 +272,21 @@ func TestUpdateL2DepositStatusMultipleRollups(t *testing.T) {
 
 	// This root is for network 2, this won't upgrade anything
 	require.NoError(t, pg.UpdateL2DepositsStatus(ctx, l2Root2, 1, 1, nil))
-	deposits, err = pg.GetDeposits(ctx, destAdr, 10, 0, nil)
+	deposits, err = pg.GetDepositsForUnitTest(ctx, destAdr, 10, 0, nil)
 	require.NoError(t, err)
 	require.Len(t, deposits, 2)
 	require.False(t, deposits[1].ReadyForClaim)
 	require.False(t, deposits[0].ReadyForClaim)
 
 	require.NoError(t, pg.UpdateL2DepositsStatus(ctx, l2Root1, 1, 1, nil))
-	deposits, err = pg.GetDeposits(ctx, destAdr, 10, 0, nil)
+	deposits, err = pg.GetDepositsForUnitTest(ctx, destAdr, 10, 0, nil)
 	require.NoError(t, err)
 	require.Len(t, deposits, 2)
 	require.True(t, deposits[1].ReadyForClaim)
 	require.False(t, deposits[0].ReadyForClaim)
 
 	require.NoError(t, pg.UpdateL2DepositsStatus(ctx, l2Root2, 1, 2, nil))
-	deposits, err = pg.GetDeposits(ctx, destAdr, 10, 0, nil)
+	deposits, err = pg.GetDepositsForUnitTest(ctx, destAdr, 10, 0, nil)
 	require.NoError(t, err)
 	require.Len(t, deposits, 2)
 	require.True(t, deposits[1].ReadyForClaim)
