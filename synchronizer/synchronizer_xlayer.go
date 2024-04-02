@@ -55,6 +55,7 @@ func (s *ClientSynchronizer) afterProcessDeposit(deposit *etherman.Deposit, depo
 			FromChainId:  utils.GetChainIdByNetworkId(deposit.NetworkID),
 			ToChainId:    utils.GetChainIdByNetworkId(deposit.DestinationNetwork),
 			GlobalIndex:  s.getGlobalIndex(deposit).String(),
+			LeafType:     uint32(deposit.LeafType),
 		})
 		if err != nil {
 			log.Errorf("PushTransactionUpdate error: %v", err)
