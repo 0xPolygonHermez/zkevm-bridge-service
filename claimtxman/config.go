@@ -20,4 +20,6 @@ type Config struct {
 	RetryNumber int `mapstructure:"RetryNumber"`
 	// AuthorizedClaimMessageAddresses are the allowed address to bridge message with autoClaim
 	AuthorizedClaimMessageAddresses []common.Address `mapstructure:"AuthorizedClaimMessageAddresses"`
+	//OptClaim enabled store claimTx into storage every deposit
+	OptClaim bool `mapstructure:"OptClaim"`
 }
