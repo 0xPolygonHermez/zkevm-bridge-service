@@ -30,6 +30,7 @@ const (
 	labelToken              = "token"
 	labelTokenAddress       = "token_address"
 	labelTokenOriginNetwork = "token_origin_network"
+	labelDestNet            = "dest_net"
 
 	prefixMonitoredTxs             = prefix + "monitored_txs_"
 	metricMonitoredTxsPendingCount = prefixMonitoredTxs + "pending_count"

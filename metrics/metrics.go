@@ -23,9 +23,9 @@ func initMetrics() {
 
 	registerCounter(prometheus.CounterOpts{Name: metricRequestCount}, labelMethod, labelIsSuccess)
 	registerHistogram(prometheus.HistogramOpts{Name: metricRequestLatency}, labelMethod, labelIsSuccess)
-	registerCounter(prometheus.CounterOpts{Name: metricOrderCount}, labelNetworkID, labelLeafType, labelToken, labelTokenAddress, labelTokenOriginNetwork)
-	registerCounter(prometheus.CounterOpts{Name: metricOrderTotalAmount}, labelNetworkID, labelLeafType, labelToken, labelTokenAddress, labelTokenOriginNetwork)
-	registerHistogram(prometheus.HistogramOpts{Name: metricOrderWaitTime}, labelNetworkID)
+	registerCounter(prometheus.CounterOpts{Name: metricOrderCount}, labelNetworkID, labelLeafType, labelToken, labelTokenAddress, labelTokenOriginNetwork, labelDestNet)
+	registerCounter(prometheus.CounterOpts{Name: metricOrderTotalAmount}, labelNetworkID, labelLeafType, labelToken, labelTokenAddress, labelTokenOriginNetwork, labelDestNet)
+	registerHistogram(prometheus.HistogramOpts{Name: metricOrderWaitTime}, labelNetworkID, labelDestNet)
 	registerGauge(prometheus.GaugeOpts{Name: metricMonitoredTxsPendingCount})
 	registerCounter(prometheus.CounterOpts{Name: metricMonitoredTxsResultCount}, labelStatus)
 	registerHistogram(prometheus.HistogramOpts{Name: metricMonitoredTxsDuration})
@@ -45,7 +45,7 @@ func RecordRequestLatency(method string, latency time.Duration, isSuccess bool) 
 
 // RecordOrder records one bridge order, increase the order count and add the amount to the total order amount
 // networkID is the "from" network of the transaction
-func RecordOrder(networkID, leafType, tokenOriginNetwork uint32, tokenAddress common.Address, amount *big.Int) {
+func RecordOrder(networkID, leafType, destNet, tokenOriginNetwork uint32, tokenAddress common.Address, amount *big.Int) {
 	tokenSymbol := "unknown"
 	if coinsCache := localcache.GetDefaultCache(); coinsCache != nil {
 		coinInfo, err := coinsCache.GetCoinInfoByAddress(context.Background(), tokenOriginNetwork, tokenAddress)
@@ -62,6 +62,7 @@ func RecordOrder(networkID, leafType, tokenOriginNetwork uint32, tokenAddress co
 
 	labels := map[string]string{
 		labelNetworkID:          strconv.Itoa(int(networkID)),
+		labelDestNet:            strconv.Itoa(int(destNet)),
 		labelLeafType:           strconv.Itoa(int(leafType)),
 		labelToken:              tokenSymbol,
 		labelTokenAddress:       tokenAddress.String(),
@@ -73,8 +74,8 @@ func RecordOrder(networkID, leafType, tokenOriginNetwork uint32, tokenAddress co
 }
 
 // RecordOrderWaitTime records the waiting time (seconds) of a bridge order, from order creation (deposit time) to ready_for_claim time
-func RecordOrderWaitTime(networkID uint32, dur time.Duration) {
-	histogramObserve(metricOrderWaitTime, float64(dur/time.Second), map[string]string{labelNetworkID: strconv.Itoa(int(networkID))})
+func RecordOrderWaitTime(networkID, destNet uint32, dur time.Duration) {
+	histogramObserve(metricOrderWaitTime, float64(dur/time.Second), map[string]string{labelNetworkID: strconv.Itoa(int(networkID)), labelDestNet: strconv.Itoa(int(destNet))})
 }
 
 // RecordPendingMonitoredTxsCount records the current number of pending monitored txs (status == "created")
