@@ -6,7 +6,7 @@ import (
 	"sync"
 
 	"github.com/0xPolygonHermez/zkevm-bridge-service/config/apolloconfig"
-	"github.com/0xPolygonHermez/zkevm-node/log"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/log"
 	"github.com/alibaba/sentinel-golang/api"
 	"github.com/alibaba/sentinel-golang/core/config"
 	"github.com/alibaba/sentinel-golang/core/flow"

@@ -10,8 +10,8 @@ import (
 	"time"
 
 	"github.com/0xPolygonHermez/zkevm-bridge-service/bridgectrl/pb"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/log"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/nacos"
-	"github.com/0xPolygonHermez/zkevm-node/log"
 	"github.com/alibaba/sentinel-golang/core/base"
 	sentinelGrpc "github.com/alibaba/sentinel-golang/pkg/adapters/grpc"
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"

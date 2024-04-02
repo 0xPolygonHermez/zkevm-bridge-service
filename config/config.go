@@ -13,12 +13,12 @@ import (
 	"github.com/0xPolygonHermez/zkevm-bridge-service/config/businessconfig"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/db"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/log"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/messagepush"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/metrics"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/nacos"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/server"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/synchronizer"
-	"github.com/0xPolygonHermez/zkevm-node/log"
 	"github.com/mitchellh/mapstructure"
 	"github.com/spf13/viper"
 )

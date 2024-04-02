@@ -5,8 +5,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/0xPolygonHermez/zkevm-bridge-service/log"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/utils"
-	"github.com/0xPolygonHermez/zkevm-node/log"
 	"github.com/jackc/pgconn"
 	"github.com/jackc/pgx/v4"
 )

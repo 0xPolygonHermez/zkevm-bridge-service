@@ -5,8 +5,8 @@ import (
 	"reflect"
 	"time"
 
+	"github.com/0xPolygonHermez/zkevm-bridge-service/log"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/metrics"
-	"github.com/0xPolygonHermez/zkevm-node/log"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
