@@ -26,6 +26,7 @@ const (
 	metricOrderTotalAmount  = prefixOrder + "total_amount"
 	metricOrderWaitTime     = prefixOrder + "wait_time_sec"
 	labelNetworkID          = "network_id"
+	labelLeafType           = "leaf_type"
 	labelToken              = "token"
 	labelTokenAddress       = "token_address"
 	labelTokenOriginNetwork = "token_origin_network"

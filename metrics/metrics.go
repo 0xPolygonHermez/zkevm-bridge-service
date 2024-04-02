@@ -23,8 +23,8 @@ func initMetrics() {
 
 	registerCounter(prometheus.CounterOpts{Name: metricRequestCount}, labelMethod, labelIsSuccess)
 	registerHistogram(prometheus.HistogramOpts{Name: metricRequestLatency}, labelMethod, labelIsSuccess)
-	registerCounter(prometheus.CounterOpts{Name: metricOrderCount}, labelNetworkID, labelToken, labelTokenAddress, labelTokenOriginNetwork)
-	registerCounter(prometheus.CounterOpts{Name: metricOrderTotalAmount}, labelNetworkID, labelToken, labelTokenAddress, labelTokenOriginNetwork)
+	registerCounter(prometheus.CounterOpts{Name: metricOrderCount}, labelNetworkID, labelLeafType, labelToken, labelTokenAddress, labelTokenOriginNetwork)
+	registerCounter(prometheus.CounterOpts{Name: metricOrderTotalAmount}, labelNetworkID, labelLeafType, labelToken, labelTokenAddress, labelTokenOriginNetwork)
 	registerHistogram(prometheus.HistogramOpts{Name: metricOrderWaitTime}, labelNetworkID)
 	registerGauge(prometheus.GaugeOpts{Name: metricMonitoredTxsPendingCount})
 	registerCounter(prometheus.CounterOpts{Name: metricMonitoredTxsResultCount}, labelStatus)
@@ -45,7 +45,7 @@ func RecordRequestLatency(method string, latency time.Duration, isSuccess bool) 
 
 // RecordOrder records one bridge order, increase the order count and add the amount to the total order amount
 // networkID is the "from" network of the transaction
-func RecordOrder(networkID, tokenOriginNetwork uint32, tokenAddress common.Address, amount *big.Int) {
+func RecordOrder(networkID, leafType, tokenOriginNetwork uint32, tokenAddress common.Address, amount *big.Int) {
 	tokenSymbol := "unknown"
 	if coinsCache := localcache.GetDefaultCache(); coinsCache != nil {
 		coinInfo, err := coinsCache.GetCoinInfoByAddress(context.Background(), tokenOriginNetwork, tokenAddress)
@@ -62,6 +62,7 @@ func RecordOrder(networkID, tokenOriginNetwork uint32, tokenAddress common.Addre
 
 	labels := map[string]string{
 		labelNetworkID:          strconv.Itoa(int(networkID)),
+		labelLeafType:           strconv.Itoa(int(leafType)),
 		labelToken:              tokenSymbol,
 		labelTokenAddress:       tokenAddress.String(),
 		labelTokenOriginNetwork: strconv.Itoa(int(tokenOriginNetwork)),
