@@ -19,7 +19,7 @@ import (
 
 // AddDeposit adds new deposit to the storage.
 func (p *PostgresStorage) AddDepositXLayer(ctx context.Context, deposit *etherman.Deposit, dbTx pgx.Tx) (uint64, error) {
-	const addDepositSQL = "INSERT INTO sync.deposit (leaf_type, network_id, orig_net, orig_addr, amount, dest_net, dest_addr, block_id, deposit_cnt, tx_hash, metadata, dest_contract_addr) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING id"
+	const addDepositSQL = "INSERT INTO sync.deposit (leaf_type, network_id, orig_net, orig_addr, amount, dest_net, dest_addr, block_id, deposit_cnt, tx_hash, metadata, dest_contract_addr) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING id"
 	e := p.getExecQuerier(dbTx)
 	var depositID uint64
 	err := e.QueryRow(ctx, addDepositSQL, deposit.LeafType, deposit.NetworkID, deposit.OriginalNetwork, deposit.OriginalAddress, deposit.Amount.String(), deposit.DestinationNetwork, deposit.DestinationAddress, deposit.BlockID, deposit.DepositCount, deposit.TxHash, deposit.Metadata, deposit.DestContractAddress).Scan(&depositID)
