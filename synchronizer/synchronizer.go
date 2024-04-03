@@ -40,9 +40,10 @@ type ClientSynchronizer struct {
 
 	// XLayer
 	// Producer to push the transaction status change to front end
-	messagePushProducer messagepush.KafkaProducer
-	redisStorage        redisstorage.RedisStorage
-	rollupID            uint
+	messagePushProducer   messagepush.KafkaProducer
+	redisStorage          redisstorage.RedisStorage
+	rollupID              uint
+	usdcContractAddresses map[common.Address]bool
 }
 
 // NewSynchronizer creates and initializes an instance of Synchronizer
@@ -81,38 +82,45 @@ func NewSynchronizer(
 		log.Info("LxLyEtrog already activated")
 	}
 	rollupID := ethMan.GetRollupID()
+
+	usdcContractAddresses := make(map[common.Address]bool)
+	for _, addr := range cfg.USDCContractAddresses {
+		usdcContractAddresses[addr] = true
+	}
 	if networkID == 0 {
 		return &ClientSynchronizer{
-			bridgeCtrl:          bridge,
-			storage:             storage.(storageInterface),
-			etherMan:            ethMan,
-			ctx:                 ctx,
-			cancelCtx:           cancel,
-			genBlockNumber:      genBlockNumber,
-			cfg:                 cfg,
-			networkID:           networkID,
-			chExitRootEvent:     chExitRootEvent,
-			chSynced:            chSynced,
-			zkEVMClient:         zkEVMClient,
-			l1RollupExitRoot:    ger.ExitRoots[1],
-			messagePushProducer: messagePushProducer,
-			redisStorage:        redisStorage,
-			rollupID:            rollupID,
+			bridgeCtrl:            bridge,
+			storage:               storage.(storageInterface),
+			etherMan:              ethMan,
+			ctx:                   ctx,
+			cancelCtx:             cancel,
+			genBlockNumber:        genBlockNumber,
+			cfg:                   cfg,
+			networkID:             networkID,
+			chExitRootEvent:       chExitRootEvent,
+			chSynced:              chSynced,
+			zkEVMClient:           zkEVMClient,
+			l1RollupExitRoot:      ger.ExitRoots[1],
+			messagePushProducer:   messagePushProducer,
+			redisStorage:          redisStorage,
+			rollupID:              rollupID,
+			usdcContractAddresses: usdcContractAddresses,
 		}, nil
 	}
 	return &ClientSynchronizer{
-		bridgeCtrl:          bridge,
-		storage:             storage.(storageInterface),
-		etherMan:            ethMan,
-		ctx:                 ctx,
-		cancelCtx:           cancel,
-		genBlockNumber:      genBlockNumber,
-		cfg:                 cfg,
-		chSynced:            chSynced,
-		networkID:           networkID,
-		messagePushProducer: messagePushProducer,
-		redisStorage:        redisStorage,
-		rollupID:            rollupID,
+		bridgeCtrl:            bridge,
+		storage:               storage.(storageInterface),
+		etherMan:              ethMan,
+		ctx:                   ctx,
+		cancelCtx:             cancel,
+		genBlockNumber:        genBlockNumber,
+		cfg:                   cfg,
+		chSynced:              chSynced,
+		networkID:             networkID,
+		messagePushProducer:   messagePushProducer,
+		redisStorage:          redisStorage,
+		rollupID:              rollupID,
+		usdcContractAddresses: usdcContractAddresses,
 	}, nil
 }
 
@@ -629,9 +637,10 @@ func (s *ClientSynchronizer) processGlobalExitRoot(globalExitRoot etherman.Globa
 }
 
 func (s *ClientSynchronizer) processDeposit(deposit etherman.Deposit, blockID uint64, dbTx pgx.Tx) error {
+	s.beforeProcessDeposit(&deposit)
 	deposit.BlockID = blockID
 	deposit.NetworkID = s.networkID
-	depositID, err := s.storage.AddDeposit(s.ctx, &deposit, dbTx)
+	depositID, err := s.storage.AddDepositXLayer(s.ctx, &deposit, dbTx)
 	if err != nil {
 		log.Errorf("networkID: %d, failed to store new deposit locally, BlockNumber: %d, Deposit: %+v err: %v", s.networkID, deposit.BlockNumber, deposit, err)
 		rollbackErr := s.storage.Rollback(s.ctx, dbTx)

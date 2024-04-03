@@ -52,9 +52,10 @@ type Deposit struct {
 	ReadyForClaim bool
 
 	// XLayer
-	Time      time.Time
-	Id        uint64
-	ReadyTime time.Time
+	Time                time.Time
+	Id                  uint64
+	ReadyTime           time.Time
+	DestContractAddress common.Address
 }
 
 // Claim struct
