@@ -38,10 +38,11 @@ func TestGetDepositsXLayer(t *testing.T) {
 	utils.InitRollupNetworkId(1)
 	addr := "0x23335657622dcc27bb1914e51cdc30871d6d04d3"
 
-	deposits, err := store.GetDepositsXLayer(ctx, addr, 25, 0, []common.Address{common.HexToAddress("0xca3faf8a0e99b136394286569f95f04127cb2087")}, nil)
-	for _, d := range deposits {
-		t.Logf("deposit: [%+v]", d)
-	}
+	deposits, err := store.GetDepositsXLayer(ctx, addr, 25, 0, []common.Address{common.HexToAddress("0xca3faf8a0e99b136394286569f95f04127cb2087"), common.HexToAddress("0x74b7f16337b8972027f6196a17a631ac6de26d22")}, nil)
+	require.NoError(t, err)
+	require.Len(t, deposits, 2)
+
+	deposits, err = store.GetPendingTransactions(ctx, addr, 25, 0, []common.Address{common.HexToAddress("0xca3faf8a0e99b136394286569f95f04127cb2087"), common.HexToAddress("0x74b7f16337b8972027f6196a17a631ac6de26d22")}, nil)
 	require.NoError(t, err)
 	require.Len(t, deposits, 2)
 }

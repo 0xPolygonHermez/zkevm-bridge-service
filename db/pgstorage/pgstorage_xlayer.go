@@ -35,7 +35,7 @@ func (p *PostgresStorage) GetDepositsXLayer(ctx context.Context, destAddr string
 		ORDER BY d.block_id DESC, d.deposit_cnt DESC LIMIT $2 OFFSET $3`
 	allowListBytes := make([][]byte, 0)
 	for _, addr := range messageAllowlist {
-		allowListBytes = append(allowListBytes, addr[:])
+		allowListBytes = append(allowListBytes, addr.Bytes())
 	}
 	return p.getDepositList(ctx, getDepositsSQL, dbTx, common.FromHex(destAddr), limit, offset, pq.Array(allowListBytes), utils.GetRollupNetworkId())
 }
@@ -71,7 +71,7 @@ func (p *PostgresStorage) GetPendingTransactions(ctx context.Context, destAddr s
 
 	allowListBytes := make([][]byte, 0)
 	for _, addr := range messageAllowlist {
-		allowListBytes = append(allowListBytes, addr[:])
+		allowListBytes = append(allowListBytes, addr.Bytes())
 	}
 	return p.getDepositList(ctx, getDepositsSQL, dbTx, common.FromHex(destAddr), limit, offset, pq.Array(allowListBytes), utils.GetRollupNetworkId())
 }
