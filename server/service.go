@@ -39,6 +39,7 @@ type bridgeService struct {
 	auths                         map[uint]*bind.TransactOpts
 	messagePushProducer           messagepush.KafkaProducer
 	messageBridgeAddressAllowlist []common.Address
+	AllowContractMappingToken     map[string]string
 }
 
 // NewBridgeService creates new bridge service.
@@ -70,6 +71,7 @@ func NewBridgeService(cfg Config, height uint8, networks []uint, l2Clients []*ut
 		cache:            cache,
 
 		messageBridgeAddressAllowlist: cfg.MessageBridgeAddressAllowlist,
+		AllowContractMappingToken:     cfg.AllowContractMappingToken,
 	}
 }
 
