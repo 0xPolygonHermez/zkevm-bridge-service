@@ -28,6 +28,6 @@ type Config struct {
 	SentinelConfigFilePath string `mapstructure:"SentinelConfigFilePath"`
 
 	// XLayer
-	MessageBridgeAddressAllowlist []common.Address  `mapstructure:"MessageBridgeAddressAllowlist"`
-	AllowContractMappingToken     map[string]string `mapstructure:"AllowContractMappingToken"`
+	MessageBridgeAddressAllowlist []common.Address `mapstructure:"MessageBridgeAddressAllowlist"`
+	AllowContractMappedToken      []string         `mapstructure:"AllowContractMappedToken"`
 }

@@ -39,7 +39,7 @@ type bridgeService struct {
 	auths                         map[uint]*bind.TransactOpts
 	messagePushProducer           messagepush.KafkaProducer
 	messageBridgeAddressAllowlist []common.Address
-	AllowContractMappingToken     map[string]string
+	allowContractMappingToken     map[string]string
 }
 
 // NewBridgeService creates new bridge service.
@@ -58,6 +58,13 @@ func NewBridgeService(cfg Config, height uint8, networks []uint, l2Clients []*ut
 	if err != nil {
 		panic(err)
 	}
+	var allowContractMappingToken map[string]string
+	if cfg.MessageBridgeAddressAllowlist != nil && cfg.AllowContractMappedToken != nil {
+		allowContractMappingToken = make(map[string]string)
+		for i, bridgeAddr := range cfg.MessageBridgeAddressAllowlist {
+			allowContractMappingToken[bridgeAddr.String()] = cfg.AllowContractMappedToken[i]
+		}
+	}
 	return &bridgeService{
 		rollupID:         rollupID,
 		storage:          storage.(bridgeServiceStorage),
@@ -71,7 +78,7 @@ func NewBridgeService(cfg Config, height uint8, networks []uint, l2Clients []*ut
 		cache:            cache,
 
 		messageBridgeAddressAllowlist: cfg.MessageBridgeAddressAllowlist,
-		AllowContractMappingToken:     cfg.AllowContractMappingToken,
+		allowContractMappingToken:     allowContractMappingToken,
 	}
 }
 

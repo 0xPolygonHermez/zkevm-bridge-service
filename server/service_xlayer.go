@@ -127,7 +127,8 @@ func (s *bridgeService) GetMainCoins(ctx context.Context, req *pb.GetMainCoinsRe
 }
 
 func (s *bridgeService) replaceTokenAddrForUsdc(transaction *pb.Transaction) {
-	token, ok := s.AllowContractMappingToken[transaction.BridgeToken]
+	log.Debugf("usdc token config: %v", s.allowContractMappingToken)
+	token, ok := s.allowContractMappingToken[transaction.BridgeToken]
 	if !ok {
 		return
 	}
