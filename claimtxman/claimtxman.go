@@ -199,7 +199,7 @@ func (tm *ClaimTxManager) processDepositStatus(ger *etherman.GlobalExitRoot, dbT
 				mtProof[i] = proof[i]
 				mtRollupProof[i] = rollupProof[i]
 			}
-			tx, err := tm.l2Node.BuildSendClaimXLayer(tm.ctx, deposit, mtProof, mtRollupProof,
+			tx, err := tm.l2Node.BuildSendClaim(tm.ctx, deposit, mtProof, mtRollupProof,
 				&etherman.GlobalExitRoot{
 					ExitRoots: []common.Hash{
 						ger.ExitRoots[0],

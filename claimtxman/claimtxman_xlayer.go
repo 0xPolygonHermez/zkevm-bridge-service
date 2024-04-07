@@ -222,7 +222,7 @@ func (tm *ClaimTxManager) processDepositStatusL1(newGer *etherman.GlobalExitRoot
 			mtProof[i] = proof[i]
 			mtRollupProof[i] = rollupProof[i]
 		}
-		tx, err := tm.l2Node.BuildSendClaim(tm.ctx, deposit, mtProof, mtRollupProof,
+		tx, err := tm.l2Node.BuildSendClaimXLayer(tm.ctx, deposit, mtProof, mtRollupProof,
 			&etherman.GlobalExitRoot{
 				ExitRoots: []common.Hash{
 					ger.ExitRoots[0],
@@ -230,7 +230,7 @@ func (tm *ClaimTxManager) processDepositStatusL1(newGer *etherman.GlobalExitRoot
 				}}, 1, 1, 1, tm.rollupID,
 			tm.auth)
 		if err != nil {
-			log.Errorf("error BuildSendClaim tx for deposit %d. Error: %v", deposit.DepositCount, err)
+			log.Errorf("error BuildSendClaimXLayer tx for deposit %d. Error: %v", deposit.DepositCount, err)
 			tm.rollbackStore(dbTx)
 			return err
 		}
@@ -329,7 +329,7 @@ func (tm *ClaimTxManager) processDepositStatusXLayer(ger *etherman.GlobalExitRoo
 				mtProof[i] = proof[i]
 				mtRollupProof[i] = rollupProof[i]
 			}
-			tx, err := tm.l2Node.BuildSendClaim(tm.ctx, deposit, mtProof, mtRollupProof,
+			tx, err := tm.l2Node.BuildSendClaimXLayer(tm.ctx, deposit, mtProof, mtRollupProof,
 				&etherman.GlobalExitRoot{
 					ExitRoots: []common.Hash{
 						ger.ExitRoots[0],
@@ -337,7 +337,7 @@ func (tm *ClaimTxManager) processDepositStatusXLayer(ger *etherman.GlobalExitRoo
 					}}, 1, 1, 1, tm.rollupID,
 				tm.auth)
 			if err != nil {
-				log.Errorf("error BuildSendClaim tx for deposit %d. Error: %v", deposit.DepositCount, err)
+				log.Errorf("error BuildSendClaimXLayer tx for deposit %d. Error: %v", deposit.DepositCount, err)
 				return err
 			}
 			log.Debugf("claimTx for deposit %d build successfully %d", deposit.DepositCount)
