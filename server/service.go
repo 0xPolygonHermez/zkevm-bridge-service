@@ -426,6 +426,7 @@ func (s *bridgeService) GetBridge(ctx context.Context, req *pb.GetBridgeRequest)
 			ClaimTxHash:   claimTxHash,
 			Metadata:      "0x" + hex.EncodeToString(deposit.Metadata),
 			ReadyForClaim: deposit.ReadyForClaim,
+			GlobalIndex:   s.getGlobalIndex(deposit).String(),
 		},
 	}, nil
 }
