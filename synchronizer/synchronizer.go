@@ -564,41 +564,41 @@ func (s *ClientSynchronizer) checkReorg(latestBlock *etherman.Block) (*etherman.
 }
 
 func (s *ClientSynchronizer) processVerifyBatch(verifyBatch etherman.VerifiedBatch, blockID uint64, dbTx pgx.Tx) error {
-	if verifyBatch.RollupID == s.etherMan.GetRollupID()-1 {
-		// Just check that the calculated RollupExitRoot is fine
-		network, err := s.bridgeCtrl.GetNetworkID(s.networkID)
-		if err != nil {
-			log.Errorf("networkID: %d, error getting NetworkID. Error: %v", s.networkID, err)
-			rollbackErr := s.storage.Rollback(s.ctx, dbTx)
-			if rollbackErr != nil {
-				log.Errorf("networkID: %d, error rolling back state. BlockNumber: %d, rollbackErr: %v, error : %s",
-					s.networkID, verifyBatch.BlockNumber, rollbackErr, err.Error())
-				return rollbackErr
-			}
-			return err
-		}
-		ok, err := s.storage.CheckIfRootExists(s.ctx, verifyBatch.LocalExitRoot.Bytes(), network, dbTx)
-		if err != nil {
-			log.Errorf("networkID: %d, error Checking if root exists. Error: %v", s.networkID, err)
-			rollbackErr := s.storage.Rollback(s.ctx, dbTx)
-			if rollbackErr != nil {
-				log.Errorf("networkID: %d, error rolling back state. BlockNumber: %d, rollbackErr: %v, error : %s",
-					s.networkID, verifyBatch.BlockNumber, rollbackErr, err.Error())
-				return rollbackErr
-			}
-			return err
-		}
-		if !ok {
-			log.Errorf("networkID: %d, Root: %s doesn't exist!", s.networkID, verifyBatch.LocalExitRoot.String())
-			rollbackErr := s.storage.Rollback(s.ctx, dbTx)
-			if rollbackErr != nil {
-				log.Errorf("networkID: %d, error rolling back state. BlockNumber: %d, rollbackErr: %v, error : %s",
-					s.networkID, verifyBatch.BlockNumber, rollbackErr, err.Error())
-				return rollbackErr
-			}
-			return fmt.Errorf("networkID: %d, Root: %s doesn't exist!", s.networkID, verifyBatch.LocalExitRoot.String())
-		}
-	}
+	//if verifyBatch.RollupID == s.etherMan.GetRollupID()-1 {
+	//	// Just check that the calculated RollupExitRoot is fine
+	//	network, err := s.bridgeCtrl.GetNetworkID(s.networkID)
+	//	if err != nil {
+	//		log.Errorf("networkID: %d, error getting NetworkID. Error: %v", s.networkID, err)
+	//		rollbackErr := s.storage.Rollback(s.ctx, dbTx)
+	//		if rollbackErr != nil {
+	//			log.Errorf("networkID: %d, error rolling back state. BlockNumber: %d, rollbackErr: %v, error : %s",
+	//				s.networkID, verifyBatch.BlockNumber, rollbackErr, err.Error())
+	//			return rollbackErr
+	//		}
+	//		return err
+	//	}
+	//	ok, err := s.storage.CheckIfRootExists(s.ctx, verifyBatch.LocalExitRoot.Bytes(), network, dbTx)
+	//	if err != nil {
+	//		log.Errorf("networkID: %d, error Checking if root exists. Error: %v", s.networkID, err)
+	//		rollbackErr := s.storage.Rollback(s.ctx, dbTx)
+	//		if rollbackErr != nil {
+	//			log.Errorf("networkID: %d, error rolling back state. BlockNumber: %d, rollbackErr: %v, error : %s",
+	//				s.networkID, verifyBatch.BlockNumber, rollbackErr, err.Error())
+	//			return rollbackErr
+	//		}
+	//		return err
+	//	}
+	//	if !ok {
+	//		log.Errorf("networkID: %d, Root: %s doesn't exist!", s.networkID, verifyBatch.LocalExitRoot.String())
+	//		rollbackErr := s.storage.Rollback(s.ctx, dbTx)
+	//		if rollbackErr != nil {
+	//			log.Errorf("networkID: %d, error rolling back state. BlockNumber: %d, rollbackErr: %v, error : %s",
+	//				s.networkID, verifyBatch.BlockNumber, rollbackErr, err.Error())
+	//			return rollbackErr
+	//		}
+	//		return fmt.Errorf("networkID: %d, Root: %s doesn't exist!", s.networkID, verifyBatch.LocalExitRoot.String())
+	//	}
+	//}
 	rollupLeaf := etherman.RollupExitLeaf{
 		BlockID:  blockID,
 		Leaf:     verifyBatch.LocalExitRoot,
