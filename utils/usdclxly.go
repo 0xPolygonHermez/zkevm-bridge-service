@@ -13,6 +13,7 @@ var (
 )
 
 func InitUSDCLxLyMapping(usdcContractAddresses, usdcTokenAddresses []common.Address) {
+	log.Debugf("USDCLxLyMapping: contracts[%v] tokens[%v]", usdcContractAddresses, usdcTokenAddresses)
 	if len(usdcContractAddresses) != len(usdcTokenAddresses) {
 		log.Errorf("InitUSDCLxLyMapping: contract addresses (%v) and token addresses (%v) have different length", len(usdcContractAddresses), len(usdcTokenAddresses))
 	}
@@ -25,6 +26,14 @@ func InitUSDCLxLyMapping(usdcContractAddresses, usdcTokenAddresses []common.Addr
 		}
 		usdcContractToTokenMapping[usdcContractAddresses[i]] = usdcTokenAddresses[i]
 	}
+}
+
+func GetUSDCContractAddressList() []common.Address {
+	result := make([]common.Address, 0)
+	for addr, _ := range usdcContractToTokenMapping {
+		result = append(result, addr)
+	}
+	return result
 }
 
 func IsUSDCContractAddress(address common.Address) bool {
