@@ -126,13 +126,13 @@ func (s *bridgeService) GetMainCoins(ctx context.Context, req *pb.GetMainCoinsRe
 	}, nil
 }
 
-func (s *bridgeService) replaceTokenAddrForUsdc(transaction *pb.Transaction) {
-	log.Debugf("usdc token config: %v", s.allowContractMappingToken)
-	token, ok := s.allowContractMappingToken[transaction.BridgeToken]
+func (s *bridgeService) replaceUSDCDepositInfo(deposit *etherman.Deposit) {
+	token, ok := utils.GetUSDCTokenFromContract(deposit.OriginalAddress)
 	if !ok {
 		return
 	}
-	transaction.BridgeToken = token
+	deposit.OriginalAddress = token
+	_, deposit.Amount = utils.DecodeUSDCBridgeMetadata(deposit.Metadata)
 }
 
 // GetPendingTransactions returns the pending transactions of an account
@@ -169,9 +169,9 @@ func (s *bridgeService) GetPendingTransactions(ctx context.Context, req *pb.GetP
 
 	var pbTransactions []*pb.Transaction
 	for _, deposit := range deposits {
-		transaction := utils.EthermanDepositToPbTransaction(deposit)
 		// replace contract address to real token address
-		s.replaceTokenAddrForUsdc(transaction)
+		s.replaceUSDCDepositInfo(deposit)
+		transaction := utils.EthermanDepositToPbTransaction(deposit)
 		transaction.EstimateTime = estimatetime.GetDefaultCalculator().Get(deposit.NetworkID)
 		transaction.Status = uint32(pb.TransactionStatus_TX_CREATED)
 		transaction.GlobalIndex = s.getGlobalIndex(deposit).String()
@@ -264,9 +264,9 @@ func (s *bridgeService) GetAllTransactions(ctx context.Context, req *pb.GetAllTr
 
 	var pbTransactions []*pb.Transaction
 	for _, deposit := range deposits {
-		transaction := utils.EthermanDepositToPbTransaction(deposit)
 		// replace contract address to real token address
-		s.replaceTokenAddrForUsdc(transaction)
+		s.replaceUSDCDepositInfo(deposit)
+		transaction := utils.EthermanDepositToPbTransaction(deposit)
 		transaction.EstimateTime = estimatetime.GetDefaultCalculator().Get(deposit.NetworkID)
 		transaction.Status = uint32(pb.TransactionStatus_TX_CREATED) // Not ready for claim
 		transaction.GlobalIndex = s.getGlobalIndex(deposit).String()

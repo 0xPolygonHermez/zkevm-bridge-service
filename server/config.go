@@ -29,5 +29,4 @@ type Config struct {
 
 	// XLayer
 	MessageBridgeAddressAllowlist []common.Address `mapstructure:"MessageBridgeAddressAllowlist"`
-	AllowContractMappedToken      []string         `mapstructure:"AllowContractMappedToken"`
 }

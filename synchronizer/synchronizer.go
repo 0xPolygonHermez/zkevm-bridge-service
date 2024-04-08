@@ -40,10 +40,9 @@ type ClientSynchronizer struct {
 
 	// XLayer
 	// Producer to push the transaction status change to front end
-	messagePushProducer   messagepush.KafkaProducer
-	redisStorage          redisstorage.RedisStorage
-	rollupID              uint
-	usdcContractAddresses map[common.Address]bool
+	messagePushProducer messagepush.KafkaProducer
+	redisStorage        redisstorage.RedisStorage
+	rollupID            uint
 }
 
 // NewSynchronizer creates and initializes an instance of Synchronizer
@@ -82,45 +81,38 @@ func NewSynchronizer(
 		log.Info("LxLyEtrog already activated")
 	}
 	rollupID := ethMan.GetRollupID()
-
-	usdcContractAddresses := make(map[common.Address]bool)
-	for _, addr := range cfg.USDCContractAddresses {
-		usdcContractAddresses[addr] = true
-	}
 	if networkID == 0 {
 		return &ClientSynchronizer{
-			bridgeCtrl:            bridge,
-			storage:               storage.(storageInterface),
-			etherMan:              ethMan,
-			ctx:                   ctx,
-			cancelCtx:             cancel,
-			genBlockNumber:        genBlockNumber,
-			cfg:                   cfg,
-			networkID:             networkID,
-			chExitRootEvent:       chExitRootEvent,
-			chSynced:              chSynced,
-			zkEVMClient:           zkEVMClient,
-			l1RollupExitRoot:      ger.ExitRoots[1],
-			messagePushProducer:   messagePushProducer,
-			redisStorage:          redisStorage,
-			rollupID:              rollupID,
-			usdcContractAddresses: usdcContractAddresses,
+			bridgeCtrl:          bridge,
+			storage:             storage.(storageInterface),
+			etherMan:            ethMan,
+			ctx:                 ctx,
+			cancelCtx:           cancel,
+			genBlockNumber:      genBlockNumber,
+			cfg:                 cfg,
+			networkID:           networkID,
+			chExitRootEvent:     chExitRootEvent,
+			chSynced:            chSynced,
+			zkEVMClient:         zkEVMClient,
+			l1RollupExitRoot:    ger.ExitRoots[1],
+			messagePushProducer: messagePushProducer,
+			redisStorage:        redisStorage,
+			rollupID:            rollupID,
 		}, nil
 	}
 	return &ClientSynchronizer{
-		bridgeCtrl:            bridge,
-		storage:               storage.(storageInterface),
-		etherMan:              ethMan,
-		ctx:                   ctx,
-		cancelCtx:             cancel,
-		genBlockNumber:        genBlockNumber,
-		cfg:                   cfg,
-		chSynced:              chSynced,
-		networkID:             networkID,
-		messagePushProducer:   messagePushProducer,
-		redisStorage:          redisStorage,
-		rollupID:              rollupID,
-		usdcContractAddresses: usdcContractAddresses,
+		bridgeCtrl:          bridge,
+		storage:             storage.(storageInterface),
+		etherMan:            ethMan,
+		ctx:                 ctx,
+		cancelCtx:           cancel,
+		genBlockNumber:      genBlockNumber,
+		cfg:                 cfg,
+		chSynced:            chSynced,
+		networkID:           networkID,
+		messagePushProducer: messagePushProducer,
+		redisStorage:        redisStorage,
+		rollupID:            rollupID,
 	}, nil
 }
 

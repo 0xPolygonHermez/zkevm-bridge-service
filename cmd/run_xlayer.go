@@ -87,6 +87,8 @@ func startServer(ctx *cli.Context, opts ...runOptionFunc) error {
 		return err
 	}
 
+	utils.InitUSDCLxLyMapping(c.BusinessConfig.USDCContractAddresses, c.BusinessConfig.USDCTokenAddresses)
+
 	l1ChainId := c.Etherman.L1ChainId
 	l2ChainIds := c.Etherman.L2ChainIds
 	var chainIDs = []uint{l1ChainId}

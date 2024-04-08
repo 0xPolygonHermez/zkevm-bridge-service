@@ -10,26 +10,15 @@ import (
 	"github.com/0xPolygonHermez/zkevm-bridge-service/log"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/pushtask"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/utils"
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/jackc/pgx/v4"
 )
 
 func (s *ClientSynchronizer) beforeProcessDeposit(deposit *etherman.Deposit) {
 	// If the deposit is USDC LxLy message, extract the user address from the metadata
-	if deposit.LeafType == uint8(utils.LeafTypeMessage) && s.usdcContractAddresses[deposit.OriginalAddress] {
+	if deposit.LeafType == uint8(utils.LeafTypeMessage) && utils.IsUSDCContractAddress(deposit.OriginalAddress) {
 		deposit.DestContractAddress = deposit.DestinationAddress
-		deposit.DestinationAddress = extractUSDCDepositUserAddress(deposit.Metadata)
+		deposit.DestinationAddress, _ = utils.DecodeUSDCBridgeMetadata(deposit.Metadata)
 	}
-}
-
-func extractUSDCDepositUserAddress(metadata []byte) common.Address {
-	// Metadata structure:
-	// - Destination address: 32 bytes
-	// - Bridging amount: 32 bytes
-
-	// Convert the first 32 bytes to address
-	// Maybe there's a more elegant way?
-	return common.BytesToAddress(metadata[:32]) //nolint:gomnd
 }
 
 func (s *ClientSynchronizer) afterProcessDeposit(deposit *etherman.Deposit, depositID uint64, dbTx pgx.Tx) error {
@@ -55,7 +44,7 @@ func (s *ClientSynchronizer) afterProcessDeposit(deposit *etherman.Deposit, depo
 			return
 		}
 		if deposit.LeafType != uint8(utils.LeafTypeAsset) {
-			if s.usdcContractAddresses[deposit.OriginalAddress] {
+			if !utils.IsUSDCContractAddress(deposit.OriginalAddress) {
 				log.Infof("transaction is not asset, so skip push update change, hash: %v", deposit.TxHash)
 				return
 			}
@@ -112,7 +101,7 @@ func (s *ClientSynchronizer) afterProcessClaim(claim *etherman.Claim) error {
 			return
 		}
 		if deposit.LeafType != uint8(utils.LeafTypeAsset) {
-			if s.usdcContractAddresses[deposit.OriginalAddress] {
+			if !utils.IsUSDCContractAddress(deposit.OriginalAddress) {
 				log.Infof("transaction is not asset, so skip push update change, hash: %v", deposit.TxHash)
 				return
 			}
