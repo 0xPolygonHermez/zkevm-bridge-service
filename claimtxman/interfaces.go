@@ -28,6 +28,7 @@ type storageInterface interface {
 	UpdateL1DepositStatus(ctx context.Context, depositCount uint, dbTx pgx.Tx) error
 	GetDeposit(ctx context.Context, depositCounterUser uint, networkID uint, dbTx pgx.Tx) (*etherman.Deposit, error)
 	GetClaim(ctx context.Context, depositCount, networkID uint, dbTx pgx.Tx) (*etherman.Claim, error)
+	GetClaimTxsByStatusWithLimit(ctx context.Context, statuses []types.MonitoredTxStatus, limit, offset uint, dbTx pgx.Tx) ([]types.MonitoredTx, error)
 }
 
 type bridgeServiceInterface interface {
