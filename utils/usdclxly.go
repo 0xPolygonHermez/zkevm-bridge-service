@@ -30,7 +30,7 @@ func InitUSDCLxLyMapping(usdcContractAddresses, usdcTokenAddresses []common.Addr
 
 func GetUSDCContractAddressList() []common.Address {
 	result := make([]common.Address, 0)
-	for addr, _ := range usdcContractToTokenMapping {
+	for addr := range usdcContractToTokenMapping {
 		result = append(result, addr)
 	}
 	return result
