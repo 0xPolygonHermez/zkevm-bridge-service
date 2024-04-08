@@ -675,7 +675,7 @@ func (tm *ClaimTxManager) pushTransactionUpdate(deposit *etherman.Deposit, statu
 		log.Errorf("kafka push producer is nil, so can't push tx status change msg!")
 		return
 	}
-	if deposit.LeafType != uint8(utils.LeafTypeAsset) {
+	if deposit.LeafType != uint8(utils.LeafTypeAsset) && !tm.isDepositMessageAllowed(deposit) {
 		log.Infof("transaction is not asset, so skip push update change, hash: %v", deposit.TxHash)
 		return
 	}
