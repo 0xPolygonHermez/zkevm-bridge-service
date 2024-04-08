@@ -304,6 +304,7 @@ message Transaction {
     uint32 leafType = 17;
     uint64 blockNumber = 18;
     string globalIndex = 19;
+    string destContractAddr = 20;
 }
 
 // Monitored tx
