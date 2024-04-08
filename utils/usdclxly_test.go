@@ -30,7 +30,7 @@ func TestUSDCLxLyMapping(t *testing.T) {
 	require.True(t, ok)
 	require.Equal(t, tokenAddr2, token)
 
-	token, ok = GetUSDCTokenFromContract(contractAddr3)
+	_, ok = GetUSDCTokenFromContract(contractAddr3)
 	require.False(t, ok)
 }
 
