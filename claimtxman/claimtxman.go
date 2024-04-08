@@ -91,7 +91,7 @@ func NewClaimTxManager(cfg Config, chExitRootEvent chan *etherman.GlobalExitRoot
 		nonceCache:          cache,
 		messagePushProducer: producer,
 		redisStorage:        redisStorage,
-		monitorTxsLimit:     apolloconfig.NewIntEntry("claimtxman.monitorTxsLimit", uint(128)),
+		monitorTxsLimit:     apolloconfig.NewIntEntry("claimtxman.monitorTxsLimit", uint(128)), //nolint:gomnd
 	}, err
 }
 
