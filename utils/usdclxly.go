@@ -3,6 +3,7 @@ package utils
 import (
 	"math/big"
 
+	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/log"
 	"github.com/ethereum/go-ethereum/common"
 )
@@ -58,4 +59,13 @@ func DecodeUSDCBridgeMetadata(metadata []byte) (common.Address, *big.Int) {
 	// Convert the first 32 bytes to address, and last 32 bytes to big int
 	// Maybe there's a more elegant way?
 	return common.BytesToAddress(metadata[:32]), new(big.Int).SetBytes(metadata[32:]) //nolint:gomnd
+}
+
+func ReplaceUSDCDepositInfo(deposit *etherman.Deposit) {
+	token, ok := GetUSDCTokenFromContract(deposit.OriginalAddress)
+	if !ok {
+		return
+	}
+	deposit.OriginalAddress = token
+	_, deposit.Amount = DecodeUSDCBridgeMetadata(deposit.Metadata)
 }
