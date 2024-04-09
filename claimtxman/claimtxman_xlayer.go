@@ -620,6 +620,7 @@ func (tm *ClaimTxManager) monitorTxsXLayer(ctx context.Context) error {
 							mTxLog.Infof("nonce cache cleared for address %v", mTx.From.Hex())
 						}
 					}
+					tm.decreaseNonceCache(mTx.From)
 					mTx.RemoveHistory(signedTx)
 					// we should rebuild the monitored tx to fix the nonce
 					err := tm.ReviewMonitoredTxXLayer(ctx, &mTx)
@@ -667,6 +668,22 @@ func (tm *ClaimTxManager) setTxNonce(mTx *ctmtypes.MonitoredTx) error {
 	}
 	mTx.Nonce = nonce
 	return nil
+}
+
+// decreaseNonceCache decreases the nonce value stored in the local cache
+func (tm *ClaimTxManager) decreaseNonceCache(from common.Address) {
+	nonce, err := tm.l2Node.NonceAt(tm.ctx, from, nil)
+	if err != nil {
+		return
+	}
+	if tempNonce, found := tm.nonceCache.Get(from.Hex()); found {
+		tempNonce--
+		if tempNonce >= nonce {
+			tm.nonceCache.Add(from.Hex(), tempNonce)
+		} else {
+			tm.nonceCache.Remove(from.Hex())
+		}
+	}
 }
 
 // Push message to FE to notify about tx status change
