@@ -38,7 +38,6 @@ func (s *ClientSynchronizer) afterProcessDeposit(deposit *etherman.Deposit, depo
 		}
 	}
 
-	utils.ReplaceUSDCDepositInfo(deposit)
 	// Notify FE about a new deposit
 	go func() {
 		if s.messagePushProducer == nil {
@@ -51,6 +50,8 @@ func (s *ClientSynchronizer) afterProcessDeposit(deposit *etherman.Deposit, depo
 				return
 			}
 		}
+		// after check allow list for original address, replace token address for usdc
+		utils.ReplaceUSDCDepositInfo(deposit)
 		err := s.messagePushProducer.PushTransactionUpdate(&pb.Transaction{
 			FromChain:    uint32(deposit.NetworkID),
 			ToChain:      uint32(deposit.DestinationNetwork),
