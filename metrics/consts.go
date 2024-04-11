@@ -1,7 +1,7 @@
 package metrics
 
 const (
-	endpointMetrics = "/metrics"
+	defaultMetricsEndpoint = "/metrics"
 )
 
 // Metric types

@@ -43,7 +43,12 @@ func StartMetricsHttpServer(c Config) {
 	mux := http.NewServeMux()
 	addr := ":" + c.Port
 
-	mux.Handle(endpointMetrics, promhttp.Handler())
+	endpoint := c.Endpoint
+	if endpoint == "" {
+		endpoint = defaultMetricsEndpoint
+	}
+
+	mux.Handle(endpoint, promhttp.Handler())
 	srv := &http.Server{
 		Addr:        addr,
 		Handler:     mux,
