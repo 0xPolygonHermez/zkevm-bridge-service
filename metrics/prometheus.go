@@ -37,7 +37,7 @@ func StartMetricsHttpServer(c Config) {
 	}
 
 	// Init metrics registry
-	initMetrics()
+	initMetrics(c)
 
 	// Start metrics HTTP server
 	mux := http.NewServeMux()

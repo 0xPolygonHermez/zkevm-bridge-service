@@ -13,7 +13,8 @@ const (
 
 // Metric names and labels
 const (
-	prefix = "bridge_"
+	prefix   = "bridge_"
+	labelEnv = "env"
 
 	prefixRequest        = prefix + "request_"
 	metricRequestCount   = prefixRequest + "count"

@@ -12,7 +12,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-func initMetrics() {
+func initMetrics(c Config) {
 	if !initialized {
 		registerer = prometheus.DefaultRegisterer
 		gauges = make(map[string]*prometheus.GaugeVec)
@@ -21,15 +21,17 @@ func initMetrics() {
 		initialized = true
 	}
 
-	registerCounter(prometheus.CounterOpts{Name: metricRequestCount}, labelMethod, labelIsSuccess)
-	registerHistogram(prometheus.HistogramOpts{Name: metricRequestLatency}, labelMethod, labelIsSuccess)
-	registerCounter(prometheus.CounterOpts{Name: metricOrderCount}, labelNetworkID, labelLeafType, labelToken, labelTokenAddress, labelTokenOriginNetwork, labelDestNet)
-	registerCounter(prometheus.CounterOpts{Name: metricOrderTotalAmount}, labelNetworkID, labelLeafType, labelToken, labelTokenAddress, labelTokenOriginNetwork, labelDestNet)
-	registerHistogram(prometheus.HistogramOpts{Name: metricOrderWaitTime}, labelNetworkID, labelDestNet)
-	registerGauge(prometheus.GaugeOpts{Name: metricMonitoredTxsPendingCount})
-	registerCounter(prometheus.CounterOpts{Name: metricMonitoredTxsResultCount}, labelStatus)
-	registerHistogram(prometheus.HistogramOpts{Name: metricMonitoredTxsDuration})
-	registerCounter(prometheus.CounterOpts{Name: metricSynchronizerEventCount}, labelNetworkID, labelEventType)
+	constLabels := map[string]string{labelEnv: c.Env}
+
+	registerCounter(prometheus.CounterOpts{Name: metricRequestCount, ConstLabels: constLabels}, labelMethod, labelIsSuccess)
+	registerHistogram(prometheus.HistogramOpts{Name: metricRequestLatency, ConstLabels: constLabels}, labelMethod, labelIsSuccess)
+	registerCounter(prometheus.CounterOpts{Name: metricOrderCount, ConstLabels: constLabels}, labelNetworkID, labelLeafType, labelToken, labelTokenAddress, labelTokenOriginNetwork, labelDestNet)
+	registerCounter(prometheus.CounterOpts{Name: metricOrderTotalAmount, ConstLabels: constLabels}, labelNetworkID, labelLeafType, labelToken, labelTokenAddress, labelTokenOriginNetwork, labelDestNet)
+	registerHistogram(prometheus.HistogramOpts{Name: metricOrderWaitTime, ConstLabels: constLabels}, labelNetworkID, labelDestNet)
+	registerGauge(prometheus.GaugeOpts{Name: metricMonitoredTxsPendingCount, ConstLabels: constLabels})
+	registerCounter(prometheus.CounterOpts{Name: metricMonitoredTxsResultCount, ConstLabels: constLabels}, labelStatus)
+	registerHistogram(prometheus.HistogramOpts{Name: metricMonitoredTxsDuration, ConstLabels: constLabels})
+	registerCounter(prometheus.CounterOpts{Name: metricSynchronizerEventCount, ConstLabels: constLabels}, labelNetworkID, labelEventType)
 }
 
 // RecordRequest increments the request count for the method
