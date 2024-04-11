@@ -104,6 +104,7 @@ services:
     ports:
       - 8080:8080
       - 9090:9090
+      - 9300:9091
     environment:
       - ZKEVM_BRIDGE_DATABASE_USER=test_user
       - ZKEVM_BRIDGE_DATABASE_PASSWORD=test_password
@@ -123,6 +124,8 @@ services:
   xlayer-bridge-service-task:
     container_name: xlayer-bridge-service-task
     image: xlayer-bridge-service
+    ports:
+      - 9302:9091
     environment:
       - ZKEVM_BRIDGE_DATABASE_USER=test_user
       - ZKEVM_BRIDGE_DATABASE_PASSWORD=test_password
@@ -141,6 +144,8 @@ services:
   xlayer-bridge-service-push:
     container_name: xlayer-bridge-service-push
     image: xlayer-bridge-service
+    ports:
+      - 9301:9091
     environment:
       - ZKEVM_BRIDGE_DATABASE_USER=test_user
       - ZKEVM_BRIDGE_DATABASE_PASSWORD=test_password
@@ -296,6 +301,7 @@ services:
     ports:
       - 8080:8080
       - 9090:9090
+      - 9300:9091
     environment:
       - ZKEVM_BRIDGE_DATABASE_USER=test_user
       - ZKEVM_BRIDGE_DATABASE_PASSWORD=test_password
@@ -318,6 +324,7 @@ services:
     ports:
       - 8080:8080
       - 9090:9090
+      - 9300:9091
     environment:
       - ZKEVM_BRIDGE_DATABASE_USER=test_user
       - ZKEVM_BRIDGE_DATABASE_PASSWORD=test_password

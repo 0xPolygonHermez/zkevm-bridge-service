@@ -96,3 +96,8 @@ ExternalListenAddr = "127.0.0.1:26659"
 [BusinessConfig]
 StandardChainIds = [195]
 InnerChainIds = [19500]
+
+[Metrics]
+Enabled = true
+Port = "9091"
+

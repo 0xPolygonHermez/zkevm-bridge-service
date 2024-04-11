@@ -15,6 +15,7 @@ import (
 	"github.com/0xPolygonHermez/zkevm-bridge-service/localcache"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/log"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/messagepush"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/metrics"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/pushtask"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/redisstorage"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/sentinel"
@@ -166,7 +167,7 @@ func startServer(ctx *cli.Context, opts ...runOptionFunc) error {
 		return err
 	}
 
-	mainCoinsCache, err := localcache.NewMainCoinsCache(apiStorage)
+	err = localcache.InitDefaultCache(apiStorage)
 	if err != nil {
 		log.Error(err)
 		return err
@@ -194,12 +195,17 @@ func startServer(ctx *cli.Context, opts ...runOptionFunc) error {
 		}()
 	}
 
+	// Start metrics
+	if c.Metrics.Enabled {
+		go metrics.StartMetricsHttpServer(c.Metrics)
+	}
+
 	// Initialize chainId manager
 	utils.InitChainIdManager(networkIDs, chainIDs)
 
 	rollupID := l1Etherman.GetRollupID()
 	bridgeService := server.NewBridgeService(c.BridgeServer, c.BridgeController.Height, networkIDs, l2NodeClients, l2Auths, apiStorage, rollupID).
-		WithRedisStorage(redisStorage).WithMainCoinsCache(mainCoinsCache).WithMessagePushProducer(messagePushProducer)
+		WithRedisStorage(redisStorage).WithMainCoinsCache(localcache.GetDefaultCache()).WithMessagePushProducer(messagePushProducer)
 
 	// Initialize inner chain id conf
 	utils.InnitOkInnerChainIdMapper(c.BusinessConfig)

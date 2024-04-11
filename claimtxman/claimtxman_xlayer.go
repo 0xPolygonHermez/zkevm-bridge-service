@@ -10,6 +10,7 @@ import (
 	ctmtypes "github.com/0xPolygonHermez/zkevm-bridge-service/claimtxman/types"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/log"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/metrics"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/pushtask"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/utils"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/utils/gerror"
@@ -142,6 +143,8 @@ func (tm *ClaimTxManager) processDepositStatusL2(ger *etherman.GlobalExitRoot) e
 	for _, deposit := range deposits {
 		// Notify FE that tx is pending auto claim
 		go tm.pushTransactionUpdate(deposit, uint32(pb.TransactionStatus_TX_PENDING_USER_CLAIM))
+		// Record order waiting time metric
+		metrics.RecordOrderWaitTime(uint32(deposit.NetworkID), uint32(deposit.DestinationNetwork), time.Since(deposit.Time))
 	}
 	return nil
 }
@@ -266,6 +269,8 @@ func (tm *ClaimTxManager) processDepositStatusL1(newGer *etherman.GlobalExitRoot
 
 		// Notify FE that tx is pending auto claim
 		go tm.pushTransactionUpdate(deposit, uint32(pb.TransactionStatus_TX_PENDING_AUTO_CLAIM))
+		// Record order waiting time metric
+		metrics.RecordOrderWaitTime(uint32(deposit.NetworkID), uint32(deposit.DestinationNetwork), time.Since(deposit.Time))
 	}
 	return nil
 }
@@ -290,6 +295,8 @@ func (tm *ClaimTxManager) processDepositStatusXLayer(ger *etherman.GlobalExitRoo
 		for _, deposit := range deposits {
 			// Notify FE that tx is pending auto claim
 			go tm.pushTransactionUpdate(deposit, uint32(pb.TransactionStatus_TX_PENDING_USER_CLAIM))
+			// Record order waiting time metric
+			metrics.RecordOrderWaitTime(uint32(deposit.NetworkID), uint32(deposit.DestinationNetwork), time.Since(deposit.Time))
 		}
 	} else { // L1 exit root is updated in the trusted state
 		log.Infof("Mainnet exitroot %v is updated", ger.ExitRoots[0])
@@ -359,6 +366,8 @@ func (tm *ClaimTxManager) processDepositStatusXLayer(ger *etherman.GlobalExitRoo
 
 			// Notify FE that tx is pending auto claim
 			go tm.pushTransactionUpdate(deposit, uint32(pb.TransactionStatus_TX_PENDING_AUTO_CLAIM))
+			// Record order waiting time metric
+			metrics.RecordOrderWaitTime(uint32(deposit.NetworkID), uint32(deposit.DestinationNetwork), time.Since(deposit.Time))
 		}
 	}
 	return nil
@@ -425,6 +434,7 @@ func (tm *ClaimTxManager) monitorTxsXLayer(ctx context.Context) error {
 		return fmt.Errorf("failed to get created monitored txs: %v", err)
 	}
 	mLog.Infof("found %v monitored tx to process", len(mTxs))
+	metrics.RecordPendingMonitoredTxsCount(len(mTxs))
 
 	isResetNonce := false // it will reset the nonce in one cycle
 	for _, mTx := range mTxs {
@@ -445,6 +455,8 @@ func (tm *ClaimTxManager) monitorTxsXLayer(ctx context.Context) error {
 			if err != nil {
 				mTxLog.Errorf("failed to update tx status to confirmed: %v", err)
 			}
+			metrics.RecordMonitoredTxsResult(string(mTx.Status))
+			metrics.RecordAutoClaimDuration(time.Since(mTx.CreatedAt))
 			continue
 		}
 
@@ -500,6 +512,8 @@ func (tm *ClaimTxManager) monitorTxsXLayer(ctx context.Context) error {
 				if err != nil {
 					mTxLog.Errorf("failed to update monitored tx when confirmed: %v", err)
 				}
+				metrics.RecordMonitoredTxsResult(string(mTx.Status))
+				metrics.RecordAutoClaimDuration(time.Since(mTx.CreatedAt))
 				break
 			}
 
@@ -525,6 +539,7 @@ func (tm *ClaimTxManager) monitorTxsXLayer(ctx context.Context) error {
 			if err != nil {
 				mTxLog.Errorf("failed to update monitored tx when max history size limit reached: %v", err)
 			}
+			metrics.RecordMonitoredTxsResult(string(mTx.Status))
 
 			// Notify FE that tx is pending user claim
 			go func() {

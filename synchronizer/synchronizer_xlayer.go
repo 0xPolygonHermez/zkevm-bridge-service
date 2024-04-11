@@ -8,6 +8,7 @@ import (
 	"github.com/0xPolygonHermez/zkevm-bridge-service/estimatetime"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/log"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/metrics"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/pushtask"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/utils"
 	"github.com/jackc/pgx/v4"
@@ -72,6 +73,8 @@ func (s *ClientSynchronizer) afterProcessDeposit(deposit *etherman.Deposit, depo
 			log.Errorf("PushTransactionUpdate error: %v", err)
 		}
 	}()
+
+	metrics.RecordOrder(uint32(deposit.NetworkID), uint32(deposit.DestinationNetwork), uint32(deposit.LeafType), uint32(deposit.OriginalNetwork), deposit.OriginalAddress, deposit.Amount)
 	return nil
 }
 
