@@ -186,7 +186,7 @@ func (p *PostgresStorage) UpdateL1DepositStatus(ctx context.Context, depositCoun
 	return err
 }
 
-// UpdateL2DepositsStatus updates the ready_for_claim status of L2 deposits. and return deposit list
+// UpdateL2DepositsStatusXLayer updates the ready_for_claim status of L2 deposits. and return deposit list
 func (p *PostgresStorage) UpdateL2DepositsStatusXLayer(ctx context.Context, exitRoot []byte, rollupID, networkID uint, dbTx pgx.Tx) ([]*etherman.Deposit, error) {
 	const updateDepositsStatusSQL = `WITH d AS (UPDATE sync.deposit SET ready_for_claim = true, ready_time = $4
 		WHERE deposit_cnt <=
