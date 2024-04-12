@@ -38,6 +38,11 @@ func (s *ClientSynchronizer) afterProcessDeposit(deposit *etherman.Deposit, depo
 		}
 	}
 
+	// Original address is needed for message allow list check, but it may be changed when we replace USDC info
+	origAddress := deposit.OriginalAddress
+	// Replace the USDC info here so that the metrics can report the correct token info
+	utils.ReplaceUSDCDepositInfo(deposit)
+
 	// Notify FE about a new deposit
 	go func() {
 		if s.messagePushProducer == nil {
@@ -45,13 +50,11 @@ func (s *ClientSynchronizer) afterProcessDeposit(deposit *etherman.Deposit, depo
 			return
 		}
 		if deposit.LeafType != uint8(utils.LeafTypeAsset) {
-			if !utils.IsUSDCContractAddress(deposit.OriginalAddress) {
+			if !utils.IsUSDCContractAddress(origAddress) {
 				log.Infof("transaction is not asset, so skip push update change, hash: %v", deposit.TxHash)
 				return
 			}
 		}
-		// after check allow list for original address, replace token address for usdc
-		utils.ReplaceUSDCDepositInfo(deposit)
 		err := s.messagePushProducer.PushTransactionUpdate(&pb.Transaction{
 			FromChain:    uint32(deposit.NetworkID),
 			ToChain:      uint32(deposit.DestinationNetwork),
