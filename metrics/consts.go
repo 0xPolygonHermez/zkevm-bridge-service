@@ -13,7 +13,7 @@ const (
 
 // Metric names and labels
 const (
-	prefix   = "bridge_"
+	prefix   = "xlayer_bridge_"
 	labelEnv = "env"
 
 	prefixRequest        = prefix + "request_"
