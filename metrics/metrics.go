@@ -47,7 +47,7 @@ func RecordRequestLatency(method string, latency time.Duration, isSuccess bool) 
 
 // RecordOrder records one bridge order, increase the order count and add the amount to the total order amount
 // networkID is the "from" network of the transaction
-func RecordOrder(networkID, leafType, destNet, tokenOriginNetwork uint32, tokenAddress common.Address, amount *big.Int) {
+func RecordOrder(networkID, destNet, leafType, tokenOriginNetwork uint32, tokenAddress common.Address, amount *big.Int) {
 	tokenSymbol := "unknown"
 	if coinsCache := localcache.GetDefaultCache(); coinsCache != nil {
 		coinInfo, err := coinsCache.GetCoinInfoByAddress(context.Background(), tokenOriginNetwork, tokenAddress)
