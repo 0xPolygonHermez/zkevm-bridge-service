@@ -2,6 +2,7 @@ package metrics
 
 import (
 	"context"
+	"math"
 	"math/big"
 	"strconv"
 	"time"
@@ -49,10 +50,12 @@ func RecordRequestLatency(method string, latency time.Duration, isSuccess bool) 
 // networkID is the "from" network of the transaction
 func RecordOrder(networkID, destNet, leafType, tokenOriginNetwork uint32, tokenAddress common.Address, amount *big.Int) {
 	tokenSymbol := "unknown"
+	decimals := uint64(0)
 	if coinsCache := localcache.GetDefaultCache(); coinsCache != nil {
 		coinInfo, err := coinsCache.GetCoinInfoByAddress(context.Background(), tokenOriginNetwork, tokenAddress)
 		if err == nil {
 			tokenSymbol = coinInfo.Symbol
+			decimals = coinInfo.Decimals
 		}
 	}
 
@@ -60,6 +63,10 @@ func RecordOrder(networkID, destNet, leafType, tokenOriginNetwork uint32, tokenA
 	floatAmount, err := strconv.ParseFloat(amount.String(), 64) //nolint:gomnd
 	if err != nil {
 		log.Warnf("cannot convert [%v] to float", amount.String())
+	}
+	// Deflate the amount
+	if decimals != 0 {
+		floatAmount = floatAmount / math.Pow(10, float64(decimals)) //nolint:gomnd
 	}
 
 	labels := map[string]string{
