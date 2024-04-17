@@ -1,10 +1,9 @@
-package txcompressor
+package claimtxman
 
 import (
 	"context"
 	"fmt"
 
-	"github.com/0xPolygonHermez/zkevm-bridge-service/claimtxman"
 	ctmtypes "github.com/0xPolygonHermez/zkevm-bridge-service/claimtxman/types"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman/smartcontracts/generated_binding/ClaimCompressor"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/log"
@@ -18,7 +17,7 @@ const (
 	MinTxPerGroup = 2
 )
 
-type StorageRequireInterface interface {
+type StorageCompressedInterface interface {
 	GetClaimTxsByStatus(ctx context.Context, statuses []ctmtypes.MonitoredTxStatus, dbTx pgx.Tx) ([]ctmtypes.MonitoredTx, error)
 	GetMonitoredTxsGroups(ctx context.Context, groupIds []uint64, dbTx pgx.Tx) (map[uint64]ctmtypes.MonitoredTxGroupDBEntry, error)
 
@@ -32,13 +31,13 @@ type StorageRequireInterface interface {
 	Commit(ctx context.Context, dbTx pgx.Tx) error
 }
 
-type MonitorTxs struct {
-	storage StorageRequireInterface
+type MonitorCompressedTxs struct {
+	storage StorageCompressedInterface
 	ctx     context.Context
 	// client is the ethereum client
 	l2Node                *utils.Client
-	cfg                   claimtxman.Config
-	nonceCache            *claimtxman.NonceCache
+	cfg                   Config
+	nonceCache            *NonceCache
 	auth                  *bind.TransactOpts
 	claimCompressorSMC    *ClaimCompressor.ClaimCompressor
 	compressClaimComposer *ComposeCompressClaim
@@ -46,19 +45,19 @@ type MonitorTxs struct {
 	triggerGroups         *GroupsTrigger
 }
 
-func NewMonitorTxs(ctx context.Context,
-	storage StorageRequireInterface,
+func NewMonitorCompressedTxs(ctx context.Context,
+	storage StorageCompressedInterface,
 	l2Node *utils.Client,
-	cfg claimtxman.Config,
-	nonceCache *claimtxman.NonceCache,
+	cfg Config,
+	nonceCache *NonceCache,
 	auth *bind.TransactOpts,
 	claimCompressorSMC *ClaimCompressor.ClaimCompressor,
-	timeProvider utils.TimeProvider) *MonitorTxs {
+	timeProvider utils.TimeProvider) *MonitorCompressedTxs {
 	composer, err := NewComposeCompressClaim()
 	if err != nil {
 		log.Fatal("failed to create ComposeCompressClaim: %v", err)
 	}
-	return &MonitorTxs{
+	return &MonitorCompressedTxs{
 		storage:               storage,
 		ctx:                   ctx,
 		l2Node:                l2Node,
@@ -88,7 +87,7 @@ func getGroupsIds(txs []ctmtypes.MonitoredTx) []uint64 {
 	return keys
 }
 
-func (tm *MonitorTxs) getPendingTxs(ctx context.Context, dbTx pgx.Tx) (PendingTxs, error) {
+func (tm *MonitorCompressedTxs) getPendingTxs(ctx context.Context, dbTx pgx.Tx) (PendingTxs, error) {
 	statusesFilter := []ctmtypes.MonitoredTxStatus{ctmtypes.MonitoredTxStatusCreated,
 		ctmtypes.MonitoredTxStatusCompressing,
 		ctmtypes.MonitoredTxStatusClaiming}
@@ -109,7 +108,7 @@ func (tm *MonitorTxs) getPendingTxs(ctx context.Context, dbTx pgx.Tx) (PendingTx
 }
 
 // monitorTxs process all pending monitored tx
-func (tm *MonitorTxs) MonitorTxs(ctx context.Context) error {
+func (tm *MonitorCompressedTxs) MonitorTxs(ctx context.Context) error {
 	dbTx, err := tm.storage.BeginDBTransaction(ctx)
 	if err != nil {
 		return err
@@ -123,7 +122,7 @@ func (tm *MonitorTxs) MonitorTxs(ctx context.Context) error {
 }
 
 // monitorTxs process all pending monitored tx
-func (tm *MonitorTxs) internalMonitorTxs(ctx context.Context, dbTx pgx.Tx) error {
+func (tm *MonitorCompressedTxs) internalMonitorTxs(ctx context.Context, dbTx pgx.Tx) error {
 	pendingTx, err := tm.getPendingTxs(ctx, dbTx)
 	if err != nil {
 		return err
@@ -160,7 +159,7 @@ func (tm *MonitorTxs) internalMonitorTxs(ctx context.Context, dbTx pgx.Tx) error
 	return nil
 }
 
-func (tm *MonitorTxs) Process(ctx context.Context, pendingTxs *PendingTxs) error {
+func (tm *MonitorCompressedTxs) Process(ctx context.Context, pendingTxs *PendingTxs) error {
 	// SendCompressClaims for each group
 	err := tm.SendClaims(pendingTxs, false)
 	if err != nil {
@@ -185,7 +184,7 @@ func (tm *MonitorTxs) Process(ctx context.Context, pendingTxs *PendingTxs) error
 }
 
 // OnFinishClaimGroupTx is called when a claim tx is mined successful
-func (tm *MonitorTxs) OnFinishClaimGroupTxSuccessful(group *ctmtypes.MonitoredTxGroup, txIndex int) {
+func (tm *MonitorCompressedTxs) OnFinishClaimGroupTxSuccessful(group *ctmtypes.MonitoredTxGroup, txIndex int) {
 	txHash := group.DbEntry.ClaimTxHistory.TxHashes[txIndex].TxHash
 	msg := fmt.Sprintf("group_id:%d , tx %s was mined successfully", group.DbEntry.GroupID, txHash.String())
 	log.Infof(msg)
@@ -198,7 +197,7 @@ func (tm *MonitorTxs) OnFinishClaimGroupTxSuccessful(group *ctmtypes.MonitoredTx
 	}
 }
 
-func (tm *MonitorTxs) OnFailGroup(group *ctmtypes.MonitoredTxGroup) {
+func (tm *MonitorCompressedTxs) OnFailGroup(group *ctmtypes.MonitoredTxGroup) {
 	group.DbEntry.Status = ctmtypes.MonitoredTxGroupStatussFailed
 	group.DbEntry.LastLog = fmt.Sprintf("group_id:%d , reached maximum retries", group.DbEntry.GroupID)
 	for i := 0; i < len(group.Txs); i++ {
@@ -207,7 +206,7 @@ func (tm *MonitorTxs) OnFailGroup(group *ctmtypes.MonitoredTxGroup) {
 	}
 }
 
-func (tm *MonitorTxs) OnFinishClaimGroupTxFailed(group *ctmtypes.MonitoredTxGroup, txIndex int, msg string) {
+func (tm *MonitorCompressedTxs) OnFinishClaimGroupTxFailed(group *ctmtypes.MonitoredTxGroup, txIndex int, msg string) {
 	txHash := group.DbEntry.ClaimTxHistory.TxHashes[txIndex].TxHash
 	msg2 := fmt.Sprintf("tx %s. %s", txHash.String(), msg)
 	log.Warn(msg2)
@@ -215,7 +214,7 @@ func (tm *MonitorTxs) OnFinishClaimGroupTxFailed(group *ctmtypes.MonitoredTxGrou
 	group.DbEntry.ClaimTxHistory.TxHashes[txIndex].ReceiptFailed()
 }
 
-func (tm *MonitorTxs) CheckReceipts(ctx context.Context, pendingTx *PendingTxs) error {
+func (tm *MonitorCompressedTxs) CheckReceipts(ctx context.Context, pendingTx *PendingTxs) error {
 	for idx := range pendingTx.GroupTx {
 		group := pendingTx.GroupTx[idx]
 		if group.DbEntry.Status == ctmtypes.MonitoredTxGroupStatusClaiming {
@@ -249,7 +248,7 @@ func (tm *MonitorTxs) CheckReceipts(ctx context.Context, pendingTx *PendingTxs) 
 	return nil
 }
 
-func (tm *MonitorTxs) OutdateClaims(pendingTx *PendingTxs) error {
+func (tm *MonitorCompressedTxs) OutdateClaims(pendingTx *PendingTxs) error {
 	for idx := range pendingTx.GroupTx {
 		group := pendingTx.GroupTx[idx]
 		if group.DbEntry.Status == ctmtypes.MonitoredTxGroupStatusClaiming {
@@ -271,7 +270,7 @@ func (tm *MonitorTxs) OutdateClaims(pendingTx *PendingTxs) error {
 	return nil
 }
 
-func (tm *MonitorTxs) CanSendNewClaimCall(group *ctmtypes.MonitoredTxGroup) bool {
+func (tm *MonitorCompressedTxs) CanSendNewClaimCall(group *ctmtypes.MonitoredTxGroup) bool {
 	if group.DbEntry.Status == ctmtypes.MonitoredTxGroupStatusCreated {
 		return true
 	}
@@ -300,7 +299,7 @@ func (tm *MonitorTxs) CanSendNewClaimCall(group *ctmtypes.MonitoredTxGroup) bool
 	return elapsed >= tm.cfg.GroupingClaims.RetryInterval.Duration
 }
 
-func (tm *MonitorTxs) SendClaims(pendingTx *PendingTxs, onlyFirstOne bool) error {
+func (tm *MonitorCompressedTxs) SendClaims(pendingTx *PendingTxs, onlyFirstOne bool) error {
 	for idx := range pendingTx.GroupTx {
 		group := pendingTx.GroupTx[idx]
 		if group.DbEntry.CompressedTxData == nil {
@@ -330,7 +329,7 @@ func (tm *MonitorTxs) SendClaims(pendingTx *PendingTxs, onlyFirstOne bool) error
 	return nil
 }
 
-func (tm *MonitorTxs) createNewGroups(pendingTx *PendingTxs) error {
+func (tm *MonitorCompressedTxs) createNewGroups(pendingTx *PendingTxs) error {
 	var err error
 	if pendingTx == nil || pendingTx.TxCandidatesForGroup == nil {
 		return nil

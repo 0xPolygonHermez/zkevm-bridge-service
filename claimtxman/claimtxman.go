@@ -12,6 +12,7 @@ import (
 	"github.com/0xPolygonHermez/zkevm-bridge-service/log"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/utils"
 	"github.com/0xPolygonHermez/zkevm-node/state/runtime"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman/smartcontracts/generated_binding/ClaimCompressor"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -50,10 +51,9 @@ func NewClaimTxManager(ctx context.Context, cfg Config, chExitRootEvent chan *et
 	chSynced chan uint,
 	l2NodeURL string,
 	l2NetworkID uint,
-	l2BridgeAddr common.Address,
+	l2BridgeAddr, claimCompressorAddress common.Address,
 	bridgeService bridgeServiceInterface,
 	storage interface{},
-	TxMonitorer ctmtypes.TxMonitorer,
 	rollupID uint,
 	nonceCache *NonceCache,
 	auth *bind.TransactOpts) (*ClaimTxManager, error) {
@@ -61,9 +61,23 @@ func NewClaimTxManager(ctx context.Context, cfg Config, chExitRootEvent chan *et
 	if err != nil {
 		return nil, err
 	}
-
 	ctx, cancel := context.WithCancel(ctx)
 
+	var monitorTx ctmtypes.TxMonitorer
+	if cfg.GroupingClaims.Enabled {
+		if claimCompressorAddress == (common.Address{}) {
+			log.Error("Claim compressor Address required")
+			return nil, fmt.Errorf("Claim compressor Address required")
+		}
+		log.Infof("ClaimTxManager grouping claims enabled, claimCompressor=%s", claimCompressorAddress.String())
+		claimCompressor, err := ClaimCompressor.NewClaimCompressor(claimCompressorAddress, client)
+		if err != nil {
+			log.Fatalf("error creating claim compressor for L2 %s. Error: %v", l2NodeURL, err)
+		}
+		monitorTx = NewMonitorCompressedTxs(ctx, storage.(StorageCompressedInterface), client, cfg, nonceCache, auth, claimCompressor, utils.NewTimeProviderSystemLocalTime())
+	} else {
+		monitorTx = NewMonitorTxs(ctx, storage.(StorageInterface), client, cfg, nonceCache, auth)
+	}
 	return &ClaimTxManager{
 		ctx:             ctx,
 		cancel:          cancel,
@@ -77,7 +91,7 @@ func NewClaimTxManager(ctx context.Context, cfg Config, chExitRootEvent chan *et
 		auth:            auth,
 		rollupID:        rollupID,
 		nonceCache:      nonceCache,
-		monitorTxs:      TxMonitorer,
+		monitorTxs:      monitorTx,
 	}, err
 }
 

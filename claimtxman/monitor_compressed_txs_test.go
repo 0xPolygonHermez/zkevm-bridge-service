@@ -1,16 +1,16 @@
-package txcompressor_test
+package claimtxman_test
 
 import (
 	"testing"
 
-	"github.com/0xPolygonHermez/zkevm-bridge-service/claimtxman/txcompressor"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/claimtxman"
 	ctmtypes "github.com/0xPolygonHermez/zkevm-bridge-service/claimtxman/types"
 	"github.com/barkimedes/go-deepcopy"
 	"github.com/stretchr/testify/require"
 )
 
 func TestDeepCopy(t *testing.T) {
-	pendingTx := &txcompressor.PendingTxs{
+	pendingTx := &claimtxman.PendingTxs{
 		GroupTx:              make(map[uint64]*ctmtypes.MonitoredTxGroup),
 		TxCandidatesForGroup: make([]ctmtypes.MonitoredTx, 0),
 		LastGroupTxID:        0,
@@ -19,7 +19,7 @@ func TestDeepCopy(t *testing.T) {
 
 	initialStatus, err := deepcopy.Anything(pendingTx)
 	require.NoError(t, err)
-	copied := *initialStatus.(*txcompressor.PendingTxs)
+	copied := *initialStatus.(*claimtxman.PendingTxs)
 	require.Equal(t, pendingTx, &copied)
 }
 
@@ -30,11 +30,11 @@ func TestDeepCopy2(t *testing.T) {
 
 	lastGroupID := uint64(0)
 
-	pendingTx, err := txcompressor.NewPendingTxs(mTxs, groups, lastGroupID)
+	pendingTx, err := claimtxman.NewPendingTxs(mTxs, groups, lastGroupID)
 	require.NoError(t, err)
 
 	initialStatus, err := deepcopy.Anything(&pendingTx)
 	require.NoError(t, err)
-	copied := *initialStatus.(*txcompressor.PendingTxs)
+	copied := *initialStatus.(*claimtxman.PendingTxs)
 	require.Equal(t, pendingTx, &copied)
 }

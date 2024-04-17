@@ -30,7 +30,7 @@ type MonitorTxs struct {
 }
 
 func NewMonitorTxs(ctx context.Context,
-	storage interface{},
+	storage StorageInterface,
 	l2Node *utils.Client,
 	cfg Config,
 	nonceCache *NonceCache,

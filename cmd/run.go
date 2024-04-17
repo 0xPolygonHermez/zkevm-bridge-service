@@ -10,13 +10,9 @@ import (
 	zkevmbridgeservice "github.com/0xPolygonHermez/zkevm-bridge-service"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/bridgectrl"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/claimtxman"
-	"github.com/0xPolygonHermez/zkevm-bridge-service/claimtxman/txcompressor"
-	ctmtypes "github.com/0xPolygonHermez/zkevm-bridge-service/claimtxman/types"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/config"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/db"
-	"github.com/0xPolygonHermez/zkevm-bridge-service/db/pgstorage"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman"
-	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman/smartcontracts/generated_binding/ClaimCompressor"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/log"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/server"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/synchronizer"
@@ -81,7 +77,6 @@ func start(ctx *cli.Context) error {
 		log.Error(err)
 		return err
 	}
-	pgstorage := storage.(*pgstorage.PostgresStorage)
 
 	var bridgeController *bridgectrl.BridgeController
 
@@ -136,20 +131,9 @@ func start(ctx *cli.Context) error {
 			if err != nil {
 				log.Fatalf("error creating signer for L2 %s. Error: %v", c.Etherman.L2URLs[i], err)
 			}
-			var monitorTx ctmtypes.TxMonitorer
-			if c.ClaimTxManager.GroupingClaims.Enabled {
-				log.Info("ClaimTxManager grouping claims enabled, claimCompressor=%s", c.ClaimCompressorAddress.String())
-				claimCompressor, err := ClaimCompressor.NewClaimCompressor(c.ClaimCompressorAddress, client)
-				if err != nil {
-					log.Fatalf("error creating claim compressor for L2 %s. Error: %v", c.Etherman.L2URLs[i], err)
-				}
-				monitorTx = txcompressor.NewMonitorTxs(ctx, pgstorage, client, c.ClaimTxManager, nonceCache, auth, claimCompressor, utils.NewTimeProviderSystemLocalTime())
-			} else {
-				monitorTx = claimtxman.NewMonitorTxs(ctx, storage, client, c.ClaimTxManager, nonceCache, auth)
-			}
 
 			claimTxManager, err := claimtxman.NewClaimTxManager(ctx, c.ClaimTxManager, chExitRootEvent, chSynced,
-				c.Etherman.L2URLs[i], networkIDs[i+1], c.NetworkConfig.L2PolygonBridgeAddresses[i], bridgeService, storage, monitorTx, rollupID, nonceCache, auth)
+				c.Etherman.L2URLs[i], networkIDs[i+1], c.NetworkConfig.L2PolygonBridgeAddresses[i], c.ClaimCompressorAddress,  bridgeService, storage, rollupID, nonceCache, auth)
 			if err != nil {
 				log.Fatalf("error creating claim tx manager for L2 %s. Error: %v", c.Etherman.L2URLs[i], err)
 			}

@@ -1,4 +1,4 @@
-package txcompressor
+package claimtxman
 
 import (
 	"fmt"

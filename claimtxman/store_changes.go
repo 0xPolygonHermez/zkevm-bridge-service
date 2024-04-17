@@ -1,4 +1,4 @@
-package txcompressor
+package claimtxman
 
 import (
 	"context"
@@ -29,7 +29,7 @@ func (a *StoreChanges) UpdateTx(tx ctmtypes.MonitoredTx) {
 	a.UpdateTxs = append(a.UpdateTxs, tx)
 }
 
-func (a *StoreChanges) Execute(ctx context.Context, storage StorageRequireInterface, dbTx pgx.Tx) error {
+func (a *StoreChanges) Execute(ctx context.Context, storage StorageCompressedInterface, dbTx pgx.Tx) error {
 	for i := range a.AddGroups {
 		log.Debugf("Adding group %d ", a.AddGroups[i].GroupID)
 		err := storage.AddMonitoredTxsGroup(ctx, &a.AddGroups[i], dbTx)

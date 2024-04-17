@@ -1,9 +1,8 @@
-package txcompressor
+package claimtxman
 
 import (
 	"time"
 
-	"github.com/0xPolygonHermez/zkevm-bridge-service/claimtxman"
 	ctmtypes "github.com/0xPolygonHermez/zkevm-bridge-service/claimtxman/types"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/log"
 )
@@ -18,10 +17,10 @@ import (
 	TriggerRetainedClaimPeriod types.Duration `mapstructure:"TriggerElapsedPeriod"`
 */
 type GroupsTrigger struct {
-	Cfg claimtxman.ConfigGroupingClaims
+	Cfg ConfigGroupingClaims
 }
 
-func NewGroupsTrigger(cfg claimtxman.ConfigGroupingClaims) *GroupsTrigger {
+func NewGroupsTrigger(cfg ConfigGroupingClaims) *GroupsTrigger {
 	return &GroupsTrigger{Cfg: cfg}
 }
 

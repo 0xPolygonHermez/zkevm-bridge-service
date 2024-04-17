@@ -1,9 +1,9 @@
-package txcompressor_test
+package claimtxman_test
 
 import (
 	"testing"
 
-	"github.com/0xPolygonHermez/zkevm-bridge-service/claimtxman/txcompressor"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/claimtxman"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/stretchr/testify/require"
 )
@@ -13,7 +13,7 @@ const (
 )
 
 func TestCompose1Tx(t *testing.T) {
-	composer, err := txcompressor.NewComposeCompressClaim()
+	composer, err := claimtxman.NewComposeCompressClaim()
 	require.NoError(t, err)
 	txData := make(map[uint64][]byte)
 	txData[1] = common.Hex2Bytes(Tx1MonitoredTxsData)

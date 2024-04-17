@@ -1,4 +1,4 @@
-package txcompressor_test
+package claimtxman_test
 
 import (
 	"bytes"
