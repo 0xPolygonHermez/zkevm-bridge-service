@@ -28,21 +28,21 @@ func initMetrics(c Config) {
 	registerHistogram(prometheus.HistogramOpts{
 		Name:        metricRequestLatency,
 		ConstLabels: constLabels,
-		Buckets:     []float64{1, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 10000},
+		Buckets:     []float64{1, 10, 25, 50, 100, 250, 500, 750, 1000, 2500, 5000, 10000},
 	}, labelMethod, labelIsSuccess)
 	registerCounter(prometheus.CounterOpts{Name: metricOrderCount, ConstLabels: constLabels}, labelNetworkID, labelLeafType, labelToken, labelTokenAddress, labelTokenOriginNetwork, labelDestNet)
 	registerCounter(prometheus.CounterOpts{Name: metricOrderTotalAmount, ConstLabels: constLabels}, labelNetworkID, labelLeafType, labelToken, labelTokenAddress, labelTokenOriginNetwork, labelDestNet)
 	registerHistogram(prometheus.HistogramOpts{
 		Name:        metricOrderWaitTime,
 		ConstLabels: constLabels,
-		Buckets:     []float64{50, 100, 400, 700, 900, 1000, 2000, 3000, 4000, 5000, 10000},
+		Buckets:     []float64{50, 100, 400, 700, 900, 1200, 2000, 3000, 4000, 5000, 10000},
 	}, labelNetworkID, labelDestNet)
 	registerGauge(prometheus.GaugeOpts{Name: metricMonitoredTxsPendingCount, ConstLabels: constLabels})
 	registerCounter(prometheus.CounterOpts{Name: metricMonitoredTxsResultCount, ConstLabels: constLabels}, labelStatus)
 	registerHistogram(prometheus.HistogramOpts{
 		Name:        metricMonitoredTxsDuration,
 		ConstLabels: constLabels,
-		Buckets:     []float64{0.5, 1, 2.5, 5, 10, 20, 50, 80, 100, 1000},
+		Buckets:     []float64{0.5, 1, 2.5, 5, 10, 20, 50, 80, 100, 500, 1000},
 	})
 	registerCounter(prometheus.CounterOpts{Name: metricSynchronizerEventCount, ConstLabels: constLabels}, labelNetworkID, labelEventType)
 }
