@@ -277,8 +277,8 @@ generate-mocks: ## Generates mocks for the tests, using mockery tool
 	mockery --name=bridgectrlInterface --dir=synchronizer --output=synchronizer --outpkg=synchronizer --structname=bridgectrlMock --filename=mock_bridgectrl.go ${COMMON_MOCKERY_PARAMS}
 	mockery --name=Tx --srcpkg=github.com/jackc/pgx/v4 --output=synchronizer --outpkg=synchronizer --structname=dbTxMock --filename=mock_dbtx.go ${COMMON_MOCKERY_PARAMS}
 	mockery --name=zkEVMClientInterface --dir=synchronizer --output=synchronizer --outpkg=synchronizer --structname=zkEVMClientMock --filename=mock_zkevmclient.go ${COMMON_MOCKERY_PARAMS}
-	rm -Rf claimtxman/txcompressor/mocks
-	export "GOROOT=$$(go env GOROOT)" && $$(go env GOPATH)/bin/mockery --all --case snake --dir claimtxman/txcompressor/ --output claimtxman/txcompressor/mocks --outpkg mock_txcompressor ${COMMON_MOCKERY_PARAMS}
+	rm -Rf claimtxman/mocks
+	export "GOROOT=$$(go env GOROOT)" && $$(go env GOPATH)/bin/mockery --all --case snake --dir claimtxman/ --output claimtxman/mocks --outpkg mock_txcompressor ${COMMON_MOCKERY_PARAMS}
 	
 
 .PHONY: generate-smart-contracts-bindings
