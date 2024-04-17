@@ -25,13 +25,25 @@ func initMetrics(c Config) {
 	constLabels := map[string]string{labelEnv: c.Env}
 
 	registerCounter(prometheus.CounterOpts{Name: metricRequestCount, ConstLabels: constLabels}, labelMethod, labelIsSuccess)
-	registerHistogram(prometheus.HistogramOpts{Name: metricRequestLatency, ConstLabels: constLabels}, labelMethod, labelIsSuccess)
+	registerHistogram(prometheus.HistogramOpts{
+		Name:        metricRequestLatency,
+		ConstLabels: constLabels,
+		Buckets:     []float64{1, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 10000},
+	}, labelMethod, labelIsSuccess)
 	registerCounter(prometheus.CounterOpts{Name: metricOrderCount, ConstLabels: constLabels}, labelNetworkID, labelLeafType, labelToken, labelTokenAddress, labelTokenOriginNetwork, labelDestNet)
 	registerCounter(prometheus.CounterOpts{Name: metricOrderTotalAmount, ConstLabels: constLabels}, labelNetworkID, labelLeafType, labelToken, labelTokenAddress, labelTokenOriginNetwork, labelDestNet)
-	registerHistogram(prometheus.HistogramOpts{Name: metricOrderWaitTime, ConstLabels: constLabels}, labelNetworkID, labelDestNet)
+	registerHistogram(prometheus.HistogramOpts{
+		Name:        metricOrderWaitTime,
+		ConstLabels: constLabels,
+		Buckets:     []float64{50, 100, 400, 700, 900, 1000, 2000, 3000, 4000, 5000, 10000},
+	}, labelNetworkID, labelDestNet)
 	registerGauge(prometheus.GaugeOpts{Name: metricMonitoredTxsPendingCount, ConstLabels: constLabels})
 	registerCounter(prometheus.CounterOpts{Name: metricMonitoredTxsResultCount, ConstLabels: constLabels}, labelStatus)
-	registerHistogram(prometheus.HistogramOpts{Name: metricMonitoredTxsDuration, ConstLabels: constLabels})
+	registerHistogram(prometheus.HistogramOpts{
+		Name:        metricMonitoredTxsDuration,
+		ConstLabels: constLabels,
+		Buckets:     []float64{0.5, 1, 2.5, 5, 10, 20, 50, 80, 100, 1000},
+	})
 	registerCounter(prometheus.CounterOpts{Name: metricSynchronizerEventCount, ConstLabels: constLabels}, labelNetworkID, labelEventType)
 }
 
@@ -42,8 +54,8 @@ func RecordRequest(method string, isSuccess bool) {
 
 // RecordRequestLatency records the latency histogram in nanoseconds
 func RecordRequestLatency(method string, latency time.Duration, isSuccess bool) {
-	latencyNs := latency / time.Nanosecond
-	histogramObserve(metricRequestLatency, float64(latencyNs), map[string]string{labelMethod: method, labelIsSuccess: strconv.FormatBool(isSuccess)})
+	latencyMs := float64(latency) / float64(time.Millisecond)
+	histogramObserve(metricRequestLatency, latencyMs, map[string]string{labelMethod: method, labelIsSuccess: strconv.FormatBool(isSuccess)})
 }
 
 // RecordOrder records one bridge order, increase the order count and add the amount to the total order amount
@@ -84,7 +96,7 @@ func RecordOrder(networkID, destNet, leafType, tokenOriginNetwork uint32, tokenA
 
 // RecordOrderWaitTime records the waiting time (seconds) of a bridge order, from order creation (deposit time) to ready_for_claim time
 func RecordOrderWaitTime(networkID, destNet uint32, dur time.Duration) {
-	histogramObserve(metricOrderWaitTime, float64(dur/time.Second), map[string]string{labelNetworkID: strconv.Itoa(int(networkID)), labelDestNet: strconv.Itoa(int(destNet))})
+	histogramObserve(metricOrderWaitTime, float64(dur)/float64(time.Second), map[string]string{labelNetworkID: strconv.Itoa(int(networkID)), labelDestNet: strconv.Itoa(int(destNet))})
 }
 
 // RecordPendingMonitoredTxsCount records the current number of pending monitored txs (status == "created")
@@ -99,7 +111,7 @@ func RecordMonitoredTxsResult(status string) {
 
 // RecordAutoClaimDuration records the duration (seconds) of a confirmed monitored tx (from creation time to confirm time)
 func RecordAutoClaimDuration(dur time.Duration) {
-	histogramObserve(metricMonitoredTxsDuration, float64(dur/time.Second), map[string]string{})
+	histogramObserve(metricMonitoredTxsDuration, float64(dur)/float64(time.Second), map[string]string{})
 }
 
 // RecordSynchronizerEvent records an event log consumed by the synchronizer
