@@ -69,7 +69,9 @@ func getRespErrorInfo(resp any, err error) (code int64, msg string) {
 	if codeField.CanUint() {
 		code = int64(codeField.Uint())
 	}
-	msg = msgField.String()
+	if msgField.Kind() == reflect.String {
+		msg = msgField.String()
+	}
 
 	return
 }
