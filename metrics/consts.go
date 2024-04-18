@@ -19,8 +19,9 @@ const (
 	prefixRequest        = prefix + "request_"
 	metricRequestCount   = prefixRequest + "count"
 	metricRequestLatency = prefixRequest + "latency_ms"
-	labelIsSuccess       = "is_success"
 	labelMethod          = "method"
+	labelCode            = "code"
+	labelErrMessage      = "msg"
 
 	prefixOrder             = prefix + "order_"
 	metricOrderCount        = prefixOrder + "count"

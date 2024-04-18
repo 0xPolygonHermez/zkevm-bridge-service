@@ -24,12 +24,12 @@ func initMetrics(c Config) {
 
 	constLabels := map[string]string{labelEnv: c.Env}
 
-	registerCounter(prometheus.CounterOpts{Name: metricRequestCount, ConstLabels: constLabels}, labelMethod, labelIsSuccess)
+	registerCounter(prometheus.CounterOpts{Name: metricRequestCount, ConstLabels: constLabels}, labelMethod, labelCode, labelErrMessage)
 	registerHistogram(prometheus.HistogramOpts{
 		Name:        metricRequestLatency,
 		ConstLabels: constLabels,
 		Buckets:     []float64{1, 10, 25, 50, 100, 250, 500, 750, 1000, 2500, 5000, 10000},
-	}, labelMethod, labelIsSuccess)
+	}, labelMethod, labelCode)
 	registerCounter(prometheus.CounterOpts{Name: metricOrderCount, ConstLabels: constLabels}, labelNetworkID, labelLeafType, labelToken, labelTokenAddress, labelTokenOriginNetwork, labelDestNet)
 	registerCounter(prometheus.CounterOpts{Name: metricOrderTotalAmount, ConstLabels: constLabels}, labelNetworkID, labelLeafType, labelToken, labelTokenAddress, labelTokenOriginNetwork, labelDestNet)
 	registerHistogram(prometheus.HistogramOpts{
@@ -48,14 +48,14 @@ func initMetrics(c Config) {
 }
 
 // RecordRequest increments the request count for the method
-func RecordRequest(method string, isSuccess bool) {
-	counterInc(metricRequestCount, map[string]string{labelMethod: method, labelIsSuccess: strconv.FormatBool(isSuccess)})
+func RecordRequest(method string, code int64, msg string) {
+	counterInc(metricRequestCount, map[string]string{labelMethod: method, labelCode: strconv.FormatInt(code, 10), labelErrMessage: msg}) //nolint:gomnd
 }
 
 // RecordRequestLatency records the latency histogram in nanoseconds
-func RecordRequestLatency(method string, latency time.Duration, isSuccess bool) {
+func RecordRequestLatency(method string, latency time.Duration, code int64) {
 	latencyMs := float64(latency) / float64(time.Millisecond)
-	histogramObserve(metricRequestLatency, latencyMs, map[string]string{labelMethod: method, labelIsSuccess: strconv.FormatBool(isSuccess)})
+	histogramObserve(metricRequestLatency, latencyMs, map[string]string{labelMethod: method, labelCode: strconv.FormatInt(code, 10)}) //nolint:gomnd
 }
 
 // RecordOrder records one bridge order, increase the order count and add the amount to the total order amount

@@ -38,34 +38,38 @@ func NewRequestMetricsInterceptor() grpc.UnaryServerInterceptor {
 		resp, err := handler(ctx, req)
 
 		duration := time.Since(startTime)
-		isSuccess := checkRespIsSuccess(resp, err)
+		code, msg := getRespErrorInfo(resp, err)
 
-		metrics.RecordRequest(methodName, isSuccess)
-		metrics.RecordRequestLatency(methodName, duration, isSuccess)
+		metrics.RecordRequest(methodName, code, msg)
+		metrics.RecordRequestLatency(methodName, duration, code)
 
 		return resp, err
 	}
 }
 
-func checkRespIsSuccess(resp any, err error) bool {
-	// Check the returned error
+// getRespErrorInfo returns the error code and msg from the resp
+func getRespErrorInfo(resp any, err error) (code int64, msg string) {
 	if err != nil {
-		return false
+		return defaultErrorCode, err.Error()
 	}
 
 	if resp == nil {
-		return true
-	}
-	// Check the `code` field in the response body
-	v := reflect.Indirect(reflect.ValueOf(resp))
-	codeField := v.FieldByName("Code")
-	if codeField.CanInt() && codeField.Int() != 0 {
-		return false
-	}
-	if codeField.CanUint() && codeField.Uint() != 0 {
-		return false
+		// This should not happen
+		return defaultSuccessCode, ""
 	}
 
-	// If code is 0 or cannot properly check code field, assume it's successful
-	return true
+	// Check `Msg" field in the resp body
+	v := reflect.Indirect(reflect.ValueOf(resp))
+	codeField := v.FieldByName("Code")
+	msgField := v.FieldByName("Msg")
+
+	if codeField.CanInt() {
+		code = codeField.Int()
+	}
+	if codeField.CanUint() {
+		code = int64(codeField.Uint())
+	}
+	msg = msgField.String()
+
+	return
 }
