@@ -161,7 +161,7 @@ func (s *bridgeService) GetPendingTransactions(ctx context.Context, req *pb.GetP
 	var pbTransactions []*pb.Transaction
 	for _, deposit := range deposits {
 		// replace contract address to real token address
-		utils.ReplaceUSDCDepositInfo(deposit)
+		utils.ReplaceUSDCDepositInfo(deposit, false)
 		transaction := utils.EthermanDepositToPbTransaction(deposit)
 		transaction.EstimateTime = estimatetime.GetDefaultCalculator().Get(deposit.NetworkID)
 		transaction.Status = uint32(pb.TransactionStatus_TX_CREATED)
@@ -256,7 +256,7 @@ func (s *bridgeService) GetAllTransactions(ctx context.Context, req *pb.GetAllTr
 	var pbTransactions []*pb.Transaction
 	for _, deposit := range deposits {
 		// replace contract address to real token address
-		utils.ReplaceUSDCDepositInfo(deposit)
+		utils.ReplaceUSDCDepositInfo(deposit, false)
 		transaction := utils.EthermanDepositToPbTransaction(deposit)
 		transaction.EstimateTime = estimatetime.GetDefaultCalculator().Get(deposit.NetworkID)
 		transaction.Status = uint32(pb.TransactionStatus_TX_CREATED) // Not ready for claim

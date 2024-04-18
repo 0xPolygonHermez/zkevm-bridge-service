@@ -41,7 +41,7 @@ func (s *ClientSynchronizer) afterProcessDeposit(deposit *etherman.Deposit, depo
 	// Original address is needed for message allow list check, but it may be changed when we replace USDC info
 	origAddress := deposit.OriginalAddress
 	// Replace the USDC info here so that the metrics can report the correct token info
-	utils.ReplaceUSDCDepositInfo(deposit)
+	utils.ReplaceUSDCDepositInfo(deposit, true)
 
 	// Notify FE about a new deposit
 	go func() {

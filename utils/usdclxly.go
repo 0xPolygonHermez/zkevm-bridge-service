@@ -61,11 +61,14 @@ func DecodeUSDCBridgeMetadata(metadata []byte) (common.Address, *big.Int) {
 	return common.BytesToAddress(metadata[:32]), new(big.Int).SetBytes(metadata[32:]) //nolint:gomnd
 }
 
-func ReplaceUSDCDepositInfo(deposit *etherman.Deposit) {
+func ReplaceUSDCDepositInfo(deposit *etherman.Deposit, overwriteOrigNetworkID bool) {
 	token, ok := GetUSDCTokenFromContract(deposit.OriginalAddress)
 	if !ok {
 		return
 	}
 	deposit.OriginalAddress = token
+	if overwriteOrigNetworkID {
+		deposit.OriginalNetwork = 0 // Always use 0 for this case when reporting metrics
+	}
 	_, deposit.Amount = DecodeUSDCBridgeMetadata(deposit.Metadata)
 }
