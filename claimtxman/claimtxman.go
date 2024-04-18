@@ -12,7 +12,7 @@ import (
 	"github.com/0xPolygonHermez/zkevm-bridge-service/log"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/utils"
 	"github.com/0xPolygonHermez/zkevm-node/state/runtime"
-	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman/smartcontracts/generated_binding/ClaimCompressor"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman/smartcontracts/claimcompressor"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -67,10 +67,11 @@ func NewClaimTxManager(ctx context.Context, cfg Config, chExitRootEvent chan *et
 	if cfg.GroupingClaims.Enabled {
 		if claimCompressorAddress == (common.Address{}) {
 			log.Error("Claim compressor Address required")
+			cancel()
 			return nil, fmt.Errorf("Claim compressor Address required")
 		}
 		log.Infof("ClaimTxManager grouping claims enabled, claimCompressor=%s", claimCompressorAddress.String())
-		claimCompressor, err := ClaimCompressor.NewClaimCompressor(claimCompressorAddress, client)
+		claimCompressor, err := claimcompressor.NewClaimcompressor(claimCompressorAddress, client)
 		if err != nil {
 			log.Fatalf("error creating claim compressor for L2 %s. Error: %v", l2NodeURL, err)
 		}

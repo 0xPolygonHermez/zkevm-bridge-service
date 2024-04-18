@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman/smartcontracts/generated_binding/ClaimCompressor"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman/smartcontracts/claimcompressor"
 	zkevmtypes "github.com/0xPolygonHermez/zkevm-node/config/types"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -51,9 +51,9 @@ func TestExploratory(t *testing.T) {
 	client, err := ethclient.Dial("http://localhost:8123")
 	require.NoError(t, err)
 	addr := common.HexToAddress(ClaimCompressorAddress)
-	claimCompressor, err := ClaimCompressor.NewClaimCompressor(addr, client)
+	claimCompressor, err := claimcompressor.NewClaimcompressor(addr, client)
 	require.NoError(t, err)
-	smcAbi, err := abi.JSON(strings.NewReader(ClaimCompressor.ClaimCompressorABI))
+	smcAbi, err := abi.JSON(strings.NewReader(claimcompressor.ClaimcompressorABI))
 	method, ok := smcAbi.Methods["compressClaimCall"]
 	require.True(t, ok)
 	mainet := [32]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32}
@@ -70,7 +70,7 @@ func TestExploratory(t *testing.T) {
 	require.NoError(t, err)
 
 	auth, err := getSignerFromKeystore(zkevmtypes.KeystoreFileConfig{
-		Path:     "/home/jesteban/POLYGON/src/bridge/bridge-develop/test/test.keystore.claimtx",
+		Path:     "./test/test.keystore.claimtx",
 		Password: "testonly",
 	}, ChainID)
 	require.NoError(t, err)
@@ -95,7 +95,7 @@ func TestExploratory(t *testing.T) {
 	err = client.SendTransaction(context.Background(), signedTx)
 	require.NoError(t, err)
 
-	compressClaimCalldata := []ClaimCompressor.ClaimCompressorCompressClaimCallData{}
+	compressClaimCalldata := []claimcompressor.ClaimCompressorCompressClaimCallData{}
 	bindcall := &bind.CallOpts{Pending: false}
 	res, err := claimCompressor.CompressClaimCall(bindcall, mainet, rollup, compressClaimCalldata)
 	require.NoError(t, err)

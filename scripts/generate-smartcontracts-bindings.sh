@@ -6,17 +6,17 @@ then
     echo "abigen binary could not be found"
     exit 1
 fi
-if ! command -v jq &> /dev/null
-then
-    echo "jq binary could not be found"
-    exit 1
-fi
 
+OUTPUT_BASE_DIR=../etherman/smartcontracts/
 
-SMC_NAME=$1
-OUTPUT_BASE_DIR=etherman/smartcontracts/
-GENERATE_FILE_OUTPUT_PATH=${OUTPUT_BASE_DIR}/generated_binding/${SMC_NAME}
-GENERATE_FILE_OUTPUT=${GENERATE_FILE_OUTPUT_PATH}/${SMC_NAME}.go
-mkdir -p ${GENERATE_FILE_OUTPUT_PATH}
-echo "Generating: ${GENERATE_FILE_OUTPUT}"
-cat etherman/smartcontracts/json/${SMC_NAME}.json | jq .abi |  abigen --abi - --pkg ${SMC_NAME} --out ${GENERATE_FILE_OUTPUT}
+set -e
+
+gen() {
+    local package=$1
+
+    mkdir -p ${OUTPUT_BASE_DIR}/${package}
+
+    abigen --bin ${OUTPUT_BASE_DIR}/bin/${package}.bin --abi ${OUTPUT_BASE_DIR}/abi/${package}.abi --pkg=${package} --out=${OUTPUT_BASE_DIR}/${package}/${package}.go
+}
+
+gen claimcompressor

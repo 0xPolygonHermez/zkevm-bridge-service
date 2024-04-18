@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	ctmtypes "github.com/0xPolygonHermez/zkevm-bridge-service/claimtxman/types"
-	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman/smartcontracts/generated_binding/ClaimCompressor"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman/smartcontracts/claimcompressor"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/test/mocksmartcontracts/polygonzkevmbridge"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
@@ -24,7 +24,7 @@ var (
 type CompressClaimParameters struct {
 	MainnetExitRoot common.Hash
 	RollupExitRoot  common.Hash
-	ClaimDatas      []ClaimCompressor.ClaimCompressorCompressClaimCallData
+	ClaimDatas      []claimcompressor.ClaimCompressorCompressClaimCallData
 }
 
 // bridgeClaimXParams is a struct to hold the parameters for the bridge claimAsset and claimMessage methods
@@ -95,7 +95,7 @@ func (c *ComposeCompressClaim) GetCompressClaimParameters(txsData map[uint64][]b
 		RollupExitRoot:  params[maxDepositID].rollupExitRoot,
 	}
 	for _, v := range params {
-		claimData := ClaimCompressor.ClaimCompressorCompressClaimCallData{
+		claimData := claimcompressor.ClaimCompressorCompressClaimCallData{
 			SmtProofLocalExitRoot:  v.smtProofLocalExitRoot,
 			SmtProofRollupExitRoot: v.smtProofRollupExitRoot,
 			GlobalIndex:            v.globalIndex,

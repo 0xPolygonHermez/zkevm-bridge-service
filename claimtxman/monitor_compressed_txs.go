@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	ctmtypes "github.com/0xPolygonHermez/zkevm-bridge-service/claimtxman/types"
-	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman/smartcontracts/generated_binding/ClaimCompressor"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman/smartcontracts/claimcompressor"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/log"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/utils"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -39,7 +39,7 @@ type MonitorCompressedTxs struct {
 	cfg                   Config
 	nonceCache            *NonceCache
 	auth                  *bind.TransactOpts
-	claimCompressorSMC    *ClaimCompressor.ClaimCompressor
+	claimCompressorSMC    *claimcompressor.Claimcompressor
 	compressClaimComposer *ComposeCompressClaim
 	timeProvider          utils.TimeProvider
 	triggerGroups         *GroupsTrigger
@@ -51,7 +51,7 @@ func NewMonitorCompressedTxs(ctx context.Context,
 	cfg Config,
 	nonceCache *NonceCache,
 	auth *bind.TransactOpts,
-	claimCompressorSMC *ClaimCompressor.ClaimCompressor,
+	claimCompressorSMC *claimcompressor.Claimcompressor,
 	timeProvider utils.TimeProvider) *MonitorCompressedTxs {
 	composer, err := NewComposeCompressClaim()
 	if err != nil {
@@ -300,8 +300,7 @@ func (tm *MonitorCompressedTxs) CanSendNewClaimCall(group *ctmtypes.MonitoredTxG
 }
 
 func (tm *MonitorCompressedTxs) SendClaims(pendingTx *PendingTxs, onlyFirstOne bool) error {
-	for idx := range pendingTx.GroupTx {
-		group := pendingTx.GroupTx[idx]
+	for _, group := range pendingTx.GroupTx {
 		if group.DbEntry.CompressedTxData == nil {
 			log.Warnf("group %d has no compressed data", group.DbEntry.GroupID)
 			continue
@@ -312,8 +311,8 @@ func (tm *MonitorCompressedTxs) SendClaims(pendingTx *PendingTxs, onlyFirstOne b
 		if onlyFirstOne && !group.DbEntry.IsClaimTxHistoryEmpty() {
 			continue
 		}
-		// Send claim tx
 
+		// Send claim tx
 		claimTx, err := tm.claimCompressorSMC.SendCompressedClaims(tm.auth, group.DbEntry.CompressedTxData)
 		if err != nil {
 			msg := fmt.Sprintf("failed to call SMC SendCompressedClaims for group %d: %v", group.DbEntry.GroupID, err)

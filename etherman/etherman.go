@@ -7,7 +7,7 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman/smartcontracts/generated_binding/ClaimCompressor"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman/smartcontracts/claimcompressor"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/log"
 	"github.com/0xPolygonHermez/zkevm-node/etherman/smartcontracts/oldpolygonzkevmbridge"
 	"github.com/0xPolygonHermez/zkevm-node/etherman/smartcontracts/polygonrollupmanager"
@@ -121,7 +121,7 @@ type Client struct {
 	OldPolygonBridge           *oldpolygonzkevmbridge.Oldpolygonzkevmbridge
 	PolygonZkEVMGlobalExitRoot *polygonzkevmglobalexitroot.Polygonzkevmglobalexitroot
 	PolygonRollupManager       *polygonrollupmanager.Polygonrollupmanager
-	ClaimCompressor            *ClaimCompressor.ClaimCompressor
+	ClaimCompressor            *claimcompressor.Claimcompressor
 	RollupID                   uint32
 	SCAddresses                []common.Address
 }
@@ -152,7 +152,7 @@ func NewClient(cfg Config, polygonBridgeAddr, polygonZkEVMGlobalExitRootAddress,
 		return nil, err
 	}
 
-	claimCompressor, err := ClaimCompressor.NewClaimCompressor(claimCompressorAdress, ethClient)
+	claimCompressor, err := claimcompressor.NewClaimcompressor(claimCompressorAdress, ethClient)
 	if err != nil {
 		log.Errorf("error creating claimCompressor: %+v", err)
 		return nil, err
