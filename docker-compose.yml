@@ -207,7 +207,8 @@ services:
     command:
       - "/bin/sh"
       - "-c"
-      - "/app/zkevm-bridge run --cfg /app/config.toml"
+      - "/app/test-deploy-claimcompressor deploy --url \"http://zkevm-node:8123\" --bridgeAddress \"0xCca6ECD73932e49633B9307e1aa0fC174525F424\" --walletFile /pk/keystore.claimtxmanager --password \"testonly\" &&
+        /app/zkevm-bridge run --cfg /app/config.toml"
 
   zkevm-bridge-service-v1tov2:
     container_name: zkevm-bridge-service-v1tov2

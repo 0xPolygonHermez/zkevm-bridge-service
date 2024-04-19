@@ -53,13 +53,17 @@ GO_BIN := $(GO_BASE)/dist
 GO_ENV_VARS := GO_BIN=$(GO_BIN)
 GO_BINARY := zkevm-bridge
 GO_CMD := $(GO_BASE)/cmd
+GO_DEPLOY_SCRIPT := $(GO_BASE)/test/scripts/deployclaimcompressor
+GO_DEPLOY_SCRIPT_BINARY := test-deploy-claimcompressor
 
 LINT := $$(go env GOPATH)/bin/golangci-lint run --timeout=5m -E whitespace -E gosec -E gci -E misspell -E gomnd -E gofmt -E goimports --exclude-use-default=false --max-same-issues 0
 BUILD := $(GO_ENV_VARS) go build -ldflags "all=$(LDFLAGS)" -o $(GO_BIN)/$(GO_BINARY) $(GO_CMD)
+BUILDSCRIPTEPLOY := $(GO_ENV_VARS) go build -o $(GO_BIN)/$(GO_DEPLOY_SCRIPT_BINARY) $(GO_DEPLOY_SCRIPT)
 
 .PHONY: build
 build: ## Build the binary locally into ./dist
 	$(BUILD)
+	$(BUILDSCRIPTEPLOY)
 
 .PHONY: lint
 lint: ## runs linter
