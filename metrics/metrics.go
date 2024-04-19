@@ -35,14 +35,14 @@ func initMetrics(c Config) {
 	registerHistogram(prometheus.HistogramOpts{
 		Name:        metricOrderWaitTime,
 		ConstLabels: constLabels,
-		Buckets:     []float64{50, 100, 400, 700, 900, 1200, 2000, 3000, 4000, 5000, 10000},
+		Buckets:     []float64{300, 700, 900, 1000, 1200, 1800, 3000, 3300, 3600, 3900, 5000, 7000},
 	}, labelNetworkID, labelDestNet)
 	registerGauge(prometheus.GaugeOpts{Name: metricMonitoredTxsPendingCount, ConstLabels: constLabels})
 	registerCounter(prometheus.CounterOpts{Name: metricMonitoredTxsResultCount, ConstLabels: constLabels}, labelStatus)
 	registerHistogram(prometheus.HistogramOpts{
 		Name:        metricMonitoredTxsDuration,
 		ConstLabels: constLabels,
-		Buckets:     []float64{0.5, 1, 2.5, 5, 10, 20, 50, 80, 100, 500, 1000},
+		Buckets:     []float64{0.5, 1, 2.5, 5, 10, 20, 30, 60, 100, 500, 1000},
 	})
 	registerCounter(prometheus.CounterOpts{Name: metricSynchronizerEventCount, ConstLabels: constLabels}, labelNetworkID, labelEventType)
 }
