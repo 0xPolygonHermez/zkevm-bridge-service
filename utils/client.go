@@ -42,7 +42,7 @@ const (
 type Client struct {
 	// Client ethclient
 	*ethclient.Client
-	bridge *polygonzkevmbridge.Polygonzkevmbridge
+	Bridge *polygonzkevmbridge.Polygonzkevmbridge
 }
 
 // NewClient creates client.
@@ -52,12 +52,12 @@ func NewClient(ctx context.Context, nodeURL string, bridgeSCAddr common.Address)
 		return nil, err
 	}
 	var br *polygonzkevmbridge.Polygonzkevmbridge
-	if len(bridgeSCAddr) != 0 {
+	if bridgeSCAddr != (common.Address{}) {
 		br, err = polygonzkevmbridge.NewPolygonzkevmbridge(bridgeSCAddr, client)
 	}
 	return &Client{
 		Client: client,
-		bridge: br,
+		Bridge: br,
 	}, err
 }
 
@@ -166,7 +166,7 @@ func (c *Client) SendBridgeAsset(ctx context.Context, tokenAddr common.Address, 
 	if destAddr == nil {
 		destAddr = &auth.From
 	}
-	tx, err := c.bridge.BridgeAsset(auth, destNetwork, *destAddr, amount, tokenAddr, true, metadata)
+	tx, err := c.Bridge.BridgeAsset(auth, destNetwork, *destAddr, amount, tokenAddr, true, metadata)
 	if err != nil {
 		log.Error("Error: ", err)
 		return err
@@ -180,7 +180,7 @@ func (c *Client) SendBridgeAsset(ctx context.Context, tokenAddr common.Address, 
 func (c *Client) SendBridgeMessage(ctx context.Context, destNetwork uint32, destAddr common.Address, metadata []byte,
 	auth *bind.TransactOpts,
 ) error {
-	tx, err := c.bridge.BridgeMessage(auth, destNetwork, destAddr, true, metadata)
+	tx, err := c.Bridge.BridgeMessage(auth, destNetwork, destAddr, true, metadata)
 	if err != nil {
 		log.Error("Error: ", err)
 		return err
@@ -213,9 +213,9 @@ func (c *Client) BuildSendClaim(ctx context.Context, deposit *etherman.Deposit, 
 	localExitRootIndex := deposit.DepositCount
 	globalIndex := etherman.GenerateGlobalIndex(mainnetFlag, rollupIndex, localExitRootIndex)
 	if deposit.LeafType == uint8(LeafTypeAsset) {
-		tx, err = c.bridge.ClaimAsset(&opts, smtProof, smtRollupProof, globalIndex, globalExitRoot.ExitRoots[0], globalExitRoot.ExitRoots[1], uint32(deposit.OriginalNetwork), deposit.OriginalAddress, uint32(deposit.DestinationNetwork), deposit.DestinationAddress, deposit.Amount, deposit.Metadata)
+		tx, err = c.Bridge.ClaimAsset(&opts, smtProof, smtRollupProof, globalIndex, globalExitRoot.ExitRoots[0], globalExitRoot.ExitRoots[1], uint32(deposit.OriginalNetwork), deposit.OriginalAddress, uint32(deposit.DestinationNetwork), deposit.DestinationAddress, deposit.Amount, deposit.Metadata)
 	} else if deposit.LeafType == uint8(LeafTypeMessage) {
-		tx, err = c.bridge.ClaimMessage(&opts, smtProof, smtRollupProof, globalIndex, globalExitRoot.ExitRoots[0], globalExitRoot.ExitRoots[1], uint32(deposit.OriginalNetwork), deposit.OriginalAddress, uint32(deposit.DestinationNetwork), deposit.DestinationAddress, deposit.Amount, deposit.Metadata)
+		tx, err = c.Bridge.ClaimMessage(&opts, smtProof, smtRollupProof, globalIndex, globalExitRoot.ExitRoots[0], globalExitRoot.ExitRoots[1], uint32(deposit.OriginalNetwork), deposit.OriginalAddress, uint32(deposit.DestinationNetwork), deposit.DestinationAddress, deposit.Amount, deposit.Metadata)
 	}
 	if err != nil {
 		txHash := ""
@@ -238,9 +238,9 @@ func (c *Client) SendClaim(ctx context.Context, deposit *pb.Deposit, smtProof [m
 	)
 	globalIndex, _ := big.NewInt(0).SetString(deposit.GlobalIndex, 0)
 	if deposit.LeafType == LeafTypeAsset {
-		tx, err = c.bridge.ClaimAsset(auth, smtProof, smtRollupProof, globalIndex, globalExitRoot.ExitRoots[0], globalExitRoot.ExitRoots[1], deposit.OrigNet, common.HexToAddress(deposit.OrigAddr), deposit.DestNet, common.HexToAddress(deposit.DestAddr), amount, common.FromHex(deposit.Metadata))
+		tx, err = c.Bridge.ClaimAsset(auth, smtProof, smtRollupProof, globalIndex, globalExitRoot.ExitRoots[0], globalExitRoot.ExitRoots[1], deposit.OrigNet, common.HexToAddress(deposit.OrigAddr), deposit.DestNet, common.HexToAddress(deposit.DestAddr), amount, common.FromHex(deposit.Metadata))
 	} else if deposit.LeafType == LeafTypeMessage {
-		tx, err = c.bridge.ClaimMessage(auth, smtProof, smtRollupProof, globalIndex, globalExitRoot.ExitRoots[0], globalExitRoot.ExitRoots[1], deposit.OrigNet, common.HexToAddress(deposit.OrigAddr), deposit.DestNet, common.HexToAddress(deposit.DestAddr), amount, common.FromHex(deposit.Metadata))
+		tx, err = c.Bridge.ClaimMessage(auth, smtProof, smtRollupProof, globalIndex, globalExitRoot.ExitRoots[0], globalExitRoot.ExitRoots[1], deposit.OrigNet, common.HexToAddress(deposit.OrigAddr), deposit.DestNet, common.HexToAddress(deposit.DestAddr), amount, common.FromHex(deposit.Metadata))
 	}
 	if err != nil {
 		txHash := ""
