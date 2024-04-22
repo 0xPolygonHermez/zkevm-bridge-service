@@ -84,6 +84,10 @@ func GetOneURL(serviceName string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	url := fmt.Sprintf("%v:%v", instance.Ip, instance.Port)
+
+	// There's no scheme info (HTTP/HTTPS) in the instance info (?!)
+	// Default it to HTTPS (sending requests will require having the scheme)
+	// What if the service only supports HTTP?
+	url := fmt.Sprintf("https://%v:%v", instance.Ip, instance.Port)
 	return url, nil
 }
