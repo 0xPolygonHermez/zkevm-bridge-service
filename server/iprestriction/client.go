@@ -5,7 +5,6 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"time"
 
 	"github.com/0xPolygonHermez/zkevm-bridge-service/log"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/nacos"
@@ -31,7 +30,7 @@ func InitClient(c Config) {
 	client = &Client{
 		cfg: c,
 		httpClient: &http.Client{
-			Timeout: time.Duration(c.TimeoutSeconds) * time.Second,
+			Timeout: c.Timeout.Duration,
 		},
 	}
 	return
