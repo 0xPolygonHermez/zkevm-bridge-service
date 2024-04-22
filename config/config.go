@@ -18,6 +18,7 @@ import (
 	"github.com/0xPolygonHermez/zkevm-bridge-service/metrics"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/nacos"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/server"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/server/iprestriction"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/synchronizer"
 	"github.com/mitchellh/mapstructure"
 	"github.com/spf13/viper"
@@ -39,6 +40,7 @@ type Config struct {
 	NacosConfig         nacos.Config
 	BusinessConfig      businessconfig.Config `apollo:"BusinessConfig"`
 	Metrics             metrics.Config        `apollo:"Metrics"`
+	IPRestriction       iprestriction.Config  `apollo:"IPRestriction"`
 }
 
 // Load loads the configuration

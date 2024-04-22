@@ -11,6 +11,7 @@ import (
 	"github.com/nacos-group/nacos-sdk-go/v2/common/constant"
 	"github.com/nacos-group/nacos-sdk-go/v2/model"
 	"github.com/nacos-group/nacos-sdk-go/v2/vo"
+	"github.com/pkg/errors"
 )
 
 var (
@@ -70,6 +71,9 @@ func InitNacosClient(urls string, namespace string, name string, externalAddr st
 
 // GetOneInstance returns the info of one healthy instance of the service
 func GetOneInstance(serviceName string) (*model.Instance, error) {
+	if client == nil {
+		return nil, errors.New("nacos client is nil")
+	}
 	params := vo.SelectOneHealthInstanceParam{ServiceName: serviceName}
 	return client.SelectOneHealthyInstance(params)
 }
