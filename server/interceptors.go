@@ -3,11 +3,16 @@ package server
 import (
 	"context"
 	"reflect"
+	"strings"
 	"time"
 
 	"github.com/0xPolygonHermez/zkevm-bridge-service/log"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/metrics"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/server/iprestriction"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 )
@@ -74,4 +79,28 @@ func getRespErrorInfo(resp any, err error) (code int64, msg string) {
 	}
 
 	return
+}
+
+func NewIPCheckInterceptor() grpc.UnaryServerInterceptor {
+	return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
+		headers, ok := metadata.FromIncomingContext(ctx)
+		if !ok {
+			log.Warnf("cannot get headers from incoming context, skipped checking IP")
+			return handler(ctx, req)
+		}
+		xForwardedFor := headers.Get("x-forwarded-for")
+		log.Debugf("method[%v] client IPs: %v", xForwardedFor)
+		// Check each IP in xForwardedFor header
+		for _, ipList := range xForwardedFor {
+			ips := strings.Split(ipList, ",")
+			for _, ip := range ips {
+				ip = strings.TrimSpace(ip)
+				if iprestriction.GetClient().CheckIPRestricted(ip) {
+					// IP is restricted, need to block the request
+					return nil, status.Error(codes.PermissionDenied, "access from this IP is restricted")
+				}
+			}
+		}
+		return handler(ctx, req)
+	}
 }

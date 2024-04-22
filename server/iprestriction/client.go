@@ -46,6 +46,11 @@ func (c *Client) CheckIPRestricted(ip string) bool {
 		log.Debugf("IP restriction is disabled, skipped")
 		return false
 	}
+	for _, blockedIP := range c.cfg.IPBlocklist {
+		if ip == blockedIP {
+			return true
+		}
+	}
 	host := c.cfg.Host
 	if c.cfg.UseNacos {
 		// Resolve nacos service name to URL
