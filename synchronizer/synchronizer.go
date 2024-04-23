@@ -122,6 +122,7 @@ var waitDuration = time.Duration(0)
 // Sync function will read the last state synced and will continue from that point.
 // Sync() will read blockchain events to detect rollup updates
 func (s *ClientSynchronizer) Sync() error {
+	go s.recordLatestBlockNum()
 	// If there is no lastEthereumBlock means that sync from the beginning is necessary. If not, it continues from the retrieved ethereum block
 	// Get the latest synced block. If there is no block on db, use genesis block
 	log.Infof("NetworkID: %d, Synchronization started", s.networkID)
