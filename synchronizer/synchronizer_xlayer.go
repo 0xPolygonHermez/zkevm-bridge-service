@@ -3,6 +3,7 @@ package synchronizer
 import (
 	"context"
 	"math/big"
+	"time"
 
 	"github.com/0xPolygonHermez/zkevm-bridge-service/bridgectrl/pb"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/estimatetime"
@@ -136,4 +137,19 @@ func (s *ClientSynchronizer) getGlobalIndex(deposit *etherman.Deposit) *big.Int 
 	isMainnet := deposit.NetworkID == 0
 	rollupIndex := s.rollupID - 1
 	return etherman.GenerateGlobalIndex(isMainnet, rollupIndex, deposit.DepositCount)
+}
+
+// recordLatestBlockNum continuously records the latest block number to prometheus metrics
+func (s *ClientSynchronizer) recordLatestBlockNum() {
+	ticker := time.NewTicker(1 * time.Second)
+	ticker.Stop()
+
+	for range ticker.C {
+		// Get the latest block header
+		header, err := s.etherMan.HeaderByNumber(s.ctx, nil)
+		if err != nil {
+			continue
+		}
+		metrics.RecordLatestBlockNum(uint32(s.networkID), header.Number.Uint64())
+	}
 }
