@@ -133,7 +133,7 @@ func start(ctx *cli.Context) error {
 			}
 
 			claimTxManager, err := claimtxman.NewClaimTxManager(ctx, c.ClaimTxManager, chExitRootEvent, chSynced,
-				c.Etherman.L2URLs[i], networkIDs[i+1], c.NetworkConfig.L2PolygonBridgeAddresses[i], c.ClaimCompressorAddress,  bridgeService, storage, rollupID, nonceCache, auth)
+				c.Etherman.L2URLs[i], networkIDs[i+1], c.NetworkConfig.L2PolygonBridgeAddresses[i], c.L2ClaimCompressorAddress,  bridgeService, storage, rollupID, nonceCache, auth)
 			if err != nil {
 				log.Fatalf("error creating claim tx manager for L2 %s. Error: %v", c.Etherman.L2URLs[i], err)
 			}
@@ -174,7 +174,7 @@ func newEthermans(c *config.Config) (*etherman.Client, []*etherman.Client, error
 		c.NetworkConfig.PolygonZkEVMGlobalExitRootAddress,
 		c.NetworkConfig.PolygonRollupManagerAddress,
 		c.NetworkConfig.PolygonZkEvmAddress,
-		c.NetworkConfig.ClaimCompressorAddress)
+		c.NetworkConfig.L2ClaimCompressorAddress)
 	if err != nil {
 		log.Error("L1 etherman error: ", err)
 		return nil, nil, err

@@ -35,10 +35,10 @@ func (m *PendingTxs) GenerateNewGroupID() uint64 {
 	return m.LastGroupTxID
 }
 
-func (m *PendingTxs) AddTxCandidatesForGroup(tx ctmtypes.MonitoredTx) {
+func (m *PendingTxs) addTxCandidatesForGroup(tx ctmtypes.MonitoredTx) {
 	m.TxCandidatesForGroup = append(m.TxCandidatesForGroup, tx)
 }
-func (m *PendingTxs) AddTxToGroup(group uint64, tx ctmtypes.MonitoredTx) {
+func (m *PendingTxs) addTxToGroup(group uint64, tx ctmtypes.MonitoredTx) {
 	if _, ok := m.GroupTx[group]; !ok {
 		m.GroupTx[group] = &ctmtypes.MonitoredTxGroup{}
 	}
@@ -73,7 +73,7 @@ func NewPendingTxs(mTxs []ctmtypes.MonitoredTx, groups map[uint64]ctmtypes.Monit
 	for _, tx := range mTxs {
 		// just Created are not grouped yet
 		if tx.IsCandidateToBeGrouped() {
-			result.AddTxCandidatesForGroup(tx)
+			result.addTxCandidatesForGroup(tx)
 			continue
 		}
 		if tx.GroupID != nil {
@@ -82,7 +82,7 @@ func NewPendingTxs(mTxs []ctmtypes.MonitoredTx, groups map[uint64]ctmtypes.Monit
 				return PendingTxs{}, fmt.Errorf("group %d not found", *tx.GroupID)
 			}
 			result.SetGroupDBEntry(groupEntry)
-			result.AddTxToGroup(*tx.GroupID, tx)
+			result.addTxToGroup(*tx.GroupID, tx)
 		}
 	}
 	return result, nil
@@ -111,7 +111,7 @@ func GenerateStoreUpdate(oldState, newState PendingTxs, timeProvider utils.TimeP
 		if oldGroup, ok := oldState.GroupTx[groupID]; ok {
 			// Check if the txs are the same, if not add the txs to the update list
 			for _, tx := range group.Txs {
-				oldTx := oldGroup.GetTxByDipositID(tx.DepositID)
+				oldTx := oldGroup.GetTxByDepositID(tx.DepositID)
 				if oldTx == nil {
 					return nil, fmt.Errorf("tx with depositID %d not found in old state", tx.DepositID)
 				}

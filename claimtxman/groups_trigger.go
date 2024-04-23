@@ -7,15 +7,6 @@ import (
 	"github.com/0xPolygonHermez/zkevm-bridge-service/log"
 )
 
-/*
-// TriggerNumberOfClaims is the number of claims to trigger sending the grouped claim tx
-
-	TriggerNumberOfClaims int `mapstructure:"TriggerNumberOfClaims"`
-	// MaxNumberOfClaimsPerGroup is the maximum number of claims per group
-	MaxNumberOfClaimsPerGroup int `mapstructure:"MaxNumberOfClaimsPerGroup"`
-	// TriggerRetainedClaimPeriod is maximum time that a claim can be retainer before creating a group
-	TriggerRetainedClaimPeriod types.Duration `mapstructure:"TriggerElapsedPeriod"`
-*/
 type GroupsTrigger struct {
 	Cfg ConfigGroupingClaims
 }

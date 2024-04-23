@@ -168,7 +168,7 @@ func NewMonitoredTxGroup(entry MonitoredTxGroupDBEntry, txs []MonitoredTx) Monit
 	return res
 }
 
-func (m MonitoredTxGroup) GetTxByDipositID(depositID uint) *MonitoredTx {
+func (m MonitoredTxGroup) GetTxByDepositID(depositID uint) *MonitoredTx {
 	for idx := range m.Txs {
 		if m.Txs[idx].DepositID == depositID {
 			return &m.Txs[idx]
