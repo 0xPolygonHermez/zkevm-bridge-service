@@ -33,7 +33,6 @@ func InitClient(c Config) {
 			Timeout: c.Timeout.Duration,
 		},
 	}
-	return
 }
 
 func GetClient() *Client {
@@ -72,7 +71,9 @@ func (c *Client) CheckIPRestricted(ip string) bool {
 		return false
 	}
 	// Add request params
-	req.URL.Query().Add("ip", ip)
+	q := req.URL.Query()
+	q.Add("ip", ip)
+	req.URL.RawQuery = q.Encode()
 
 	// Call the API
 	resp, err := c.httpClient.Do(req)
