@@ -142,7 +142,7 @@ func (s *ClientSynchronizer) getGlobalIndex(deposit *etherman.Deposit) *big.Int 
 // recordLatestBlockNum continuously records the latest block number to prometheus metrics
 func (s *ClientSynchronizer) recordLatestBlockNum() {
 	log.Debugf("Start recordLatestBlockNum")
-	ticker := time.NewTicker(1 * time.Second)
+	ticker := time.NewTicker(2 * time.Second)
 
 	for range ticker.C {
 		// Get the latest block header
