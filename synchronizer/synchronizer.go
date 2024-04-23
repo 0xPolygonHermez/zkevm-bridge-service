@@ -293,7 +293,6 @@ func (s *ClientSynchronizer) syncBlocks(lastBlockSynced *etherman.Block) (*ether
 				log.Debug("NetworkID: ", s.networkID, ", Position: ", i, ". BlockNumber: ", blocks[i].BlockNumber, ". BlockHash: ", blocks[i].BlockHash)
 			}
 		}
-		metrics.RecordLastSyncedBlockNum(uint32(s.networkID), lastBlockSynced.BlockNumber)
 		fromBlock = toBlock + 1
 
 		if lastKnownBlock.Cmp(new(big.Int).SetUint64(toBlock)) < 1 {
@@ -303,6 +302,7 @@ func (s *ClientSynchronizer) syncBlocks(lastBlockSynced *etherman.Block) (*ether
 				s.synced = true
 				s.chSynced <- s.networkID
 			}
+			metrics.RecordLastSyncedBlockNum(uint32(s.networkID), lastKnownBlock.Uint64())
 			break
 		}
 		if len(blocks) == 0 { // If there is no events in the checked blocks range and lastKnownBlock > fromBlock.
@@ -325,8 +325,8 @@ func (s *ClientSynchronizer) syncBlocks(lastBlockSynced *etherman.Block) (*ether
 			lastBlockSynced = &b
 			log.Debugf("NetworkID: %d, Storing empty block. BlockNumber: %d. BlockHash: %s",
 				s.networkID, b.BlockNumber, b.BlockHash.String())
-			metrics.RecordLastSyncedBlockNum(uint32(s.networkID), lastBlockSynced.BlockNumber)
 		}
+		metrics.RecordLastSyncedBlockNum(uint32(s.networkID), lastBlockSynced.BlockNumber)
 	}
 
 	return lastBlockSynced, nil
