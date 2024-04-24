@@ -99,9 +99,9 @@ func runGRPCServer(ctx context.Context, bridgeServer pb.BridgeServiceServer, por
 
 	server := grpc.NewServer(grpc.ChainUnaryInterceptor(
 		NewRequestMetricsInterceptor(),
+		sentinelGrpc.NewUnaryServerInterceptor(sentinelGrpc.WithUnaryServerBlockFallback(blockErrFallbackFn)),
 		NewRequestLogInterceptor(),
 		NewIPCheckInterceptor(),
-		sentinelGrpc.NewUnaryServerInterceptor(sentinelGrpc.WithUnaryServerBlockFallback(blockErrFallbackFn)),
 	))
 	pb.RegisterBridgeServiceServer(server, bridgeServer)
 
