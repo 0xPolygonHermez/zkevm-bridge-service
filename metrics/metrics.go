@@ -45,6 +45,8 @@ func initMetrics(c Config) {
 		Buckets:     []float64{0.5, 1, 2.5, 5, 10, 20, 30, 60, 100, 500, 1000},
 	})
 	registerCounter(prometheus.CounterOpts{Name: metricSynchronizerEventCount, ConstLabels: constLabels}, labelNetworkID, labelEventType)
+	registerGauge(prometheus.GaugeOpts{Name: metricLastSyncedBlockNum, ConstLabels: constLabels}, labelNetworkID)
+	registerGauge(prometheus.GaugeOpts{Name: metricLatestBlockNum, ConstLabels: constLabels}, labelNetworkID)
 }
 
 // RecordRequest increments the request count for the method
@@ -117,4 +119,14 @@ func RecordAutoClaimDuration(dur time.Duration) {
 // RecordSynchronizerEvent records an event log consumed by the synchronizer
 func RecordSynchronizerEvent(networkID uint32, eventType string) {
 	counterInc(metricSynchronizerEventCount, map[string]string{labelNetworkID: strconv.Itoa(int(networkID)), labelEventType: eventType})
+}
+
+// RecordLastSyncedBlockNum records the latest block number that has been synced by the synchronizer, per network
+func RecordLastSyncedBlockNum(networkID uint32, blockNum uint64) {
+	gaugeSet(metricLastSyncedBlockNum, float64(blockNum), map[string]string{labelNetworkID: strconv.Itoa(int(networkID))})
+}
+
+// RecordLatestBlockNum records the latest known block number on chain
+func RecordLatestBlockNum(networkID uint32, blockNum uint64) {
+	gaugeSet(metricLatestBlockNum, float64(blockNum), map[string]string{labelNetworkID: strconv.Itoa(int(networkID))})
 }
