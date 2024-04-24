@@ -258,6 +258,12 @@ enum TransactionStatus {
     TX_PENDING_VERIFICATION = 4; // Only for L2->L1
 }
 
+enum ErrorCode {
+    ERROR_OK = 0;
+    ERROR_DEFAULT = 1;
+    ERROR_IP_RESTRICTED = 1009;
+}
+
 // Symbol info message
 message SymbolInfo {
     uint64 chainId = 1;
@@ -468,4 +474,12 @@ message GetFakePushMessagesResponse {
     string error_message = 4;
     string detailMsg = 5;
     repeated string data = 6;
+}
+
+message CommonResponse {
+    uint32 code = 1;
+    string msg = 2;
+    string error_code = 3;
+    string error_message = 4;
+    string detailMsg = 5;
 }

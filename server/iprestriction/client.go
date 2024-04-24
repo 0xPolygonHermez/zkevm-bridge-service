@@ -73,6 +73,8 @@ func (c *Client) CheckIPRestricted(ip string) bool {
 	// Add request params
 	q := req.URL.Query()
 	q.Add("ip", ip)
+	q.Add("type", queryTypeXLayerBridge)
+	q.Add("siteCode", siteCodeOKXGLobal)
 	req.URL.RawQuery = q.Encode()
 
 	// Call the API
