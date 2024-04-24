@@ -14,7 +14,6 @@ import (
 	"github.com/0xPolygonHermez/zkevm-bridge-service/nacos"
 	"github.com/alibaba/sentinel-golang/core/base"
 	sentinelGrpc "github.com/alibaba/sentinel-golang/pkg/adapters/grpc"
-	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -98,12 +97,12 @@ func runGRPCServer(ctx context.Context, bridgeServer pb.BridgeServiceServer, por
 		return nil, status.Error(codes.ResourceExhausted, blockErr.Error())
 	}
 
-	server := grpc.NewServer(grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(
-		sentinelGrpc.NewUnaryServerInterceptor(sentinelGrpc.WithUnaryServerBlockFallback(blockErrFallbackFn)),
-		NewIPCheckInterceptor(),
-		NewRequestLogInterceptor(),
+	server := grpc.NewServer(grpc.ChainUnaryInterceptor(
 		NewRequestMetricsInterceptor(),
-	)))
+		NewRequestLogInterceptor(),
+		NewIPCheckInterceptor(),
+		sentinelGrpc.NewUnaryServerInterceptor(sentinelGrpc.WithUnaryServerBlockFallback(blockErrFallbackFn)),
+	))
 	pb.RegisterBridgeServiceServer(server, bridgeServer)
 
 	healthService := newHealthChecker()
