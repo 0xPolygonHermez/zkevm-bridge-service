@@ -11,7 +11,9 @@ import (
 	"github.com/0xPolygonHermez/zkevm-bridge-service/metrics"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/server/iprestriction"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 )
@@ -100,10 +102,7 @@ func NewIPCheckInterceptor() grpc.UnaryServerInterceptor {
 				ip = strings.TrimSpace(ip)
 				if iprestriction.GetClient().CheckIPRestricted(ip) {
 					// IP is restricted, need to block the request
-					return &pb.CommonResponse{
-						Code: uint32(pb.ErrorCode_ERROR_IP_RESTRICTED),
-						Msg:  ipRestrictionErrorMsg,
-					}, nil
+					return nil, status.Error(codes.Code(pb.ErrorCode_ERROR_IP_RESTRICTED), ipRestrictionErrorMsg)
 				}
 			}
 		}
