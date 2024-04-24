@@ -92,7 +92,7 @@ func NewIPCheckInterceptor() grpc.UnaryServerInterceptor {
 			return handler(ctx, req)
 		}
 		xForwardedFor := headers.Get("x-forwarded-for")
-		log.Debugf("method[%v] client IPs: %v", xForwardedFor)
+		log.Debugf("method[%v] client IPs: %v", info.FullMethod, xForwardedFor)
 		// Check each IP in xForwardedFor header
 		for _, ipList := range xForwardedFor {
 			ips := strings.Split(ipList, ",")
