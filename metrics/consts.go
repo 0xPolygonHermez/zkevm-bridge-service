@@ -42,5 +42,7 @@ const (
 
 	prefixSynchronizer           = prefix + "synchronizer_"
 	metricSynchronizerEventCount = prefixSynchronizer + "event_count"
+	metricLastSyncedBlockNum     = prefixSynchronizer + "last_synced_block_num"
+	metricLatestBlockNum         = prefixSynchronizer + "latest_block_num"
 	labelEventType               = "type"
 )
