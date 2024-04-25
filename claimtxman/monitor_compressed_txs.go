@@ -9,6 +9,7 @@ import (
 	"github.com/0xPolygonHermez/zkevm-bridge-service/log"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/utils"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/jackc/pgx/v4"
 )
@@ -31,6 +32,10 @@ type StorageCompressedInterface interface {
 	Commit(ctx context.Context, dbTx pgx.Tx) error
 }
 
+type EthermanI interface {
+	CompressClaimCall(mainnetExitRoot, rollupExitRoot common.Hash, claimData []claimcompressor.ClaimCompressorCompressClaimCallData) ([]byte, error)
+	SendCompressedClaims(auth *bind.TransactOpts, compressedTxData []byte) (common.Hash, error)
+}
 type MonitorCompressedTxs struct {
 	storage StorageCompressedInterface
 	ctx     context.Context
@@ -39,7 +44,7 @@ type MonitorCompressedTxs struct {
 	cfg                   Config
 	nonceCache            *NonceCache
 	auth                  *bind.TransactOpts
-	claimCompressorSMC    *claimcompressor.Claimcompressor
+	etherMan              EthermanI
 	compressClaimComposer *ComposeCompressClaim
 	timeProvider          utils.TimeProvider
 	triggerGroups         *GroupsTrigger
@@ -51,7 +56,7 @@ func NewMonitorCompressedTxs(ctx context.Context,
 	cfg Config,
 	nonceCache *NonceCache,
 	auth *bind.TransactOpts,
-	claimCompressorSMC *claimcompressor.Claimcompressor,
+	etherMan EthermanI,
 	timeProvider utils.TimeProvider) *MonitorCompressedTxs {
 	composer, err := NewComposeCompressClaim()
 	if err != nil {
@@ -64,7 +69,7 @@ func NewMonitorCompressedTxs(ctx context.Context,
 		cfg:                   cfg,
 		nonceCache:            nonceCache,
 		auth:                  auth,
-		claimCompressorSMC:    claimCompressorSMC,
+		etherMan:              etherMan,
 		compressClaimComposer: composer,
 		timeProvider:          timeProvider,
 		triggerGroups:         NewGroupsTrigger(cfg.GroupingClaims),
@@ -313,16 +318,16 @@ func (tm *MonitorCompressedTxs) SendClaims(pendingTx *PendingTxs, onlyFirstOne b
 		}
 
 		// Send claim tx
-		claimTx, err := tm.claimCompressorSMC.SendCompressedClaims(tm.auth, group.DbEntry.CompressedTxData)
+		txHash, err := tm.etherMan.SendCompressedClaims(tm.auth, group.DbEntry.CompressedTxData)
 		if err != nil {
 			msg := fmt.Sprintf("failed to call SMC SendCompressedClaims for group %d: %v", group.DbEntry.GroupID, err)
 			log.Warn(msg)
 			group.DbEntry.LastLog = msg
 			continue
 		}
-		log.Infof("send claim tx try: %d for group_id:%d  deposits_id:%s txHash:%s", group.DbEntry.NumRetries, group.DbEntry.GroupID, group.GetTxsDepositIDString(), claimTx.Hash().String())
+		log.Infof("send claim tx try: %d for group_id:%d  deposits_id:%s txHash:%s", group.DbEntry.NumRetries, group.DbEntry.GroupID, group.GetTxsDepositIDString(), txHash.String())
 		group.DbEntry.Status = ctmtypes.MonitoredTxGroupStatusClaiming
-		group.DbEntry.AddPendingTx(claimTx.Hash())
+		group.DbEntry.AddPendingTx(txHash)
 		group.DbEntry.NumRetries++
 	}
 	return nil
@@ -353,11 +358,9 @@ func (tm *MonitorCompressedTxs) createNewGroups(pendingTx *PendingTxs) error {
 		return err
 	}
 	log.Debugf("calling smc.compressClaimParams for deposits_id=%s", group.GetTxsDepositIDString())
-	bindcall := &bind.CallOpts{Pending: false}
-	compressedData, err := tm.claimCompressorSMC.CompressClaimCall(bindcall,
-		compressClaimParams.MainnetExitRoot, compressClaimParams.RollupExitRoot, compressClaimParams.ClaimDatas)
+	compressedData, err := tm.etherMan.CompressClaimCall(compressClaimParams.MainnetExitRoot, compressClaimParams.RollupExitRoot, compressClaimParams.ClaimData)
 	if err != nil {
-		return fmt.Errorf("fails call to claimCompressorSMC for new group_id  with deposits %s err:%w ", group.GetTxsDepositIDString(), err)
+		return fmt.Errorf("fails call to claimCompressorSMC for new group_id  with deposits %s err: %v", group.GetTxsDepositIDString(), err)
 	}
 	log.Infof("Compressed data len %d", len(compressedData))
 	group.DbEntry.CompressedTxData = compressedData

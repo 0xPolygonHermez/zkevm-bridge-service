@@ -24,7 +24,7 @@ var (
 type CompressClaimParameters struct {
 	MainnetExitRoot common.Hash
 	RollupExitRoot  common.Hash
-	ClaimDatas      []claimcompressor.ClaimCompressorCompressClaimCallData
+	ClaimData       []claimcompressor.ClaimCompressorCompressClaimCallData
 }
 
 // bridgeClaimXParams is a struct to hold the parameters for the bridge claimAsset and claimMessage methods
@@ -95,7 +95,7 @@ func (c *ComposeCompressClaim) GetCompressClaimParameters(txsData map[uint64][]b
 		RollupExitRoot:  params[maxDepositID].rollupExitRoot,
 	}
 	for _, v := range params {
-		claimData := claimcompressor.ClaimCompressorCompressClaimCallData{
+		claim := claimcompressor.ClaimCompressorCompressClaimCallData{
 			SmtProofLocalExitRoot:  v.smtProofLocalExitRoot,
 			SmtProofRollupExitRoot: v.smtProofRollupExitRoot,
 			GlobalIndex:            v.globalIndex,
@@ -108,7 +108,7 @@ func (c *ComposeCompressClaim) GetCompressClaimParameters(txsData map[uint64][]b
 			Metadata:           v.metadata,
 			IsMessage:          v.isMessage,
 		}
-		result.ClaimDatas = append(result.ClaimDatas, claimData)
+		result.ClaimData = append(result.ClaimData, claim)
 	}
 	return result, nil
 }

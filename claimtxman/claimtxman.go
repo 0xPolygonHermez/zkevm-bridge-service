@@ -12,7 +12,6 @@ import (
 	"github.com/0xPolygonHermez/zkevm-bridge-service/log"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/utils"
 	"github.com/0xPolygonHermez/zkevm-node/state/runtime"
-	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman/smartcontracts/claimcompressor"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -51,10 +50,11 @@ func NewClaimTxManager(ctx context.Context, cfg Config, chExitRootEvent chan *et
 	chSynced chan uint,
 	l2NodeURL string,
 	l2NetworkID uint,
-	l2BridgeAddr, claimCompressorAddress common.Address,
+	l2BridgeAddr common.Address,
 	bridgeService bridgeServiceInterface,
 	storage interface{},
 	rollupID uint,
+	etherMan EthermanI,
 	nonceCache *NonceCache,
 	auth *bind.TransactOpts) (*ClaimTxManager, error) {
 	client, err := utils.NewClient(ctx, l2NodeURL, l2BridgeAddr)
@@ -65,17 +65,7 @@ func NewClaimTxManager(ctx context.Context, cfg Config, chExitRootEvent chan *et
 
 	var monitorTx ctmtypes.TxMonitorer
 	if cfg.GroupingClaims.Enabled {
-		if claimCompressorAddress == (common.Address{}) {
-			log.Error("Claim compressor Address required")
-			cancel()
-			return nil, fmt.Errorf("Claim compressor Address required")
-		}
-		log.Infof("ClaimTxManager grouping claims enabled, claimCompressor=%s", claimCompressorAddress.String())
-		claimCompressor, err := claimcompressor.NewClaimcompressor(claimCompressorAddress, client)
-		if err != nil {
-			log.Fatalf("error creating claim compressor for L2 %s. Error: %v", l2NodeURL, err)
-		}
-		monitorTx = NewMonitorCompressedTxs(ctx, storage.(StorageCompressedInterface), client, cfg, nonceCache, auth, claimCompressor, utils.NewTimeProviderSystemLocalTime())
+		monitorTx = NewMonitorCompressedTxs(ctx, storage.(StorageCompressedInterface), client, cfg, nonceCache, auth, etherMan, utils.NewTimeProviderSystemLocalTime())
 	} else {
 		monitorTx = NewMonitorTxs(ctx, storage.(StorageInterface), client, cfg, nonceCache, auth)
 	}

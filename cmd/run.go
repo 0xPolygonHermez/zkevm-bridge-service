@@ -133,7 +133,7 @@ func start(ctx *cli.Context) error {
 			}
 
 			claimTxManager, err := claimtxman.NewClaimTxManager(ctx, c.ClaimTxManager, chExitRootEvent, chSynced,
-				c.Etherman.L2URLs[i], networkIDs[i+1], c.NetworkConfig.L2PolygonBridgeAddresses[i], c.L2ClaimCompressorAddress,  bridgeService, storage, rollupID, nonceCache, auth)
+				c.Etherman.L2URLs[i], networkIDs[i+1], c.NetworkConfig.L2PolygonBridgeAddresses[i], bridgeService, storage, rollupID, l2Ethermans[i], nonceCache, auth)
 			if err != nil {
 				log.Fatalf("error creating claim tx manager for L2 %s. Error: %v", c.Etherman.L2URLs[i], err)
 			}
@@ -173,8 +173,7 @@ func newEthermans(c *config.Config) (*etherman.Client, []*etherman.Client, error
 		c.NetworkConfig.PolygonBridgeAddress,
 		c.NetworkConfig.PolygonZkEVMGlobalExitRootAddress,
 		c.NetworkConfig.PolygonRollupManagerAddress,
-		c.NetworkConfig.PolygonZkEvmAddress,
-		c.NetworkConfig.L2ClaimCompressorAddress)
+		c.NetworkConfig.PolygonZkEvmAddress)
 	if err != nil {
 		log.Error("L1 etherman error: ", err)
 		return nil, nil, err
@@ -184,7 +183,7 @@ func newEthermans(c *config.Config) (*etherman.Client, []*etherman.Client, error
 	}
 	var l2Ethermans []*etherman.Client
 	for i, addr := range c.L2PolygonBridgeAddresses {
-		l2Etherman, err := etherman.NewL2Client(c.Etherman.L2URLs[i], addr)
+		l2Etherman, err := etherman.NewL2Client(c.Etherman.L2URLs[i], addr, c.NetworkConfig.L2ClaimCompressorAddress)
 		if err != nil {
 			log.Error("L2 etherman ", i, c.Etherman.L2URLs[i], ", error: ", err)
 			return l1Etherman, nil, err

@@ -36,7 +36,7 @@ func NewMonitorTxs(ctx context.Context,
 	nonceCache *NonceCache,
 	auth *bind.TransactOpts) *MonitorTxs {
 	return &MonitorTxs{
-		storage:    storage.(StorageInterface),
+		storage:    storage,
 		ctx:        ctx,
 		l2Node:     l2Node,
 		cfg:        cfg,

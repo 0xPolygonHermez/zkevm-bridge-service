@@ -65,8 +65,6 @@ services:
       - ZKEVM_NODE_STATE_DB_HOST=zkevm-state-db
       - ZKEVM_NODE_POOL_HOST=zkevm-pool-db
       - ZKEVM_NODE_RPC_DB_HOST=zkevm-rpc-db
-      - ZKEVM_NODE_SEQUENCER_FINALIZER_BATCHMAXDELTATIMESTAMP="4s"
-      - ZKEVM_NODE_SEQUENCER_FINALIZER_L2BLOCKMAXDELTATIMESTAMP="1s"
     volumes:
       - ./test/test.keystore.sequencer:/pk/keystore.sequencer
       - ./test/test.keystore.aggregator:/pk/keystore.aggregator
@@ -207,7 +205,7 @@ services:
     command:
       - "/bin/sh"
       - "-c"
-      - "/app/test-deploy-claimcompressor deploy --url \"http://zkevm-node:8123\" --bridgeAddress \"0xCca6ECD73932e49633B9307e1aa0fC174525F424\" --walletFile /pk/keystore.claimtxmanager --password \"testonly\" &&
+      - "/app/test-deploy-claimcompressor deploy --url \"http://zkevm-node:8123\" --bridgeAddress \"0xFe12ABaa190Ef0c8638Ee0ba9F828BF41368Ca0E\" --walletFile /pk/keystore.claimtxmanager --password \"testonly\" &&
         /app/zkevm-bridge run --cfg /app/config.toml"
 
   zkevm-bridge-service-v1tov2:
