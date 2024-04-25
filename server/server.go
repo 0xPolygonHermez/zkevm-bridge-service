@@ -28,10 +28,11 @@ const (
 )
 
 func RegisterNacos(cfg nacos.Config) {
-	log.Info(fmt.Sprintf("nacos config NacosUrls %s NamespaceId %s ApplicationName %s ExternalListenAddr %s", cfg.NacosUrls, cfg.NamespaceId, cfg.ApplicationName, cfg.ExternalListenAddr))
+	var err error
 	if cfg.NacosUrls != "" {
-		nacos.InitNacosClient(cfg.NacosUrls, cfg.NamespaceId, cfg.ApplicationName, cfg.ExternalListenAddr)
+		err = nacos.InitNacosClient(cfg.NacosUrls, cfg.NamespaceId, cfg.ApplicationName, cfg.ExternalListenAddr)
 	}
+	log.Debugf("Init nacos NacosUrls[%s] NamespaceId[%s] ApplicationName[%s] ExternalListenAddr[%s] Error[%v]", cfg.NacosUrls, cfg.NamespaceId, cfg.ApplicationName, cfg.ExternalListenAddr, err)
 }
 
 // RunServer runs gRPC server and HTTP gateway

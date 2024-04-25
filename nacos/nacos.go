@@ -19,17 +19,17 @@ var (
 )
 
 // InitNacosClient start nacos client and register rest service in nacos
-func InitNacosClient(urls string, namespace string, name string, externalAddr string) {
+func InitNacosClient(urls string, namespace string, name string, externalAddr string) error {
 	ip, port, err := resolveIPAndPort(externalAddr)
 	if err != nil {
 		log.Error(fmt.Sprintf("failed to resolve %s error: %s", externalAddr, err.Error()))
-		return
+		return err
 	}
 
 	serverConfigs, err := getServerConfigs(urls)
 	if err != nil {
 		log.Error(fmt.Sprintf("failed to resolve nacos server url %s: %s", urls, err.Error()))
-		return
+		return err
 	}
 	const timeoutMs = 5000
 	client, err = clients.CreateNamingClient(map[string]interface{}{
@@ -44,7 +44,7 @@ func InitNacosClient(urls string, namespace string, name string, externalAddr st
 	})
 	if err != nil {
 		log.Error(fmt.Sprintf("failed to create nacos client. error: %s", err.Error()))
-		return
+		return err
 	}
 
 	const weight = 10
@@ -64,15 +64,16 @@ func InitNacosClient(urls string, namespace string, name string, externalAddr st
 	})
 	if err != nil {
 		log.Error(fmt.Sprintf("failed to register instance in nacos server. error: %s", err.Error()))
-		return
+		return err
 	}
 	log.Info("register application instance in nacos successfully")
+	return nil
 }
 
 // GetOneInstance returns the info of one healthy instance of the service
 func GetOneInstance(serviceName string) (*model.Instance, error) {
 	if client == nil {
-		return nil, errors.New("nacos client is nil")
+		return nil, errors.New("nacos client is not initialized")
 	}
 	params := vo.SelectOneHealthInstanceParam{ServiceName: serviceName}
 	return client.SelectOneHealthyInstance(params)
