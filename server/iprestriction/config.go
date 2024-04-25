@@ -7,6 +7,7 @@ import (
 type Config struct {
 	Enabled  bool           `mapstructure:"Enabled"`
 	UseNacos bool           `mapstructure:"UseNacos"`
+	Scheme   string         `mapstructure:"Scheme"`
 	Host     string         `mapstructure:"Host"` // If UseNacos, Host is the nacos service name
 	Timeout  types.Duration `mapstructure:"TimeoutSeconds"`
 

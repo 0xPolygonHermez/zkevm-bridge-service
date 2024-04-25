@@ -82,14 +82,10 @@ func GetOneInstance(serviceName string) (*model.Instance, error) {
 // GetOneURL returns the URL address of one healthy instance of the service
 func GetOneURL(serviceName string) (string, error) {
 	instance, err := GetOneInstance(serviceName)
-	log.Debugf("Nacos GetOneInstance serviceName[%v] err[%v] instance[%v]", serviceName, instance, err)
 	if err != nil {
 		return "", err
 	}
 
-	// There's no scheme info (HTTP/HTTPS) in the instance info (?!)
-	// Default it to HTTPS (sending requests will require having the scheme)
-	// What if the service only supports HTTP?
-	url := fmt.Sprintf("https://%v:%v", instance.Ip, instance.Port)
+	url := fmt.Sprintf("%v:%v", instance.Ip, instance.Port)
 	return url, nil
 }

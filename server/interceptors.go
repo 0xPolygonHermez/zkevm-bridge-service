@@ -103,22 +103,38 @@ func NewIPCheckInterceptor() grpc.UnaryServerInterceptor {
 			log.Warnf("cannot get headers from incoming context, skipped checking IP")
 			return handler(ctx, req)
 		}
-		xForwardedFor := headers.Get("x-forwarded-for")
-		log.Debugf("method[%v] client IPs: %v", info.FullMethod, xForwardedFor)
-		// Check each IP in xForwardedFor header
-		for _, ipList := range xForwardedFor {
-			ips := strings.Split(ipList, ",")
-			for _, ip := range ips {
-				ip = strings.TrimSpace(ip)
-				if ip == "" {
-					continue
-				}
-				if iprestriction.GetClient().CheckIPRestricted(ip) {
-					// IP is restricted, need to block the request
-					return nil, status.Error(codes.Code(pb.ErrorCode_ERROR_IP_RESTRICTED), ipRestrictionErrorMsg)
-				}
-			}
+		ip := getIPAddrFromHeaders(headers)
+		log.Debugf("method[%v] client IP: %v", info.FullMethod, ip)
+		if ip != "" && iprestriction.GetClient().CheckIPRestricted(ip) {
+			// IP is restricted, need to block the request
+			return nil, status.Error(codes.Code(pb.ErrorCode_ERROR_IP_RESTRICTED), ipRestrictionErrorMsg)
 		}
+
+		// Not restricted, continue the flow
 		return handler(ctx, req)
 	}
+}
+
+func getIPAddrFromHeaders(headers metadata.MD) string {
+	ipHeaders := []string{"x-real-ip", "x-forwarded-for", "Proxy-Client-IP", "WL-Proxy-Client-IP"}
+
+	// Check each header in order
+	for _, h := range ipHeaders {
+		// Find the first valid IP address from the headers
+		vals := headers.Get(h)
+		if len(vals) == 0 {
+			continue
+		}
+		ipArray := strings.Split(vals[0], ",")
+		if len(ipArray) == 0 {
+			continue
+		}
+		ip := strings.TrimSpace(ipArray[0])
+		// Return the first valid IP address found
+		if ip != "" && strings.ToLower(ip) != "unknown" {
+			return ip
+		}
+	}
+
+	return ""
 }

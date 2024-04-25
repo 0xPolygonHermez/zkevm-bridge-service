@@ -27,6 +27,9 @@ func InitClient(c Config) {
 		log.Errorf("host is empty")
 		return
 	}
+	if c.Scheme == "" {
+		c.Scheme = "http"
+	}
 	client = &Client{
 		cfg: c,
 		httpClient: &http.Client{
@@ -57,7 +60,7 @@ func (c *Client) CheckIPRestricted(ip string) bool {
 			log.Errorf("[CheckIPRestricted] cannot get URL from nacos service, name[%v] err[%v]", c.cfg.Host, err)
 			return false
 		}
-		host = nacosUrl
+		host = c.cfg.Scheme + "://" + nacosUrl
 	}
 
 	fullPath, err := url.JoinPath(host, endpointCheckCountryLimit)
