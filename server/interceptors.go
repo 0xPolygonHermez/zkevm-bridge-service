@@ -110,6 +110,9 @@ func NewIPCheckInterceptor() grpc.UnaryServerInterceptor {
 			ips := strings.Split(ipList, ",")
 			for _, ip := range ips {
 				ip = strings.TrimSpace(ip)
+				if ip == "" {
+					continue
+				}
 				if iprestriction.GetClient().CheckIPRestricted(ip) {
 					// IP is restricted, need to block the request
 					return nil, status.Error(codes.Code(pb.ErrorCode_ERROR_IP_RESTRICTED), ipRestrictionErrorMsg)
