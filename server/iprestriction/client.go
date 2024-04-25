@@ -88,7 +88,7 @@ func (c *Client) CheckIPRestricted(ip string) bool {
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		log.Errorf("[CheckIPRestrictied] GET API status code %v url[%v] ip[%v]", resp.StatusCode, fullPath, ip)
+		log.Errorf("[CheckIPRestricted] GET API status code %v url[%v] ip[%v]", resp.StatusCode, fullPath, ip)
 		return false
 	}
 
