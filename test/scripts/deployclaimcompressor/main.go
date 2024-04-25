@@ -101,6 +101,6 @@ func deploy(ctx *cli.Context) error {
 		log.Error("Error deploying claimCompressor contract: ", err)
 		return err
 	}
-	log.Info("ClaimCompressosAddress: ", claimCompressorAddress)
+	log.Info("ClaimCompressorAddress: ", claimCompressorAddress)
 	return nil
 }
