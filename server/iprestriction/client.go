@@ -86,6 +86,7 @@ func (c *Client) CheckIPRestricted(ip string) bool {
 		log.Errorf("[CheckIPRestricted] call GET API err[%v] url[%v] ip[%v]", err, fullPath, ip)
 		return false
 	}
+	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
 		log.Errorf("[CheckIPRestricted] GET API status code %v url[%v] ip[%v]", resp.StatusCode, fullPath, ip)
@@ -97,12 +98,11 @@ func (c *Client) CheckIPRestricted(ip string) bool {
 		log.Errorf("[CheckIPRestricted] failed to read resp body err[%v]")
 		return false
 	}
-	log.Debugf("[CheckIPRestricted] CheckCountryLimit ip[%v] respBody[%v]", string(respBody))
 
 	respStruct := new(CheckCountryLimitResponse)
 	err = json.Unmarshal(respBody, respStruct)
 	if err != nil {
-		log.Errorf("[CheckIPRestricted] failed to unmarshal response, err[%v]", err)
+		log.Errorf("[CheckIPRestricted] failed to unmarshal response, err[%v] body[%v]", err, respBody)
 		return false
 	}
 	log.Debugf("[CheckIPRestricted] URL[%v] IP[%v] Result[%+v]", fullPath, ip, respStruct.Data.XLayerBridge)
