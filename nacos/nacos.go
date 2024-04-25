@@ -6,11 +6,11 @@ import (
 	"time"
 
 	"github.com/0xPolygonHermez/zkevm-bridge-service/log"
-	"github.com/nacos-group/nacos-sdk-go/v2/clients"
-	"github.com/nacos-group/nacos-sdk-go/v2/clients/naming_client"
-	"github.com/nacos-group/nacos-sdk-go/v2/common/constant"
-	"github.com/nacos-group/nacos-sdk-go/v2/model"
-	"github.com/nacos-group/nacos-sdk-go/v2/vo"
+	"github.com/nacos-group/nacos-sdk-go/clients"
+	"github.com/nacos-group/nacos-sdk-go/clients/naming_client"
+	"github.com/nacos-group/nacos-sdk-go/common/constant"
+	"github.com/nacos-group/nacos-sdk-go/model"
+	"github.com/nacos-group/nacos-sdk-go/vo"
 	"github.com/pkg/errors"
 )
 
@@ -81,6 +81,7 @@ func GetOneInstance(serviceName string) (*model.Instance, error) {
 // GetOneURL returns the URL address of one healthy instance of the service
 func GetOneURL(serviceName string) (string, error) {
 	instance, err := GetOneInstance(serviceName)
+	log.Debugf("Nacos GetOneInstance serviceName[%v] err[%v] instance[%v]", serviceName, instance, err)
 	if err != nil {
 		return "", err
 	}
