@@ -590,7 +590,6 @@ func (s *bridgeService) fillLogoInfos(ctx context.Context, transactionMap map[st
 	logoParams := s.buildQueryLogoParams(noCacheTokenMap)
 	tokenLogoMap, err := tokenlogoinfo.GetClient().GetTokenLogoInfos(logoParams)
 	if err != nil {
-
 		log.Errorf("get token logo infos by rpc failed, so skip these tokens")
 		return
 	}
