@@ -312,6 +312,10 @@ message Transaction {
     uint64 blockNumber = 18;
     string globalIndex = 19;
     string destContractAddr = 20;
+    string symbol = 21;
+    string tokenName = 22;
+    string logoOssUrl = 23;
+    uint32 decimal = 24;
 }
 
 // Monitored tx
