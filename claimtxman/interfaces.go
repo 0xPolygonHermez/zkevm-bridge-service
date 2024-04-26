@@ -6,6 +6,7 @@ import (
 	"github.com/0xPolygonHermez/zkevm-bridge-service/bridgectrl"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/claimtxman/types"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/jackc/pgx/v4"
 )
 
@@ -23,6 +24,6 @@ type StorageInterface interface {
 }
 
 type bridgeServiceInterface interface {
-	GetClaimProof(depositCnt, networkID uint, dbTx pgx.Tx) (*etherman.GlobalExitRoot, [][bridgectrl.KeyLen]byte, [][bridgectrl.KeyLen]byte, error)
+	GetClaimProofForCompressed(ger common.Hash, depositCnt, networkID uint, dbTx pgx.Tx) (*etherman.GlobalExitRoot, [][bridgectrl.KeyLen]byte, [][bridgectrl.KeyLen]byte, error)
 	GetDepositStatus(ctx context.Context, depositCount uint, destNetworkID uint) (string, error)
 }

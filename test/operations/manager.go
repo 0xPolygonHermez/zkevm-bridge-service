@@ -2,6 +2,7 @@ package operations
 
 import (
 	"context"
+	"fmt"
 	"math/big"
 	"os"
 	"os/exec"
@@ -167,6 +168,30 @@ func (m *Manager) SendL1Deposit(ctx context.Context, tokenAddr common.Address, a
 	return m.WaitExitRootToBeSynced(ctx, orgExitRoot, false)
 }
 
+// SendMultipleL1Deposit sends a deposit from l1 to l2.
+func (m *Manager) SendMultipleL1Deposit(ctx context.Context, tokenAddr common.Address, amount *big.Int,
+	destNetwork uint32, destAddr *common.Address, numberDeposits int,
+) error {
+	if numberDeposits == 0 {
+		return fmt.Errorf("error: numberDeposits is 0")
+	}
+	client := m.clients[L1]
+	auth, err := client.GetSigner(ctx, accHexPrivateKeys[L1])
+	if err != nil {
+		log.Error("error getting signer: ", err)
+		return err
+	}
+
+	for i := 0; i < numberDeposits; i++ {
+		err = client.SendBridgeAsset(ctx, tokenAddr, big.NewInt(0).Add(amount, big.NewInt(int64(i))), destNetwork, destAddr, []byte{}, auth)
+		if err != nil {
+			log.Error("error sending bridge asset: ", err)
+			return err
+		}
+	}
+	return nil
+}
+
 // SendL2Deposit sends a deposit from l2 to l1.
 func (m *Manager) SendL2Deposit(ctx context.Context, tokenAddr common.Address, amount *big.Int,
 	destNetwork uint32, destAddr *common.Address,
@@ -279,7 +304,7 @@ func (m *Manager) Setup() error {
 	time.Sleep(t * time.Second)
 
 	// Run bridge container
-	err = m.StartBridge()
+	err = StartBridge()
 	if err != nil {
 		log.Error("bridge start failed")
 		// return err
@@ -446,7 +471,7 @@ func runCmd(c *exec.Cmd) error {
 }
 
 // StartBridge restarts the bridge service.
-func (m *Manager) StartBridge() error {
+func StartBridge() error {
 	if err := StopBridge(); err != nil {
 		return err
 	}
@@ -689,7 +714,7 @@ func (m *Manager) UpdateBlocksForTesting(ctx context.Context, networkID uint, bl
 
 // WaitExitRootToBeSynced waits until new exit root is synced.
 func (m *Manager) WaitExitRootToBeSynced(ctx context.Context, orgExitRoot *etherman.GlobalExitRoot, isRollup bool) error {
-	log.Debugf("WaitExitRootToBeSynced: %v\n", orgExitRoot)
+	log.Debugf("WaitExitRootToBeSynced: %v", orgExitRoot)
 	if orgExitRoot == nil {
 		orgExitRoot = &etherman.GlobalExitRoot{
 			ExitRoots: []common.Hash{{}, {}},

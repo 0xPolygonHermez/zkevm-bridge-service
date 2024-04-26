@@ -49,16 +49,15 @@ func (sc *StoreChanges) Execute(ctx context.Context, storage StorageCompressedIn
 	}
 
 	for i := range sc.UpdateTxs {
-		log.Debugf("Updating tx deposit_id:%d  group_id:%d", sc.UpdateTxs[i].DepositID, *sc.UpdateTxs[i].GroupID)
+		if sc.UpdateTxs[i].GroupID != nil {
+			log.Debugf("Updating tx deposit_id: %d. Group_id:%d", sc.UpdateTxs[i].DepositID, *sc.UpdateTxs[i].GroupID)
+		} else {
+			log.Warnf("Updating tx deposit_id: %d. Group_id is nil", sc.UpdateTxs[i].DepositID)
+		}
 		err := storage.UpdateClaimTx(ctx, sc.UpdateTxs[i], dbTx)
 		if err != nil {
 			return fmt.Errorf("storeChanges.Execute error UpdateClaimTx. Err: %w", err)
 		}
-		groupIDstr := "<nil>"
-		if sc.UpdateTxs[i].GroupID != nil {
-			groupIDstr = fmt.Sprintf("%d", *sc.UpdateTxs[i].GroupID)
-		}
-		log.Infof("Updated tx deposit_id:%d  group_id:%s", sc.UpdateTxs[i].DepositID, groupIDstr)
 	}
 	return nil
 }

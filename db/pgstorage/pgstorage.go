@@ -255,6 +255,24 @@ func (p *PostgresStorage) GetLatestL1SyncedExitRoot(ctx context.Context, dbTx pg
 	return &ger, nil
 }
 
+// GetExitRootByGER gets the latest L1 synced global exit root.
+func (p *PostgresStorage) GetExitRootByGER(ctx context.Context, ger common.Hash, dbTx pgx.Tx) (*etherman.GlobalExitRoot, error) {
+	var (
+		gerData       etherman.GlobalExitRoot
+		exitRoots [][]byte
+	)
+	const getLatestL1SyncedExitRootSQL = "SELECT block_id, global_exit_root, exit_roots FROM sync.exit_root WHERE block_id > 0 AND global_exit_root = $1 ORDER BY id DESC LIMIT 1"
+	err := p.getExecQuerier(dbTx).QueryRow(ctx, getLatestL1SyncedExitRootSQL, ger).Scan(&gerData.BlockID, &gerData.GlobalExitRoot, pq.Array(&exitRoots))
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return &gerData, gerror.ErrStorageNotFound
+		}
+		return nil, err
+	}
+	gerData.ExitRoots = []common.Hash{common.BytesToHash(exitRoots[0]), common.BytesToHash(exitRoots[1])}
+	return &gerData, nil
+}
+
 // GetLatestTrustedExitRoot gets the latest trusted global exit root.
 func (p *PostgresStorage) GetLatestTrustedExitRoot(ctx context.Context, dbTx pgx.Tx) (*etherman.GlobalExitRoot, error) {
 	var (

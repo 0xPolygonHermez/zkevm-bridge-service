@@ -101,8 +101,6 @@ func (c *ComposeCompressClaim) GetCompressClaimParameters(txsData map[uint64][]b
 			GlobalIndex:            v.globalIndex,
 			OriginNetwork:          v.originNetwork,
 			OriginAddress:          v.originTokenAddress,
-			// TODO: destinationNetwork is missing?
-			//DestinationNetwork:     v.destinationNetwork,
 			DestinationAddress: v.destinationAddress,
 			Amount:             v.amount,
 			Metadata:           v.metadata,

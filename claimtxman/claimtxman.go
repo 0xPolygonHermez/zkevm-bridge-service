@@ -179,7 +179,7 @@ func (tm *ClaimTxManager) processDepositStatus(ger *etherman.GlobalExitRoot, dbT
 			}
 
 			log.Infof("create the claim tx for the deposit %d", deposit.DepositCount)
-			ger, proof, rollupProof, err := tm.bridgeService.GetClaimProof(deposit.DepositCount, deposit.NetworkID, dbTx)
+			ger, proof, rollupProof, err := tm.bridgeService.GetClaimProofForCompressed(ger.GlobalExitRoot, deposit.DepositCount, deposit.NetworkID, dbTx)
 			if err != nil {
 				log.Errorf("error getting Claim Proof for deposit %d. Error: %v", deposit.DepositCount, err)
 				return err
