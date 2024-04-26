@@ -21,6 +21,7 @@ import (
 	"github.com/0xPolygonHermez/zkevm-bridge-service/sentinel"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/server"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/server/iprestriction"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/server/tokenlogoinfo"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/utils"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/utils/gerror"
 	"github.com/0xPolygonHermez/zkevm-node/jsonrpc/client"
@@ -224,6 +225,7 @@ func startServer(ctx *cli.Context, opts ...runOptionFunc) error {
 		}
 		server.RegisterNacos(c.NacosConfig)
 		iprestriction.InitClient(c.IPRestriction)
+		tokenlogoinfo.InitClient(c.TokenLogoServiceConfig)
 
 		err = server.RunServer(c.BridgeServer, bridgeService)
 		if err != nil {
