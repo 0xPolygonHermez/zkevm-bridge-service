@@ -576,6 +576,7 @@ func (s *bridgeService) fillLogoInfos(ctx context.Context, transactionMap map[st
 			if !errors.Is(err, redis.Nil) {
 				log.Errorf("get token logo info failed, so use rpc to fetch, chainId: %v, token: %v, error: %v", v[0].FromChainId, v[0].BridgeToken, err)
 			}
+			log.Infof("token need to use rpc to get logo, token: %v, chainId: %v", v[0].BridgeToken, v[0].FromChainId)
 			noCacheTokenMap[v[0].FromChainId] = append(noCacheTokenMap[v[0].FromChainId], v[0].BridgeToken)
 			continue
 		}
@@ -589,11 +590,12 @@ func (s *bridgeService) fillLogoInfos(ctx context.Context, transactionMap map[st
 	logoParams := s.buildQueryLogoParams(noCacheTokenMap)
 	tokenLogoMap, err := tokenlogoinfo.GetClient().GetTokenLogoInfos(logoParams)
 	if err != nil {
-		log.Errorf("get token logo infos by rpc failed, so skip these tokens: %v", logoParams)
+
+		log.Errorf("get token logo infos by rpc failed, so skip these tokens")
 		return
 	}
 	if tokenLogoMap == nil {
-		log.Infof("get token logo infos, but result is empty, so skip these tokens: %v", logoParams)
+		log.Infof("get token logo infos, but result is empty, so skip these tokens")
 		return
 	}
 	for k, v := range tokenLogoMap {
