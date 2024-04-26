@@ -428,7 +428,7 @@ func (s *redisStorageImpl) rPopIntCacheFoundation(ctx context.Context, key strin
 	return num, nil
 }
 
-func (s *redisStorageImpl) SetTokenLogoInfo(ctx context.Context, keySuffix string, logoInfo *tokenlogoinfo.TokenLogoInfo) error {
+func (s *redisStorageImpl) SetTokenLogoInfo(ctx context.Context, keySuffix string, logoInfo tokenlogoinfo.TokenLogoInfo) error {
 	value, err := json.Marshal(logoInfo)
 	if err != nil {
 		return errors.Wrap(err, "failed to convert logoInfo to string")

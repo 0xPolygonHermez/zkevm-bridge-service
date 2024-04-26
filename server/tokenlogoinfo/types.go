@@ -15,7 +15,7 @@ type TokenLogoInfo struct {
 	TokenName            string `json:"tokenName"`
 }
 
-type CheckCountryLimitResponse struct {
+type GetTokenLogosResponse struct {
 	Code         int             `json:"code"`
 	Msg          string          `json:"msg"`
 	ErrorCode    string          `json:"error_code"`

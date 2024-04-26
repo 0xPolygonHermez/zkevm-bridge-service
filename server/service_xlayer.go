@@ -576,12 +576,11 @@ func (s *bridgeService) fillLogoInfos(ctx context.Context, transactionMap map[st
 			if !errors.Is(err, redis.Nil) {
 				log.Errorf("get token logo info failed, so use rpc to fetch, chainId: %v, token: %v, error: %v", v[0].FromChainId, v[0].BridgeToken, err)
 			}
-			noCacheTokenMap := make(map[uint32][]string, len(transactionMap))
 			noCacheTokenMap[v[0].FromChainId] = append(noCacheTokenMap[v[0].FromChainId], v[0].BridgeToken)
 			continue
 		}
 		for _, tx := range v {
-			s.fillOneTxLogoInfo(tx, logoInfo)
+			s.fillOneTxLogoInfo(tx, *logoInfo)
 		}
 	}
 	if len(noCacheTokenMap) == 0 {
@@ -599,9 +598,9 @@ func (s *bridgeService) fillLogoInfos(ctx context.Context, transactionMap map[st
 	}
 	for k, v := range tokenLogoMap {
 		for _, tx := range transactionMap[k] {
-			s.fillOneTxLogoInfo(tx, &v)
+			s.fillOneTxLogoInfo(tx, v)
 		}
-		err = s.redisStorage.SetTokenLogoInfo(ctx, k, &v)
+		err = s.redisStorage.SetTokenLogoInfo(ctx, k, v)
 		if err != nil {
 			log.Errorf("failed to set logo info cache for token: %v", v.TokenContractAddress)
 		}
@@ -621,9 +620,11 @@ func (s *bridgeService) buildQueryLogoParams(noCacheTokenMap map[uint32][]string
 	return logoParams
 }
 
-func (s *bridgeService) fillOneTxLogoInfo(tx *pb.Transaction, logoInfo *tokenlogoinfo.TokenLogoInfo) {
-	tx.Symbol = logoInfo.TokenSymbol
-	tx.TokenName = logoInfo.TokenName
-	tx.LogoOssUrl = logoInfo.LogoOssUrl
-	tx.Decimal = logoInfo.Unit
+func (s *bridgeService) fillOneTxLogoInfo(tx *pb.Transaction, logoInfo tokenlogoinfo.TokenLogoInfo) {
+	tx.LogoInfo = &pb.TokenLogoInfo{
+		Symbol:     logoInfo.TokenSymbol,
+		TokenName:  logoInfo.TokenName,
+		LogoOssUrl: logoInfo.LogoOssUrl,
+		Decimal:    logoInfo.Unit,
+	}
 }

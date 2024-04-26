@@ -47,7 +47,7 @@ type RedisStorage interface {
 	RPopVerifyTime(ctx context.Context) (int64, error)
 
 	// token logo storage
-	SetTokenLogoInfo(ctx context.Context, keySuffix string, logoInfo *tokenlogoinfo.TokenLogoInfo) error
+	SetTokenLogoInfo(ctx context.Context, keySuffix string, logoInfo tokenlogoinfo.TokenLogoInfo) error
 	GetTokenLogoInfo(ctx context.Context, keySuffix string) (*tokenlogoinfo.TokenLogoInfo, error)
 }
 

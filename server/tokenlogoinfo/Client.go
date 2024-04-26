@@ -88,7 +88,7 @@ func (c *Client) GetTokenLogoInfos(tokenAddArr []*QueryLogoParam) (map[string]To
 		log.Errorf("[getTokenLogoInfos] failed to read resp body err[%v]", err)
 		return nil, err
 	}
-	respStruct := &CheckCountryLimitResponse{}
+	respStruct := &GetTokenLogosResponse{}
 	err = json.Unmarshal(respBody, respStruct)
 	if err != nil {
 		log.Errorf("[getTokenLogoInfos] failed to convert resp to struct, resp [%v] err[%v]", string(respBody), err)
