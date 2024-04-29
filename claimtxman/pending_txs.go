@@ -69,6 +69,7 @@ func NewPendingTxs(mTxs []ctmtypes.MonitoredTx, groups map[uint64]ctmtypes.Monit
 	result := PendingTxs{
 		GroupTx:       make(map[uint64]*ctmtypes.MonitoredTxGroup),
 		LastGroupTxID: lastGroupID,
+		TxCandidatesForGroup: make([]ctmtypes.MonitoredTx, 0),
 	}
 	var ger common.Hash
 	if len(mTxs) > 0 {

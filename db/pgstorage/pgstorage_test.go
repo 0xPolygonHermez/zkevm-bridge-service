@@ -181,13 +181,11 @@ func TestAddMonitoredTxs(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestKK(t *testing.T) {
-	//AddMonitoredTxsGroup(ctx context.Context, mTxGroup ctmtypes.MonitoredTxGroup, dbTx pgx.Tx)
-
+func TestAddMonitoredTxsGroup(t *testing.T) {
 	store := createStore(t)
 	ctx := context.Background()
 	group := ctmtypes.MonitoredTxGroupDBEntry{
-		GroupID:   0,
+		GroupID:   1,
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	}

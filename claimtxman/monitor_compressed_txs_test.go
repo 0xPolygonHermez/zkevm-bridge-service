@@ -15,12 +15,23 @@ func TestDeepCopy(t *testing.T) {
 		TxCandidatesForGroup: make([]ctmtypes.MonitoredTx, 0),
 		LastGroupTxID:        0,
 	}
-	pendingTx.AddGroup(ctmtypes.MonitoredTxGroup{})
+	pendingTx.AddGroup(ctmtypes.MonitoredTxGroup{
+		DbEntry: ctmtypes.MonitoredTxGroupDBEntry{
+			CompressedTxData: []byte{},
+			DepositIDs: []uint64{},
+		},
+    	Txs: []ctmtypes.MonitoredTx{},
+	})
 
 	initialStatus, err := deepcopy.Anything(pendingTx)
 	require.NoError(t, err)
 	copied := *initialStatus.(*claimtxman.PendingTxs)
 	require.Equal(t, pendingTx, &copied)
+	require.Equal(t, len(pendingTx.GroupTx), len(copied.GroupTx))
+	require.Equal(t, pendingTx.GroupTx[0].DbEntry, copied.GroupTx[0].DbEntry)
+	require.Equal(t, pendingTx.GroupTx[0].Txs, copied.GroupTx[0].Txs)
+	require.Equal(t, pendingTx.LastGroupTxID, copied.LastGroupTxID)
+	require.Equal(t, pendingTx.TxCandidatesForGroup, copied.TxCandidatesForGroup)
 }
 
 func TestDeepCopy2(t *testing.T) {
@@ -36,5 +47,5 @@ func TestDeepCopy2(t *testing.T) {
 	initialStatus, err := deepcopy.Anything(&pendingTx)
 	require.NoError(t, err)
 	copied := *initialStatus.(*claimtxman.PendingTxs)
-	require.Equal(t, pendingTx, &copied)
+	require.Equal(t, pendingTx, copied)
 }
