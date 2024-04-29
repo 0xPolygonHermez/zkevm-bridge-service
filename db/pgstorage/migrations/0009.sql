@@ -17,11 +17,15 @@ CREATE TABLE IF NOT EXISTS sync.monitored_txs_group
 
 ALTER TABLE sync.monitored_txs
 ADD COLUMN IF NOT EXISTS group_id BIGINT DEFAULT NULL;
+ALTER TABLE sync.monitored_txs
+ADD COLUMN IF NOT EXISTS global_exit_root BYTEA NOT NULL DEFAULT '\x0000000000000000000000000000000000000000';
 -- ADD CONSTRAINT fk_group_id FOREIGN KEY (group_id) REFERENCES sync.monitored_txs_group(group_id) ON DELETE CASCADE;
 
 
 -- +migrate Down
 ALTER TABLE sync.monitored_txs
 DROP COLUMN IF EXISTS group_id;
+ALTER TABLE sync.monitored_txs
+DROP COLUMN IF EXISTS global_exit_root;
 
 DROP TABLE IF EXISTS sync.monitored_txs_group;
