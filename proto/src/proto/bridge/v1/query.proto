@@ -313,6 +313,7 @@ message Transaction {
     string globalIndex = 19;
     string destContractAddr = 20;
     TokenLogoInfo logoInfo = 21;
+    uint32 originalNetwork = 22;
 }
 
 message TokenLogoInfo {

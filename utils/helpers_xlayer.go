@@ -53,6 +53,7 @@ func EthermanDepositToPbTransaction(deposit *etherman.Deposit) *pb.Transaction {
 		LeafType:         uint32(deposit.LeafType),
 		BlockNumber:      deposit.BlockNumber,
 		DestContractAddr: deposit.DestContractAddress.Hex(),
+		OriginalNetwork:  uint32(deposit.OriginalNetwork),
 	}
 }
 

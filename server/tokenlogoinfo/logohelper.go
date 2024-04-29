@@ -15,7 +15,7 @@ import (
 func FillLogoInfos(ctx context.Context, redisStorage redisstorage.RedisStorage, transactionMap map[string][]*pb.Transaction) {
 	noCacheTokenMap := make(map[uint32][]string)
 	for k, v := range transactionMap {
-		chainId := utils.GetStandardChainIdByInnerId(uint64(v[0].FromChainId))
+		chainId := utils.GetChainIdByNetworkId(uint(v[0].OriginalNetwork))
 		logoInfo, err := redisStorage.GetTokenLogoInfo(ctx, k)
 		if err != nil {
 			if !errors.Is(err, redis.Nil) {
