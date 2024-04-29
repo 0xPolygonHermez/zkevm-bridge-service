@@ -101,10 +101,10 @@ func (c *ComposeCompressClaim) GetCompressClaimParameters(txsData map[uint64][]b
 			GlobalIndex:            v.globalIndex,
 			OriginNetwork:          v.originNetwork,
 			OriginAddress:          v.originTokenAddress,
-			DestinationAddress: v.destinationAddress,
-			Amount:             v.amount,
-			Metadata:           v.metadata,
-			IsMessage:          v.isMessage,
+			DestinationAddress:     v.destinationAddress,
+			Amount:                 v.amount,
+			Metadata:               v.metadata,
+			IsMessage:              v.isMessage,
 		}
 		result.ClaimData = append(result.ClaimData, claim)
 	}

@@ -20,13 +20,13 @@ RetryNumber = 10
 AuthorizedClaimMessageAddresses = ["0x90F79bf6EB2c4f870365E785982E1f101E93b906"]
 [ClaimTxManager.GroupingClaims]
     Enabled = true
-    TriggerNumberOfClaims = 10
-    MaxNumberOfClaimsPerGroup = 10
-    TriggerRetainedClaimPeriod = "30s"
+    TriggerNumberOfClaims = 20
+    MaxNumberOfClaimsPerGroup = 25
+    TriggerRetainedClaimPeriod = "1m"
     MaxRetries = 2
     RetryInterval = "10s"
     RetryTimeout = "30s"
-    FrequencyToProcessCompressedClaims = "10m"
+    FrequencyToProcessCompressedClaims = "1m"
 
 [Etherman]
 L1URL = "http://localhost:8545"
