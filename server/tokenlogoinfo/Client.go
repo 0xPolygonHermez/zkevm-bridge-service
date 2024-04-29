@@ -60,6 +60,7 @@ func (c *Client) GetTokenLogoInfos(tokenAddArr []*tokenlogo.QueryLogoParam) (map
 		log.Errorf("[getTokenLogoInfos] cannot get URL from nacos service, name[%v] err[%v]", c.cfg.LogoServiceNacosName, err)
 		return nil, err
 	}
+	host = c.cfg.Scheme + "://" + host
 	fullPath, err := url.JoinPath(host, endpointGetLogoInfos)
 	if err != nil {
 		log.Errorf("[getTokenLogoInfos] JoinPath err[%v] host[%v] endpoint[%v]", err, host, endpointGetLogoInfos)

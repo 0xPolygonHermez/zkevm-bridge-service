@@ -7,6 +7,7 @@ import (
 	"github.com/0xPolygonHermez/zkevm-bridge-service/log"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/models/tokenlogo"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/redisstorage"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/utils"
 	"github.com/pkg/errors"
 	"github.com/redis/go-redis/v9"
 )
@@ -14,13 +15,14 @@ import (
 func FillLogoInfos(ctx context.Context, redisStorage redisstorage.RedisStorage, transactionMap map[string][]*pb.Transaction) {
 	noCacheTokenMap := make(map[uint32][]string)
 	for k, v := range transactionMap {
+		chainId := utils.GetStandardChainIdByInnerId(uint64(v[0].FromChainId))
 		logoInfo, err := redisStorage.GetTokenLogoInfo(ctx, k)
 		if err != nil {
 			if !errors.Is(err, redis.Nil) {
-				log.Errorf("get token logo info failed, so use rpc to fetch, chainId: %v, token: %v, error: %v", v[0].FromChainId, v[0].BridgeToken, err)
+				log.Errorf("get token logo info failed, so use rpc to fetch, chainId: %v, token: %v, error: %v", chainId, v[0].BridgeToken, err)
 			}
-			log.Infof("token need to use rpc to get logo, token: %v, chainId: %v", v[0].BridgeToken, v[0].FromChainId)
-			noCacheTokenMap[v[0].FromChainId] = append(noCacheTokenMap[v[0].FromChainId], v[0].BridgeToken)
+			log.Infof("token need to use rpc to get logo, token: %v, chainId: %v", v[0].BridgeToken, chainId)
+			noCacheTokenMap[v[0].FromChainId] = append(noCacheTokenMap[uint32(chainId)], v[0].BridgeToken)
 			continue
 		}
 		for _, tx := range v {

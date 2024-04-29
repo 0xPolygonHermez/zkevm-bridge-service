@@ -8,4 +8,5 @@ type Config struct {
 	Enabled              bool           `mapstructure:"Enabled"`
 	LogoServiceNacosName string         `mapstructure:"LogoServiceNacosName"`
 	Timeout              types.Duration `mapstructure:"TimeoutSeconds"`
+	Scheme               string         `mapstructure:"Scheme"`
 }
