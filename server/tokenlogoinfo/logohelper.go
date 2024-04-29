@@ -66,7 +66,7 @@ func buildQueryLogoParams(noCacheTokenMap map[uint32][]string) []*tokenlogo.Quer
 	return logoParams
 }
 
-func fillOneTxLogoInfo(tx *pb.Transaction, logoInfo tokenlogo.TokenLogoInfo) {
+func fillOneTxLogoInfo(tx *pb.Transaction, logoInfo tokenlogo.LogoInfo) {
 	tx.LogoInfo = &pb.TokenLogoInfo{
 		Symbol:     logoInfo.TokenSymbol,
 		TokenName:  logoInfo.TokenName,

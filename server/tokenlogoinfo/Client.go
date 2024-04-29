@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 
 	"github.com/0xPolygonHermez/zkevm-bridge-service/models/tokenlogo"
@@ -47,7 +48,7 @@ func InitClient(c Config) {
 	}
 }
 
-func (c *Client) GetTokenLogoInfos(tokenAddArr []*tokenlogo.QueryLogoParam) (map[string]tokenlogo.TokenLogoInfo, error) {
+func (c *Client) GetTokenLogoInfos(tokenAddArr []*tokenlogo.QueryLogoParam) (map[string]tokenlogo.LogoInfo, error) {
 	if c == nil {
 		log.Infof("init logo info client failed, so skip")
 		return nil, nil
@@ -101,9 +102,14 @@ func (c *Client) GetTokenLogoInfos(tokenAddArr []*tokenlogo.QueryLogoParam) (map
 		log.Errorf("[getTokenLogoInfos] failed to convert resp to struct, resp [%v] err[%v]", string(respBody), err)
 		return nil, err
 	}
-	logoMap := make(map[string]tokenlogo.TokenLogoInfo, len(respStruct.Data))
+	logoMap := make(map[string]tokenlogo.LogoInfo, len(respStruct.Data))
 	for _, v := range respStruct.Data {
-		logoMap[GetTokenLogoMapKey(v.TokenContractAddress, v.ChainId)] = v
+		chainId, errConvert := strconv.ParseInt(v.ChainIdStr, 10, 64)
+		if errConvert != nil {
+			log.Errorf("token: %v convert chain id to uint failed, chain str: %v, err: %v", v.TokenContractAddress, v.ChainIdStr, errConvert)
+			continue
+		}
+		logoMap[GetTokenLogoMapKey(v.TokenContractAddress, uint32(chainId))] = v
 	}
 	convertRet, _ := json.Marshal(logoMap)
 	log.Debugf("request token info by rpc, final ret: %v", convertRet)
