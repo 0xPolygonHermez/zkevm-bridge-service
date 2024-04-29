@@ -1,4 +1,4 @@
-package tokenlogoinfo
+package tokenlogo
 
 type QueryLogoParam struct {
 	ChainId              uint32 `json:"chainId"`

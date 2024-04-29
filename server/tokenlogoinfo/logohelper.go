@@ -5,6 +5,7 @@ import (
 
 	"github.com/0xPolygonHermez/zkevm-bridge-service/bridgectrl/pb"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/log"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/models/tokenlogo"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/redisstorage"
 	"github.com/pkg/errors"
 	"github.com/redis/go-redis/v9"
@@ -50,11 +51,11 @@ func FillLogoInfos(ctx context.Context, redisStorage redisstorage.RedisStorage, 
 	}
 }
 
-func buildQueryLogoParams(noCacheTokenMap map[uint32][]string) []*QueryLogoParam {
-	var logoParams []*QueryLogoParam
+func buildQueryLogoParams(noCacheTokenMap map[uint32][]string) []*tokenlogo.QueryLogoParam {
+	var logoParams []*tokenlogo.QueryLogoParam
 	for k, v := range noCacheTokenMap {
 		for _, addr := range v {
-			logoParams = append(logoParams, &QueryLogoParam{
+			logoParams = append(logoParams, &tokenlogo.QueryLogoParam{
 				ChainId:              k,
 				TokenContractAddress: addr,
 			})
@@ -63,7 +64,7 @@ func buildQueryLogoParams(noCacheTokenMap map[uint32][]string) []*QueryLogoParam
 	return logoParams
 }
 
-func fillOneTxLogoInfo(tx *pb.Transaction, logoInfo TokenLogoInfo) {
+func fillOneTxLogoInfo(tx *pb.Transaction, logoInfo tokenlogo.TokenLogoInfo) {
 	tx.LogoInfo = &pb.TokenLogoInfo{
 		Symbol:     logoInfo.TokenSymbol,
 		TokenName:  logoInfo.TokenName,

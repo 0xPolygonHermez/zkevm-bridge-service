@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 
+	"github.com/0xPolygonHermez/zkevm-bridge-service/models/tokenlogo"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/nacos"
 	"github.com/0xPolygonHermez/zkevm-node/log"
 )
@@ -45,7 +46,7 @@ func InitClient(c Config) {
 	}
 }
 
-func (c *Client) GetTokenLogoInfos(tokenAddArr []*QueryLogoParam) (map[string]TokenLogoInfo, error) {
+func (c *Client) GetTokenLogoInfos(tokenAddArr []*tokenlogo.QueryLogoParam) (map[string]tokenlogo.TokenLogoInfo, error) {
 	if c == nil {
 		log.Infof("init logo info client failed, so skip")
 		return nil, nil
@@ -92,13 +93,13 @@ func (c *Client) GetTokenLogoInfos(tokenAddArr []*QueryLogoParam) (map[string]To
 		log.Errorf("[getTokenLogoInfos] failed to read resp body err[%v]", err)
 		return nil, err
 	}
-	respStruct := &GetTokenLogosResponse{}
+	respStruct := &tokenlogo.GetTokenLogosResponse{}
 	err = json.Unmarshal(respBody, respStruct)
 	if err != nil {
 		log.Errorf("[getTokenLogoInfos] failed to convert resp to struct, resp [%v] err[%v]", string(respBody), err)
 		return nil, err
 	}
-	logoMap := make(map[string]TokenLogoInfo, len(respStruct.Data))
+	logoMap := make(map[string]tokenlogo.TokenLogoInfo, len(respStruct.Data))
 	for _, v := range respStruct.Data {
 		logoMap[GetTokenLogoMapKey(v.TokenContractAddress, v.ChainId)] = v
 	}

@@ -12,7 +12,7 @@ import (
 	"github.com/0xPolygonHermez/zkevm-bridge-service/config/apolloconfig"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/log"
-	"github.com/0xPolygonHermez/zkevm-bridge-service/server/tokenlogoinfo"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/models/tokenlogo"
 	"github.com/pkg/errors"
 	"github.com/redis/go-redis/v9"
 	"google.golang.org/protobuf/encoding/protojson"
@@ -428,7 +428,7 @@ func (s *redisStorageImpl) rPopIntCacheFoundation(ctx context.Context, key strin
 	return num, nil
 }
 
-func (s *redisStorageImpl) SetTokenLogoInfo(ctx context.Context, keySuffix string, logoInfo tokenlogoinfo.TokenLogoInfo) error {
+func (s *redisStorageImpl) SetTokenLogoInfo(ctx context.Context, keySuffix string, logoInfo tokenlogo.TokenLogoInfo) error {
 	value, err := json.Marshal(logoInfo)
 	if err != nil {
 		return errors.Wrap(err, "failed to convert logoInfo to string")
@@ -436,7 +436,7 @@ func (s *redisStorageImpl) SetTokenLogoInfo(ctx context.Context, keySuffix strin
 	return s.setFoundation(ctx, s.getTokenInfoCacheKey(keySuffix), value, durationFor48h)
 }
 
-func (s *redisStorageImpl) GetTokenLogoInfo(ctx context.Context, keySuffix string) (*tokenlogoinfo.TokenLogoInfo, error) {
+func (s *redisStorageImpl) GetTokenLogoInfo(ctx context.Context, keySuffix string) (*tokenlogo.TokenLogoInfo, error) {
 	if s == nil || s.client == nil {
 		return nil, errors.New("redis client is nil")
 	}
@@ -445,7 +445,7 @@ func (s *redisStorageImpl) GetTokenLogoInfo(ctx context.Context, keySuffix strin
 	if err != nil {
 		return nil, errors.Wrap(err, fmt.Sprintf("get redis cache for key: %v failed", fullKey))
 	}
-	logoStruct := &tokenlogoinfo.TokenLogoInfo{}
+	logoStruct := &tokenlogo.TokenLogoInfo{}
 	err = json.Unmarshal([]byte(res), logoStruct)
 	if err != nil {
 		return nil, errors.Wrap(err, fmt.Sprintf("failed convert logo info cache to struct, cache: %v", res))
