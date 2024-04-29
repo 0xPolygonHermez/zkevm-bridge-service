@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strings"
 
 	"github.com/0xPolygonHermez/zkevm-bridge-service/models/tokenlogo"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/nacos"
@@ -108,5 +109,5 @@ func (c *Client) GetTokenLogoInfos(tokenAddArr []*tokenlogo.QueryLogoParam) (map
 }
 
 func GetTokenLogoMapKey(tokenAddr string, chainId uint32) string {
-	return fmt.Sprintf("%s_%d", tokenAddr, chainId)
+	return fmt.Sprintf("%s_%d", strings.ToLower(tokenAddr), chainId)
 }
