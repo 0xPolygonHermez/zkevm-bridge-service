@@ -67,8 +67,8 @@ func (m *PendingTxs) SetGroupDBEntry(group ctmtypes.MonitoredTxGroupDBEntry) {
 
 func NewPendingTxs(mTxs []ctmtypes.MonitoredTx, groups map[uint64]ctmtypes.MonitoredTxGroupDBEntry, lastGroupID uint64) (PendingTxs, error) {
 	result := PendingTxs{
-		GroupTx:       make(map[uint64]*ctmtypes.MonitoredTxGroup),
-		LastGroupTxID: lastGroupID,
+		GroupTx:              make(map[uint64]*ctmtypes.MonitoredTxGroup),
+		LastGroupTxID:        lastGroupID,
 		TxCandidatesForGroup: make([]ctmtypes.MonitoredTx, 0),
 	}
 	var ger common.Hash

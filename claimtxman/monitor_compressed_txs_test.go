@@ -18,9 +18,9 @@ func TestDeepCopy(t *testing.T) {
 	pendingTx.AddGroup(ctmtypes.MonitoredTxGroup{
 		DbEntry: ctmtypes.MonitoredTxGroupDBEntry{
 			CompressedTxData: []byte{},
-			DepositIDs: []uint64{},
+			DepositIDs:       []uint64{},
 		},
-    	Txs: []ctmtypes.MonitoredTx{},
+		Txs: []ctmtypes.MonitoredTx{},
 	})
 
 	initialStatus, err := deepcopy.Anything(pendingTx)
