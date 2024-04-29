@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	endpointGetLogoInfos = "/inner/logo/service/queryLogoSocialList"
+	endpointGetLogoInfos = "/priapi/v1/oc/web-common/coin/getLogoInfoBatch"
 )
 
 type Client struct {
