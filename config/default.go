@@ -24,6 +24,7 @@ RetryNumber = 10
 AuthorizedClaimMessageAddresses = []
 [ClaimTxManager.GroupingClaims]
     Enabled = false
+    FrequencyToProcessCompressedClaims = "10m"
     TriggerNumberOfClaims = 10
     MaxNumberOfClaimsPerGroup = 10
     TriggerRetainedClaimPeriod = "30s"

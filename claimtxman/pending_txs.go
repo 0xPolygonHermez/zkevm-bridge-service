@@ -70,9 +70,13 @@ func NewPendingTxs(mTxs []ctmtypes.MonitoredTx, groups map[uint64]ctmtypes.Monit
 		GroupTx:       make(map[uint64]*ctmtypes.MonitoredTxGroup),
 		LastGroupTxID: lastGroupID,
 	}
+	var ger common.Hash
+	if len(mTxs) > 0 {
+		ger = mTxs[0].GlobalExitRoot
+	}
 	for _, tx := range mTxs {
 		// just Created are not grouped yet
-		if tx.IsCandidateToBeGrouped() {
+		if tx.IsCandidateToBeGrouped(ger) {
 			result.addTxCandidatesForGroup(tx)
 			continue
 		}

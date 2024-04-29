@@ -26,6 +26,7 @@ AuthorizedClaimMessageAddresses = ["0x90F79bf6EB2c4f870365E785982E1f101E93b906"]
     MaxRetries = 2
     RetryInterval = "10s"
     RetryTimeout = "30s"
+    FrequencyToProcessCompressedClaims = "10m"
 
 [Etherman]
 L1URL = "http://localhost:8545"

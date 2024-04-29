@@ -28,6 +28,8 @@ type Config struct {
 type ConfigGroupingClaims struct {
 	//Enabled whether to enable this module
 	Enabled bool `mapstructure:"Enabled"`
+	//FrequencyToProcessCompressedClaims wait time to process compressed claims
+	FrequencyToProcessCompressedClaims types.Duration `mapstructure:"FrequencyToProcessCompressedClaims"`
 	// TriggerNumberOfClaims is the number of claims to trigger sending the grouped claim tx
 	TriggerNumberOfClaims int `mapstructure:"TriggerNumberOfClaims"`
 	// MaxNumberOfClaimsPerGroup is the maximum number of claims per group

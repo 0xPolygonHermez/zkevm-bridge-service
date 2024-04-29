@@ -91,6 +91,8 @@ func NewClaimTxManager(ctx context.Context, cfg Config, chExitRootEvent chan *et
 // get mined
 func (tm *ClaimTxManager) Start() {
 	ticker := time.NewTicker(tm.cfg.FrequencyToMonitorTxs.Duration)
+	compressorTicker := time.NewTicker(tm.cfg.GroupingClaims.FrequencyToProcessCompressedClaims.Duration)
+	var ger *etherman.GlobalExitRoot
 	for {
 		select {
 		case <-tm.ctx.Done():
@@ -100,9 +102,13 @@ func (tm *ClaimTxManager) Start() {
 				log.Info("NetworkID synced: ", netID)
 				tm.synced = true
 			}
-		case ger := <-tm.chExitRootEvent:
+		case ger = <-tm.chExitRootEvent:
 			if tm.synced {
 				log.Debug("UpdateDepositsStatus for ger: ", ger.GlobalExitRoot)
+				if tm.cfg.GroupingClaims.Enabled {
+					log.Debug("Ger value updated and ready to be processed...")
+					continue
+				}
 				go func() {
 					err := tm.updateDepositsStatus(ger)
 					if err != nil {
@@ -111,6 +117,16 @@ func (tm *ClaimTxManager) Start() {
 				}()
 			} else {
 				log.Infof("Waiting for networkID %d to be synced before processing deposits", tm.l2NetworkID)
+			}
+		case <-compressorTicker.C:
+			if tm.synced && tm.cfg.GroupingClaims.Enabled {
+				log.Info("Processing deposits for ger: ", ger.GlobalExitRoot)
+				go func() {
+					err := tm.updateDepositsStatus(ger)
+					if err != nil {
+						log.Errorf("failed to update deposits status: %v", err)
+					}
+				}()
 			}
 		case <-ticker.C:
 			err := tm.monitorTxs.MonitorTxs(tm.ctx)
@@ -203,7 +219,7 @@ func (tm *ClaimTxManager) processDepositStatus(ger *etherman.GlobalExitRoot, dbT
 				log.Errorf("error BuildSendClaim tx for deposit %d. Error: %v", deposit.DepositCount, err)
 				return err
 			}
-			if err = tm.addClaimTx(deposit.DepositCount, tm.auth.From, tx.To(), nil, tx.Data(), dbTx); err != nil {
+			if err = tm.addClaimTx(deposit.DepositCount, tm.auth.From, tx.To(), nil, tx.Data(), ger.GlobalExitRoot, dbTx); err != nil {
 				log.Errorf("error adding claim tx for deposit %d. Error: %v", deposit.DepositCount, err)
 				return err
 			}
@@ -223,7 +239,7 @@ func (tm *ClaimTxManager) isDepositMessageAllowed(deposit *etherman.Deposit) boo
 	return false
 }
 
-func (tm *ClaimTxManager) addClaimTx(depositCount uint, from common.Address, to *common.Address, value *big.Int, data []byte, dbTx pgx.Tx) error {
+func (tm *ClaimTxManager) addClaimTx(depositCount uint, from common.Address, to *common.Address, value *big.Int, data []byte, ger common.Hash, dbTx pgx.Tx) error {
 	// get gas
 	tx := ethereum.CallMsg{
 		From:  from,
@@ -254,6 +270,7 @@ func (tm *ClaimTxManager) addClaimTx(depositCount uint, from common.Address, to 
 		DepositID: depositCount, From: from, To: to,
 		Nonce: nonce, Value: value, Data: data,
 		Gas: gas, Status: ctmtypes.MonitoredTxStatusCreated,
+		GlobalExitRoot: ger,
 	}
 
 	// add to storage

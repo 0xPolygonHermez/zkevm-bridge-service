@@ -90,6 +90,9 @@ type MonitoredTx struct {
 
 	// GroupID is the group id of the tx if have it (could be null)
 	GroupID *uint64
+
+	// GlobalExitRoot is the ger used to get the merkle proof
+	GlobalExitRoot common.Hash
 }
 
 // MonitoredTxGroupStatus represents the status of a monitored tx
@@ -349,6 +352,6 @@ func (mTx *MonitoredTx) HistoryHashSlice() [][]byte {
 }
 
 // IsCandidateForGroup returns true if the tx is a candidate to be grouped
-func (mTx *MonitoredTx) IsCandidateToBeGrouped() bool {
-	return mTx.Status == MonitoredTxStatusCreated && len(mTx.History) == 0 && mTx.GroupID == nil
+func (mTx *MonitoredTx) IsCandidateToBeGrouped(ger common.Hash) bool {
+	return mTx.Status == MonitoredTxStatusCreated && len(mTx.History) == 0 && mTx.GroupID == nil && mTx.GlobalExitRoot == ger
 }
