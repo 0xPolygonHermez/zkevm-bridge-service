@@ -11,6 +11,7 @@ import (
 	"github.com/0xPolygonHermez/zkevm-bridge-service/log"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/metrics"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/pushtask"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/server/tokenlogoinfo"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/utils"
 	"github.com/jackc/pgx/v4"
 )
@@ -56,7 +57,7 @@ func (s *ClientSynchronizer) afterProcessDeposit(deposit *etherman.Deposit, depo
 				return
 			}
 		}
-		err := s.messagePushProducer.PushTransactionUpdate(&pb.Transaction{
+		transaction := &pb.Transaction{
 			FromChain:    uint32(deposit.NetworkID),
 			ToChain:      uint32(deposit.DestinationNetwork),
 			BridgeToken:  deposit.OriginalAddress.Hex(),
@@ -73,7 +74,13 @@ func (s *ClientSynchronizer) afterProcessDeposit(deposit *etherman.Deposit, depo
 			ToChainId:    utils.GetChainIdByNetworkId(deposit.DestinationNetwork),
 			GlobalIndex:  s.getGlobalIndex(deposit).String(),
 			LeafType:     uint32(deposit.LeafType),
-		})
+		}
+		transactionMap := make(map[string][]*pb.Transaction)
+		chainId := utils.GetChainIdByNetworkId(deposit.OriginalNetwork)
+		logoCacheKey := tokenlogoinfo.GetTokenLogoMapKey(transaction.GetBridgeToken(), chainId)
+		transactionMap[logoCacheKey] = append(transactionMap[logoCacheKey], transaction)
+		tokenlogoinfo.FillLogoInfos(s.ctx, s.redisStorage, transactionMap)
+		err := s.messagePushProducer.PushTransactionUpdate(transaction)
 		if err != nil {
 			log.Errorf("PushTransactionUpdate error: %v", err)
 		}

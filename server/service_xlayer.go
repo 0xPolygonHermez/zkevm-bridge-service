@@ -21,7 +21,6 @@ import (
 	"github.com/0xPolygonHermez/zkevm-bridge-service/utils"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/utils/gerror"
 	"github.com/pkg/errors"
-	"github.com/redis/go-redis/v9"
 )
 
 const (
@@ -205,7 +204,7 @@ func (s *bridgeService) GetPendingTransactions(ctx context.Context, req *pb.GetP
 		logoCacheKey := tokenlogoinfo.GetTokenLogoMapKey(transaction.GetBridgeToken(), chainId)
 		transactionMap[logoCacheKey] = append(transactionMap[logoCacheKey], transaction)
 	}
-	s.fillLogoInfos(ctx, transactionMap)
+	tokenlogoinfo.FillLogoInfos(ctx, s.redisStorage, transactionMap)
 	return &pb.CommonTransactionsResponse{
 		Code: defaultSuccessCode,
 		Data: &pb.TransactionDetail{HasNext: hasNext, Transactions: pbTransactions},
@@ -320,7 +319,7 @@ func (s *bridgeService) GetAllTransactions(ctx context.Context, req *pb.GetAllTr
 		logoCacheKey := tokenlogoinfo.GetTokenLogoMapKey(transaction.GetBridgeToken(), chainId)
 		transactionMap[logoCacheKey] = append(transactionMap[logoCacheKey], transaction)
 	}
-	s.fillLogoInfos(ctx, transactionMap)
+	tokenlogoinfo.FillLogoInfos(ctx, s.redisStorage, transactionMap)
 
 	return &pb.CommonTransactionsResponse{
 		Code: defaultSuccessCode,
@@ -566,66 +565,4 @@ func (s *bridgeService) GetFakePushMessages(ctx context.Context, req *pb.GetFake
 		Code: defaultSuccessCode,
 		Data: s.messagePushProducer.GetFakeMessages(req.Topic),
 	}, nil
-}
-
-func (s *bridgeService) fillLogoInfos(ctx context.Context, transactionMap map[string][]*pb.Transaction) {
-	noCacheTokenMap := make(map[uint32][]string)
-	for k, v := range transactionMap {
-		logoInfo, err := s.redisStorage.GetTokenLogoInfo(ctx, k)
-		if err != nil {
-			if !errors.Is(err, redis.Nil) {
-				log.Errorf("get token logo info failed, so use rpc to fetch, chainId: %v, token: %v, error: %v", v[0].FromChainId, v[0].BridgeToken, err)
-			}
-			log.Infof("token need to use rpc to get logo, token: %v, chainId: %v", v[0].BridgeToken, v[0].FromChainId)
-			noCacheTokenMap[v[0].FromChainId] = append(noCacheTokenMap[v[0].FromChainId], v[0].BridgeToken)
-			continue
-		}
-		for _, tx := range v {
-			s.fillOneTxLogoInfo(tx, *logoInfo)
-		}
-	}
-	if len(noCacheTokenMap) == 0 {
-		return
-	}
-	logoParams := s.buildQueryLogoParams(noCacheTokenMap)
-	tokenLogoMap, err := tokenlogoinfo.GetClient().GetTokenLogoInfos(logoParams)
-	if err != nil {
-		log.Errorf("get token logo infos by rpc failed, so skip these tokens")
-		return
-	}
-	if tokenLogoMap == nil {
-		log.Infof("get token logo infos, but result is empty, so skip these tokens")
-		return
-	}
-	for k, v := range tokenLogoMap {
-		for _, tx := range transactionMap[k] {
-			s.fillOneTxLogoInfo(tx, v)
-		}
-		err = s.redisStorage.SetTokenLogoInfo(ctx, k, v)
-		if err != nil {
-			log.Errorf("failed to set logo info cache for token: %v", v.TokenContractAddress)
-		}
-	}
-}
-
-func (s *bridgeService) buildQueryLogoParams(noCacheTokenMap map[uint32][]string) []*tokenlogoinfo.QueryLogoParam {
-	var logoParams []*tokenlogoinfo.QueryLogoParam
-	for k, v := range noCacheTokenMap {
-		for _, addr := range v {
-			logoParams = append(logoParams, &tokenlogoinfo.QueryLogoParam{
-				ChainId:              k,
-				TokenContractAddress: addr,
-			})
-		}
-	}
-	return logoParams
-}
-
-func (s *bridgeService) fillOneTxLogoInfo(tx *pb.Transaction, logoInfo tokenlogoinfo.TokenLogoInfo) {
-	tx.LogoInfo = &pb.TokenLogoInfo{
-		Symbol:     logoInfo.TokenSymbol,
-		TokenName:  logoInfo.TokenName,
-		LogoOssUrl: logoInfo.LogoOssUrl,
-		Decimal:    logoInfo.Unit,
-	}
 }

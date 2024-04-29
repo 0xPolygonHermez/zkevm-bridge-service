@@ -46,6 +46,10 @@ func InitClient(c Config) {
 }
 
 func (c *Client) GetTokenLogoInfos(tokenAddArr []*QueryLogoParam) (map[string]TokenLogoInfo, error) {
+	if c == nil {
+		log.Infof("init logo info client failed, so skip")
+		return nil, nil
+	}
 	if !c.cfg.Enabled {
 		log.Infof("get token logo enable is false, so skip")
 		return nil, nil
