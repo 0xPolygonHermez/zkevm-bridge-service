@@ -1,5 +1,6 @@
-//go:build compress
-// +build compress
+//go:build e2ecompress
+// +build e2ecompress
+
 package e2e
 
 import (
