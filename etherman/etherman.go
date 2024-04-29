@@ -192,7 +192,7 @@ func NewL2Client(url string, polygonBridgeAddr, claimCompressorAddress common.Ad
 	if claimCompressorAddress == (common.Address{}) {
 		log.Warn("Claim compressor Address not configured")
 	} else {
-		log.Infof("ClaimTxManager grouping claims enabled, claimCompressor=%s", claimCompressorAddress.String())
+		log.Infof("Grouping claims allowed, claimCompressor=%s", claimCompressorAddress.String())
 		claimCompressor, err = claimcompressor.NewClaimcompressor(claimCompressorAddress, ethClient)
 		if err != nil {
 			log.Errorf("error creating claimCompressor: %+v", err)

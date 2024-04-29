@@ -5,6 +5,7 @@ package e2e
 import (
 	"context"
 	"math/big"
+	"os"
 	"testing"
 	"time"
 
@@ -19,7 +20,8 @@ const (
 	defaultInterval = 10 * time.Second
 	defaultDeadline = 600 * time.Second
 )
-func depositFromL1(ctx context.Context, opsman *operations.Manager, destAddr common.Address, t *testing.T) {
+
+func multiDepositFromL1(ctx context.Context, opsman *operations.Manager, destAddr common.Address, t *testing.T) {
 	amount := new(big.Int).SetUint64(250000000000000000)
 	tokenAddr := common.Address{} // This means is eth
 	var destNetwork uint32 = 1
@@ -74,6 +76,7 @@ func TestClaimCompressor(t *testing.T) {
 		},
 	}
 
+	os.Setenv("ZKEVM_BRIDGE_CLAIMTXMANAGER_GROUPINGCLAIMS_ENABLED", "true")
 	require.NoError(t, operations.StartBridge())
 	opsman, err := operations.NewManager(ctx, opsCfg)
 	require.NoError(t, err)
@@ -82,7 +85,7 @@ func TestClaimCompressor(t *testing.T) {
 
 	t.Run("Test claim compressor", func(t *testing.T) {
 		destAddr := common.HexToAddress("0xc949254d682d8c9ad5682521675b8f43b102aec4")
-		depositFromL1(ctx, opsman, destAddr, t)
+		multiDepositFromL1(ctx, opsman, destAddr, t)
 		// Check number claim events
 		numberClaims, err := opsman.GetNumberClaims(ctx, destAddr.String())
 		require.NoError(t, err)

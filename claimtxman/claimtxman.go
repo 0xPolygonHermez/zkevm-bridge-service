@@ -65,8 +65,10 @@ func NewClaimTxManager(ctx context.Context, cfg Config, chExitRootEvent chan *et
 
 	var monitorTx ctmtypes.TxMonitorer
 	if cfg.GroupingClaims.Enabled {
+		log.Info("ClaimTxManager working in compressor mode to group claim txs")
 		monitorTx = NewMonitorCompressedTxs(ctx, storage.(StorageCompressedInterface), client, cfg, nonceCache, auth, etherMan, utils.NewTimeProviderSystemLocalTime())
 	} else {
+		log.Info("ClaimTxManager working in regular mode to send claim txs individually")
 		monitorTx = NewMonitorTxs(ctx, storage.(StorageInterface), client, cfg, nonceCache, auth)
 	}
 	return &ClaimTxManager{
