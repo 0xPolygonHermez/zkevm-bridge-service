@@ -299,6 +299,9 @@ func startServer(ctx *cli.Context, opts ...runOptionFunc) error {
 			}()
 		}
 
+		// init token logo client
+		tokenlogoinfo.InitClient(c.TokenLogoServiceConfig)
+
 		// Start the coin middleware kafka consumer
 		log.Debugf("start initializing kafka consumer...")
 		coinKafkaConsumer, err := coinmiddleware.NewKafkaConsumer(c.CoinKafkaConsumer, redisStorage)

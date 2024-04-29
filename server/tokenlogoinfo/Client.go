@@ -105,6 +105,8 @@ func (c *Client) GetTokenLogoInfos(tokenAddArr []*tokenlogo.QueryLogoParam) (map
 	for _, v := range respStruct.Data {
 		logoMap[GetTokenLogoMapKey(v.TokenContractAddress, v.ChainId)] = v
 	}
+	convertRet, _ := json.Marshal(logoMap)
+	log.Debugf("request token info by rpc, final ret: %v", convertRet)
 	return logoMap, nil
 }
 

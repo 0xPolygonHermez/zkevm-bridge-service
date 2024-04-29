@@ -38,7 +38,7 @@ func FillLogoInfos(ctx context.Context, redisStorage redisstorage.RedisStorage, 
 		log.Errorf("get token logo infos by rpc failed, so skip these tokens")
 		return
 	}
-	if tokenLogoMap == nil {
+	if tokenLogoMap == nil || len(tokenLogoMap) == 0 {
 		log.Infof("get token logo infos, but result is empty, so skip these tokens")
 		return
 	}
