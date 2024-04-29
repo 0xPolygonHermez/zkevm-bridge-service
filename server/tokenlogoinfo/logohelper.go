@@ -22,7 +22,7 @@ func FillLogoInfos(ctx context.Context, redisStorage redisstorage.RedisStorage, 
 				log.Errorf("get token logo info failed, so use rpc to fetch, chainId: %v, token: %v, error: %v", chainId, v[0].BridgeToken, err)
 			}
 			log.Infof("token need to use rpc to get logo, token: %v, chainId: %v", v[0].BridgeToken, chainId)
-			noCacheTokenMap[v[0].FromChainId] = append(noCacheTokenMap[uint32(chainId)], v[0].BridgeToken)
+			noCacheTokenMap[chainId] = append(noCacheTokenMap[chainId], v[0].BridgeToken)
 			continue
 		}
 		for _, tx := range v {
