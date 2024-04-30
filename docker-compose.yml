@@ -57,7 +57,7 @@ services:
 
   zkevm-node:
     container_name: zkevm-node
-    image: hermeznetwork/zkevm-node:v0.5.0
+    image: hermeznetwork/zkevm-node:v0.6.6
     ports:
       - 8123:8123
       - 61090:61090
@@ -65,8 +65,6 @@ services:
       - ZKEVM_NODE_STATE_DB_HOST=zkevm-state-db
       - ZKEVM_NODE_POOL_HOST=zkevm-pool-db
       - ZKEVM_NODE_RPC_DB_HOST=zkevm-rpc-db
-      - ZKEVM_NODE_SEQUENCER_FINALIZER_BATCHMAXDELTATIMESTAMP="4s"
-      - ZKEVM_NODE_SEQUENCER_FINALIZER_L2BLOCKMAXDELTATIMESTAMP="1s"
     volumes:
       - ./test/test.keystore.sequencer:/pk/keystore.sequencer
       - ./test/test.keystore.aggregator:/pk/keystore.aggregator
@@ -80,7 +78,7 @@ services:
 
   zkevm-node-v1tov2:
     container_name: zkevm-node-v1tov2
-    image: hermeznetwork/zkevm-node:v0.5.0
+    image: hermeznetwork/zkevm-node:v0.6.6
     ports:
       - 8123:8123
       - 9091:9091 # needed if metrics enabled
@@ -104,7 +102,7 @@ services:
 
   zkevm-aggregator-v1tov2:
     container_name: zkevm-aggregator-v1tov2
-    image: hermeznetwork/zkevm-node:v0.5.0
+    image: hermeznetwork/zkevm-node:v0.6.6
     ports:
       - 9092:9091 # needed if metrics enabled
     environment:
@@ -127,7 +125,7 @@ services:
 
   zkevm-mock-l1-network:
     container_name: zkevm-local-l1-network
-    image: hermeznetwork/geth-zkevm-contracts:v2.1.1-fork.7-geth1.12.0
+    image: hermeznetwork/geth-zkevm-contracts:elderberry-fork.9-geth1.13.11
     ports:
       - 8545:8545
 
@@ -163,7 +161,7 @@ services:
 
   zkevm-prover:
     container_name: zkevm-prover
-    image: hermeznetwork/zkevm-prover:v4.0.1
+    image: hermeznetwork/zkevm-prover:v6.0.0
     ports:
       - 50051:50051 # Prover
       - 50052:50052 # MockProver
@@ -176,7 +174,7 @@ services:
 
   zkevm-prover-v1tov2:
     container_name: zkevm-prover-v1tov2
-    image: hermeznetwork/zkevm-prover:v4.0.1
+    image: hermeznetwork/zkevm-prover:v6.0.0
     environment:
       - AGGREGATOR_CLIENT_HOST=zkevm-aggregator-v1tov2
     ports:
@@ -201,13 +199,15 @@ services:
       - ZKEVM_BRIDGE_DATABASE_NAME=test_db
       - ZKEVM_BRIDGE_DATABASE_HOST=zkevm-bridge-db
       - ZKEVM_BRIDGE_DATABASE_PORT=5432
+      - ZKEVM_BRIDGE_CLAIMTXMANAGER_GROUPINGCLAIMS_ENABLED=${ZKEVM_BRIDGE_CLAIMTXMANAGER_GROUPINGCLAIMS_ENABLED}
     volumes:
       - ./test/test.keystore.claimtx:/pk/keystore.claimtxmanager
       - ./config/config.local.toml:/app/config.toml
     command:
       - "/bin/sh"
       - "-c"
-      - "/app/zkevm-bridge run --cfg /app/config.toml"
+      - "/app/test-deploy-claimcompressor deploy --url \"http://zkevm-node:8123\" --bridgeAddress \"0xFe12ABaa190Ef0c8638Ee0ba9F828BF41368Ca0E\" --walletFile /pk/keystore.claimtxmanager --password \"testonly\" &&
+        /app/zkevm-bridge run --cfg /app/config.toml"
 
   zkevm-bridge-service-v1tov2:
     container_name: zkevm-bridge-service-v1tov2

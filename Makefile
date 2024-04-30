@@ -53,13 +53,17 @@ GO_BIN := $(GO_BASE)/dist
 GO_ENV_VARS := GO_BIN=$(GO_BIN)
 GO_BINARY := zkevm-bridge
 GO_CMD := $(GO_BASE)/cmd
+GO_DEPLOY_SCRIPT := $(GO_BASE)/test/scripts/deployclaimcompressor
+GO_DEPLOY_SCRIPT_BINARY := test-deploy-claimcompressor
 
 LINT := $$(go env GOPATH)/bin/golangci-lint run --timeout=5m -E whitespace -E gosec -E gci -E misspell -E gomnd -E gofmt -E goimports --exclude-use-default=false --max-same-issues 0
 BUILD := $(GO_ENV_VARS) go build -ldflags "all=$(LDFLAGS)" -o $(GO_BIN)/$(GO_BINARY) $(GO_CMD)
+BUILDSCRIPTEPLOY := $(GO_ENV_VARS) go build -o $(GO_BIN)/$(GO_DEPLOY_SCRIPT_BINARY) $(GO_DEPLOY_SCRIPT)
 
 .PHONY: build
 build: ## Build the binary locally into ./dist
 	$(BUILD)
+	$(BUILDSCRIPTEPLOY)
 
 .PHONY: lint
 lint: ## runs linter
@@ -197,6 +201,15 @@ run: stop ## runs all services
 	sleep 7
 	$(RUN_BRIDGE)
 
+.PHONY: run-bridge-dependencies
+run-bridge-dependencies: stop ## runs all services
+	$(RUN_DBS)
+	$(RUN_L1_NETWORK)
+	sleep 5
+	$(RUN_ZKPROVER)
+	sleep 3
+	$(RUN_NODE)
+
 .PHONY: run-v1tov2
 run-v1tov2: stop ## runs all services
 	$(RUN_DBS)
@@ -246,6 +259,11 @@ test-edge: build-docker stop run ## Runs all tests checking race conditions
 	sleep 3
 	trap '$(STOP)' EXIT; MallocNanoZone=0 go test -v -failfast -race -p 1 -timeout 2400s ./test/e2e/... -count 1 -tags='edge'
 
+.PHONY: test-e2ecompress
+test-e2ecompress: build-docker stop run ## Runs all tests checking race conditions
+	sleep 3
+	trap '$(STOP)' EXIT; MallocNanoZone=0 go test -v -failfast -race -p 1 -timeout 2400s ./test/e2e/... -count 1 -tags='e2ecompress'
+
 .PHONY: validate
 validate: lint build test-full ## Validates the whole integrity of the code base
 
@@ -260,10 +278,21 @@ help: ## Prints this help
 		| sort \
 		| awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
 
+COMMON_MOCKERY_PARAMS=--disable-version-string --with-expecter
 .PHONY: generate-mocks
 generate-mocks: ## Generates mocks for the tests, using mockery tool
-	mockery --name=ethermanInterface --dir=synchronizer --output=synchronizer --outpkg=synchronizer --structname=ethermanMock --filename=mock_etherman.go
-	mockery --name=storageInterface --dir=synchronizer --output=synchronizer --outpkg=synchronizer --structname=storageMock --filename=mock_storage.go
-	mockery --name=bridgectrlInterface --dir=synchronizer --output=synchronizer --outpkg=synchronizer --structname=bridgectrlMock --filename=mock_bridgectrl.go
-	mockery --name=Tx --srcpkg=github.com/jackc/pgx/v4 --output=synchronizer --outpkg=synchronizer --structname=dbTxMock --filename=mock_dbtx.go
-	mockery --name=zkEVMClientInterface --dir=synchronizer --output=synchronizer --outpkg=synchronizer --structname=zkEVMClientMock --filename=mock_zkevmclient.go
+	mockery --name=ethermanInterface --dir=synchronizer --output=synchronizer --outpkg=synchronizer --structname=ethermanMock --filename=mock_etherman.go ${COMMON_MOCKERY_PARAMS}
+	mockery --name=storageInterface --dir=synchronizer --output=synchronizer --outpkg=synchronizer --structname=storageMock --filename=mock_storage.go ${COMMON_MOCKERY_PARAMS}
+	mockery --name=bridgectrlInterface --dir=synchronizer --output=synchronizer --outpkg=synchronizer --structname=bridgectrlMock --filename=mock_bridgectrl.go ${COMMON_MOCKERY_PARAMS}
+	mockery --name=Tx --srcpkg=github.com/jackc/pgx/v4 --output=synchronizer --outpkg=synchronizer --structname=dbTxMock --filename=mock_dbtx.go ${COMMON_MOCKERY_PARAMS}
+	mockery --name=zkEVMClientInterface --dir=synchronizer --output=synchronizer --outpkg=synchronizer --structname=zkEVMClientMock --filename=mock_zkevmclient.go ${COMMON_MOCKERY_PARAMS}
+	rm -Rf claimtxman/mocks
+	export "GOROOT=$$(go env GOROOT)" && $$(go env GOPATH)/bin/mockery --all --case snake --dir claimtxman/ --output claimtxman/mocks --outpkg mock_txcompressor ${COMMON_MOCKERY_PARAMS}
+	
+
+.PHONY: generate-smart-contracts-bindings
+generate-smartcontracts-bindings:	## Generates the smart contracts bindings
+	@for contract in `ls -1 etherman/smartcontracts/json/*.json | xargs -l basename`; do \
+		 ./scripts/generate-smartcontracts-bindings.sh $${contract%.*}; \
+	done
+	
