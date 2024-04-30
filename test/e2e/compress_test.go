@@ -14,6 +14,7 @@ import (
 	"github.com/0xPolygonHermez/zkevm-bridge-service/db"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/server"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/test/operations"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/log"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/stretchr/testify/require"
 )
@@ -85,6 +86,7 @@ func TestClaimCompressor(t *testing.T) {
 	time.Sleep(st * time.Second)
 
 	t.Run("Test claim compressor", func(t *testing.T) {
+		log.Info("ZKEVM_BRIDGE_CLAIMTXMANAGER_GROUPINGCLAIMS_ENABLED: ", os.Getenv("ZKEVM_BRIDGE_CLAIMTXMANAGER_GROUPINGCLAIMS_ENABLED"))
 		destAddr := common.HexToAddress("0xc949254d682d8c9ad5682521675b8f43b102aec4")
 		multiDepositFromL1(ctx, opsman, destAddr, t)
 		// Check number claim events
