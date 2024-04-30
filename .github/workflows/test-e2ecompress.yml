@@ -1,0 +1,27 @@
+name: Test
+on:
+  push:
+    branches:
+      - main
+      - master
+      - develop
+      - update-external-dependencies
+  pull_request:
+jobs:
+  test-e2ecompress:
+    strategy:
+      matrix:
+        go-version: [ 1.21.x ]
+        goarch: [ "amd64" ]
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+    - name: Install Go
+      uses: actions/setup-go@v1
+      with:
+        go-version: ${{ matrix.go-version }}
+      env:
+        GOARCH: ${{ matrix.goarch }}
+    - name: Test
+      run: make test-e2ecompress

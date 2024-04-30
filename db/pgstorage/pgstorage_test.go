@@ -3,7 +3,9 @@ package pgstorage
 import (
 	"context"
 	"testing"
+	"time"
 
+	ctmtypes "github.com/0xPolygonHermez/zkevm-bridge-service/claimtxman/types"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/log"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/stretchr/testify/assert"
@@ -144,4 +146,50 @@ func TestIsRollupExitRoot(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t, true, exist)
+}
+
+func createStore(t *testing.T) *PostgresStorage {
+	dbCfg := NewConfigFromEnv()
+
+	err := InitOrReset(dbCfg)
+	require.NoError(t, err)
+
+	store, err := NewPostgresStorage(dbCfg)
+	require.NoError(t, err)
+	return store
+}
+
+func TestAddMonitoredTxs(t *testing.T) {
+	store := createStore(t)
+	ctx := context.Background()
+	to := common.HexToAddress("0x123")
+	groupID := uint64(1)
+	monitoredTx := ctmtypes.MonitoredTx{
+		To:        &to,
+		Nonce:     1,
+		Value:     nil,
+		Data:      []byte("data"),
+		Gas:       100,
+		GasPrice:  nil,
+		Status:    ctmtypes.MonitoredTxStatusCreated,
+		History:   map[common.Hash]bool{},
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+		GroupID:   &groupID,
+	}
+	err := store.AddClaimTx(ctx, monitoredTx, nil)
+	require.NoError(t, err)
+}
+
+func TestAddMonitoredTxsGroup(t *testing.T) {
+	store := createStore(t)
+	ctx := context.Background()
+	group := ctmtypes.MonitoredTxGroupDBEntry{
+		GroupID:   1,
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+	}
+	err := store.AddMonitoredTxsGroup(ctx, &group, nil)
+	require.NoError(t, err)
+	require.Equal(t, uint64(1), group.GroupID)
 }
