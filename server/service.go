@@ -202,6 +202,59 @@ func (s *bridgeService) GetClaimProof(depositCnt, networkID uint, dbTx pgx.Tx) (
 	return globalExitRoot, merkleProof, rollupMerkleProof, nil
 }
 
+// GetClaimProofForCompressed returns the merkle proof to claim the given deposit.
+func (s *bridgeService) GetClaimProofForCompressed(ger common.Hash, depositCnt, networkID uint, dbTx pgx.Tx) (*etherman.GlobalExitRoot, [][bridgectrl.KeyLen]byte, [][bridgectrl.KeyLen]byte, error) {
+	ctx := context.Background()
+
+	if dbTx == nil { // if the call comes from the rest API
+		deposit, err := s.storage.GetDeposit(ctx, depositCnt, networkID, nil)
+		if err != nil {
+			return nil, nil, nil, err
+		}
+
+		if !deposit.ReadyForClaim {
+			return nil, nil, nil, gerror.ErrDepositNotSynced
+		}
+	}
+
+	tID, err := s.getNetworkID(networkID)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	globalExitRoot, err := s.storage.GetExitRootByGER(ctx, ger, dbTx)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	var (
+		merkleProof       [][bridgectrl.KeyLen]byte
+		rollupMerkleProof [][bridgectrl.KeyLen]byte
+		rollupLeaf        common.Hash
+	)
+	if networkID == 0 { // Mainnet
+		merkleProof, err = s.getProof(depositCnt, globalExitRoot.ExitRoots[tID], dbTx)
+		if err != nil {
+			log.Error("error getting merkleProof. Error: ", err)
+			return nil, nil, nil, fmt.Errorf("getting the proof failed, error: %v, network: %d", err, networkID)
+		}
+		rollupMerkleProof = emptyProof()
+	} else { // Rollup
+		rollupMerkleProof, rollupLeaf, err = s.getRollupExitProof(s.rollupID-1, globalExitRoot.ExitRoots[tID], dbTx)
+		if err != nil {
+			log.Error("error getting rollupProof. Error: ", err)
+			return nil, nil, nil, fmt.Errorf("getting the rollup proof failed, error: %v, network: %d", err, networkID)
+		}
+		merkleProof, err = s.getProof(depositCnt, rollupLeaf, dbTx)
+		if err != nil {
+			log.Error("error getting merkleProof. Error: ", err)
+			return nil, nil, nil, fmt.Errorf("getting the proof failed, error: %v, network: %d", err, networkID)
+		}
+	}
+
+	return globalExitRoot, merkleProof, rollupMerkleProof, nil
+}
+
 func emptyProof() [][bridgectrl.KeyLen]byte {
 	var proof [][bridgectrl.KeyLen]byte
 	for i := 0; i < 32; i++ {

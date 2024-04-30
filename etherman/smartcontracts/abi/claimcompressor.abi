@@ -1,0 +1,107 @@
+[
+    {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "__bridgeAddress",
+                "type": "address"
+            },
+            {
+                "internalType": "uint32",
+                "name": "__networkID",
+                "type": "uint32"
+            }
+        ],
+        "stateMutability": "nonpayable",
+        "type": "constructor"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "bytes32",
+                "name": "mainnetExitRoot",
+                "type": "bytes32"
+            },
+            {
+                "internalType": "bytes32",
+                "name": "rollupExitRoot",
+                "type": "bytes32"
+            },
+            {
+                "components": [
+                    {
+                        "internalType": "bytes32[32]",
+                        "name": "smtProofLocalExitRoot",
+                        "type": "bytes32[32]"
+                    },
+                    {
+                        "internalType": "bytes32[32]",
+                        "name": "smtProofRollupExitRoot",
+                        "type": "bytes32[32]"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "globalIndex",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "uint32",
+                        "name": "originNetwork",
+                        "type": "uint32"
+                    },
+                    {
+                        "internalType": "address",
+                        "name": "originAddress",
+                        "type": "address"
+                    },
+                    {
+                        "internalType": "address",
+                        "name": "destinationAddress",
+                        "type": "address"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "amount",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "bytes",
+                        "name": "metadata",
+                        "type": "bytes"
+                    },
+                    {
+                        "internalType": "bool",
+                        "name": "isMessage",
+                        "type": "bool"
+                    }
+                ],
+                "internalType": "struct ClaimCompressor.CompressClaimCallData[]",
+                "name": "compressClaimCalldata",
+                "type": "tuple[]"
+            }
+        ],
+        "name": "compressClaimCall",
+        "outputs": [
+            {
+                "internalType": "bytes",
+                "name": "",
+                "type": "bytes"
+            }
+        ],
+        "stateMutability": "pure",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "bytes",
+                "name": "compressedClaimCalls",
+                "type": "bytes"
+            }
+        ],
+        "name": "sendCompressedClaims",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    }
+]

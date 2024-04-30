@@ -16,6 +16,7 @@ import (
 	"github.com/0xPolygonHermez/zkevm-bridge-service/log"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/server"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/synchronizer"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/utils"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/utils/gerror"
 	"github.com/0xPolygonHermez/zkevm-node/jsonrpc/client"
 	"github.com/urfave/cli/v2"
@@ -117,7 +118,22 @@ func start(ctx *cli.Context) error {
 		for i := 0; i < len(c.Etherman.L2URLs); i++ {
 			// we should match the orders of L2URLs between etherman and claimtxman
 			// since we are using the networkIDs in the same order
-			claimTxManager, err := claimtxman.NewClaimTxManager(c.ClaimTxManager, chExitRootEvent, chSynced, c.Etherman.L2URLs[i], networkIDs[i+1], c.NetworkConfig.L2PolygonBridgeAddresses[i], bridgeService, storage, rollupID)
+			ctx := context.Background()
+			client, err := utils.NewClient(ctx, c.Etherman.L2URLs[i], c.NetworkConfig.L2PolygonBridgeAddresses[i])
+			if err != nil {
+				log.Fatalf("error creating client for L2 %s. Error: %v", c.Etherman.L2URLs[i], err)
+			}
+			nonceCache, err := claimtxman.NewNonceCache(ctx, client)
+			if err != nil {
+				log.Fatalf("error creating nonceCache for L2 %s. Error: %v", c.Etherman.L2URLs[i], err)
+			}
+			auth, err := client.GetSignerFromKeystore(ctx, c.ClaimTxManager.PrivateKey)
+			if err != nil {
+				log.Fatalf("error creating signer for L2 %s. Error: %v", c.Etherman.L2URLs[i], err)
+			}
+
+			claimTxManager, err := claimtxman.NewClaimTxManager(ctx, c.ClaimTxManager, chExitRootEvent, chSynced,
+				c.Etherman.L2URLs[i], networkIDs[i+1], c.NetworkConfig.L2PolygonBridgeAddresses[i], bridgeService, storage, rollupID, l2Ethermans[i], nonceCache, auth)
 			if err != nil {
 				log.Fatalf("error creating claim tx manager for L2 %s. Error: %v", c.Etherman.L2URLs[i], err)
 			}
@@ -153,7 +169,11 @@ func setupLog(c log.Config) {
 }
 
 func newEthermans(c *config.Config) (*etherman.Client, []*etherman.Client, error) {
-	l1Etherman, err := etherman.NewClient(c.Etherman, c.NetworkConfig.PolygonBridgeAddress, c.NetworkConfig.PolygonZkEVMGlobalExitRootAddress, c.NetworkConfig.PolygonRollupManagerAddress, c.NetworkConfig.PolygonZkEvmAddress)
+	l1Etherman, err := etherman.NewClient(c.Etherman,
+		c.NetworkConfig.PolygonBridgeAddress,
+		c.NetworkConfig.PolygonZkEVMGlobalExitRootAddress,
+		c.NetworkConfig.PolygonRollupManagerAddress,
+		c.NetworkConfig.PolygonZkEvmAddress)
 	if err != nil {
 		log.Error("L1 etherman error: ", err)
 		return nil, nil, err
@@ -163,7 +183,7 @@ func newEthermans(c *config.Config) (*etherman.Client, []*etherman.Client, error
 	}
 	var l2Ethermans []*etherman.Client
 	for i, addr := range c.L2PolygonBridgeAddresses {
-		l2Etherman, err := etherman.NewL2Client(c.Etherman.L2URLs[i], addr)
+		l2Etherman, err := etherman.NewL2Client(c.Etherman.L2URLs[i], addr, c.NetworkConfig.L2ClaimCompressorAddress)
 		if err != nil {
 			log.Error("L2 etherman ", i, c.Etherman.L2URLs[i], ", error: ", err)
 			return l1Etherman, nil, err

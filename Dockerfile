@@ -15,6 +15,7 @@ RUN cd /src && make build
 # CONTAINER FOR RUNNING BINARY
 FROM alpine:3.16.0
 COPY --from=build /src/dist/zkevm-bridge /app/zkevm-bridge
+COPY --from=build /src/dist/test-deploy-claimcompressor /app/test-deploy-claimcompressor
 COPY --from=build /src/test/vectors /app/test/vectors
 EXPOSE 8080
 EXPOSE 9090
