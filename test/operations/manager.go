@@ -759,3 +759,7 @@ func (m *Manager) WaitExitRootToBeSynced(ctx context.Context, orgExitRoot *ether
 		return exitRoot.ExitRoots[tID] != orgExitRoot.ExitRoots[tID], nil
 	})
 }
+
+func (m *Manager) GetLatestMonitoredTxGroupID(ctx context.Context) (uint64, error) {
+	return m.storage.GetLatestMonitoredTxGroupID(ctx, nil)
+}

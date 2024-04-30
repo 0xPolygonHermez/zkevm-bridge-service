@@ -21,6 +21,7 @@ type StorageInterface interface {
 	GetClaim(ctx context.Context, depositCount, networkID uint, dbTx pgx.Tx) (*etherman.Claim, error)
 	GetClaims(ctx context.Context, destAddr string, limit uint, offset uint, dbTx pgx.Tx) ([]*etherman.Claim, error)
 	UpdateDepositsStatusForTesting(ctx context.Context, dbTx pgx.Tx) error
+	GetLatestMonitoredTxGroupID(ctx context.Context, dbTx pgx.Tx) (uint64, error)
 	// synchronizer
 	AddBlock(ctx context.Context, block *etherman.Block, dbTx pgx.Tx) (uint64, error)
 	AddGlobalExitRoot(ctx context.Context, exitRoot *etherman.GlobalExitRoot, dbTx pgx.Tx) error

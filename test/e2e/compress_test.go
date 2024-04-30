@@ -97,5 +97,8 @@ func TestClaimCompressor(t *testing.T) {
 		balance, err := opsman.CheckAccountBalance(ctx, "l2", &destAddr)
 		require.NoError(t, err)
 		require.Equal(t, "7500000000000000435", balance.String())
+		maxGroupID, err := opsman.GetLatestMonitoredTxGroupID(ctx)
+		require.NoError(t, err)
+		require.Equal(t, uint64(2), maxGroupID)
 	})
 }
