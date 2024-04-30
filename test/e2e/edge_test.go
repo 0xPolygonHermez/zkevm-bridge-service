@@ -93,9 +93,9 @@ func TestEdgeCase(t *testing.T) {
 		},
 	}
 
+	require.NoError(t, operations.StartBridge())
 	opsman, err := operations.NewManager(ctx, opsCfg)
 	require.NoError(t, err)
-	require.NoError(t, opsman.StartBridge())
 	const st time.Duration = 20 // wait until the syncing is finished
 	time.Sleep(st * time.Second)
 
@@ -107,7 +107,7 @@ func TestEdgeCase(t *testing.T) {
 		// Modify the L1 blocks for L1 reorg
 		require.NoError(t, opsman.UpdateBlocksForTesting(ctx, 0, 1))
 		// Restart the bridge service.
-		require.NoError(t, opsman.StartBridge())
+		require.NoError(t, operations.StartBridge())
 		time.Sleep(st * time.Second)
 
 		depositFromL2(ctx, opsman, t)

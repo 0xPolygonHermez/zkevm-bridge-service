@@ -2,6 +2,7 @@ package operations
 
 import (
 	"context"
+	"fmt"
 	"math/big"
 	"os"
 	"os/exec"
@@ -44,8 +45,8 @@ const (
 
 	// PolTokenAddress token address
 	PolTokenAddress = "0x5FbDB2315678afecb367f032d93F642f64180aa3" //nolint:gosec
-	l1BridgeAddr    = "0xCca6ECD73932e49633B9307e1aa0fC174525F424"
-	l2BridgeAddr    = "0xCca6ECD73932e49633B9307e1aa0fC174525F424"
+	l1BridgeAddr    = "0xFe12ABaa190Ef0c8638Ee0ba9F828BF41368Ca0E"
+	l2BridgeAddr    = "0xFe12ABaa190Ef0c8638Ee0ba9F828BF41368Ca0E"
 
 	l1AccHexAddress = "0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC"
 
@@ -143,6 +144,30 @@ func (m *Manager) CheckL2Claim(ctx context.Context, networkID, depositCnt uint) 
 	})
 }
 
+// CustomCheckL2Claim checks if the claim is already in the L2 network.
+func (m *Manager) CustomCheckL2Claim(ctx context.Context, networkID, depositCnt uint, interval, deadline time.Duration) error {
+	return operations.Poll(interval, deadline, func() (bool, error) {
+		_, err := m.storage.GetClaim(ctx, depositCnt, networkID, nil)
+		if err != nil {
+			if err == gerror.ErrStorageNotFound {
+				return false, nil
+			}
+			return false, err
+		}
+		return true, nil
+	})
+}
+
+// GetNumberClaims get the number of claim events synced
+func (m *Manager) GetNumberClaims(ctx context.Context, destAddr string) (int, error) {
+	const limit = 100
+	claims, err := m.storage.GetClaims(ctx, destAddr, limit, 0, nil)
+	if err != nil {
+		return 0, err
+	}
+	return len(claims), nil
+}
+
 // SendL1Deposit sends a deposit from l1 to l2.
 func (m *Manager) SendL1Deposit(ctx context.Context, tokenAddr common.Address, amount *big.Int,
 	destNetwork uint32, destAddr *common.Address,
@@ -165,6 +190,30 @@ func (m *Manager) SendL1Deposit(ctx context.Context, tokenAddr common.Address, a
 
 	// sync for new exit root
 	return m.WaitExitRootToBeSynced(ctx, orgExitRoot, false)
+}
+
+// SendMultipleL1Deposit sends a deposit from l1 to l2.
+func (m *Manager) SendMultipleL1Deposit(ctx context.Context, tokenAddr common.Address, amount *big.Int,
+	destNetwork uint32, destAddr *common.Address, numberDeposits int,
+) error {
+	if numberDeposits == 0 {
+		return fmt.Errorf("error: numberDeposits is 0")
+	}
+	client := m.clients[L1]
+	auth, err := client.GetSigner(ctx, accHexPrivateKeys[L1])
+	if err != nil {
+		log.Error("error getting signer: ", err)
+		return err
+	}
+
+	for i := 0; i < numberDeposits; i++ {
+		err = client.SendBridgeAsset(ctx, tokenAddr, big.NewInt(0).Add(amount, big.NewInt(int64(i))), destNetwork, destAddr, []byte{}, auth)
+		if err != nil {
+			log.Error("error sending bridge asset: ", err)
+			return err
+		}
+	}
+	return nil
 }
 
 // SendL2Deposit sends a deposit from l2 to l1.
@@ -279,7 +328,7 @@ func (m *Manager) Setup() error {
 	time.Sleep(t * time.Second)
 
 	// Run bridge container
-	err = m.StartBridge()
+	err = StartBridge()
 	if err != nil {
 		log.Error("bridge start failed")
 		// return err
@@ -446,7 +495,7 @@ func runCmd(c *exec.Cmd) error {
 }
 
 // StartBridge restarts the bridge service.
-func (m *Manager) StartBridge() error {
+func StartBridge() error {
 	if err := StopBridge(); err != nil {
 		return err
 	}
@@ -689,7 +738,7 @@ func (m *Manager) UpdateBlocksForTesting(ctx context.Context, networkID uint, bl
 
 // WaitExitRootToBeSynced waits until new exit root is synced.
 func (m *Manager) WaitExitRootToBeSynced(ctx context.Context, orgExitRoot *etherman.GlobalExitRoot, isRollup bool) error {
-	log.Debugf("WaitExitRootToBeSynced: %v\n", orgExitRoot)
+	log.Debugf("WaitExitRootToBeSynced: %v", orgExitRoot)
 	if orgExitRoot == nil {
 		orgExitRoot = &etherman.GlobalExitRoot{
 			ExitRoots: []common.Hash{{}, {}},
@@ -709,4 +758,8 @@ func (m *Manager) WaitExitRootToBeSynced(ctx context.Context, orgExitRoot *ether
 		}
 		return exitRoot.ExitRoots[tID] != orgExitRoot.ExitRoots[tID], nil
 	})
+}
+
+func (m *Manager) GetLatestMonitoredTxGroupID(ctx context.Context) (uint64, error) {
+	return m.storage.GetLatestMonitoredTxGroupID(ctx, nil)
 }

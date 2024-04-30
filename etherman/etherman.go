@@ -7,6 +7,7 @@ import (
 	"math/big"
 	"time"
 
+	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman/smartcontracts/claimcompressor"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/log"
 	"github.com/0xPolygonHermez/zkevm-node/etherman/smartcontracts/oldpolygonzkevmbridge"
 	"github.com/0xPolygonHermez/zkevm-node/etherman/smartcontracts/polygonrollupmanager"
@@ -120,6 +121,7 @@ type Client struct {
 	OldPolygonBridge           *oldpolygonzkevmbridge.Oldpolygonzkevmbridge
 	PolygonZkEVMGlobalExitRoot *polygonzkevmglobalexitroot.Polygonzkevmglobalexitroot
 	PolygonRollupManager       *polygonrollupmanager.Polygonrollupmanager
+	ClaimCompressor            *claimcompressor.Claimcompressor
 	RollupID                   uint32
 	SCAddresses                []common.Address
 }
@@ -149,6 +151,7 @@ func NewClient(cfg Config, polygonBridgeAddr, polygonZkEVMGlobalExitRootAddress,
 	if err != nil {
 		return nil, err
 	}
+
 	// Get RollupID
 	rollupID, err := polygonRollupManager.RollupAddressToID(&bind.CallOpts{Pending: false}, polygonZkEvmAddress)
 	if err != nil {
@@ -169,7 +172,7 @@ func NewClient(cfg Config, polygonBridgeAddr, polygonZkEVMGlobalExitRootAddress,
 }
 
 // NewL2Client creates a new etherman for L2.
-func NewL2Client(url string, polygonBridgeAddr common.Address) (*Client, error) {
+func NewL2Client(url string, polygonBridgeAddr, claimCompressorAddress common.Address) (*Client, error) {
 	// Connect to ethereum node
 	ethClient, err := ethclient.Dial(url)
 	if err != nil {
@@ -185,9 +188,27 @@ func NewL2Client(url string, polygonBridgeAddr common.Address) (*Client, error) 
 	if err != nil {
 		return nil, err
 	}
+	var claimCompressor *claimcompressor.Claimcompressor
+	if claimCompressorAddress == (common.Address{}) {
+		log.Warn("Claim compressor Address not configured")
+	} else {
+		log.Infof("Grouping claims allowed, claimCompressor=%s", claimCompressorAddress.String())
+		claimCompressor, err = claimcompressor.NewClaimcompressor(claimCompressorAddress, ethClient)
+		if err != nil {
+			log.Errorf("error creating claimCompressor: %+v", err)
+			return nil, err
+		}
+	}
+
 	scAddresses := []common.Address{polygonBridgeAddr}
 
-	return &Client{EtherClient: ethClient, PolygonBridge: bridge, OldPolygonBridge: oldpolygonBridge, SCAddresses: scAddresses}, nil
+	return &Client{
+		EtherClient:      ethClient,
+		PolygonBridge:    bridge,
+		OldPolygonBridge: oldpolygonBridge,
+		SCAddresses:      scAddresses,
+		ClaimCompressor:  claimCompressor,
+	}, nil
 }
 
 // GetRollupInfoByBlockRange function retrieves the Rollup information that are included in all this ethereum blocks
@@ -742,4 +763,22 @@ func (etherMan *Client) AddExistingRollupEvent(ctx context.Context, vLog types.L
 	}
 	(*blocksOrder)[(*blocks)[len(*blocks)-1].BlockHash] = append((*blocksOrder)[(*blocks)[len(*blocks)-1].BlockHash], or)
 	return nil
+}
+
+func (etherMan *Client) SendCompressedClaims(auth *bind.TransactOpts, compressedTxData []byte) (common.Hash, error) {
+	claimTx, err := etherMan.ClaimCompressor.SendCompressedClaims(auth, compressedTxData)
+	if err != nil {
+		log.Error("failed to call SMC SendCompressedClaims: %v", err)
+		return common.Hash{}, err
+	}
+	return claimTx.Hash(), err
+}
+
+func (etherMan *Client) CompressClaimCall(mainnetExitRoot, rollupExitRoot common.Hash, claimData []claimcompressor.ClaimCompressorCompressClaimCallData) ([]byte, error) {
+	compressedData, err := etherMan.ClaimCompressor.CompressClaimCall(&bind.CallOpts{Pending: false}, mainnetExitRoot, rollupExitRoot, claimData)
+	if err != nil {
+		log.Errorf("fails call to claimCompressorSMC. Error: %v", err)
+		return []byte{}, nil
+	}
+	return compressedData, nil
 }
