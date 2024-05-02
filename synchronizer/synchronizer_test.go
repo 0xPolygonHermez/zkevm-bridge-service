@@ -54,9 +54,11 @@ func TestSyncGer(t *testing.T) {
 		}()
 
 		parentHash := common.HexToHash("0x111")
-		ethHeader := &types.Header{Number: big.NewInt(1), ParentHash: parentHash}
-		ethBlock := types.NewBlockWithHeader(ethHeader)
-		lastBlock := &etherman.Block{BlockHash: ethBlock.Hash(), BlockNumber: ethBlock.Number().Uint64()}
+		ethHeader0 := &types.Header{Number: big.NewInt(0), ParentHash: parentHash}
+		ethHeader1 := &types.Header{Number: big.NewInt(1), ParentHash: ethHeader0.Hash()}
+		ethBlock0 := types.NewBlockWithHeader(ethHeader0)
+		ethBlock1 := types.NewBlockWithHeader(ethHeader1)
+		lastBlock := &etherman.Block{BlockHash: ethBlock0.Hash(), BlockNumber: ethBlock0.Number().Uint64()}
 		var networkID uint = 0
 
 		m.Storage.
@@ -65,13 +67,13 @@ func TestSyncGer(t *testing.T) {
 
 		m.Etherman.
 			On("EthBlockByNumber", ctx, lastBlock.BlockNumber).
-			Return(ethBlock, nil).
+			Return(ethBlock0, nil).
 			Once()
 
 		var n *big.Int
 		m.Etherman.
 			On("HeaderByNumber", ctx, n).
-			Return(ethHeader, nil).
+			Return(ethHeader1, nil).
 			Once()
 
 		globalExitRoot := etherman.GlobalExitRoot{
@@ -82,15 +84,19 @@ func TestSyncGer(t *testing.T) {
 			},
 			GlobalExitRoot: common.HexToHash("0xb14c74e4dddf25627a745f46cae6ac98782e2783c3ccc28107c8210e60d58864"),
 		}
-
-		ethermanBlock := etherman.Block{
-			BlockHash:       ethBlock.Hash(),
+		ethermanBlock0 := etherman.Block{
+			BlockHash:       ethBlock0.Hash(),
+			NetworkID:       0,
+		}
+		ethermanBlock1 := etherman.Block{
+			BlockNumber:     ethBlock0.NumberU64(),
+			BlockHash:       ethBlock1.Hash(),
 			GlobalExitRoots: []etherman.GlobalExitRoot{globalExitRoot},
 			NetworkID:       0,
 		}
-		blocks := []etherman.Block{ethermanBlock}
+		blocks := []etherman.Block{ethermanBlock0, ethermanBlock1}
 		order := map[common.Hash][]etherman.Order{
-			ethBlock.Hash(): {
+			ethBlock1.Hash(): {
 				{
 					Name: etherman.GlobalExitRootsOrder,
 					Pos:  0,
@@ -98,9 +104,11 @@ func TestSyncGer(t *testing.T) {
 			},
 		}
 
-		fromBlock := ethBlock.NumberU64() + 1
+		fromBlock := ethBlock0.NumberU64()
 		toBlock := fromBlock + cfg.SyncChunkSize
-
+		if toBlock > ethBlock1.NumberU64() {
+			toBlock = ethBlock1.NumberU64()
+		}
 		m.Etherman.
 			On("GetRollupInfoByBlockRange", ctx, fromBlock, &toBlock).
 			Return(blocks, order, nil).
@@ -112,12 +120,12 @@ func TestSyncGer(t *testing.T) {
 			Once()
 
 		m.Storage.
-			On("AddBlock", ctx, &blocks[0], m.DbTx).
+			On("AddBlock", ctx, &blocks[1], m.DbTx).
 			Return(uint64(1), nil).
 			Once()
 
 		m.Storage.
-			On("AddGlobalExitRoot", ctx, &blocks[0].GlobalExitRoots[0], m.DbTx).
+			On("AddGlobalExitRoot", ctx, &blocks[1].GlobalExitRoots[0], m.DbTx).
 			Return(nil).
 			Once()
 
@@ -129,7 +137,7 @@ func TestSyncGer(t *testing.T) {
 
 		m.Storage.
 			On("GetLatestL1SyncedExitRoot", ctx, nil).
-			Return(&blocks[0].GlobalExitRoots[0], nil).
+			Return(&blocks[1].GlobalExitRoots[0], nil).
 			Once()
 
 		g := common.HexToHash("0xb14c74e4dddf25627a745f46cae6ac98782e2783c3ccc28107c8210e60d58861")
