@@ -94,7 +94,7 @@ func NewClaimTxManager(ctx context.Context, cfg Config, chExitRootEvent chan *et
 func (tm *ClaimTxManager) Start() {
 	ticker := time.NewTicker(tm.cfg.FrequencyToMonitorTxs.Duration)
 	compressorTicker := time.NewTicker(tm.cfg.GroupingClaims.FrequencyToProcessCompressedClaims.Duration)
-	var ger *etherman.GlobalExitRoot
+	var ger = &etherman.GlobalExitRoot{}
 	for {
 		select {
 		case <-tm.ctx.Done():
