@@ -94,7 +94,8 @@ func NewClaimTxManager(ctx context.Context, cfg Config, chExitRootEvent chan *et
 func (tm *ClaimTxManager) Start() {
 	ticker := time.NewTicker(tm.cfg.FrequencyToMonitorTxs.Duration)
 	compressorTicker := time.NewTicker(tm.cfg.GroupingClaims.FrequencyToProcessCompressedClaims.Duration)
-	var ger *etherman.GlobalExitRoot
+	var ger = &etherman.GlobalExitRoot{}
+	var latestProcessedGer common.Hash
 	for {
 		select {
 		case <-tm.ctx.Done():
@@ -121,7 +122,7 @@ func (tm *ClaimTxManager) Start() {
 				log.Infof("Waiting for networkID %d to be synced before processing deposits", tm.l2NetworkID)
 			}
 		case <-compressorTicker.C:
-			if tm.synced && tm.cfg.GroupingClaims.Enabled {
+			if tm.synced && tm.cfg.GroupingClaims.Enabled && ger.GlobalExitRoot != latestProcessedGer {
 				log.Info("Processing deposits for ger: ", ger.GlobalExitRoot)
 				go func() {
 					err := tm.updateDepositsStatus(ger)
@@ -129,6 +130,7 @@ func (tm *ClaimTxManager) Start() {
 						log.Errorf("failed to update deposits status: %v", err)
 					}
 				}()
+				latestProcessedGer = ger.GlobalExitRoot
 			}
 		case <-ticker.C:
 			err := tm.monitorTxs.MonitorTxs(tm.ctx)
