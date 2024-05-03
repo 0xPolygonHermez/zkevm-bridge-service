@@ -42,4 +42,6 @@ type ConfigGroupingClaims struct {
 	RetryInterval types.Duration `mapstructure:"RetryInterval"`
 	// RetryTimeout is the maximum time to wait for a claim tx to be mined
 	RetryTimeout types.Duration `mapstructure:"RetryTimeout"`
+	// GasOffset is the offset for the gas estimation
+	GasOffset uint64 `mapstructure:"GasOffset"`
 }
