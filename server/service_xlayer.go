@@ -23,8 +23,6 @@ import (
 )
 
 const (
-	defaultErrorCode   = 1
-	defaultSuccessCode = 0
 	mtHeight           = 32 // For sending mtProof to bridge contract, it requires constant-sized array...
 	defaultMinDuration = 1
 )
@@ -53,8 +51,7 @@ func (s *bridgeService) GetSmtProof(ctx context.Context, req *pb.GetSmtProofRequ
 	if err != nil || len(merkleProof) != len(rollupMerkleProof) {
 		log.Errorf("GetSmtProof err[%v] merkleProofLen[%v] rollupMerkleProofLen[%v]", err, len(merkleProof), len(rollupMerkleProof))
 		return &pb.CommonProofResponse{
-			Code: defaultErrorCode,
-			Data: nil,
+			Code: uint32(pb.ErrorCode_ERROR_DEFAULT),
 			Msg:  err.Error(),
 		}, nil
 	}
@@ -68,7 +65,7 @@ func (s *bridgeService) GetSmtProof(ctx context.Context, req *pb.GetSmtProofRequ
 	}
 
 	return &pb.CommonProofResponse{
-		Code: defaultSuccessCode,
+		Code: uint32(pb.ErrorCode_ERROR_OK),
 		Data: &pb.ProofDetail{
 			SmtProof:        proof,
 			RollupSmtProof:  rollupProof,
@@ -89,8 +86,7 @@ func (s *bridgeService) GetCoinPrice(ctx context.Context, req *pb.GetCoinPriceRe
 	if err != nil {
 		log.Errorf("get coin price from redis failed for symbol: %v, error: %v", req.SymbolInfos, err)
 		return &pb.CommonCoinPricesResponse{
-			Code: defaultErrorCode,
-			Data: nil,
+			Code: uint32(pb.ErrorCode_ERROR_DEFAULT),
 			Msg:  gerror.ErrInternalErrorForRpcCall.Error(),
 		}, nil
 	}
@@ -99,7 +95,7 @@ func (s *bridgeService) GetCoinPrice(ctx context.Context, req *pb.GetCoinPriceRe
 		priceInfo.ChainId = utils.GetInnerChainIdByStandardId(priceInfo.ChainId)
 	}
 	return &pb.CommonCoinPricesResponse{
-		Code: defaultSuccessCode,
+		Code: uint32(pb.ErrorCode_ERROR_OK),
 		Data: priceList,
 	}, nil
 }
@@ -111,8 +107,7 @@ func (s *bridgeService) GetMainCoins(ctx context.Context, req *pb.GetMainCoinsRe
 	if err != nil {
 		log.Errorf("get main coins from cache failed for net: %v, error: %v", req.NetworkId, err)
 		return &pb.CommonCoinsResponse{
-			Code: defaultErrorCode,
-			Data: nil,
+			Code: uint32(pb.ErrorCode_ERROR_DEFAULT),
 			Msg:  gerror.ErrInternalErrorForRpcCall.Error(),
 		}, nil
 	}
@@ -121,7 +116,7 @@ func (s *bridgeService) GetMainCoins(ctx context.Context, req *pb.GetMainCoinsRe
 		coinInfo.ChainId = utils.GetInnerChainIdByStandardId(coinInfo.ChainId)
 	}
 	return &pb.CommonCoinsResponse{
-		Code: defaultSuccessCode,
+		Code: uint32(pb.ErrorCode_ERROR_OK),
 		Data: coins,
 	}, nil
 }
@@ -141,8 +136,7 @@ func (s *bridgeService) GetPendingTransactions(ctx context.Context, req *pb.GetP
 	if err != nil {
 		log.Errorf("get pending tx failed for address: %v, limit: %v, offset: %v, error: %v", req.DestAddr, limit, req.Offset, err)
 		return &pb.CommonTransactionsResponse{
-			Code: defaultErrorCode,
-			Data: nil,
+			Code: uint32(pb.ErrorCode_ERROR_DEFAULT),
 			Msg:  gerror.ErrInternalErrorForRpcCall.Error(),
 		}, nil
 	}
@@ -200,7 +194,7 @@ func (s *bridgeService) GetPendingTransactions(ctx context.Context, req *pb.GetP
 		pbTransactions = append(pbTransactions, transaction)
 	}
 	return &pb.CommonTransactionsResponse{
-		Code: defaultSuccessCode,
+		Code: uint32(pb.ErrorCode_ERROR_OK),
 		Data: &pb.TransactionDetail{HasNext: hasNext, Transactions: pbTransactions},
 	}, nil
 }
@@ -236,8 +230,7 @@ func (s *bridgeService) GetAllTransactions(ctx context.Context, req *pb.GetAllTr
 	if err != nil {
 		log.Errorf("get deposits from db failed for address: %v, limit: %v, offset: %v, error: %v", req.DestAddr, limit, req.Offset, err)
 		return &pb.CommonTransactionsResponse{
-			Code: defaultErrorCode,
-			Data: nil,
+			Code: uint32(pb.ErrorCode_ERROR_DEFAULT),
 			Msg:  gerror.ErrInternalErrorForRpcCall.Error(),
 		}, nil
 	}
@@ -268,8 +261,7 @@ func (s *bridgeService) GetAllTransactions(ctx context.Context, req *pb.GetAllTr
 			if err != nil {
 				if !errors.Is(err, gerror.ErrStorageNotFound) {
 					return &pb.CommonTransactionsResponse{
-						Code: defaultErrorCode,
-						Data: nil,
+						Code: uint32(pb.ErrorCode_ERROR_DEFAULT),
 						Msg:  errors.Wrap(err, "load claim error").Error(),
 					}, nil
 				}
@@ -311,7 +303,7 @@ func (s *bridgeService) GetAllTransactions(ctx context.Context, req *pb.GetAllTr
 	}
 
 	return &pb.CommonTransactionsResponse{
-		Code: defaultSuccessCode,
+		Code: uint32(pb.ErrorCode_ERROR_OK),
 		Data: &pb.TransactionDetail{HasNext: hasNext, Transactions: pbTransactions},
 	}, nil
 }
@@ -329,8 +321,7 @@ func (s *bridgeService) GetNotReadyTransactions(ctx context.Context, req *pb.Get
 	deposits, err := s.storage.GetNotReadyTransactions(ctx, uint(limit+1), uint(req.Offset), nil)
 	if err != nil {
 		return &pb.CommonTransactionsResponse{
-			Code: defaultErrorCode,
-			Data: nil,
+			Code: uint32(pb.ErrorCode_ERROR_DEFAULT),
 			Msg:  err.Error(),
 		}, nil
 	}
@@ -350,7 +341,7 @@ func (s *bridgeService) GetNotReadyTransactions(ctx context.Context, req *pb.Get
 	}
 
 	return &pb.CommonTransactionsResponse{
-		Code: defaultSuccessCode,
+		Code: uint32(pb.ErrorCode_ERROR_OK),
 		Data: &pb.TransactionDetail{HasNext: hasNext, Transactions: pbTransactions},
 	}, nil
 }
@@ -368,8 +359,7 @@ func (s *bridgeService) GetMonitoredTxsByStatus(ctx context.Context, req *pb.Get
 	mTxs, err := s.storage.GetClaimTxsByStatusWithLimit(ctx, []ctmtypes.MonitoredTxStatus{ctmtypes.MonitoredTxStatus(req.Status)}, uint(limit+1), uint(req.Offset), nil)
 	if err != nil {
 		return &pb.CommonMonitoredTxsResponse{
-			Code: defaultErrorCode,
-			Data: nil,
+			Code: uint32(pb.ErrorCode_ERROR_DEFAULT),
 			Msg:  err.Error(),
 		}, nil
 	}
@@ -401,7 +391,7 @@ func (s *bridgeService) GetMonitoredTxsByStatus(ctx context.Context, req *pb.Get
 	}
 
 	return &pb.CommonMonitoredTxsResponse{
-		Code: defaultSuccessCode,
+		Code: uint32(pb.ErrorCode_ERROR_OK),
 		Data: &pb.MonitoredTxsDetail{HasNext: hasNext, Transactions: pbTransactions},
 	}, nil
 }
@@ -409,7 +399,7 @@ func (s *bridgeService) GetMonitoredTxsByStatus(ctx context.Context, req *pb.Get
 // GetEstimateTime returns the estimated deposit waiting time for L1 and L2
 func (s *bridgeService) GetEstimateTime(ctx context.Context, req *pb.GetEstimateTimeRequest) (*pb.CommonEstimateTimeResponse, error) {
 	return &pb.CommonEstimateTimeResponse{
-		Code: defaultSuccessCode,
+		Code: uint32(pb.ErrorCode_ERROR_OK),
 		Data: []uint32{estimatetime.GetDefaultCalculator().Get(0), estimatetime.GetDefaultCalculator().Get(1)},
 	}, nil
 }
@@ -419,7 +409,7 @@ func (s *bridgeService) ManualClaim(ctx context.Context, req *pb.ManualClaimRequ
 	// Only allow L1->L2
 	if req.FromChain != 0 {
 		return &pb.CommonManualClaimResponse{
-			Code: defaultErrorCode,
+			Code: uint32(pb.ErrorCode_ERROR_DEFAULT),
 			Msg:  "only allow L1->L2 claim",
 		}, nil
 	}
@@ -429,7 +419,7 @@ func (s *bridgeService) ManualClaim(ctx context.Context, req *pb.ManualClaimRequ
 	if err != nil {
 		log.Errorf("Failed to get deposit: %v", err)
 		return &pb.CommonManualClaimResponse{
-			Code: defaultErrorCode,
+			Code: uint32(pb.ErrorCode_ERROR_DEFAULT),
 			Msg:  "failed to get deposit info",
 		}, nil
 	}
@@ -437,7 +427,7 @@ func (s *bridgeService) ManualClaim(ctx context.Context, req *pb.ManualClaimRequ
 	// Only allow to claim ready transactions
 	if !deposit.ReadyForClaim {
 		return &pb.CommonManualClaimResponse{
-			Code: defaultErrorCode,
+			Code: uint32(pb.ErrorCode_ERROR_DEFAULT),
 			Msg:  "transaction is not ready for claim",
 		}, nil
 	}
@@ -446,13 +436,13 @@ func (s *bridgeService) ManualClaim(ctx context.Context, req *pb.ManualClaimRequ
 	_, err = s.storage.GetClaim(ctx, deposit.DepositCount, deposit.DestinationNetwork, nil)
 	if err == nil {
 		return &pb.CommonManualClaimResponse{
-			Code: defaultErrorCode,
+			Code: uint32(pb.ErrorCode_ERROR_DEFAULT),
 			Msg:  "transaction has already been claimed",
 		}, nil
 	}
 	if !errors.Is(err, gerror.ErrStorageNotFound) {
 		return &pb.CommonManualClaimResponse{
-			Code: defaultErrorCode,
+			Code: uint32(pb.ErrorCode_ERROR_DEFAULT),
 		}, nil
 	}
 
@@ -461,7 +451,7 @@ func (s *bridgeService) ManualClaim(ctx context.Context, req *pb.ManualClaimRequ
 	if !ok || client == nil {
 		log.Errorf("node client for networkID %v not found", destNet)
 		return &pb.CommonManualClaimResponse{
-			Code: defaultErrorCode,
+			Code: uint32(pb.ErrorCode_ERROR_DEFAULT),
 		}, nil
 	}
 	// Get the claim proof
@@ -482,13 +472,13 @@ func (s *bridgeService) ManualClaim(ctx context.Context, req *pb.ManualClaimRequ
 	if err != nil {
 		log.Errorf("failed to send claim transaction: %v", err)
 		return &pb.CommonManualClaimResponse{
-			Code: defaultErrorCode,
+			Code: uint32(pb.ErrorCode_ERROR_DEFAULT),
 			Msg:  "failed to send claim transaction",
 		}, nil
 	}
 
 	return &pb.CommonManualClaimResponse{
-		Code: defaultSuccessCode,
+		Code: uint32(pb.ErrorCode_ERROR_OK),
 		Data: &pb.ManualClaimResponse{
 			ClaimTxHash: tx.Hash().String(),
 		},
@@ -510,8 +500,7 @@ func (s *bridgeService) GetReadyPendingTransactions(ctx context.Context, req *pb
 	deposits, err := s.storage.GetReadyPendingTransactions(ctx, uint(req.NetworkId), uint(limit+1), uint(req.Offset), minReadyTime, nil)
 	if err != nil {
 		return &pb.CommonTransactionsResponse{
-			Code: defaultErrorCode,
-			Data: nil,
+			Code: uint32(pb.ErrorCode_ERROR_DEFAULT),
 		}, nil
 	}
 
@@ -530,7 +519,7 @@ func (s *bridgeService) GetReadyPendingTransactions(ctx context.Context, req *pb
 	}
 
 	return &pb.CommonTransactionsResponse{
-		Code: defaultSuccessCode,
+		Code: uint32(pb.ErrorCode_ERROR_OK),
 		Data: &pb.TransactionDetail{HasNext: hasNext, Transactions: pbTransactions},
 	}, nil
 }
@@ -545,13 +534,13 @@ func (s *bridgeService) getGlobalIndex(deposit *etherman.Deposit) *big.Int {
 func (s *bridgeService) GetFakePushMessages(ctx context.Context, req *pb.GetFakePushMessagesRequest) (*pb.GetFakePushMessagesResponse, error) {
 	if s.messagePushProducer == nil {
 		return &pb.GetFakePushMessagesResponse{
-			Code: defaultErrorCode,
+			Code: uint32(pb.ErrorCode_ERROR_DEFAULT),
 			Msg:  "producer is nil",
 		}, nil
 	}
 
 	return &pb.GetFakePushMessagesResponse{
-		Code: defaultSuccessCode,
+		Code: uint32(pb.ErrorCode_ERROR_OK),
 		Data: s.messagePushProducer.GetFakeMessages(req.Topic),
 	}, nil
 }

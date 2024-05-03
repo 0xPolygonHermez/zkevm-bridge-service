@@ -262,6 +262,7 @@ enum ErrorCode {
     ERROR_OK = 0;
     // Start from 1000 so that it will not conflict with gRPC error code range
     ERROR_DEFAULT = 1000;
+    ERROR_BUSINESS = 1001; // General business error
     ERROR_IP_RESTRICTED = 1009;
 }
 

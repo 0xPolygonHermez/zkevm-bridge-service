@@ -68,12 +68,12 @@ func NewRequestMetricsInterceptor() grpc.UnaryServerInterceptor {
 // getRespErrorInfo returns the error code and msg from the resp
 func getRespErrorInfo(resp any, err error) (code int64, msg string) {
 	if err != nil {
-		return defaultErrorCode, err.Error()
+		return int64(pb.ErrorCode_ERROR_DEFAULT), err.Error()
 	}
 
 	if resp == nil {
 		// This should not happen
-		return defaultSuccessCode, ""
+		return int64(pb.ErrorCode_ERROR_OK), ""
 	}
 
 	// Check `Msg" field in the resp body

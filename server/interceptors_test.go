@@ -20,14 +20,14 @@ func TestGetRespErrorInfo(t *testing.T) {
 			"err is not nil",
 			pb.CommonCoinsResponse{Code: 2, Msg: "this will not be returned"},
 			errors.New("this is an error"),
-			defaultErrorCode,
+			uint32(pb.ErrorCode_ERROR_DEFAULT),
 			"this is an error",
 		},
 		{
 			"no error and resp is nil",
 			nil,
 			nil,
-			defaultSuccessCode,
+			uint32(pb.ErrorCode_ERROR_OK),
 			"",
 		},
 		{
@@ -41,7 +41,7 @@ func TestGetRespErrorInfo(t *testing.T) {
 			"no code and msg field",
 			struct{}{},
 			nil,
-			defaultSuccessCode,
+			uint32(pb.ErrorCode_ERROR_OK),
 			"",
 		},
 	}
