@@ -43,7 +43,7 @@ type bridgeClaimXParams struct {
 }
 
 type ComposeCompressClaim struct {
-	bridgeContractABI  *abi.ABI
+	bridgeContractABI   *abi.ABI
 	methodClaimAssets   abi.Method
 	methodClaimMessages abi.Method
 }
@@ -62,7 +62,7 @@ func NewComposeCompressClaim() (*ComposeCompressClaim, error) {
 		return nil, errors.New("method claimMessages not found")
 	}
 	return &ComposeCompressClaim{
-		bridgeContractABI:  smcAbi,
+		bridgeContractABI:   smcAbi,
 		methodClaimAssets:   methodClaimAssets,
 		methodClaimMessages: methodClaimMessages,
 	}, nil
