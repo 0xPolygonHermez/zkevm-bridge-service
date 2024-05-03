@@ -765,13 +765,13 @@ func (etherMan *Client) AddExistingRollupEvent(ctx context.Context, vLog types.L
 	return nil
 }
 
-func (etherMan *Client) SendCompressedClaims(auth *bind.TransactOpts, compressedTxData []byte) (common.Hash, error) {
+func (etherMan *Client) SendCompressedClaims(auth *bind.TransactOpts, compressedTxData []byte) (*types.Transaction, error) {
 	claimTx, err := etherMan.ClaimCompressor.SendCompressedClaims(auth, compressedTxData)
 	if err != nil {
 		log.Error("failed to call SMC SendCompressedClaims: %v", err)
-		return common.Hash{}, err
+		return nil, err
 	}
-	return claimTx.Hash(), err
+	return claimTx, err
 }
 
 func (etherMan *Client) CompressClaimCall(mainnetExitRoot, rollupExitRoot common.Hash, claimData []claimcompressor.ClaimCompressorCompressClaimCallData) ([]byte, error) {

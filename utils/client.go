@@ -168,7 +168,7 @@ func (c *Client) SendBridgeAsset(ctx context.Context, tokenAddr common.Address, 
 	}
 	tx, err := c.Bridge.BridgeAsset(auth, destNetwork, *destAddr, amount, tokenAddr, true, metadata)
 	if err != nil {
-		log.Error("Error: ", err)
+		log.Error("error sending deposit. Error: ", err)
 		return err
 	}
 	// wait transfer to be included in a batch

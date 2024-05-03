@@ -38,6 +38,7 @@ AuthorizedClaimMessageAddresses = []
     MaxRetries = 2
     RetryInterval = "10s"
     RetryTimeout = "30s"
+    GasOffset = 0
 
 
 [Etherman]
