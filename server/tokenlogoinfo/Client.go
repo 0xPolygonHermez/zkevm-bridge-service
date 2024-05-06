@@ -17,6 +17,8 @@ import (
 
 const (
 	endpointGetLogoInfos = "/priapi/v1/oc/web-common/coin/getLogoInfoBatch"
+	ChainNativeTokenAddr = "0x0000000000000000000000000000000000000000"
+	EmptyStr             = ""
 )
 
 type Client struct {
@@ -117,5 +119,8 @@ func (c *Client) GetTokenLogoInfos(tokenAddArr []*tokenlogo.QueryLogoParam) (map
 }
 
 func GetTokenLogoMapKey(tokenAddr string, chainId uint32) string {
+	if tokenAddr == ChainNativeTokenAddr {
+		tokenAddr = EmptyStr
+	}
 	return fmt.Sprintf("%s_%d", strings.ToLower(tokenAddr), chainId)
 }

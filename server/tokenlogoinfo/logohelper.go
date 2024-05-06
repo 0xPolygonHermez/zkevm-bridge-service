@@ -57,9 +57,13 @@ func buildQueryLogoParams(noCacheTokenMap map[uint32][]string) []*tokenlogo.Quer
 	var logoParams []*tokenlogo.QueryLogoParam
 	for k, v := range noCacheTokenMap {
 		for _, addr := range v {
+			finalAddr := addr
+			if addr == ChainNativeTokenAddr {
+				finalAddr = EmptyStr
+			}
 			logoParams = append(logoParams, &tokenlogo.QueryLogoParam{
 				ChainId:              k,
-				TokenContractAddress: addr,
+				TokenContractAddress: finalAddr,
 			})
 		}
 	}
