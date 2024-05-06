@@ -39,7 +39,7 @@ type ClientSynchronizer struct {
 
 // NewSynchronizer creates and initializes an instance of Synchronizer
 func NewSynchronizer(
-	ctx context.Context,
+	parentCtx context.Context,
 	storage interface{},
 	bridge bridgectrlInterface,
 	ethMan ethermanInterface,
@@ -48,7 +48,7 @@ func NewSynchronizer(
 	chExitRootEvent chan *etherman.GlobalExitRoot,
 	chSynced chan uint,
 	cfg Config) (Synchronizer, error) {
-	ctx, cancel := context.WithCancel(ctx)
+	ctx, cancel := context.WithCancel(parentCtx)
 	networkID, err := ethMan.GetNetworkID(ctx)
 	if err != nil {
 		log.Fatal("error getting networkID. Error: ", err)
@@ -182,6 +182,7 @@ func (s *ClientSynchronizer) Sync() error {
 
 // Stop function stops the synchronizer
 func (s *ClientSynchronizer) Stop() {
+	log.Info("Stopping synchronizer and cancelling context")
 	s.cancelCtx()
 }
 
@@ -544,22 +545,7 @@ func (s *ClientSynchronizer) checkReorg(latestStoredBlock, syncedBlock *etherman
 			depth++
 			log.Info("NetworkID: ", s.networkID, ", REORG: Looking for the latest correct ethereum block. Depth: ", depth)
 			// Reorg detected. Getting previous block
-			dbTx, err := s.storage.BeginDBTransaction(s.ctx)
-			if err != nil {
-				log.Errorf("networkID: %d, error creating db transaction to get previous blocks. Error: %v", s.networkID, err)
-				return nil, err
-			}
-			lb, err := s.storage.GetPreviousBlock(s.ctx, s.networkID, depth, dbTx)
-			errC := s.storage.Commit(s.ctx, dbTx)
-			if errC != nil {
-				log.Errorf("networkID: %d, error committing dbTx, err: %v", s.networkID, errC)
-				rollbackErr := s.storage.Rollback(s.ctx, dbTx)
-				if rollbackErr != nil {
-					log.Errorf("networkID: %d, error rolling back state. RollbackErr: %v", s.networkID, rollbackErr)
-					return nil, rollbackErr
-				}
-				return nil, errC
-			}
+			lb, err := s.storage.GetPreviousBlock(s.ctx, s.networkID, depth, nil)
 			if errors.Is(err, gerror.ErrStorageNotFound) {
 				log.Warnf("networkID: %d, error checking reorg: previous block not found in db: %v", s.networkID, err)
 				return &reorgedBlock, nil
