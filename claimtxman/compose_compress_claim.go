@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"math/big"
 	"slices"
-	"strings"
 
 	ctmtypes "github.com/0xPolygonHermez/zkevm-bridge-service/claimtxman/types"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman/smartcontracts/claimcompressor"
@@ -44,13 +43,13 @@ type bridgeClaimXParams struct {
 }
 
 type ComposeCompressClaim struct {
-	smcAbi              abi.ABI
+	bridgeContractABI  *abi.ABI
 	methodClaimAssets   abi.Method
 	methodClaimMessages abi.Method
 }
 
 func NewComposeCompressClaim() (*ComposeCompressClaim, error) {
-	smcAbi, err := abi.JSON(strings.NewReader(polygonzkevmbridge.PolygonzkevmbridgeABI))
+	smcAbi, err := polygonzkevmbridge.PolygonzkevmbridgeMetaData.GetAbi()
 	if err != nil {
 		return nil, errors.New("fails to read abi fom Bridge contract")
 	}
@@ -63,7 +62,7 @@ func NewComposeCompressClaim() (*ComposeCompressClaim, error) {
 		return nil, errors.New("method claimMessages not found")
 	}
 	return &ComposeCompressClaim{
-		smcAbi:              smcAbi,
+		bridgeContractABI:  smcAbi,
 		methodClaimAssets:   methodClaimAssets,
 		methodClaimMessages: methodClaimMessages,
 	}, nil
@@ -129,7 +128,7 @@ func (c *ComposeCompressClaim) extractParams(data []byte) (*bridgeClaimXParams, 
 }
 func (c *ComposeCompressClaim) extractParamsClaimX(data []byte) (*bridgeClaimXParams, error) {
 	// do something
-	method, err := c.smcAbi.MethodById(data[:4])
+	method, err := c.bridgeContractABI.MethodById(data[:4])
 	if err != nil {
 		return nil, fmt.Errorf("extracting params, getting method err: %w ", err)
 	}
