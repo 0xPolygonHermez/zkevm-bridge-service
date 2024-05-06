@@ -335,13 +335,14 @@ func (tm *MonitorCompressedTxs) SendClaims(pendingTx *PendingTxs, onlyFirstOne b
 		auth.GasLimit = estimatedTx.Gas() + tm.gasOffset
 		log.Debug("New GAS: ", auth.GasLimit)
 		// Send claim tx
-		tx, err := tm.etherMan.SendCompressedClaims(tm.auth, group.DbEntry.CompressedTxData)
+		tx, err := tm.etherMan.SendCompressedClaims(&auth, group.DbEntry.CompressedTxData)
 		if err != nil {
 			msg := fmt.Sprintf("failed to call SMC SendCompressedClaims for group %d: %v", group.DbEntry.GroupID, err)
 			log.Warn(msg)
 			group.DbEntry.LastLog = msg
 			continue
 		}
+		log.Debug("Gas used: ", tx.Gas())
 		log.Infof("Send claim tx try: %d for group_id:%d  deposits_id:%s txHash:%s", group.DbEntry.NumRetries, group.DbEntry.GroupID, group.GetTxsDepositIDString(), tx.Hash().String())
 		group.DbEntry.Status = ctmtypes.MonitoredTxGroupStatusClaiming
 		group.DbEntry.AddPendingTx(tx.Hash())
