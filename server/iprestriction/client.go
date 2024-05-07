@@ -107,7 +107,7 @@ func (c *Client) CheckIPRestricted(ip string) bool {
 		log.Errorf("[CheckIPRestricted] failed to unmarshal response, err[%v] body[%v]", err, respBody)
 		return false
 	}
-	log.Debugf("[CheckIPRestricted] URL[%v] IP[%v] Result[%+v]", fullPath, ip, respStruct.Data.XLayerBridge)
+	log.Debugf("[CheckIPRestricted] URL[%v] IP[%v] Result[%+v]", fullPath, ip, respStruct)
 	if respStruct.Data.XLayerBridge != nil && (respStruct.Data.XLayerBridge.Hidden || respStruct.Data.XLayerBridge.Limit) {
 		return true
 	}
