@@ -297,21 +297,23 @@ func startServer(ctx *cli.Context, opts ...runOptionFunc) error {
 			}()
 		}
 
-		// Start the coin middleware kafka consumer
-		log.Debugf("start initializing kafka consumer...")
-		coinKafkaConsumer, err := coinmiddleware.NewKafkaConsumer(c.CoinKafkaConsumer, redisStorage)
-		if err != nil {
-			log.Error(err)
-			return err
-		}
-		log.Debugf("finish initializing kafka consumer")
-		go coinKafkaConsumer.Start(ctx.Context)
-		defer func() {
-			err := coinKafkaConsumer.Close()
+		if len(c.CoinKafkaConsumer.Brokers) > 0 {
+			// Start the coin middleware kafka consumer
+			log.Debugf("start initializing kafka consumer...")
+			coinKafkaConsumer, err := coinmiddleware.NewKafkaConsumer(c.CoinKafkaConsumer, redisStorage)
 			if err != nil {
-				log.Errorf("close kafka consumer error: %v", err)
+				log.Error(err)
+				return err
 			}
-		}()
+			log.Debugf("finish initializing kafka consumer")
+			go coinKafkaConsumer.Start(ctx.Context)
+			defer func() {
+				err := coinKafkaConsumer.Close()
+				if err != nil {
+					log.Errorf("close kafka consumer error: %v", err)
+				}
+			}()
+		}
 	}
 
 	// Wait for an in interrupt.

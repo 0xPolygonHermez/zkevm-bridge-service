@@ -68,7 +68,7 @@ BridgeVersion = "v1"
     MockPrice = true
 
 [CoinKafkaConsumer]
-Brokers = ["localhost:9092"]
+Brokers = []
 Topics = ["explorer_chainAddressPrice_push"]
 ConsumerGroupID = "xlayer-bridge-service"
 InitialOffset = -1
