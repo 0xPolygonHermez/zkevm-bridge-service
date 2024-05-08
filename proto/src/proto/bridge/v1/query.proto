@@ -258,6 +258,14 @@ enum TransactionStatus {
     TX_PENDING_VERIFICATION = 4; // Only for L2->L1
 }
 
+enum ErrorCode {
+    ERROR_OK = 0;
+    // Start from 1000 so that it will not conflict with gRPC error code range
+    ERROR_DEFAULT = 1000;
+    ERROR_BUSINESS = 1001; // General business error
+    ERROR_IP_RESTRICTED = 1009;
+}
+
 // Symbol info message
 message SymbolInfo {
     uint64 chainId = 1;
@@ -304,6 +312,16 @@ message Transaction {
     uint32 leafType = 17;
     uint64 blockNumber = 18;
     string globalIndex = 19;
+    string destContractAddr = 20;
+    TokenLogoInfo logoInfo = 21;
+    uint32 originalNetwork = 22;
+}
+
+message TokenLogoInfo {
+    string symbol = 1;
+    string tokenName = 2;
+    string logoOssUrl = 3;
+    uint32 decimal = 4;
 }
 
 // Monitored tx
@@ -467,4 +485,12 @@ message GetFakePushMessagesResponse {
     string error_message = 4;
     string detailMsg = 5;
     repeated string data = 6;
+}
+
+message CommonResponse {
+    uint32 code = 1;
+    string msg = 2;
+    string error_code = 3;
+    string error_message = 4;
+    string detailMsg = 5;
 }

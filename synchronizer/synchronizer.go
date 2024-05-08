@@ -10,6 +10,7 @@ import (
 	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/log"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/messagepush"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/metrics"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/redisstorage"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/utils/gerror"
 	"github.com/ethereum/go-ethereum/common"
@@ -121,6 +122,7 @@ var waitDuration = time.Duration(0)
 // Sync function will read the last state synced and will continue from that point.
 // Sync() will read blockchain events to detect rollup updates
 func (s *ClientSynchronizer) Sync() error {
+	go s.recordLatestBlockNum()
 	// If there is no lastEthereumBlock means that sync from the beginning is necessary. If not, it continues from the retrieved ethereum block
 	// Get the latest synced block. If there is no block on db, use genesis block
 	log.Infof("NetworkID: %d, Synchronization started", s.networkID)
@@ -300,6 +302,7 @@ func (s *ClientSynchronizer) syncBlocks(lastBlockSynced *etherman.Block) (*ether
 				s.synced = true
 				s.chSynced <- s.networkID
 			}
+			metrics.RecordLastSyncedBlockNum(uint32(s.networkID), lastKnownBlock.Uint64())
 			break
 		}
 		if len(blocks) == 0 { // If there is no events in the checked blocks range and lastKnownBlock > fromBlock.
@@ -323,6 +326,7 @@ func (s *ClientSynchronizer) syncBlocks(lastBlockSynced *etherman.Block) (*ether
 			log.Debugf("NetworkID: %d, Storing empty block. BlockNumber: %d. BlockHash: %s",
 				s.networkID, b.BlockNumber, b.BlockHash.String())
 		}
+		metrics.RecordLastSyncedBlockNum(uint32(s.networkID), lastBlockSynced.BlockNumber)
 	}
 
 	return lastBlockSynced, nil
@@ -394,6 +398,8 @@ func (s *ClientSynchronizer) processBlockRange(blocks []etherman.Block, order ma
 				// this is activated when the bridge detects the CreateNewRollup or the AddExistingRollup event from the rollupManager
 				log.Info("Event received. Activating LxLyEtrog...")
 			}
+
+			metrics.RecordSynchronizerEvent(uint32(s.networkID), string(element.Name))
 		}
 		log.Infof("NetworkID: %d. block %d element number %d", s.networkID, blocks[i].BlockNumber, counter)
 		err = s.storage.Commit(s.ctx, dbTx)
@@ -594,9 +600,10 @@ func (s *ClientSynchronizer) processGlobalExitRoot(globalExitRoot etherman.Globa
 }
 
 func (s *ClientSynchronizer) processDeposit(deposit etherman.Deposit, blockID uint64, dbTx pgx.Tx) error {
+	s.beforeProcessDeposit(&deposit)
 	deposit.BlockID = blockID
 	deposit.NetworkID = s.networkID
-	depositID, err := s.storage.AddDeposit(s.ctx, &deposit, dbTx)
+	depositID, err := s.storage.AddDepositXLayer(s.ctx, &deposit, dbTx)
 	if err != nil {
 		log.Errorf("networkID: %d, failed to store new deposit locally, BlockNumber: %d, Deposit: %+v err: %v", s.networkID, deposit.BlockNumber, deposit, err)
 		rollbackErr := s.storage.Rollback(s.ctx, dbTx)

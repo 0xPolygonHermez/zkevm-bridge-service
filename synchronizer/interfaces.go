@@ -40,6 +40,7 @@ type storageInterface interface {
 
 	// XLayer
 	GetDeposit(ctx context.Context, depositCounterUser uint, networkID uint, dbTx pgx.Tx) (*etherman.Deposit, error)
+	AddDepositXLayer(ctx context.Context, deposit *etherman.Deposit, dbTx pgx.Tx) (uint64, error)
 }
 
 type bridgectrlInterface interface {

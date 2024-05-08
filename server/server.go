@@ -14,7 +14,6 @@ import (
 	"github.com/0xPolygonHermez/zkevm-bridge-service/nacos"
 	"github.com/alibaba/sentinel-golang/core/base"
 	sentinelGrpc "github.com/alibaba/sentinel-golang/pkg/adapters/grpc"
-	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -29,10 +28,11 @@ const (
 )
 
 func RegisterNacos(cfg nacos.Config) {
-	log.Info(fmt.Sprintf("nacos config NacosUrls %s NamespaceId %s ApplicationName %s ExternalListenAddr %s", cfg.NacosUrls, cfg.NamespaceId, cfg.ApplicationName, cfg.ExternalListenAddr))
+	var err error
 	if cfg.NacosUrls != "" {
-		nacos.StartNacosClient(cfg.NacosUrls, cfg.NamespaceId, cfg.ApplicationName, cfg.ExternalListenAddr)
+		err = nacos.InitNacosClient(cfg.NacosUrls, cfg.NamespaceId, cfg.ApplicationName, cfg.ExternalListenAddr)
 	}
+	log.Debugf("Init nacos NacosUrls[%s] NamespaceId[%s] ApplicationName[%s] ExternalListenAddr[%s] Error[%v]", cfg.NacosUrls, cfg.NamespaceId, cfg.ApplicationName, cfg.ExternalListenAddr, err)
 }
 
 // RunServer runs gRPC server and HTTP gateway
@@ -98,9 +98,12 @@ func runGRPCServer(ctx context.Context, bridgeServer pb.BridgeServiceServer, por
 		return nil, status.Error(codes.ResourceExhausted, blockErr.Error())
 	}
 
-	server := grpc.NewServer(grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(
+	server := grpc.NewServer(grpc.ChainUnaryInterceptor(
+		NewRequestMetricsInterceptor(),
 		sentinelGrpc.NewUnaryServerInterceptor(sentinelGrpc.WithUnaryServerBlockFallback(blockErrFallbackFn)),
-		NewRequestLogInterceptor())))
+		NewRequestLogInterceptor(),
+		NewIPCheckInterceptor(),
+	))
 	pb.RegisterBridgeServiceServer(server, bridgeServer)
 
 	healthService := newHealthChecker()

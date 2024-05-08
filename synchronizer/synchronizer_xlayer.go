@@ -3,15 +3,26 @@ package synchronizer
 import (
 	"context"
 	"math/big"
+	"time"
 
 	"github.com/0xPolygonHermez/zkevm-bridge-service/bridgectrl/pb"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/estimatetime"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/log"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/metrics"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/pushtask"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/server/tokenlogoinfo"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/utils"
 	"github.com/jackc/pgx/v4"
 )
+
+func (s *ClientSynchronizer) beforeProcessDeposit(deposit *etherman.Deposit) {
+	// If the deposit is USDC LxLy message, extract the user address from the metadata
+	if deposit.LeafType == uint8(utils.LeafTypeMessage) && utils.IsUSDCContractAddress(deposit.OriginalAddress) {
+		deposit.DestContractAddress = deposit.DestinationAddress
+		deposit.DestinationAddress, _ = utils.DecodeUSDCBridgeMetadata(deposit.Metadata)
+	}
+}
 
 func (s *ClientSynchronizer) afterProcessDeposit(deposit *etherman.Deposit, depositID uint64, dbTx pgx.Tx) error {
 	// Add the deposit to Redis for L1
@@ -29,6 +40,11 @@ func (s *ClientSynchronizer) afterProcessDeposit(deposit *etherman.Deposit, depo
 		}
 	}
 
+	// Original address is needed for message allow list check, but it may be changed when we replace USDC info
+	origAddress := deposit.OriginalAddress
+	// Replace the USDC info here so that the metrics can report the correct token info
+	utils.ReplaceUSDCDepositInfo(deposit, true)
+
 	// Notify FE about a new deposit
 	go func() {
 		if s.messagePushProducer == nil {
@@ -36,30 +52,42 @@ func (s *ClientSynchronizer) afterProcessDeposit(deposit *etherman.Deposit, depo
 			return
 		}
 		if deposit.LeafType != uint8(utils.LeafTypeAsset) {
-			log.Infof("transaction is not asset, so skip push update change, hash: %v", deposit.TxHash)
-			return
+			if !utils.IsUSDCContractAddress(origAddress) {
+				log.Infof("transaction is not asset, so skip push update change, hash: %v", deposit.TxHash)
+				return
+			}
 		}
-		err := s.messagePushProducer.PushTransactionUpdate(&pb.Transaction{
-			FromChain:    uint32(deposit.NetworkID),
-			ToChain:      uint32(deposit.DestinationNetwork),
-			BridgeToken:  deposit.OriginalAddress.Hex(),
-			TokenAmount:  deposit.Amount.String(),
-			EstimateTime: s.getEstimateTimeForDepositCreated(deposit.NetworkID),
-			Time:         uint64(deposit.Time.UnixMilli()),
-			TxHash:       deposit.TxHash.String(),
-			Id:           depositID,
-			Index:        uint64(deposit.DepositCount),
-			Status:       uint32(pb.TransactionStatus_TX_CREATED),
-			BlockNumber:  deposit.BlockNumber,
-			DestAddr:     deposit.DestinationAddress.Hex(),
-			FromChainId:  utils.GetChainIdByNetworkId(deposit.NetworkID),
-			ToChainId:    utils.GetChainIdByNetworkId(deposit.DestinationNetwork),
-			GlobalIndex:  s.getGlobalIndex(deposit).String(),
-		})
+		transaction := &pb.Transaction{
+			FromChain:       uint32(deposit.NetworkID),
+			ToChain:         uint32(deposit.DestinationNetwork),
+			BridgeToken:     deposit.OriginalAddress.Hex(),
+			TokenAmount:     deposit.Amount.String(),
+			EstimateTime:    s.getEstimateTimeForDepositCreated(deposit.NetworkID),
+			Time:            uint64(deposit.Time.UnixMilli()),
+			TxHash:          deposit.TxHash.String(),
+			Id:              depositID,
+			Index:           uint64(deposit.DepositCount),
+			Status:          uint32(pb.TransactionStatus_TX_CREATED),
+			BlockNumber:     deposit.BlockNumber,
+			DestAddr:        deposit.DestinationAddress.Hex(),
+			FromChainId:     utils.GetChainIdByNetworkId(deposit.NetworkID),
+			ToChainId:       utils.GetChainIdByNetworkId(deposit.DestinationNetwork),
+			GlobalIndex:     s.getGlobalIndex(deposit).String(),
+			LeafType:        uint32(deposit.LeafType),
+			OriginalNetwork: uint32(deposit.OriginalNetwork),
+		}
+		transactionMap := make(map[string][]*pb.Transaction)
+		chainId := utils.GetChainIdByNetworkId(deposit.OriginalNetwork)
+		logoCacheKey := tokenlogoinfo.GetTokenLogoMapKey(transaction.GetBridgeToken(), chainId)
+		transactionMap[logoCacheKey] = append(transactionMap[logoCacheKey], transaction)
+		tokenlogoinfo.FillLogoInfos(s.ctx, s.redisStorage, transactionMap)
+		err := s.messagePushProducer.PushTransactionUpdate(transaction)
 		if err != nil {
 			log.Errorf("PushTransactionUpdate error: %v", err)
 		}
 	}()
+
+	metrics.RecordOrder(uint32(deposit.NetworkID), uint32(deposit.DestinationNetwork), uint32(deposit.LeafType), uint32(deposit.OriginalNetwork), deposit.OriginalAddress, deposit.Amount)
 	return nil
 }
 
@@ -90,8 +118,10 @@ func (s *ClientSynchronizer) afterProcessClaim(claim *etherman.Claim) error {
 			return
 		}
 		if deposit.LeafType != uint8(utils.LeafTypeAsset) {
-			log.Infof("transaction is not asset, so skip push update change, hash: %v", deposit.TxHash)
-			return
+			if !utils.IsUSDCContractAddress(deposit.OriginalAddress) {
+				log.Infof("transaction is not asset, so skip push update change, hash: %v", deposit.TxHash)
+				return
+			}
 		}
 		err = s.messagePushProducer.PushTransactionUpdate(&pb.Transaction{
 			FromChain:   uint32(deposit.NetworkID),
@@ -115,4 +145,20 @@ func (s *ClientSynchronizer) getGlobalIndex(deposit *etherman.Deposit) *big.Int 
 	isMainnet := deposit.NetworkID == 0
 	rollupIndex := s.rollupID - 1
 	return etherman.GenerateGlobalIndex(isMainnet, rollupIndex, deposit.DepositCount)
+}
+
+// recordLatestBlockNum continuously records the latest block number to prometheus metrics
+func (s *ClientSynchronizer) recordLatestBlockNum() {
+	log.Debugf("Start recordLatestBlockNum")
+	ticker := time.NewTicker(2 * time.Second) //nolint:gomnd
+
+	for range ticker.C {
+		// Get the latest block header
+		header, err := s.etherMan.HeaderByNumber(s.ctx, nil)
+		if err != nil {
+			log.Errorf("HeaderByNumber err: %v", err)
+			continue
+		}
+		metrics.RecordLatestBlockNum(uint32(s.networkID), header.Number.Uint64())
+	}
 }

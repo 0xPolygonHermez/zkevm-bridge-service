@@ -274,7 +274,7 @@ func (ins *CommittedBatchHandler) pushMsgForDeposit(deposit *etherman.Deposit, l
 			log.Errorf("kafka push producer is nil, so can't push tx status change msg!")
 			return
 		}
-		if deposit.LeafType != uint8(utils.LeafTypeAsset) {
+		if deposit.LeafType != uint8(utils.LeafTypeAsset) && !utils.IsUSDCContractAddress(deposit.OriginalAddress) {
 			log.Infof("transaction is not asset, so skip push update change, hash: %v", deposit.TxHash)
 			return
 		}

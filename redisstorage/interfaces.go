@@ -6,6 +6,7 @@ import (
 
 	"github.com/0xPolygonHermez/zkevm-bridge-service/bridgectrl/pb"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/models/tokenlogo"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -44,6 +45,10 @@ type RedisStorage interface {
 	LPushVerifyTime(ctx context.Context, commitTimeTimestamp int64) error
 	LLenVerifyTimeList(ctx context.Context) (int64, error)
 	RPopVerifyTime(ctx context.Context) (int64, error)
+
+	// token logo storage
+	SetTokenLogoInfo(ctx context.Context, keySuffix string, logoInfo tokenlogo.LogoInfo) error
+	GetTokenLogoInfo(ctx context.Context, keySuffix string) (*tokenlogo.LogoInfo, error)
 }
 
 type RedisClient interface {

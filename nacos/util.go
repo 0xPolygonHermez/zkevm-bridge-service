@@ -1,41 +1,41 @@
 package nacos
 
 import (
-	"fmt"
+	"net"
 	"strconv"
 	"strings"
 
-	"github.com/nacos-group/nacos-sdk-go/clients"
 	"github.com/nacos-group/nacos-sdk-go/common/constant"
-	"github.com/nacos-group/nacos-sdk-go/model"
-	"github.com/nacos-group/nacos-sdk-go/vo"
 )
 
-func GetOneInstance(urls string, nameSpace string, param vo.SelectOneHealthInstanceParam) (instance *model.Instance, err error) {
-	serverConfigs, err := getServerConfigs(urls)
-	if err != nil {
-		return nil, fmt.Errorf("failed to resolve nacos server url %s: %s", urls, err.Error())
+func resolveIPAndPort(addr string) (string, int, error) {
+	laddr := strings.Split(addr, ":")
+	ip := laddr[0]
+	if ip == "127.0.0.1" {
+		const port = 26659
+		return getLocalIP(), port, nil
 	}
+	port, err := strconv.Atoi(laddr[1])
+	if err != nil {
+		return "", 0, err
+	}
+	return ip, port, nil
+}
 
-	const timeoutMs = 5000
-	namingClient, err := clients.CreateNamingClient(map[string]interface{}{
-		"serverConfigs": serverConfigs,
-		"clientConfig": constant.ClientConfig{
-			NamespaceId:         nameSpace,
-			TimeoutMs:           timeoutMs,
-			NotLoadCacheAtStart: true,
-			LogDir:              "/dev/null",
-		},
-	})
+// getLocalIP get local ip
+func getLocalIP() string {
+	addrs, err := net.InterfaceAddrs()
 	if err != nil {
-		return nil, fmt.Errorf("failed to create nacos client when getting one service. error: %s", err.Error())
+		return ""
 	}
-
-	instance, err = namingClient.SelectOneHealthyInstance(param)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get %s service in [%s, %s]. error: %s", param, urls, nameSpace, err.Error())
+	for _, address := range addrs {
+		if ipnet, ok := address.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
+			if ipnet.IP.To4() != nil {
+				return ipnet.IP.String()
+			}
+		}
 	}
-	return instance, nil
+	return ""
 }
 
 func getServerConfigs(urls string) ([]constant.ServerConfig, error) {

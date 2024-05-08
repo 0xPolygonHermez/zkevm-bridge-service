@@ -69,7 +69,7 @@ SentinelConfigFilePath = "/app/sentinel_config.json"
     MockPrice = true
 
 [CoinKafkaConsumer]
-Brokers = ["xlayer-bridge-coin-kafka:9092"]
+Brokers = []
 Topics = ["explorer_chainAddressPrice_push"]
 ConsumerGroupID = "xlayer-bridge-service"
 InitialOffset = -1
@@ -97,3 +97,7 @@ ExternalListenAddr = "127.0.0.1:26659"
 [BusinessConfig]
 StandardChainIds = [195]
 InnerChainIds = [19500]
+
+[Metrics]
+Enabled = true
+Port = "9091"

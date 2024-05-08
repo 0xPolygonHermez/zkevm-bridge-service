@@ -2,7 +2,6 @@ package claimtxman
 
 import (
 	"context"
-	"time"
 
 	"github.com/0xPolygonHermez/zkevm-bridge-service/bridgectrl"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/claimtxman/types"
@@ -23,12 +22,13 @@ type storageInterface interface {
 	Commit(ctx context.Context, dbTx pgx.Tx) error
 
 	// XLayer
-	UpdateL1DepositsStatusXLayer(ctx context.Context, exitRoot []byte, eventTime time.Time, dbTx pgx.Tx) ([]*etherman.Deposit, error)
-	UpdateL2DepositsStatusXLayer(ctx context.Context, exitRoot []byte, eventTime time.Time, rollupID, networkID uint, dbTx pgx.Tx) ([]*etherman.Deposit, error)
+	UpdateL1DepositsStatusXLayer(ctx context.Context, exitRoot []byte, dbTx pgx.Tx) ([]*etherman.Deposit, error)
+	UpdateL2DepositsStatusXLayer(ctx context.Context, exitRoot []byte, rollupID, networkID uint, dbTx pgx.Tx) ([]*etherman.Deposit, error)
 	GetL1Deposits(ctx context.Context, exitRoot []byte, dbTx pgx.Tx) ([]*etherman.Deposit, error)
-	UpdateL1DepositStatus(ctx context.Context, depositCount uint, eventTime time.Time, dbTx pgx.Tx) error
+	UpdateL1DepositStatus(ctx context.Context, depositCount uint, dbTx pgx.Tx) error
 	GetDeposit(ctx context.Context, depositCounterUser uint, networkID uint, dbTx pgx.Tx) (*etherman.Deposit, error)
 	GetClaim(ctx context.Context, depositCount, networkID uint, dbTx pgx.Tx) (*etherman.Claim, error)
+	GetClaimTxsByStatusWithLimit(ctx context.Context, statuses []types.MonitoredTxStatus, limit, offset uint, dbTx pgx.Tx) ([]types.MonitoredTx, error)
 }
 
 type bridgeServiceInterface interface {

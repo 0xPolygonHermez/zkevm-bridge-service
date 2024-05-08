@@ -10,6 +10,7 @@ import (
 	"time"
 
 	ctmtypes "github.com/0xPolygonHermez/zkevm-bridge-service/claimtxman/types"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/config/apolloconfig"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/log"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/messagepush"
@@ -57,6 +58,7 @@ type ClaimTxManager struct {
 	// Producer to push the transaction status change to front end
 	messagePushProducer messagepush.KafkaProducer
 	redisStorage        redisstorage.RedisStorage
+	monitorTxsLimit     apolloconfig.Entry[uint]
 }
 
 // NewClaimTxManager creates a new claim transaction manager.
@@ -89,6 +91,7 @@ func NewClaimTxManager(cfg Config, chExitRootEvent chan *etherman.GlobalExitRoot
 		nonceCache:          cache,
 		messagePushProducer: producer,
 		redisStorage:        redisStorage,
+		monitorTxsLimit:     apolloconfig.NewIntEntry("claimtxman.monitorTxsLimit", uint(128)), //nolint:gomnd
 	}, err
 }
 

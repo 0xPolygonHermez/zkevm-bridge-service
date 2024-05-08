@@ -4,6 +4,8 @@ import (
 	"encoding/binary"
 
 	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/utils"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/iden3/go-iden3-crypto/keccak256"
 	"golang.org/x/crypto/sha3"
 )
@@ -42,6 +44,11 @@ func hashDeposit(deposit *etherman.Deposit) [KeyLen]byte {
 	binary.BigEndian.PutUint32(destNet, uint32(deposit.DestinationNetwork))
 	var buf [KeyLen]byte
 	metaHash := keccak256.Hash(deposit.Metadata)
-	copy(res[:], keccak256.Hash([]byte{deposit.LeafType}, origNet, deposit.OriginalAddress[:], destNet, deposit.DestinationAddress[:], deposit.Amount.FillBytes(buf[:]), metaHash))
+	destAddr := deposit.DestinationAddress
+	emptyAddr := common.Address{}
+	if deposit.LeafType == uint8(utils.LeafTypeMessage) && deposit.DestContractAddress != emptyAddr {
+		destAddr = deposit.DestContractAddress
+	}
+	copy(res[:], keccak256.Hash([]byte{deposit.LeafType}, origNet, deposit.OriginalAddress[:], destNet, destAddr[:], deposit.Amount.FillBytes(buf[:]), metaHash))
 	return res
 }

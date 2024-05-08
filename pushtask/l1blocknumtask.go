@@ -129,7 +129,7 @@ func (t *L1BlockNumTask) doTask(ctx context.Context) {
 				if t.messagePushProducer == nil {
 					return
 				}
-				if deposit.LeafType != uint8(utils.LeafTypeAsset) {
+				if deposit.LeafType != uint8(utils.LeafTypeAsset) && !utils.IsUSDCContractAddress(deposit.OriginalAddress) {
 					log.Infof("transaction is not asset, so skip push update change, hash: %v", deposit.TxHash)
 					return
 				}

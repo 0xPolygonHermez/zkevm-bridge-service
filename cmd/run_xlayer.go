@@ -15,10 +15,13 @@ import (
 	"github.com/0xPolygonHermez/zkevm-bridge-service/localcache"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/log"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/messagepush"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/metrics"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/pushtask"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/redisstorage"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/sentinel"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/server"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/server/iprestriction"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/server/tokenlogoinfo"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/utils"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/utils/gerror"
 	"github.com/0xPolygonHermez/zkevm-node/jsonrpc/client"
@@ -86,6 +89,8 @@ func startServer(ctx *cli.Context, opts ...runOptionFunc) error {
 		log.Error(err)
 		return err
 	}
+
+	utils.InitUSDCLxLyMapping(c.BusinessConfig.USDCContractAddresses, c.BusinessConfig.USDCTokenAddresses)
 
 	l1ChainId := c.Etherman.L1ChainId
 	l2ChainIds := c.Etherman.L2ChainIds
@@ -164,7 +169,7 @@ func startServer(ctx *cli.Context, opts ...runOptionFunc) error {
 		return err
 	}
 
-	mainCoinsCache, err := localcache.NewMainCoinsCache(apiStorage)
+	err = localcache.InitDefaultCache(apiStorage)
 	if err != nil {
 		log.Error(err)
 		return err
@@ -192,12 +197,17 @@ func startServer(ctx *cli.Context, opts ...runOptionFunc) error {
 		}()
 	}
 
+	// Start metrics
+	if c.Metrics.Enabled {
+		go metrics.StartMetricsHttpServer(c.Metrics)
+	}
+
 	// Initialize chainId manager
 	utils.InitChainIdManager(networkIDs, chainIDs)
 
 	rollupID := l1Etherman.GetRollupID()
 	bridgeService := server.NewBridgeService(c.BridgeServer, c.BridgeController.Height, networkIDs, l2NodeClients, l2Auths, apiStorage, rollupID).
-		WithRedisStorage(redisStorage).WithMainCoinsCache(mainCoinsCache).WithMessagePushProducer(messagePushProducer)
+		WithRedisStorage(redisStorage).WithMainCoinsCache(localcache.GetDefaultCache()).WithMessagePushProducer(messagePushProducer)
 
 	// Initialize inner chain id conf
 	utils.InnitOkInnerChainIdMapper(c.BusinessConfig)
@@ -214,6 +224,8 @@ func startServer(ctx *cli.Context, opts ...runOptionFunc) error {
 			log.Infof("init sentinel error[%v]; ignored and proceed with no sentinel config", err)
 		}
 		server.RegisterNacos(c.NacosConfig)
+		iprestriction.InitClient(c.IPRestriction)
+		tokenlogoinfo.InitClient(c.TokenLogoServiceConfig)
 
 		err = server.RunServer(c.BridgeServer, bridgeService)
 		if err != nil {
@@ -287,21 +299,26 @@ func startServer(ctx *cli.Context, opts ...runOptionFunc) error {
 			}()
 		}
 
-		// Start the coin middleware kafka consumer
-		log.Debugf("start initializing kafka consumer...")
-		coinKafkaConsumer, err := coinmiddleware.NewKafkaConsumer(c.CoinKafkaConsumer, redisStorage)
-		if err != nil {
-			log.Error(err)
-			return err
-		}
-		log.Debugf("finish initializing kafka consumer")
-		go coinKafkaConsumer.Start(ctx.Context)
-		defer func() {
-			err := coinKafkaConsumer.Close()
+		// init token logo client
+		tokenlogoinfo.InitClient(c.TokenLogoServiceConfig)
+
+		if len(c.CoinKafkaConsumer.Brokers) > 0 {
+			// Start the coin middleware kafka consumer
+			log.Debugf("start initializing kafka consumer...")
+			coinKafkaConsumer, err := coinmiddleware.NewKafkaConsumer(c.CoinKafkaConsumer, redisStorage)
 			if err != nil {
-				log.Errorf("close kafka consumer error: %v", err)
+				log.Error(err)
+				return err
 			}
-		}()
+			log.Debugf("finish initializing kafka consumer")
+			go coinKafkaConsumer.Start(ctx.Context)
+			defer func() {
+				err := coinKafkaConsumer.Close()
+				if err != nil {
+					log.Errorf("close kafka consumer error: %v", err)
+				}
+			}()
+		}
 	}
 
 	// Wait for an in interrupt.

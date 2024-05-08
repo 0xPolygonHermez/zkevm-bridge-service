@@ -2,37 +2,40 @@ package nacos
 
 import (
 	"fmt"
-	"net"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/0xPolygonHermez/zkevm-bridge-service/log"
 	"github.com/nacos-group/nacos-sdk-go/clients"
+	"github.com/nacos-group/nacos-sdk-go/clients/naming_client"
 	"github.com/nacos-group/nacos-sdk-go/common/constant"
+	"github.com/nacos-group/nacos-sdk-go/model"
 	"github.com/nacos-group/nacos-sdk-go/vo"
+	"github.com/pkg/errors"
 )
 
-// StartNacosClient start nacos client and register rest service in nacos
-func StartNacosClient(urls string, namespace string, name string, externalAddr string) {
-	ip, port, err := ResolveIPAndPort(externalAddr)
+var (
+	client naming_client.INamingClient
+)
+
+// InitNacosClient start nacos client and register rest service in nacos
+func InitNacosClient(urls string, namespace string, name string, externalAddr string) error {
+	ip, port, err := resolveIPAndPort(externalAddr)
 	if err != nil {
 		log.Error(fmt.Sprintf("failed to resolve %s error: %s", externalAddr, err.Error()))
-		return
+		return err
 	}
 
 	serverConfigs, err := getServerConfigs(urls)
 	if err != nil {
 		log.Error(fmt.Sprintf("failed to resolve nacos server url %s: %s", urls, err.Error()))
-		return
+		return err
 	}
 	const timeoutMs = 5000
-	const listenInterval = 10000
-	client, err := clients.CreateNamingClient(map[string]interface{}{
+	client, err = clients.CreateNamingClient(map[string]interface{}{
 		"serverConfigs": serverConfigs,
 		"clientConfig": constant.ClientConfig{
 			TimeoutMs:           timeoutMs,
-			ListenInterval:      listenInterval,
 			NotLoadCacheAtStart: true,
 			NamespaceId:         namespace,
 			LogDir:              "/dev/null",
@@ -41,7 +44,7 @@ func StartNacosClient(urls string, namespace string, name string, externalAddr s
 	})
 	if err != nil {
 		log.Error(fmt.Sprintf("failed to create nacos client. error: %s", err.Error()))
-		return
+		return err
 	}
 
 	const weight = 10
@@ -61,37 +64,28 @@ func StartNacosClient(urls string, namespace string, name string, externalAddr s
 	})
 	if err != nil {
 		log.Error(fmt.Sprintf("failed to register instance in nacos server. error: %s", err.Error()))
-		return
+		return err
 	}
 	log.Info("register application instance in nacos successfully")
+	return nil
 }
 
-func ResolveIPAndPort(addr string) (string, int, error) {
-	laddr := strings.Split(addr, ":")
-	ip := laddr[0]
-	if ip == "127.0.0.1" {
-		const port = 26659
-		return GetLocalIP(), port, nil
+// GetOneInstance returns the info of one healthy instance of the service
+func GetOneInstance(serviceName string) (*model.Instance, error) {
+	if client == nil {
+		return nil, errors.New("nacos client is not initialized")
 	}
-	port, err := strconv.Atoi(laddr[1])
-	if err != nil {
-		return "", 0, err
-	}
-	return ip, port, nil
+	params := vo.SelectOneHealthInstanceParam{ServiceName: serviceName}
+	return client.SelectOneHealthyInstance(params)
 }
 
-// GetLocalIP get local ip
-func GetLocalIP() string {
-	addrs, err := net.InterfaceAddrs()
+// GetOneURL returns the URL address of one healthy instance of the service
+func GetOneURL(serviceName string) (string, error) {
+	instance, err := GetOneInstance(serviceName)
 	if err != nil {
-		return ""
+		return "", err
 	}
-	for _, address := range addrs {
-		if ipnet, ok := address.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
-			if ipnet.IP.To4() != nil {
-				return ipnet.IP.String()
-			}
-		}
-	}
-	return ""
+
+	url := fmt.Sprintf("%v:%v", instance.Ip, instance.Port)
+	return url, nil
 }

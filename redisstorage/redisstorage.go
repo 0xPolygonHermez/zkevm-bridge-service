@@ -12,6 +12,7 @@ import (
 	"github.com/0xPolygonHermez/zkevm-bridge-service/config/apolloconfig"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/log"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/models/tokenlogo"
 	"github.com/pkg/errors"
 	"github.com/redis/go-redis/v9"
 	"google.golang.org/protobuf/encoding/protojson"
@@ -33,6 +34,9 @@ const (
 	avgVerifyDurationKey    = "bridge_avg_verify_duration"
 	verifyBatchTimeListKey  = "bridge_verify_batch_simple_info"
 	l2BlockCommitTimeKey    = "bridge_l2_block_commit_time_key_"
+
+	// token logo info key
+	tokenLogoInfoKey = "bridge_token_logo_info_"
 
 	// Set a default expiration for locks to prevent a process from keeping the lock for too long
 	lockExpire = 1 * time.Minute
@@ -422,6 +426,35 @@ func (s *redisStorageImpl) rPopIntCacheFoundation(ctx context.Context, key strin
 		return 0, errors.Wrap(err, fmt.Sprintf("convert redis list item value for key: %v failed, value: %v", key, res))
 	}
 	return num, nil
+}
+
+func (s *redisStorageImpl) SetTokenLogoInfo(ctx context.Context, keySuffix string, logoInfo tokenlogo.LogoInfo) error {
+	value, err := json.Marshal(logoInfo)
+	if err != nil {
+		return errors.Wrap(err, "failed to convert logoInfo to string")
+	}
+	return s.setFoundation(ctx, s.getTokenInfoCacheKey(keySuffix), value, durationFor48h)
+}
+
+func (s *redisStorageImpl) GetTokenLogoInfo(ctx context.Context, keySuffix string) (*tokenlogo.LogoInfo, error) {
+	if s == nil || s.client == nil {
+		return nil, errors.New("redis client is nil")
+	}
+	fullKey := s.addKeyPrefix(s.getTokenInfoCacheKey(keySuffix))
+	res, err := s.client.Get(ctx, fullKey).Result()
+	if err != nil {
+		return nil, errors.Wrap(err, fmt.Sprintf("get redis cache for key: %v failed", fullKey))
+	}
+	logoStruct := &tokenlogo.LogoInfo{}
+	err = json.Unmarshal([]byte(res), logoStruct)
+	if err != nil {
+		return nil, errors.Wrap(err, fmt.Sprintf("failed convert logo info cache to struct, cache: %v", res))
+	}
+	return logoStruct, nil
+}
+
+func (s *redisStorageImpl) getTokenInfoCacheKey(keySuffix string) string {
+	return tokenLogoInfoKey + keySuffix
 }
 
 func getCoinPriceKey(chainID uint64, tokenAddr string) string {

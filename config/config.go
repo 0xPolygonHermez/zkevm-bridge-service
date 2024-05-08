@@ -15,8 +15,11 @@ import (
 	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/log"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/messagepush"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/metrics"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/nacos"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/server"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/server/iprestriction"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/server/tokenlogoinfo"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/synchronizer"
 	"github.com/mitchellh/mapstructure"
 	"github.com/spf13/viper"
@@ -24,19 +27,22 @@ import (
 
 // Config struct
 type Config struct {
-	Log                 log.Config
-	Apollo              apolloconfig.Config
-	SyncDB              db.Config             `apollo:"SyncDB"`
-	ClaimTxManager      claimtxman.Config     `apollo:"ClaimTxManager"`
-	Etherman            etherman.Config       `apollo:"Etherman"`
-	Synchronizer        synchronizer.Config   `apollo:"Synchronizer"`
-	BridgeController    bridgectrl.Config     `apollo:"BridgeController"`
-	BridgeServer        server.Config         `apollo:"BridgeServer"`
-	CoinKafkaConsumer   coinmiddleware.Config `apollo:"CoinKafkaConsumer"`
-	MessagePushProducer messagepush.Config    `apollo:"MessagePushProducer"`
-	NetworkConfig       `apollo:"NetworkConfig"`
-	NacosConfig         nacos.Config
-	BusinessConfig      businessconfig.Config `apollo:"BusinessConfig"`
+	Log                    log.Config
+	Apollo                 apolloconfig.Config
+	SyncDB                 db.Config             `apollo:"SyncDB"`
+	ClaimTxManager         claimtxman.Config     `apollo:"ClaimTxManager"`
+	Etherman               etherman.Config       `apollo:"Etherman"`
+	Synchronizer           synchronizer.Config   `apollo:"Synchronizer"`
+	BridgeController       bridgectrl.Config     `apollo:"BridgeController"`
+	BridgeServer           server.Config         `apollo:"BridgeServer"`
+	CoinKafkaConsumer      coinmiddleware.Config `apollo:"CoinKafkaConsumer"`
+	MessagePushProducer    messagepush.Config    `apollo:"MessagePushProducer"`
+	NetworkConfig          `apollo:"NetworkConfig"`
+	NacosConfig            nacos.Config
+	BusinessConfig         businessconfig.Config `apollo:"BusinessConfig"`
+	Metrics                metrics.Config        `apollo:"Metrics"`
+	IPRestriction          iprestriction.Config  `apollo:"IPRestriction"`
+	TokenLogoServiceConfig tokenlogoinfo.Config  `apollo:"TokenLogoServiceConfig"`
 }
 
 // Load loads the configuration

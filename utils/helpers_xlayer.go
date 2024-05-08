@@ -38,20 +38,22 @@ func EthermanDepositToPbTransaction(deposit *etherman.Deposit) *pb.Transaction {
 	}
 
 	return &pb.Transaction{
-		FromChain:   uint32(deposit.NetworkID),
-		ToChain:     uint32(deposit.DestinationNetwork),
-		BridgeToken: deposit.OriginalAddress.Hex(),
-		TokenAmount: deposit.Amount.String(),
-		Time:        uint64(deposit.Time.UnixMilli()),
-		TxHash:      deposit.TxHash.String(),
-		FromChainId: GetChainIdByNetworkId(deposit.NetworkID),
-		ToChainId:   GetChainIdByNetworkId(deposit.DestinationNetwork),
-		Id:          deposit.Id,
-		Index:       uint64(deposit.DepositCount),
-		Metadata:    "0x" + hex.EncodeToString(deposit.Metadata),
-		DestAddr:    deposit.DestinationAddress.Hex(),
-		LeafType:    uint32(deposit.LeafType),
-		BlockNumber: deposit.BlockNumber,
+		FromChain:        uint32(deposit.NetworkID),
+		ToChain:          uint32(deposit.DestinationNetwork),
+		BridgeToken:      deposit.OriginalAddress.Hex(),
+		TokenAmount:      deposit.Amount.String(),
+		Time:             uint64(deposit.Time.UnixMilli()),
+		TxHash:           deposit.TxHash.String(),
+		FromChainId:      GetChainIdByNetworkId(deposit.NetworkID),
+		ToChainId:        GetChainIdByNetworkId(deposit.DestinationNetwork),
+		Id:               deposit.Id,
+		Index:            uint64(deposit.DepositCount),
+		Metadata:         "0x" + hex.EncodeToString(deposit.Metadata),
+		DestAddr:         deposit.DestinationAddress.Hex(),
+		LeafType:         uint32(deposit.LeafType),
+		BlockNumber:      deposit.BlockNumber,
+		DestContractAddr: deposit.DestContractAddress.Hex(),
+		OriginalNetwork:  uint32(deposit.OriginalNetwork),
 	}
 }
 
