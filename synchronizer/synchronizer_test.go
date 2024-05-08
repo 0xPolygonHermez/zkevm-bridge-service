@@ -26,7 +26,7 @@ type mocks struct {
 
 func TestSyncGer(t *testing.T) {
 	setupMocks := func(m *mocks) Synchronizer {
-		genBlockNumber := uint64(123456)
+		genBlockNumber := uint64(0)
 		cfg := Config{
 			SyncInterval:  cfgTypes.Duration{Duration: 1 * time.Second},
 			SyncChunkSize: 10,

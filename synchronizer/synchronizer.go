@@ -272,16 +272,17 @@ func (s *ClientSynchronizer) syncBlocks(lastBlockSynced *etherman.Block) (*ether
 		if err != nil {
 			return lastBlockSynced, err
 		}
-		if fromBlock == s.genBlockNumber {
-			log.Debugf("NetworkID: %d. adding genesis empty block", s.networkID)
-			blocks = append([]etherman.Block{{}}, blocks...)
-		} else if fromBlock < s.genBlockNumber {
-			err := fmt.Errorf("NetworkID: %d. fromBlock %d is lower than the genesisBlockNumber %d", s.networkID, fromBlock, s.genBlockNumber)
-			log.Warn(err)
-			return lastBlockSynced, err
-		}
+		
 		var initBlockReceived *etherman.Block
 		if len(blocks) != 0 {
+			if fromBlock == s.genBlockNumber && blocks[0].BlockNumber != s.genBlockNumber {
+				log.Debugf("NetworkID: %d. adding genesis empty block", s.networkID)
+				blocks = append([]etherman.Block{{}}, blocks...)
+			} else if fromBlock < s.genBlockNumber {
+				err := fmt.Errorf("NetworkID: %d. fromBlock %d is lower than the genesisBlockNumber %d", s.networkID, fromBlock, s.genBlockNumber)
+				log.Warn(err)
+				return lastBlockSynced, err
+			}
 			initBlockReceived = &blocks[0]
 			// First position of the array must be deleted
 			blocks = removeBlockElement(blocks, 0)

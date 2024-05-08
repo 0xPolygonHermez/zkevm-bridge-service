@@ -82,7 +82,7 @@ func (m migrationTest0010) RunAssertsAfterMigrationUp(t *testing.T, db *sql.DB) 
 	var count int
 	err := db.QueryRow(blockCount).Scan(&count)
 	assert.NoError(t, err)
-	assert.Equal(t, 5, count)
+	assert.Equal(t, 6, count)
 }
 
 func (m migrationTest0010) RunAssertsAfterMigrationDown(t *testing.T, db *sql.DB) {
