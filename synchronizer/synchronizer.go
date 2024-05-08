@@ -272,7 +272,7 @@ func (s *ClientSynchronizer) syncBlocks(lastBlockSynced *etherman.Block) (*ether
 		if err != nil {
 			return lastBlockSynced, err
 		}
-		
+
 		var initBlockReceived *etherman.Block
 		if len(blocks) != 0 {
 			if fromBlock == s.genBlockNumber && blocks[0].BlockNumber != s.genBlockNumber {
