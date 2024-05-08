@@ -16,7 +16,8 @@ WHERE NOT EXISTS (SELECT *
         WHERE sync.exit_root.block_id = sync.block.id)
     AND NOT EXISTS (SELECT *
         FROM mt.rollup_exit 
-        WHERE mt.rollup_exit.block_id = sync.block.id);   
+        WHERE mt.rollup_exit.block_id = sync.block.id)
+    AND sync.block.id != 0;   
 
 
 -- +migrate Down
