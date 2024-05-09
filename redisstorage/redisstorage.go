@@ -433,7 +433,7 @@ func (s *redisStorageImpl) SetTokenLogoInfo(ctx context.Context, keySuffix strin
 	if err != nil {
 		return errors.Wrap(err, "failed to convert logoInfo to string")
 	}
-	return s.setFoundation(ctx, s.getTokenInfoCacheKey(keySuffix), value, durationFor48h)
+	return s.setFoundation(ctx, s.addKeyPrefix(s.getTokenInfoCacheKey(keySuffix)), value, durationFor48h)
 }
 
 func (s *redisStorageImpl) GetTokenLogoInfo(ctx context.Context, keySuffix string) (*tokenlogo.LogoInfo, error) {
