@@ -323,7 +323,7 @@ func (tm *MonitorCompressedTxs) SendClaims(pendingTx *PendingTxs, onlyFirstOne b
 		// Estimating Gas
 		auth := *tm.auth
 		auth.NoSend = true
-		estimatedTx, err := tm.etherMan.SendCompressedClaims(tm.auth, group.DbEntry.CompressedTxData)
+		estimatedTx, err := tm.etherMan.SendCompressedClaims(&auth, group.DbEntry.CompressedTxData)
 		if err != nil {
 			msg := fmt.Sprintf("failed to call SMC SendCompressedClaims for group %d: %v", group.DbEntry.GroupID, err)
 			log.Warn(msg)
@@ -331,7 +331,7 @@ func (tm *MonitorCompressedTxs) SendClaims(pendingTx *PendingTxs, onlyFirstOne b
 			continue
 		}
 		auth.NoSend = false
-		log.Debug("GAS: ", estimatedTx.Gas())
+		log.Debug("estimatedGAS: ", estimatedTx.Gas())
 		auth.GasLimit = estimatedTx.Gas() + tm.gasOffset
 		log.Debug("New GAS: ", auth.GasLimit)
 		// Send claim tx
