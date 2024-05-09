@@ -331,7 +331,7 @@ func (tm *MonitorCompressedTxs) SendClaims(pendingTx *PendingTxs, onlyFirstOne b
 			continue
 		}
 		auth.NoSend = false
-		log.Debug("GAS: ", estimatedTx.Gas())
+		log.Debug("estimatedGAS: ", estimatedTx.Gas())
 		auth.GasLimit = estimatedTx.Gas() + tm.gasOffset
 		log.Debug("New GAS: ", auth.GasLimit)
 		// Send claim tx
