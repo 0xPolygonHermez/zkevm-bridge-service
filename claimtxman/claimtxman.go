@@ -66,7 +66,7 @@ func NewClaimTxManager(ctx context.Context, cfg Config, chExitRootEvent chan *et
 	var monitorTx ctmtypes.TxMonitorer
 	if cfg.GroupingClaims.Enabled {
 		log.Info("ClaimTxManager working in compressor mode to group claim txs")
-		monitorTx = NewMonitorCompressedTxs(ctx, storage.(StorageCompressedInterface), client, cfg, nonceCache, auth, etherMan, utils.NewTimeProviderSystemLocalTime())
+		monitorTx = NewMonitorCompressedTxs(ctx, storage.(StorageCompressedInterface), client, cfg, nonceCache, auth, etherMan, utils.NewTimeProviderSystemLocalTime(), cfg.GroupingClaims.GasOffset)
 	} else {
 		log.Info("ClaimTxManager working in regular mode to send claim txs individually")
 		monitorTx = NewMonitorTxs(ctx, storage.(StorageInterface), client, cfg, nonceCache, auth)
@@ -94,7 +94,8 @@ func NewClaimTxManager(ctx context.Context, cfg Config, chExitRootEvent chan *et
 func (tm *ClaimTxManager) Start() {
 	ticker := time.NewTicker(tm.cfg.FrequencyToMonitorTxs.Duration)
 	compressorTicker := time.NewTicker(tm.cfg.GroupingClaims.FrequencyToProcessCompressedClaims.Duration)
-	var ger *etherman.GlobalExitRoot
+	var ger = &etherman.GlobalExitRoot{}
+	var latestProcessedGer common.Hash
 	for {
 		select {
 		case <-tm.ctx.Done():
@@ -121,7 +122,7 @@ func (tm *ClaimTxManager) Start() {
 				log.Infof("Waiting for networkID %d to be synced before processing deposits", tm.l2NetworkID)
 			}
 		case <-compressorTicker.C:
-			if tm.synced && tm.cfg.GroupingClaims.Enabled {
+			if tm.synced && tm.cfg.GroupingClaims.Enabled && ger.GlobalExitRoot != latestProcessedGer {
 				log.Info("Processing deposits for ger: ", ger.GlobalExitRoot)
 				go func() {
 					err := tm.updateDepositsStatus(ger)
@@ -129,6 +130,7 @@ func (tm *ClaimTxManager) Start() {
 						log.Errorf("failed to update deposits status: %v", err)
 					}
 				}()
+				latestProcessedGer = ger.GlobalExitRoot
 			}
 		case <-ticker.C:
 			err := tm.monitorTxs.MonitorTxs(tm.ctx)

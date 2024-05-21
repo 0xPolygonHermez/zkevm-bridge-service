@@ -34,7 +34,7 @@ type StorageCompressedInterface interface {
 
 type EthermanI interface {
 	CompressClaimCall(mainnetExitRoot, rollupExitRoot common.Hash, claimData []claimcompressor.ClaimCompressorCompressClaimCallData) ([]byte, error)
-	SendCompressedClaims(auth *bind.TransactOpts, compressedTxData []byte) (common.Hash, error)
+	SendCompressedClaims(auth *bind.TransactOpts, compressedTxData []byte) (*types.Transaction, error)
 }
 type MonitorCompressedTxs struct {
 	storage StorageCompressedInterface
@@ -48,6 +48,7 @@ type MonitorCompressedTxs struct {
 	compressClaimComposer *ComposeCompressClaim
 	timeProvider          utils.TimeProvider
 	triggerGroups         *GroupsTrigger
+	gasOffset             uint64
 }
 
 func NewMonitorCompressedTxs(ctx context.Context,
@@ -57,7 +58,8 @@ func NewMonitorCompressedTxs(ctx context.Context,
 	nonceCache *NonceCache,
 	auth *bind.TransactOpts,
 	etherMan EthermanI,
-	timeProvider utils.TimeProvider) *MonitorCompressedTxs {
+	timeProvider utils.TimeProvider,
+	gasOffset uint64) *MonitorCompressedTxs {
 	composer, err := NewComposeCompressClaim()
 	if err != nil {
 		log.Fatal("failed to create ComposeCompressClaim: %v", err)
@@ -73,6 +75,7 @@ func NewMonitorCompressedTxs(ctx context.Context,
 		compressClaimComposer: composer,
 		timeProvider:          timeProvider,
 		triggerGroups:         NewGroupsTrigger(cfg.GroupingClaims),
+		gasOffset:             gasOffset,
 	}
 }
 
@@ -317,17 +320,32 @@ func (tm *MonitorCompressedTxs) SendClaims(pendingTx *PendingTxs, onlyFirstOne b
 			continue
 		}
 
-		// Send claim tx
-		txHash, err := tm.etherMan.SendCompressedClaims(tm.auth, group.DbEntry.CompressedTxData)
+		// Estimating Gas
+		auth := *tm.auth
+		auth.NoSend = true
+		estimatedTx, err := tm.etherMan.SendCompressedClaims(&auth, group.DbEntry.CompressedTxData)
 		if err != nil {
 			msg := fmt.Sprintf("failed to call SMC SendCompressedClaims for group %d: %v", group.DbEntry.GroupID, err)
 			log.Warn(msg)
 			group.DbEntry.LastLog = msg
 			continue
 		}
-		log.Infof("send claim tx try: %d for group_id:%d  deposits_id:%s txHash:%s", group.DbEntry.NumRetries, group.DbEntry.GroupID, group.GetTxsDepositIDString(), txHash.String())
+		auth.NoSend = false
+		log.Debug("estimatedGAS: ", estimatedTx.Gas())
+		auth.GasLimit = estimatedTx.Gas() + tm.gasOffset
+		log.Debug("New GAS: ", auth.GasLimit)
+		// Send claim tx
+		tx, err := tm.etherMan.SendCompressedClaims(&auth, group.DbEntry.CompressedTxData)
+		if err != nil {
+			msg := fmt.Sprintf("failed to call SMC SendCompressedClaims for group %d: %v", group.DbEntry.GroupID, err)
+			log.Warn(msg)
+			group.DbEntry.LastLog = msg
+			continue
+		}
+		log.Debug("Gas used: ", tx.Gas())
+		log.Infof("Send claim tx try: %d for group_id:%d  deposits_id:%s txHash:%s", group.DbEntry.NumRetries, group.DbEntry.GroupID, group.GetTxsDepositIDString(), tx.Hash().String())
 		group.DbEntry.Status = ctmtypes.MonitoredTxGroupStatusClaiming
-		group.DbEntry.AddPendingTx(txHash)
+		group.DbEntry.AddPendingTx(tx.Hash())
 		group.DbEntry.NumRetries++
 	}
 	return nil
