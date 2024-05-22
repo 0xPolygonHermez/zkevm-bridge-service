@@ -19,6 +19,9 @@ const (
 	polygonZkEVMAddressHex         = "0x8dAF17A20c9DBA35f005b6324F493785D239719d"
 	polygonRollupManagerAddressHex = "0xB7f8BC63BbcaD18155201308C8f3540b07f84F5e"
 	polTokenAddressHex             = "0x5FbDB2315678afecb367f032d93F642f64180aa3" //nolint:gosec
+
+	maxSequenceTimestamp = 1
+	initSequencedBatch   = 1
 )
 
 func main() {
@@ -51,7 +54,7 @@ func main() {
 	if err != nil {
 		log.Fatal("Error approving pol: ", err)
 	}
-	tx, err := polygonZkEVM.SequenceBatches(auth, nil, auth.From)
+	tx, err := polygonZkEVM.SequenceBatches(auth, nil, maxSequenceTimestamp, initSequencedBatch, auth.From)
 	if err != nil {
 		log.Fatal("Error sending the batch: ", err)
 	}
