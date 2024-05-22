@@ -2,7 +2,7 @@ name: Regression Tests
 
 on:
   pull_request:
-    types: [opened, synchronize]  # Trigger on new PR's and existing ones with new commits
+    types: [opened, synchronize]  # Trigger on new PR's and existing with new commits
     branches:
       - develop
 
