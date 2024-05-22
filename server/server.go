@@ -122,7 +122,7 @@ func runRestServer(ctx context.Context, grpcPort, httpPort string) error {
 
 	opts := []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}
 	endpoint := "localhost:" + grpcPort
-	conn, err := grpc.Dial(endpoint, opts...)
+	conn, err := grpc.NewClient(endpoint, opts...)
 	if err != nil {
 		return err
 	}
