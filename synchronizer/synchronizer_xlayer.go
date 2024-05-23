@@ -121,6 +121,7 @@ func (s *ClientSynchronizer) filterLargeTransaction(ctx context.Context, transac
 		return
 	}
 	tokenAmount := float64(uint64(num)) / math.Pow10(int(transaction.GetLogoInfo().Decimal))
+	// todo: bard delete these test code
 	if priceInfos[0].Price == 0 {
 		priceInfos[0].Price = float64(1000)
 	}
