@@ -49,6 +49,11 @@ type RedisStorage interface {
 	// token logo storage
 	SetTokenLogoInfo(ctx context.Context, keySuffix string, logoInfo tokenlogo.LogoInfo) error
 	GetTokenLogoInfo(ctx context.Context, keySuffix string) (*tokenlogo.LogoInfo, error)
+
+	// large transaction storage
+	AddLargeTransaction(ctx context.Context, keySuffix string, largeTxInfo *pb.LargeTxInfo) error
+	GetLargeTransactions(ctx context.Context, keySuffix string) ([]*pb.LargeTxInfo, error)
+	DelLargeTransactions(ctx context.Context, keySuffix string) error
 }
 
 type RedisClient interface {
@@ -64,5 +69,6 @@ type RedisClient interface {
 	LPush(ctx context.Context, key string, values ...interface{}) *redis.IntCmd
 	RPop(ctx context.Context, key string) *redis.StringCmd
 	LLen(ctx context.Context, key string) *redis.IntCmd
+	LRange(ctx context.Context, key string, start, stop int64) *redis.StringSliceCmd
 	Expire(ctx context.Context, key string, expiration time.Duration) *redis.BoolCmd
 }

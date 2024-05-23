@@ -2,7 +2,9 @@ package synchronizer
 
 import (
 	"context"
+	"math"
 	"math/big"
+	"strconv"
 	"time"
 
 	"github.com/0xPolygonHermez/zkevm-bridge-service/bridgectrl/pb"
@@ -89,6 +91,52 @@ func (s *ClientSynchronizer) afterProcessDeposit(deposit *etherman.Deposit, depo
 
 	metrics.RecordOrder(uint32(deposit.NetworkID), uint32(deposit.DestinationNetwork), uint32(deposit.LeafType), uint32(deposit.OriginalNetwork), deposit.OriginalAddress, deposit.Amount)
 	return nil
+}
+func (s *ClientSynchronizer) filterLargeTransaction(ctx context.Context, transaction *pb.Transaction, chainId uint) {
+	symbolInfo := &pb.SymbolInfo{
+		ChainId: uint64(chainId),
+		Address: transaction.BridgeToken,
+	}
+	priceInfos, err := s.redisStorage.GetCoinPrice(ctx, []*pb.SymbolInfo{symbolInfo})
+	if err != nil || len(priceInfos) == 0 {
+		log.Errorf("not find coin price for coin: %v, chain: %v, so skip monitor large tx: %v", symbolInfo.Address, symbolInfo.ChainId, transaction.GetTxHash())
+		//return
+		// todo: bard, delete test code
+		priceInfos = append(priceInfos, &pb.SymbolPrice{Price: float64(1000)})
+	}
+	num, err := strconv.ParseInt(transaction.GetTokenAmount(), 10, 64)
+	if err != nil {
+		log.Errorf("failed convert coin amount to unit, err: %v, so skip monitor large tx: %v", err, transaction.GetTxHash())
+		return
+	}
+	tokenAmount := float64(uint64(num) / uint64(transaction.GetLogoInfo().Decimal))
+	usdAmount := priceInfos[0].Price * tokenAmount
+	if usdAmount < math.Float64frombits(s.cfg.LargeTxUsdLimit) {
+		log.Infof("tx usd amount less than limit, so skip, tx usd amount: %v, tx: %v", usdAmount, transaction.GetTxHash())
+		return
+	}
+	s.freshLargeTxCache(ctx, transaction, chainId, tokenAmount, usdAmount)
+}
+
+func (s *ClientSynchronizer) freshLargeTxCache(ctx context.Context, transaction *pb.Transaction, chainId uint, tokenAmount float64, usdAmount float64) {
+	largeTxInfo := &pb.LargeTxInfo{
+		ChainId:   uint64(chainId),
+		Symbol:    transaction.LogoInfo.Symbol,
+		Amount:    tokenAmount,
+		UsdAmount: usdAmount,
+		Hash:      transaction.TxHash,
+		Address:   transaction.DestAddr,
+	}
+	err := s.redisStorage.AddLargeTransaction(ctx, utils.GetLargeTxRedisKeySuffix(uint(transaction.ToChain), utils.OpWrite), largeTxInfo)
+	if err != nil {
+		log.Errorf("failed set large tx cache for tx: %v, err: %v", transaction.GetTxHash(), err)
+	}
+	delKey := utils.GetLargeTxRedisKeySuffix(uint(transaction.ToChain), utils.OpDel)
+	// delete the cache before 2 days
+	err = s.redisStorage.DelLargeTransactions(ctx, delKey)
+	if err != nil {
+		log.Errorf("failed del large tx cache for key: %v, err: %v", delKey, err)
+	}
 }
 
 func (s *ClientSynchronizer) getEstimateTimeForDepositCreated(networkId uint) uint32 {
