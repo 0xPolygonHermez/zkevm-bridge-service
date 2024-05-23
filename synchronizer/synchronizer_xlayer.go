@@ -87,12 +87,25 @@ func (s *ClientSynchronizer) afterProcessDeposit(deposit *etherman.Deposit, depo
 		if err != nil {
 			log.Errorf("PushTransactionUpdate error: %v", err)
 		}
+		// filter and cache large transactions
+		s.filterLargeTransaction(s.ctx, transaction, uint(chainId))
 	}()
 
 	metrics.RecordOrder(uint32(deposit.NetworkID), uint32(deposit.DestinationNetwork), uint32(deposit.LeafType), uint32(deposit.OriginalNetwork), deposit.OriginalAddress, deposit.Amount)
 	return nil
 }
 func (s *ClientSynchronizer) filterLargeTransaction(ctx context.Context, transaction *pb.Transaction, chainId uint) {
+	if transaction.LogoInfo == nil {
+		log.Infof("failed to get logo info, so skip filter large transaction, tx: %v", transaction.GetTxHash())
+		//return
+		// todo: bard delete these test codes
+		transaction.LogoInfo = &pb.TokenLogoInfo{
+			Symbol:     "OKB",
+			TokenName:  "OKB",
+			LogoOssUrl: "test",
+			Decimal:    18,
+		}
+	}
 	symbolInfo := &pb.SymbolInfo{
 		ChainId: uint64(chainId),
 		Address: transaction.BridgeToken,
