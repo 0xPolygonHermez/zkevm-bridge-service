@@ -122,7 +122,9 @@ func (s *ClientSynchronizer) filterLargeTransaction(ctx context.Context, transac
 		log.Errorf("failed convert coin amount to unit, err: %v, so skip monitor large tx: %v", err, transaction.GetTxHash())
 		return
 	}
-	tokenAmount := float64(uint64(num) / uint64(transaction.GetLogoInfo().Decimal))
+	tokenAmount := float64(uint64(num)) / math.Pow10(int(transaction.GetLogoInfo().Decimal))
+	// todo: bard delete debug log
+	log.Debugf("price is: %v", priceInfos[0].Price)
 	usdAmount := priceInfos[0].Price * tokenAmount
 	if usdAmount < math.Float64frombits(s.cfg.LargeTxUsdLimit) {
 		log.Infof("tx usd amount less than limit, so skip, tx usd amount: %v, tx: %v", usdAmount, transaction.GetTxHash())
