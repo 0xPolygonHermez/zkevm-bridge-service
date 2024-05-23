@@ -113,9 +113,7 @@ func (s *ClientSynchronizer) filterLargeTransaction(ctx context.Context, transac
 	priceInfos, err := s.redisStorage.GetCoinPrice(ctx, []*pb.SymbolInfo{symbolInfo})
 	if err != nil || len(priceInfos) == 0 {
 		log.Errorf("not find coin price for coin: %v, chain: %v, so skip monitor large tx: %v", symbolInfo.Address, symbolInfo.ChainId, transaction.GetTxHash())
-		//return
-		// todo: bard, delete test code
-		priceInfos = append(priceInfos, &pb.SymbolPrice{Price: float64(1000)})
+		return
 	}
 	num, err := strconv.ParseInt(transaction.GetTokenAmount(), 10, 64)
 	if err != nil {
@@ -123,8 +121,9 @@ func (s *ClientSynchronizer) filterLargeTransaction(ctx context.Context, transac
 		return
 	}
 	tokenAmount := float64(uint64(num)) / math.Pow10(int(transaction.GetLogoInfo().Decimal))
-	// todo: bard delete debug log
-	log.Debugf("price is: %v", priceInfos[0].Price)
+	if priceInfos[0].Price == 0 {
+		priceInfos[0].Price = float64(1000)
+	}
 	usdAmount := priceInfos[0].Price * tokenAmount
 	if usdAmount < math.Float64frombits(s.cfg.LargeTxUsdLimit) {
 		log.Infof("tx usd amount less than limit, so skip, tx usd amount: %v, tx: %v", usdAmount, transaction.GetTxHash())
