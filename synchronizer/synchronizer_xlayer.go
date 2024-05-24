@@ -103,14 +103,7 @@ func (s *ClientSynchronizer) afterProcessDeposit(deposit *etherman.Deposit, depo
 func (s *ClientSynchronizer) filterLargeTransaction(ctx context.Context, transaction *pb.Transaction, chainId uint) {
 	if transaction.LogoInfo == nil {
 		log.Infof("failed to get logo info, so skip filter large transaction, tx: %v", transaction.GetTxHash())
-		//return
-		// todo: bard delete these test codes
-		transaction.LogoInfo = &pb.TokenLogoInfo{
-			Symbol:     "OKB",
-			TokenName:  "OKB",
-			LogoOssUrl: "test",
-			Decimal:    18,
-		}
+		return
 	}
 	symbolInfo := &pb.SymbolInfo{
 		ChainId: uint64(chainId),
@@ -127,10 +120,6 @@ func (s *ClientSynchronizer) filterLargeTransaction(ctx context.Context, transac
 		return
 	}
 	tokenAmount := float64(uint64(num)) / math.Pow10(int(transaction.GetLogoInfo().Decimal))
-	// todo: bard delete these test code
-	if priceInfos[0].Price == 0 {
-		priceInfos[0].Price = float64(1000)
-	}
 	usdAmount := priceInfos[0].Price * tokenAmount
 	if usdAmount < math.Float64frombits(s.cfg.LargeTxUsdLimit) {
 		log.Infof("tx usd amount less than limit, so skip, tx usd amount: %v, tx: %v", usdAmount, transaction.GetTxHash())
