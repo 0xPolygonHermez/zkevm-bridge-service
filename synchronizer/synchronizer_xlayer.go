@@ -59,6 +59,12 @@ func (s *ClientSynchronizer) afterProcessDeposit(deposit *etherman.Deposit, depo
 				return
 			}
 		}
+		rollupWorkId := utils.GetRollupNetworkId()
+		if deposit.NetworkID != rollupWorkId && deposit.DestinationNetwork != rollupWorkId {
+			log.Infof("transaction is not x layer, so skip push msg and filter large tx, hash: %v", deposit.TxHash)
+			return
+		}
+
 		transaction := &pb.Transaction{
 			FromChain:       uint32(deposit.NetworkID),
 			ToChain:         uint32(deposit.DestinationNetwork),
