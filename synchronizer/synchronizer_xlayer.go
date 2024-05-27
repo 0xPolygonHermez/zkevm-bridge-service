@@ -24,7 +24,7 @@ const (
 )
 
 var (
-	largeTxUsdLimit = apolloconfig.NewIntEntry[uint64]("Synchronizer.LargeTxUsdLimit", 10) //nolint:gomnd
+	largeTxUsdLimit = apolloconfig.NewIntEntry[uint64]("Synchronizer.LargeTxUsdLimit", 100000) //nolint:gomnd
 )
 
 func (s *ClientSynchronizer) beforeProcessDeposit(deposit *etherman.Deposit) {
@@ -112,14 +112,7 @@ func (s *ClientSynchronizer) afterProcessDeposit(deposit *etherman.Deposit, depo
 func (s *ClientSynchronizer) filterLargeTransaction(ctx context.Context, transaction *pb.Transaction, chainId uint) {
 	if transaction.LogoInfo == nil {
 		log.Infof("failed to get logo info, so skip filter large transaction, tx: %v", transaction.GetTxHash())
-		//return
-		// todo: bard delete these test codes
-		transaction.LogoInfo = &pb.TokenLogoInfo{
-			Symbol:     "OKB",
-			TokenName:  "OKB",
-			LogoOssUrl: "test",
-			Decimal:    18,
-		}
+		return
 	}
 	symbolInfo := &pb.SymbolInfo{
 		ChainId: uint64(chainId),
@@ -136,10 +129,6 @@ func (s *ClientSynchronizer) filterLargeTransaction(ctx context.Context, transac
 		return
 	}
 	tokenAmount := float64(uint64(num)) / math.Pow10(int(transaction.GetLogoInfo().Decimal))
-	// todo: bard delete these test code
-	if priceInfos[0].Price == 0 {
-		priceInfos[0].Price = float64(1000)
-	}
 	usdAmount := priceInfos[0].Price * tokenAmount
 	if usdAmount < math.Float64frombits(largeTxUsdLimit.Get()) {
 		log.Infof("tx usd amount less than limit, so skip, tx usd amount: %v, tx: %v", usdAmount, transaction.GetTxHash())
@@ -162,21 +151,15 @@ func (s *ClientSynchronizer) freshLargeTxCache(ctx context.Context, transaction 
 	if err != nil {
 		log.Errorf("failed set large tx cache for tx: %v, err: %v", transaction.GetTxHash(), err)
 	}
-	// todo: bard delete test log
 	log.Debugf("success push tx for key: %v, size: %v", key, size)
 	if size == num1 {
 		log.Infof("success init new cache list for large transaction, key: %v", key)
 		ret, err := s.redisStorage.ExpireLargeTransactions(ctx, key, utils.GetLargeTxCacheExpireDuration())
 		if err != nil || !ret {
 			log.Errorf("failed to expire large tx key: %v, err: %v", key, err)
+			return
 		}
 		log.Infof("success expire large tx key: %v", key)
-	}
-	delKey := utils.GetLargeTxRedisKeySuffix(uint(transaction.ToChain), utils.OpDel)
-	// delete the cache before 2 days
-	err = s.redisStorage.DelLargeTransactions(ctx, delKey)
-	if err != nil {
-		log.Errorf("failed del large tx cache for key: %v, err: %v", delKey, err)
 	}
 }
 
