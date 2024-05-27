@@ -21,6 +21,7 @@ import (
 	"github.com/0xPolygonHermez/zkevm-bridge-service/utils"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/utils/gerror"
 	"github.com/pkg/errors"
+	"github.com/redis/go-redis/v9"
 )
 
 const (
@@ -554,4 +555,17 @@ func (s *bridgeService) GetFakePushMessages(ctx context.Context, req *pb.GetFake
 		Code: uint32(pb.ErrorCode_ERROR_OK),
 		Data: s.messagePushProducer.GetFakeMessages(req.Topic),
 	}, nil
+}
+
+func (s *bridgeService) GetLargeTransactionInfos(ctx context.Context, req *pb.LargeTxsRequest) (*pb.LargeTxsResponse, error) {
+	key := utils.GetLargeTxRedisKeySuffix(uint(req.NetworkId), utils.OpRead)
+	txInfos, err := s.redisStorage.GetLargeTransactions(ctx, key)
+	if err != nil && !errors.Is(err, redis.Nil) {
+		log.Errorf("failed to get large tx cache for key: %v", key)
+		return &pb.LargeTxsResponse{
+			Code: uint32(pb.ErrorCode_ERROR_DEFAULT),
+			Msg:  "failed to get cache",
+		}, nil
+	}
+	return &pb.LargeTxsResponse{Code: uint32(pb.ErrorCode_ERROR_OK), Data: txInfos}, nil
 }

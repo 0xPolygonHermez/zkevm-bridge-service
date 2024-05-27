@@ -2,10 +2,13 @@ package synchronizer
 
 import (
 	"context"
+	"math"
 	"math/big"
+	"strconv"
 	"time"
 
 	"github.com/0xPolygonHermez/zkevm-bridge-service/bridgectrl/pb"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/config/apolloconfig"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/estimatetime"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/log"
@@ -14,6 +17,14 @@ import (
 	"github.com/0xPolygonHermez/zkevm-bridge-service/server/tokenlogoinfo"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/utils"
 	"github.com/jackc/pgx/v4"
+)
+
+const (
+	num1 = 1
+)
+
+var (
+	largeTxUsdLimit = apolloconfig.NewIntEntry[uint64]("Synchronizer.LargeTxUsdLimit", 100000) //nolint:gomnd
 )
 
 func (s *ClientSynchronizer) beforeProcessDeposit(deposit *etherman.Deposit) {
@@ -57,6 +68,12 @@ func (s *ClientSynchronizer) afterProcessDeposit(deposit *etherman.Deposit, depo
 				return
 			}
 		}
+		rollupWorkId := utils.GetRollupNetworkId()
+		if deposit.NetworkID != rollupWorkId && deposit.DestinationNetwork != rollupWorkId {
+			log.Infof("transaction is not x layer, so skip push msg and filter large tx, hash: %v", deposit.TxHash)
+			return
+		}
+
 		transaction := &pb.Transaction{
 			FromChain:       uint32(deposit.NetworkID),
 			ToChain:         uint32(deposit.DestinationNetwork),
@@ -85,10 +102,65 @@ func (s *ClientSynchronizer) afterProcessDeposit(deposit *etherman.Deposit, depo
 		if err != nil {
 			log.Errorf("PushTransactionUpdate error: %v", err)
 		}
+		// filter and cache large transactions
+		s.filterLargeTransaction(s.ctx, transaction, uint(chainId))
 	}()
 
 	metrics.RecordOrder(uint32(deposit.NetworkID), uint32(deposit.DestinationNetwork), uint32(deposit.LeafType), uint32(deposit.OriginalNetwork), deposit.OriginalAddress, deposit.Amount)
 	return nil
+}
+func (s *ClientSynchronizer) filterLargeTransaction(ctx context.Context, transaction *pb.Transaction, chainId uint) {
+	if transaction.LogoInfo == nil {
+		log.Infof("failed to get logo info, so skip filter large transaction, tx: %v", transaction.GetTxHash())
+		return
+	}
+	symbolInfo := &pb.SymbolInfo{
+		ChainId: uint64(chainId),
+		Address: transaction.BridgeToken,
+	}
+	priceInfos, err := s.redisStorage.GetCoinPrice(ctx, []*pb.SymbolInfo{symbolInfo})
+	if err != nil || len(priceInfos) == 0 {
+		log.Errorf("not find coin price for coin: %v, chain: %v, so skip monitor large tx: %v", symbolInfo.Address, symbolInfo.ChainId, transaction.GetTxHash())
+		return
+	}
+	num, err := strconv.ParseInt(transaction.GetTokenAmount(), 10, 64)
+	if err != nil {
+		log.Errorf("failed convert coin amount to unit, err: %v, so skip monitor large tx: %v", err, transaction.GetTxHash())
+		return
+	}
+	tokenAmount := float64(uint64(num)) / math.Pow10(int(transaction.GetLogoInfo().Decimal))
+	usdAmount := priceInfos[0].Price * tokenAmount
+	if usdAmount < math.Float64frombits(largeTxUsdLimit.Get()) {
+		log.Infof("tx usd amount less than limit, so skip, tx usd amount: %v, tx: %v", usdAmount, transaction.GetTxHash())
+		return
+	}
+	s.freshLargeTxCache(ctx, transaction, chainId, tokenAmount, usdAmount)
+}
+
+func (s *ClientSynchronizer) freshLargeTxCache(ctx context.Context, transaction *pb.Transaction, chainId uint, tokenAmount float64, usdAmount float64) {
+	largeTxInfo := &pb.LargeTxInfo{
+		ChainId:   uint64(chainId),
+		Symbol:    transaction.LogoInfo.Symbol,
+		Amount:    tokenAmount,
+		UsdAmount: usdAmount,
+		Hash:      transaction.TxHash,
+		Address:   transaction.DestAddr,
+	}
+	key := utils.GetLargeTxRedisKeySuffix(uint(transaction.ToChain), utils.OpWrite)
+	size, err := s.redisStorage.AddLargeTransaction(ctx, key, largeTxInfo)
+	if err != nil {
+		log.Errorf("failed set large tx cache for tx: %v, err: %v", transaction.GetTxHash(), err)
+	}
+	log.Debugf("success push tx for key: %v, size: %v", key, size)
+	if size == num1 {
+		log.Infof("success init new cache list for large transaction, key: %v", key)
+		ret, err := s.redisStorage.ExpireLargeTransactions(ctx, key, utils.GetLargeTxCacheExpireDuration())
+		if err != nil || !ret {
+			log.Errorf("failed to expire large tx key: %v, err: %v", key, err)
+			return
+		}
+		log.Infof("success expire large tx key: %v", key)
+	}
 }
 
 func (s *ClientSynchronizer) getEstimateTimeForDepositCreated(networkId uint) uint32 {

@@ -134,6 +134,13 @@ service BridgeService {
             get: "/fake-push-messages/{topic}",
         };
     }
+
+    /// Return large transaction infos
+    rpc GetLargeTransactionInfos(LargeTxsRequest) returns (LargeTxsResponse) {
+        option (google.api.http) = {
+            get: "/large-transactions",
+        };
+    }
 }
 
 // TokenWrapped message
@@ -493,4 +500,26 @@ message CommonResponse {
     string error_code = 3;
     string error_message = 4;
     string detailMsg = 5;
+}
+
+message LargeTxInfo {
+    uint64 chainId = 1;
+    string symbol = 2;
+    double amount = 3;
+    double usdAmount = 4;
+    string hash = 5;
+    string address = 6;
+}
+
+message LargeTxsRequest {
+    uint32 networkId = 1;
+}
+
+message LargeTxsResponse {
+    uint32 code = 1;
+    string msg = 2;
+    string error_code = 3;
+    string error_message = 4;
+    string detailMsg = 5;
+    repeated LargeTxInfo data = 6;
 }
