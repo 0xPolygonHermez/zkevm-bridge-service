@@ -544,9 +544,13 @@ func (s *redisStorageImpl) DelLargeTransactions(ctx context.Context, keySuffix s
 	return nil
 }
 
-func (s *redisStorageImpl) ExpireKeyCommon(ctx context.Context, key string, expiration time.Duration) (bool, error) {
+func (s *redisStorageImpl) ExpireLargeTransactions(ctx context.Context, key string, expiration time.Duration) (bool, error) {
+	return s.expireKeyFoundation(ctx, s.getLargeInfosCacheKey(key), expiration)
+}
+
+func (s *redisStorageImpl) expireKeyFoundation(ctx context.Context, key string, expiration time.Duration) (bool, error) {
 	if s == nil || s.client == nil {
 		return false, errors.New("redis client is nil")
 	}
-	return s.client.Expire(ctx, s.addKeyPrefix(key), expiration).Result()
+	return s.client.Expire(ctx, key, expiration).Result()
 }

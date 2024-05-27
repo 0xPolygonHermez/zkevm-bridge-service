@@ -54,9 +54,7 @@ type RedisStorage interface {
 	AddLargeTransaction(ctx context.Context, keySuffix string, largeTxInfo *pb.LargeTxInfo) (int64, error)
 	GetLargeTransactions(ctx context.Context, keySuffix string) ([]*pb.LargeTxInfo, error)
 	DelLargeTransactions(ctx context.Context, keySuffix string) error
-
-	// common
-	ExpireKeyCommon(ctx context.Context, key string, expiration time.Duration) (bool, error)
+	ExpireLargeTransactions(ctx context.Context, key string, expiration time.Duration) (bool, error)
 }
 
 type RedisClient interface {

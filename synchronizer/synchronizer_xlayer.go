@@ -166,7 +166,7 @@ func (s *ClientSynchronizer) freshLargeTxCache(ctx context.Context, transaction 
 	log.Debugf("success push tx for key: %v, size: %v", key, size)
 	if size == num1 {
 		log.Infof("success init new cache list for large transaction, key: %v", key)
-		ret, err := s.redisStorage.ExpireKeyCommon(ctx, key, utils.GetLargeTxCacheExpireDuration())
+		ret, err := s.redisStorage.ExpireLargeTransactions(ctx, key, utils.GetLargeTxCacheExpireDuration())
 		if err != nil || !ret {
 			log.Errorf("failed to expire large tx key: %v, err: %v", key, err)
 		}
