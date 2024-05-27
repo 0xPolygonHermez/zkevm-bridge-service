@@ -84,7 +84,7 @@ func (c *Client) GetSignerFromKeystore(ctx context.Context, ks zkevmtypes.Keysto
 	if err != nil {
 		return nil, err
 	}
-	chainID, err := c.NetworkID(ctx)
+	chainID, err := c.ChainID(ctx)
 	if err != nil {
 		return nil, err
 	}
