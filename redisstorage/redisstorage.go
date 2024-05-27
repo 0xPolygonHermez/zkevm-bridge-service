@@ -327,7 +327,8 @@ func (s *redisStorageImpl) GetAvgCommitDuration(ctx context.Context) (uint64, er
 }
 
 func (s *redisStorageImpl) LPushCommitTime(ctx context.Context, commitTimeTimestamp int64) error {
-	return s.lPushFoundation(ctx, s.addKeyPrefix(commitBatchTimeListKey), commitTimeTimestamp)
+	_, err := s.lPushFoundation(ctx, s.addKeyPrefix(commitBatchTimeListKey), commitTimeTimestamp)
+	return err
 }
 
 func (s *redisStorageImpl) LLenCommitTimeList(ctx context.Context) (int64, error) {
@@ -355,7 +356,8 @@ func (s *redisStorageImpl) GetAvgVerifyDuration(ctx context.Context) (uint64, er
 }
 
 func (s *redisStorageImpl) LPushVerifyTime(ctx context.Context, commitTimeTimestamp int64) error {
-	return s.lPushFoundation(ctx, s.addKeyPrefix(verifyBatchTimeListKey), commitTimeTimestamp)
+	_, err := s.lPushFoundation(ctx, s.addKeyPrefix(verifyBatchTimeListKey), commitTimeTimestamp)
+	return err
 }
 
 func (s *redisStorageImpl) LLenVerifyTimeList(ctx context.Context) (int64, error) {
@@ -404,15 +406,15 @@ func (s *redisStorageImpl) getIntCacheFoundation(ctx context.Context, key string
 	return uint64(num), nil
 }
 
-func (s *redisStorageImpl) lPushFoundation(ctx context.Context, key string, values ...interface{}) error {
+func (s *redisStorageImpl) lPushFoundation(ctx context.Context, key string, values ...interface{}) (int64, error) {
 	if s == nil || s.client == nil {
-		return errors.New("redis client is nil")
+		return 0, errors.New("redis client is nil")
 	}
-	err := s.client.LPush(ctx, key, values).Err()
+	size, err := s.client.LPush(ctx, key, values).Result()
 	if err != nil {
-		return errors.Wrap(err, fmt.Sprintf("lPush redis cache for key: %v failed", key))
+		return 0, errors.Wrap(err, fmt.Sprintf("lPush redis cache for key: %v failed", key))
 	}
-	return nil
+	return size, nil
 }
 
 func (s *redisStorageImpl) LRangeFoundation(ctx context.Context, key string, start, stop int64) ([]string, error) {
@@ -508,10 +510,10 @@ func (s *redisStorageImpl) getLargeInfosCacheKey(keySuffix string) string {
 	return s.addKeyPrefix(largeTxInfosKey + keySuffix)
 }
 
-func (s *redisStorageImpl) AddLargeTransaction(ctx context.Context, keySuffix string, largeTxInfo *pb.LargeTxInfo) error {
+func (s *redisStorageImpl) AddLargeTransaction(ctx context.Context, keySuffix string, largeTxInfo *pb.LargeTxInfo) (int64, error) {
 	largeTxInfoStr, err := protojson.Marshal(largeTxInfo)
 	if err != nil {
-		return errors.Wrap(err, fmt.Sprintf("failed convert large tx info to str, hash: %v", largeTxInfo.Hash))
+		return 0, errors.Wrap(err, fmt.Sprintf("failed convert large tx info to str, hash: %v", largeTxInfo.Hash))
 	}
 	return s.lPushFoundation(ctx, s.getLargeInfosCacheKey(keySuffix), largeTxInfoStr)
 }
@@ -540,4 +542,11 @@ func (s *redisStorageImpl) DelLargeTransactions(ctx context.Context, keySuffix s
 		return errors.Wrap(err, fmt.Sprintf("failed to del large tx cache for key: %v", keySuffix))
 	}
 	return nil
+}
+
+func (s *redisStorageImpl) ExpireKeyCommon(ctx context.Context, key string, expiration time.Duration) (bool, error) {
+	if s == nil || s.client == nil {
+		return false, errors.New("redis client is nil")
+	}
+	return s.client.Expire(ctx, s.addKeyPrefix(key), expiration).Result()
 }

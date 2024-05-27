@@ -6,14 +6,14 @@ import (
 )
 
 const (
-	largeTxCacheHourLimit = 19
-	toL1                  = "toL1"
-	toL2                  = "toL2"
-	durationForDay        = 24 * time.Hour
-	cacheMaxAliveDay      = 2
-	OpRead                = 0
-	OpWrite               = 1
-	OpDel                 = 2
+	largeTxCacheHourLimit   = 19
+	toL1                    = "toL1"
+	toL2                    = "toL2"
+	durationForDay          = 24 * time.Hour
+	largeTxCacheMaxAliveDay = 2
+	OpRead                  = 0
+	OpWrite                 = 1
+	OpDel                   = 2
 )
 
 func GetLargeTxRedisKeySuffix(toNetworkId uint, opType int) string {
@@ -38,5 +38,9 @@ func getCacheDate(opType int) (year int, month time.Month, day int) {
 	if opType == OpWrite {
 		return date.Date()
 	}
-	return date.Add(cacheMaxAliveDay * durationForDay).Date()
+	return date.Add(GetLargeTxCacheExpireDuration()).Date()
+}
+
+func GetLargeTxCacheExpireDuration() time.Duration {
+	return largeTxCacheMaxAliveDay * durationForDay
 }

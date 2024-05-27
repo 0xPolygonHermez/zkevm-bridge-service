@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/0xPolygonHermez/zkevm-bridge-service/bridgectrl/pb"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/config/apolloconfig"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/estimatetime"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/log"
@@ -16,6 +17,14 @@ import (
 	"github.com/0xPolygonHermez/zkevm-bridge-service/server/tokenlogoinfo"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/utils"
 	"github.com/jackc/pgx/v4"
+)
+
+const (
+	num1 = 1
+)
+
+var (
+	largeTxUsdLimit = apolloconfig.NewIntEntry[uint64]("Synchronizer.LargeTxUsdLimit", 10) //nolint:gomnd
 )
 
 func (s *ClientSynchronizer) beforeProcessDeposit(deposit *etherman.Deposit) {
@@ -121,7 +130,7 @@ func (s *ClientSynchronizer) filterLargeTransaction(ctx context.Context, transac
 	}
 	tokenAmount := float64(uint64(num)) / math.Pow10(int(transaction.GetLogoInfo().Decimal))
 	usdAmount := priceInfos[0].Price * tokenAmount
-	if usdAmount < math.Float64frombits(s.cfg.LargeTxUsdLimit) {
+	if usdAmount < math.Float64frombits(largeTxUsdLimit.Get()) {
 		log.Infof("tx usd amount less than limit, so skip, tx usd amount: %v, tx: %v", usdAmount, transaction.GetTxHash())
 		return
 	}
@@ -137,9 +146,20 @@ func (s *ClientSynchronizer) freshLargeTxCache(ctx context.Context, transaction 
 		Hash:      transaction.TxHash,
 		Address:   transaction.DestAddr,
 	}
-	err := s.redisStorage.AddLargeTransaction(ctx, utils.GetLargeTxRedisKeySuffix(uint(transaction.ToChain), utils.OpWrite), largeTxInfo)
+	key := utils.GetLargeTxRedisKeySuffix(uint(transaction.ToChain), utils.OpWrite)
+	size, err := s.redisStorage.AddLargeTransaction(ctx, key, largeTxInfo)
 	if err != nil {
 		log.Errorf("failed set large tx cache for tx: %v, err: %v", transaction.GetTxHash(), err)
+	}
+	// todo: bard delete test log
+	log.Debugf("success push tx for key: %v, size: %v", key, size)
+	if size == num1 {
+		log.Infof("success init new cache list for large transaction, key: %v", key)
+		ret, err := s.redisStorage.ExpireKeyCommon(ctx, key, utils.GetLargeTxCacheExpireDuration())
+		if err != nil || !ret {
+			log.Errorf("failed to expire large tx key: %v, err: %v", key, err)
+		}
+		log.Infof("success expire large tx key: %v", key)
 	}
 	delKey := utils.GetLargeTxRedisKeySuffix(uint(transaction.ToChain), utils.OpDel)
 	// delete the cache before 2 days
