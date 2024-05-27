@@ -4,7 +4,6 @@ import (
 	"context"
 	"math"
 	"math/big"
-	"strconv"
 	"time"
 
 	"github.com/0xPolygonHermez/zkevm-bridge-service/bridgectrl/pb"
@@ -123,12 +122,13 @@ func (s *ClientSynchronizer) filterLargeTransaction(ctx context.Context, transac
 		log.Errorf("not find coin price for coin: %v, chain: %v, so skip monitor large tx: %v", symbolInfo.Address, symbolInfo.ChainId, transaction.GetTxHash())
 		return
 	}
-	num, err := strconv.ParseInt(transaction.GetTokenAmount(), 10, 64)
-	if err != nil {
-		log.Errorf("failed convert coin amount to unit, err: %v, so skip monitor large tx: %v", err, transaction.GetTxHash())
+	originNum, success := new(big.Float).SetPrec(uint(transaction.GetLogoInfo().Decimal)).SetString(transaction.GetTokenAmount())
+	if !success {
+		log.Errorf("failed to convert token num to big.Float, so skip monitor large tx, tx: %v, token num: %v", transaction.GetTxHash(), transaction.GetTokenAmount())
 		return
 	}
-	tokenAmount := float64(uint64(num)) / math.Pow10(int(transaction.GetLogoInfo().Decimal))
+	tokenDecimal := new(big.Float).SetPrec(uint(transaction.GetLogoInfo().Decimal)).SetFloat64(math.Pow10(int(transaction.GetLogoInfo().Decimal)))
+	tokenAmount, _ := new(big.Float).Quo(originNum, tokenDecimal).Float64()
 	usdAmount := priceInfos[0].Price * tokenAmount
 	if usdAmount < math.Float64frombits(largeTxUsdLimit.Get()) {
 		log.Infof("tx usd amount less than limit, so skip, tx usd amount: %v, tx: %v", usdAmount, transaction.GetTxHash())
