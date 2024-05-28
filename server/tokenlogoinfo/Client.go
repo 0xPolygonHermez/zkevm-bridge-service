@@ -121,5 +121,8 @@ func GetTokenLogoMapKey(tokenAddr string, chainId uint32) string {
 	if tokenAddr == ChainNativeTokenAddr {
 		tokenAddr = EmptyStr
 	}
+	if tokenAddr == EmptyStr {
+		tokenAddr = ChainNativeTokenAddr
+	}
 	return fmt.Sprintf("%s_%d", strings.ToLower(tokenAddr), chainId)
 }
