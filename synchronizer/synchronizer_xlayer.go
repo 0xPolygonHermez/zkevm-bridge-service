@@ -130,7 +130,7 @@ func (s *ClientSynchronizer) filterLargeTransaction(ctx context.Context, transac
 	tokenDecimal := new(big.Float).SetPrec(uint(transaction.GetLogoInfo().Decimal)).SetFloat64(math.Pow10(int(transaction.GetLogoInfo().Decimal)))
 	tokenAmount, _ := new(big.Float).Quo(originNum, tokenDecimal).Float64()
 	usdAmount := priceInfos[0].Price * tokenAmount
-	if usdAmount < math.Float64frombits(largeTxUsdLimit.Get()) {
+	if usdAmount < float64(largeTxUsdLimit.Get()) {
 		log.Infof("tx usd amount less than limit, so skip, tx usd amount: %v, tx: %v", usdAmount, transaction.GetTxHash())
 		return
 	}
