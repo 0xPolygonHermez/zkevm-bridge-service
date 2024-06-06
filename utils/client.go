@@ -17,6 +17,7 @@ import (
 	zkevmtypes "github.com/0xPolygonHermez/zkevm-node/config/types"
 	"github.com/0xPolygonHermez/zkevm-node/encoding"
 	"github.com/0xPolygonHermez/zkevm-node/etherman/smartcontracts/polygonzkevmbridge"
+	"github.com/0xPolygonHermez/zkevm-node/etherman/smartcontracts/polygonzkevmglobalexitroot"
 	"github.com/0xPolygonHermez/zkevm-node/test/contracts/bin/ERC20"
 	ops "github.com/0xPolygonHermez/zkevm-node/test/operations"
 	"github.com/ethereum/go-ethereum"
@@ -42,7 +43,9 @@ const (
 type Client struct {
 	// Client ethclient
 	*ethclient.Client
-	Bridge *polygonzkevmbridge.Polygonzkevmbridge
+	Bridge       *polygonzkevmbridge.Polygonzkevmbridge
+	BridgeSCAddr common.Address
+	NodeURL      string
 }
 
 // NewClient creates client.
@@ -56,8 +59,10 @@ func NewClient(ctx context.Context, nodeURL string, bridgeSCAddr common.Address)
 		br, err = polygonzkevmbridge.NewPolygonzkevmbridge(bridgeSCAddr, client)
 	}
 	return &Client{
-		Client: client,
-		Bridge: br,
+		Client:       client,
+		Bridge:       br,
+		BridgeSCAddr: bridgeSCAddr,
+		NodeURL:      nodeURL,
 	}, err
 }
 
@@ -208,7 +213,8 @@ func (c *Client) BuildSendClaim(ctx context.Context, deposit *etherman.Deposit, 
 	localExitRootIndex := deposit.DepositCount
 	globalIndex := etherman.GenerateGlobalIndex(mainnetFlag, rollupIndex, localExitRootIndex)
 	if deposit.LeafType == uint8(LeafTypeAsset) {
-		tx, err = c.Bridge.ClaimAsset(&opts, smtProof, smtRollupProof, globalIndex, globalExitRoot.ExitRoots[0], globalExitRoot.ExitRoots[1], uint32(deposit.OriginalNetwork), deposit.OriginalAddress, uint32(deposit.DestinationNetwork), deposit.DestinationAddress, deposit.Amount, deposit.Metadata)
+		tx, err = c.Bridge.ClaimAsset(&opts, smtProof, smtRollupProof,
+			globalIndex, globalExitRoot.ExitRoots[0], globalExitRoot.ExitRoots[1], uint32(deposit.OriginalNetwork), deposit.OriginalAddress, uint32(deposit.DestinationNetwork), deposit.DestinationAddress, deposit.Amount, deposit.Metadata)
 	} else if deposit.LeafType == uint8(LeafTypeMessage) {
 		tx, err = c.Bridge.ClaimMessage(&opts, smtProof, smtRollupProof, globalIndex, globalExitRoot.ExitRoots[0], globalExitRoot.ExitRoots[1], uint32(deposit.OriginalNetwork), deposit.OriginalAddress, uint32(deposit.DestinationNetwork), deposit.DestinationAddress, deposit.Amount, deposit.Metadata)
 	}
@@ -233,7 +239,8 @@ func (c *Client) SendClaim(ctx context.Context, deposit *pb.Deposit, smtProof [m
 	)
 	globalIndex, _ := big.NewInt(0).SetString(deposit.GlobalIndex, 0)
 	if deposit.LeafType == LeafTypeAsset {
-		tx, err = c.Bridge.ClaimAsset(auth, smtProof, smtRollupProof, globalIndex, globalExitRoot.ExitRoots[0], globalExitRoot.ExitRoots[1], deposit.OrigNet, common.HexToAddress(deposit.OrigAddr), deposit.DestNet, common.HexToAddress(deposit.DestAddr), amount, common.FromHex(deposit.Metadata))
+		metadata := common.FromHex(deposit.Metadata)
+		tx, err = c.Bridge.ClaimAsset(auth, smtProof, smtRollupProof, globalIndex, globalExitRoot.ExitRoots[0], globalExitRoot.ExitRoots[1], deposit.OrigNet, common.HexToAddress(deposit.OrigAddr), deposit.DestNet, common.HexToAddress(deposit.DestAddr), amount, metadata)
 	} else if deposit.LeafType == LeafTypeMessage {
 		tx, err = c.Bridge.ClaimMessage(auth, smtProof, smtRollupProof, globalIndex, globalExitRoot.ExitRoots[0], globalExitRoot.ExitRoots[1], deposit.OrigNet, common.HexToAddress(deposit.OrigAddr), deposit.DestNet, common.HexToAddress(deposit.DestAddr), amount, common.FromHex(deposit.Metadata))
 	}
@@ -254,4 +261,31 @@ func (c *Client) SendClaim(ctx context.Context, deposit *pb.Deposit, smtProof [m
 // WaitTxToBeMined waits until a tx is mined or forged.
 func WaitTxToBeMined(ctx context.Context, client *ethclient.Client, tx *types.Transaction, timeout time.Duration) error {
 	return ops.WaitTxToBeMined(ctx, client, tx, timeout)
+}
+
+func (c *Client) GetGlobalExitRootFromSmc(ctx context.Context) (*etherman.GlobalExitRoot, error) {
+	br, err := polygonzkevmbridge.NewPolygonzkevmbridge(c.BridgeSCAddr, c.Client)
+	if err != nil {
+		return nil, err
+	}
+	GlobalExitRootManAddr, err := br.GlobalExitRootManager(&bind.CallOpts{Pending: false})
+	if err != nil {
+		return nil, err
+	}
+	globalManager, err := polygonzkevmglobalexitroot.NewPolygonzkevmglobalexitroot(GlobalExitRootManAddr, c.Client)
+	if err != nil {
+		return nil, err
+	}
+	gMainnet, err := globalManager.LastMainnetExitRoot(&bind.CallOpts{Pending: false})
+	if err != nil {
+		return nil, err
+	}
+	gRollup, err := globalManager.LastRollupExitRoot(&bind.CallOpts{Pending: false})
+	if err != nil {
+		return nil, err
+	}
+	result := etherman.GlobalExitRoot{
+		ExitRoots: []common.Hash{gMainnet, gRollup},
+	}
+	return &result, nil
 }
