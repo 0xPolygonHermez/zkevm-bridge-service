@@ -1,10 +1,8 @@
 # You must set
-# 1. TestAddr
 # 2. TestAddrPrivate
 # 3. L1NodeURL
 
-ChainID=2442
-TestAddr="set addr"
+
 TestAddrPrivate="set private key"
 
 [ConnectionConfig]
