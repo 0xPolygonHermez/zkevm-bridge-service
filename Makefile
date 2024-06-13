@@ -87,6 +87,10 @@ install-linter: ## Installs the linter
 build-docker: ## Builds a docker image with the zkevm bridge binary
 	docker build -t zkevm-bridge-service -f ./Dockerfile .
 
+.PHONY: build-docker-e2e-real_network
+build-docker-e2e-real_network: ## Builds a docker image with the zkevm bridge binary for e2e tests with real network
+	docker build -f DockerfileE2ETest .  -t bridge-e2e-realnetwork-erc20 
+
 .PHONY: run-db-node
 run-db-node: ## Runs the node database
 	$(RUN_NODE_DB)
@@ -263,6 +267,11 @@ test-edge: build-docker stop run ## Runs all tests checking race conditions
 test-e2ecompress: build-docker stop run ## Runs all tests checking race conditions
 	sleep 3
 	trap '$(STOP)' EXIT; MallocNanoZone=0 go test -v -failfast -race -p 1 -timeout 2400s ./test/e2e/... -count 1 -tags='e2ecompress'
+
+.PHONY: build-test-e2e-real_network
+build-test-e2e-real_network: ## Build binary for e2e tests with real network
+	go test -c ./test/e2e/ -o dist/zkevm-bridge-e2e-real_network -tags='e2e_real_network_erc20'
+	./dist/zkevm-bridge-e2e-real_network -test.failfast -test.list Test
 
 .PHONY: validate
 validate: lint build test-full ## Validates the whole integrity of the code base

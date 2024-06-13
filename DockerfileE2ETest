@@ -1,0 +1,13 @@
+# CONTAINER FOR BUILDING BINARY
+FROM golang:1.21 AS build
+
+ENV CGO_ENABLED=0
+
+# BUILD BINARY
+COPY . /src
+RUN cd /src && make build-test-e2e-real_network
+
+# CONTAINER FOR RUNNING BINARY
+FROM alpine:3.16.0
+COPY --from=build /src/dist/zkevm-bridge-e2e-real_network /app/zkevm-bridge-e2e-real_network
+CMD ["/bin/sh", "-c", "/app/zkevm-bridge-e2e-real_network -test.failfast -test.parallel 2 -test.v"]

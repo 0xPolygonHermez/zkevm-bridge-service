@@ -19,79 +19,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestCLaimAlreadyClaimedDepositERC20L2toL1(t *testing.T) {
-	if testing.Short() {
-		t.Skip()
-	}
-	ctx := context.TODO()
-	testData, err := NewBridge2e2TestData(ctx, nil)
-	require.NoError(t, err)
-	checkBridgeServiceIsAliveAndExpectedVersion(t, testData)
-	showCurrentStatus(t, ctx, testData)
-	require.NoError(t, err)
-	ethInitialBalances, err := getcurrentBalance(ctx, testData)
-	require.NoError(t, err)
-	fmt.Println("ETH Balance ", ethInitialBalances.String())
-	checkBridgeServiceIsAliveAndExpectedVersion(t, testData)
-	txAssetHash := common.HexToHash("0x099252f808424cd7779f8b43038600efd47cdfdde6c077e0c1089ef742aaab36")
-	deposit, err := waitDepositByTxHash(ctx, testData, txAssetHash, maxTimeToClaimReady)
-	require.NoError(t, err)
-	fmt.Println("Deposit: ", deposit)
-
-	err = manualClaimDeposit(ctx, testData, deposit)
-	if !isAlreadyClaimedError(err) {
-		require.NoError(t, err)
-	}
-	ethFinalBalances, err := getcurrentBalance(ctx, testData)
-	require.NoError(t, err)
-	fmt.Println("ETH Initial Balance ", ethFinalBalances.String())
-	fmt.Println("ETH Final   Balance ", ethFinalBalances.String())
-}
-
-func TestStep02ERC20Claim(t *testing.T) {
-	ctx := context.TODO()
-	testData, err := NewBridge2e2TestData(ctx, nil)
-	require.NoError(t, err)
-	showCurrentStatus(t, ctx, testData)
-	txAssetHash := common.HexToHash("0x7d205a479eca73357ee5afd1bce99c1b7728174310ddcd8bf7738217bf5676a2")
-	deposit, err := waitDepositToBeReadyToClaim(ctx, testData, txAssetHash, maxTimeToClaimReady)
-	require.NoError(t, err)
-	err = manualClaimDeposit(ctx, testData, deposit)
-	require.NoError(t, err)
-}
-
-func assetERC20L2ToL1(ctx context.Context, testData *bridge2e2TestData, t *testing.T, tokenAddr common.Address, amount *big.Int) common.Hash {
-	l2NetworkId, err := testData.L2Client.Bridge.NetworkID(nil)
-	require.NoError(t, err)
-	auth := testData.auth[operations.L1]
-	fmt.Printf("L2 Network ID: %d. Asset ERC20(%s) %+v from L1 -> L2 (addr=%s)\n", l2NetworkId, tokenAddr.String(), amount, auth.From.String())
-	txHash, err := assetERC20Generic(ctx, testData.L1Client, l2NetworkId, auth, tokenAddr, amount)
-	require.NoError(t, err)
-	return txHash
-}
-
-func assetERC20L1ToL2(ctx context.Context, testData *bridge2e2TestData, t *testing.T, tokenAddr common.Address, amount *big.Int) common.Hash {
-	destNetworkId, err := testData.L1Client.Bridge.NetworkID(nil)
-	require.NoError(t, err)
-	auth := testData.auth[operations.L2]
-	fmt.Printf("L1 Network ID: %d. Asset ERC20(%s) %+v from L2 -> L1 (addr=%s)\n", destNetworkId, tokenAddr.String(), amount, auth.From.String())
-	txHash, err := assetERC20Generic(ctx, testData.L2Client, destNetworkId, auth, tokenAddr, amount)
-	require.NoError(t, err)
-	return txHash
-}
-
-func assetERC20Generic(ctx context.Context, client *utils.Client, destNetwork uint32, auth *bind.TransactOpts, tokenAddr common.Address, amount *big.Int) (common.Hash, error) {
-	destAddr := auth.From
-	auth.GasLimit = 500000
-	tx, err := client.Bridge.BridgeAsset(auth, destNetwork, destAddr, amount, tokenAddr, true, []byte{})
-	if err != nil {
-		return common.Hash{}, err
-	}
-	fmt.Println("Tx: ", tx.Hash().Hex())
-	err = ops.WaitTxToBeMined(ctx, client.Client, tx, 60*time.Second)
-	return tx.Hash(), err
-}
-
 func TestERC20TransferL1toL2(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
@@ -164,4 +91,36 @@ func getAccountTokenBalance(ctx context.Context, auth *bind.TransactOpts, client
 		return big.NewInt(0), nil
 	}
 	return balance, nil
+}
+
+func assetERC20L2ToL1(ctx context.Context, testData *bridge2e2TestData, t *testing.T, tokenAddr common.Address, amount *big.Int) common.Hash {
+	l2NetworkId, err := testData.L2Client.Bridge.NetworkID(nil)
+	require.NoError(t, err)
+	auth := testData.auth[operations.L1]
+	fmt.Printf("L2 Network ID: %d. Asset ERC20(%s) %+v from L1 -> L2 (addr=%s)\n", l2NetworkId, tokenAddr.String(), amount, auth.From.String())
+	txHash, err := assetERC20Generic(ctx, testData.L1Client, l2NetworkId, auth, tokenAddr, amount)
+	require.NoError(t, err)
+	return txHash
+}
+
+func assetERC20L1ToL2(ctx context.Context, testData *bridge2e2TestData, t *testing.T, tokenAddr common.Address, amount *big.Int) common.Hash {
+	destNetworkId, err := testData.L1Client.Bridge.NetworkID(nil)
+	require.NoError(t, err)
+	auth := testData.auth[operations.L2]
+	fmt.Printf("L1 Network ID: %d. Asset ERC20(%s) %+v from L2 -> L1 (addr=%s)\n", destNetworkId, tokenAddr.String(), amount, auth.From.String())
+	txHash, err := assetERC20Generic(ctx, testData.L2Client, destNetworkId, auth, tokenAddr, amount)
+	require.NoError(t, err)
+	return txHash
+}
+
+func assetERC20Generic(ctx context.Context, client *utils.Client, destNetwork uint32, auth *bind.TransactOpts, tokenAddr common.Address, amount *big.Int) (common.Hash, error) {
+	destAddr := auth.From
+	auth.GasLimit = 500000
+	tx, err := client.Bridge.BridgeAsset(auth, destNetwork, destAddr, amount, tokenAddr, true, []byte{})
+	if err != nil {
+		return common.Hash{}, err
+	}
+	fmt.Println("Tx: ", tx.Hash().Hex())
+	err = ops.WaitTxToBeMined(ctx, client.Client, tx, 60*time.Second)
+	return tx.Hash(), err
 }
