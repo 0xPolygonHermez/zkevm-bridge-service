@@ -39,8 +39,9 @@ type bridge2e2TestConfig struct {
 }
 
 const (
-	// Tipically the time to auto-claim are 15min
-	maxTimeToAutoClaim    = 60 * time.Minute
+	// Tipically the time to auto-claim is 15min (L1->L2)
+	maxTimeToAutoClaim = 60 * time.Minute
+	// Tipically the time to claim a deposit is 1 hours (L2 -> L1)
 	maxTimeToClaimReady   = 120 * time.Minute
 	timeBetweenCheckClaim = 60 * time.Second
 	mtHeight              = 32
@@ -58,6 +59,12 @@ type bridge2e2TestData struct {
 type ethBalances struct {
 	balanceL1 *big.Int
 	balanceL2 *big.Int
+}
+
+func TestReadConfig(t *testing.T) {
+	cfg, err := readTestConfig()
+	require.NoError(t, err)
+	require.NotNil(t, cfg)
 }
 
 func readTestConfig() (*bridge2e2TestConfig, error) {
@@ -124,6 +131,13 @@ func NewBridge2e2TestData(ctx context.Context, cfg *bridge2e2TestConfig) (*bridg
 	L1auth, err := l1Client.GetSigner(ctx, cfg.TestAddrPrivate)
 	if err != nil {
 		return nil, err
+	}
+	if cfg.TestAddr == "" {
+		cfg.TestAddr = L1auth.From.String()
+	} else {
+		if cfg.TestAddr != L1auth.From.String() {
+			return nil, fmt.Errorf("TestAddr: %s is different from the one in the private key: %s", cfg.TestAddr, L1auth.From.String())
+		}
 	}
 	L2auth, err := l2Client.GetSigner(ctx, cfg.TestAddrPrivate)
 	if err != nil {
