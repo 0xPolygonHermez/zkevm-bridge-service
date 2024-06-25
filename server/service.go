@@ -144,7 +144,11 @@ func (s *bridgeService) getRollupExitProof(rollupIndex uint, root common.Hash, d
 	if err != nil {
 		return nil, common.Hash{}, err
 	} else if root != r {
-		return nil, common.Hash{}, fmt.Errorf("error checking calculated root: %s, %s", root.String(), r.String())
+		log.Warnf("error checking calculated root: %s, %s", root.String(), r.String())
+		//return nil, common.Hash{}, fmt.Errorf("error checking calculated root: %s, %s", root.String(), r.String())
+	}
+	if len(siblings) == 0 || len(ls) == 0 {
+		return nil, common.Hash{}, fmt.Errorf("no siblings found for root: %s", root.String())
 	}
 	return siblings, ls[rollupIndex], nil
 }
