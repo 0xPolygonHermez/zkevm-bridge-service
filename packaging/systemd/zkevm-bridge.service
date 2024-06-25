@@ -1,0 +1,16 @@
+[Unit]
+  Description=zkevm-bridge
+  StartLimitIntervalSec=500
+  StartLimitBurst=5
+
+[Service]
+  Restart=on-failure
+  RestartSec=5s
+  ExecStart=/usr/bin/zkevm-bridge
+  Type=simple
+  KillSignal=SIGINT
+  User=zkevm-bridge
+  TimeoutStopSec=120
+
+[Install]
+  WantedBy=multi-user.target
