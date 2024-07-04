@@ -41,6 +41,8 @@ func start(ctx *cli.Context) error {
 	if err != nil {
 		return err
 	}
+	fmt.Print("kzevm", c.NetworkConfig.PolygonZkEvmAddress.String())
+	fmt.Print("rum", c.NetworkConfig.PolygonRollupManagerAddress.String())
 	setupLog(c.Log)
 	err = db.RunMigrations(c.SyncDB)
 	if err != nil {

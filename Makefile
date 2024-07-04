@@ -299,9 +299,7 @@ generate-mocks: ## Generates mocks for the tests, using mockery tool
 	export "GOROOT=$$(go env GOROOT)" && $$(go env GOPATH)/bin/mockery --all --case snake --dir claimtxman/ --output claimtxman/mocks --outpkg mock_txcompressor ${COMMON_MOCKERY_PARAMS}
 	
 
-.PHONY: generate-smart-contracts-bindings
+.PHONY: generate-smartcontracts-bindings
 generate-smartcontracts-bindings:	## Generates the smart contracts bindings
-	@for contract in `ls -1 etherman/smartcontracts/json/*.json | xargs -l basename`; do \
-		 ./scripts/generate-smartcontracts-bindings.sh $${contract%.*}; \
-	done
+	cd scripts && ./generate-smartcontracts-bindings.sh
 	

@@ -5,15 +5,19 @@ package e2e
 
 import (
 	"context"
-	"errors"
+	"fmt"
 	"math/big"
 	"testing"
+	"time"
 
 	"github.com/0xPolygonHermez/zkevm-bridge-service/log"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/test/mocksmartcontracts/BridgeMessageReceiver"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/test/mocksmartcontracts/PingReceiver"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/test/operations"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/utils"
+	ops "github.com/0xPolygonHermez/zkevm-node/test/operations"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/stretchr/testify/require"
 )
 
@@ -25,33 +29,138 @@ func TestMessageTransferL1toL2(t *testing.T) {
 	ctx := context.TODO()
 	testData, err := NewBridge2e2TestData(ctx, nil)
 	require.NoError(t, err)
-	log.Infof("[L1->L2]  bridge_message")
-	destAdrr, err := deployBridgeMessageReceiver(ctx, testData.auth[operations.L1, testData.L1Client])
+	log.Infof("MSG [L1->L2]  deploying contract to L2 to recieve message")
+	contractDeployedAdrr, pingContract, blockDeployed, err := deployBridgeMessagePingReceiver(ctx, testData.auth[operations.L2], testData.L2Client, testData.cfg.ConnectionConfig.L2BridgeAddr)
 	require.NoError(t, err)
-	tokenAddr, err := deployToken(ctx, testData.L1Client, testData.auth[operations.L1], testData.cfg.ConnectionConfig.L1BridgeAddr)
-	log.Infof("[L1->L2] L1: Token Addr: ", tokenAddr.Hex())
+	log.Infof("MSG [L1->L2] Setting to PingReceiver Contract the sender of the message, if not is refused")
+	log.Infof("MSG [L1->L2]  deployed contract to recieve message: %s", contractDeployedAdrr.String())
+	tx, err := pingContract.SetSender(testData.auth[operations.L2], testData.cfg.ConnectionConfig.L2BridgeAddr)
 	require.NoError(t, err)
-	// Do Asset L1 -> L2
-	amount := big.NewInt(143210000000001234) // 0.14321 ETH
-	log.Infof("[L1->L2] assetERC20L2ToL1")
-	txAssetHash := assetERC20L2ToL1(ctx, testData, t, tokenAddr, amount)
-	log.Infof("ERC20 L1->L2 txAssetHash: %s \n", txAssetHash.String())
-	log.Infof("[L1->L2] waitToAutoClaim")
-	waitToAutoClaim(t, ctx, testData, txAssetHash, maxTimeToClaimReady)
+	log.Infof("MSG [L1->L2] SetSender(%s) tx: %s", testData.cfg.ConnectionConfig.L2BridgeAddr, tx.Hash().String())
+	log.Infof("MSG [L1->L2] send BridgeMessage to L1 bridge metadata:")
+	amount := new(big.Int).SetUint64(1000000000000004444)
+	txAssetHash := assetMsgL1ToL2(ctx, testData, t, contractDeployedAdrr, amount, []byte{1, 2, 3, 4})
+	log.Infof("MSG [L1->L2] txAssetHash: %s", txAssetHash.String())
+	log.Infof("MSG [L1->L2] waitDepositToBeReadyToClaim")
+	deposit, err := waitDepositToBeReadyToClaim(ctx, testData, txAssetHash, maxTimeToClaimReady, contractDeployedAdrr.String())
+	require.NoError(t, err)
+	log.Infof("MSG [L2->L1] manualClaimDeposit")
+	err = manualClaimDepositL2(ctx, testData, deposit)
+	require.NoError(t, err)
+	checkThatPingReceivedIsEmitted(ctx, t, blockDeployed, pingContract)
+}
+func TestKK(t *testing.T) {
+	ctx := context.TODO()
+	testData, err := NewBridge2e2TestData(ctx, nil)
+	require.NoError(t, err)
+	NetworkId := uint32(1)
+	DepositCnt := uint64(27453)
+	proof, err := testData.l1BridgeService.GetMerkleProof(NetworkId, DepositCnt)
+	require.NoError(t, err)
+	fmt.Println(proof)
 }
 
-func deployBridgeMessageReceiver(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *BridgeMessageReceiver, error) {
-	parsed, err := BridgeMessageReceiverMetaData.GetAbi()
-	if err != nil {
-		return common.Address{}, nil, nil, err
+func TestMessageTransferL2toL1(t *testing.T) {
+	if testing.Short() {
+		t.Skip()
 	}
-	if parsed == nil {
-		return common.Address{}, nil, nil, errors.New("GetABI returned nil")
-	}
+	log.Infof("Starting test bridge_message L2 -> L1")
+	ctx := context.TODO()
+	testData, err := NewBridge2e2TestData(ctx, nil)
+	require.NoError(t, err)
+	log.Infof("MSG [L2->L1]  deploying contract to L1 to recieve message")
+	contractDeployedAdrr, pingContract, blockDeployed, err := deployBridgeMessagePingReceiver(ctx, testData.auth[operations.L1], testData.L1Client, testData.cfg.ConnectionConfig.L1BridgeAddr)
+	require.NoError(t, err)
+	log.Infof("MSG [L2->L1] Setting to PingReceiver Contract the sender of the message, if not is refused")
+	pingContract.SetSender(testData.auth[operations.L1], testData.auth[operations.L1].From)
+	log.Infof("MSG [L2->L1]  deployed contract to recieve message: %s", contractDeployedAdrr.String())
+	log.Infof("MSG [L2->L1] send BridgeMessage to L1 bridge metadata: ")
+	amount := new(big.Int).SetUint64(1000000000000005555)
+	txAssetHash := assetMsgL2ToL1(ctx, testData, t, contractDeployedAdrr, amount, []byte{5, 6, 7, 8})
+	log.Infof("MSG [L2->L1] txAssetHash: %s", txAssetHash.String())
+	log.Infof("MSG [L2->L1] waitDepositToBeReadyToClaim")
+	deposit, err := waitDepositToBeReadyToClaim(ctx, testData, txAssetHash, maxTimeToClaimReady, contractDeployedAdrr.String())
+	require.NoError(t, err)
+	log.Infof("MSG [L2->L1] manualClaimDeposit")
+	err = manualClaimDepositL1(ctx, testData, deposit)
+	require.NoError(t, err)
+	checkThatPingReceivedIsEmitted(ctx, t, blockDeployed, pingContract)
+}
 
-	address, tx, contract, err := bind.DeployContract(auth, *parsed, common.FromHex(BridgeMessageReceiverBin), backend)
+func checkThatPingReceivedIsEmitted(ctx context.Context, t *testing.T, blockDeployed uint64, pingContract *PingReceiver.PingReceiver) {
+	query := bind.FilterOpts{Start: blockDeployed, End: nil, Context: ctx}
+	eventIterator, err := pingContract.FilterPingReceived(&query)
 	if err != nil {
-		return common.Address{}, nil, nil, err
+		log.Errorf("Error filtering events: %s", err.Error())
 	}
-	return address, tx, &BridgeMessageReceiver{BridgeMessageReceiverCaller: BridgeMessageReceiverCaller{contract: contract}, BridgeMessageReceiverTransactor: BridgeMessageReceiverTransactor{contract: contract}, BridgeMessageReceiverFilterer: BridgeMessageReceiverFilterer{contract: contract}}, nil
+	if !eventIterator.Next() {
+		log.Errorf("Error getting event, something fails")
+		require.Fail(t, "Fail to retrieve the event PingReceived, something fails")
+	}
+}
+
+func assetMsgL1ToL2(ctx context.Context, testData *bridge2e2TestData, t *testing.T, destAddr common.Address, amount *big.Int, metadata []byte) common.Hash {
+	destNetworkId, err := testData.L2Client.Bridge.NetworkID(nil)
+	require.NoError(t, err)
+	auth := testData.auth[operations.L1]
+	log.Infof("MSG [L1->L2] L2 Network ID: %d. BridgeMessage(destContract: %s) metadata:%+v from L1 -> L2 (from addr=%s)\n", destNetworkId, destAddr.String(), metadata, auth.From.String())
+	txHash, err := assetMsgGeneric(ctx, testData.L1Client, destNetworkId, auth, destAddr, amount, metadata)
+	require.NoError(t, err)
+	return txHash
+}
+
+func assetMsgL2ToL1(ctx context.Context, testData *bridge2e2TestData, t *testing.T, destAddr common.Address, amount *big.Int, metadata []byte) common.Hash {
+	destNetworkId, err := testData.L1Client.Bridge.NetworkID(nil)
+	require.NoError(t, err)
+	auth := testData.auth[operations.L2]
+	log.Infof("MSG [L2->2L1] L1 Network ID: %d. BridgeMessage(destContract: %s) metadata:%+v from L2 -> L1 (from addr=%s)\n", destNetworkId, destAddr.String(), metadata, auth.From.String())
+	txHash, err := assetMsgGeneric(ctx, testData.L2Client, destNetworkId, auth, destAddr, amount, metadata)
+	require.NoError(t, err)
+	return txHash
+}
+
+func assetMsgGeneric(ctx context.Context, client *utils.Client, destNetwork uint32, auth *bind.TransactOpts, destAddr common.Address, amount *big.Int, metadata []byte) (common.Hash, error) {
+	auth.GasLimit = 500000
+	auth.Value = amount
+	tx, err := client.Bridge.BridgeMessage(auth, destNetwork, destAddr, true, metadata)
+	if err != nil {
+		return common.Hash{}, err
+	}
+	fmt.Println("Tx: ", tx.Hash().Hex())
+	err = ops.WaitTxToBeMined(ctx, client.Client, tx, 60*time.Second)
+	return tx.Hash(), err
+}
+func checkEventOfBridgeMessageReceiver(t *testing.T, pingContract *PingReceiver.PingReceiver, blockDeployed uint64, timeNow uint32) {
+
+}
+
+func deployBridgeMessageReceiver(ctx context.Context, auth *bind.TransactOpts, backend *utils.Client) (common.Address, *BridgeMessageReceiver.BridgeMessageReceiver, error) {
+	const txMinedTimeoutLimit = 60 * time.Second
+	addr, tx, contractBinded, err := BridgeMessageReceiver.DeployBridgeMessageReceiver(auth, backend)
+	if err != nil {
+		return common.Address{}, nil, err
+	}
+	err = ops.WaitTxToBeMined(ctx, backend, tx, txMinedTimeoutLimit)
+
+	return addr, contractBinded, err
+}
+func deployBridgeMessagePingReceiver(ctx context.Context, auth *bind.TransactOpts, backend *utils.Client, bridgeAddr common.Address) (common.Address, *PingReceiver.PingReceiver, uint64, error) {
+	const txMinedTimeoutLimit = 60 * time.Second
+	log.Infof("Deploying PingReceiver contract using ath.From: %s", auth.From.String())
+	addr, tx, contractBinded, err := PingReceiver.DeployPingReceiver(auth, backend, bridgeAddr)
+	if err != nil {
+		log.Errorf("Error deploying PingReceiver contract: %s", err.Error())
+		return common.Address{}, nil, 0, err
+	}
+	err = ops.WaitTxToBeMined(ctx, backend, tx, txMinedTimeoutLimit)
+	if err != nil {
+		log.Errorf("Error deploying PingReceiver contract:WaitTxToBeMined: %s", err.Error())
+		return common.Address{}, nil, 0, err
+	}
+	receipt, err := backend.TransactionReceipt(ctx, tx.Hash())
+	if err != nil {
+		log.Errorf("Error deploying PingReceiver contract:TransactionReceipt: %s", err.Error())
+		return common.Address{}, nil, 0, err
+	}
+	return addr, contractBinded, receipt.BlockNumber.Uint64(), nil
 }
