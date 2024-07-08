@@ -55,10 +55,10 @@ func TestERC20TransferL2toL1(t *testing.T) {
 	log.Infof("[L2->L1] assetERC20L2ToL1")
 	txAssetHash := assetERC20L1ToL2(ctx, testData, t, tokenAddr, big.NewInt(133330000000001234))
 	log.Infof("[L2->L1] ERC20 L2->L1 txAssetHash: %s ", txAssetHash.String())
-	deposit, err := waitDepositToBeReadyToClaim(ctx, testData, txAssetHash, maxTimeToClaimReady)
+	deposit, err := waitDepositToBeReadyToClaim(ctx, testData, txAssetHash, maxTimeToClaimReady, testData.auth[operations.L2].From.String())
 	require.NoError(t, err)
 	log.Infof("[L2->L1] manualClaimDeposit")
-	err = manualClaimDeposit(ctx, testData, deposit)
+	err = manualClaimDepositL1(ctx, testData, deposit)
 	require.NoError(t, err)
 }
 

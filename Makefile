@@ -88,8 +88,16 @@ build-docker: ## Builds a docker image with the zkevm bridge binary
 	docker build -t zkevm-bridge-service -f ./Dockerfile .
 
 .PHONY: build-docker-e2e-real_network
-build-docker-e2e-real_network: ## Builds a docker image with the zkevm bridge binary for e2e tests with real network
-	docker build -f DockerfileE2ETest .  -t bridge-e2e-realnetwork-erc20 
+build-docker-e2e-real_network:  build-docker-e2e-real_network-erc20 build-docker-e2e-real_network-msg ## Builds a docker image with the zkevm bridge binary for e2e tests with real network
+	
+
+.PHONY: build-docker-e2e-real_network-erc20
+build-docker-e2e-real_network-erc20: ## Builds a docker image with the zkevm bridge binary for e2e ERC20 tests with real network
+	docker build  -f DockerfileE2ETest .  -t bridge-e2e-realnetwork-erc20 --target ERC20
+
+.PHONY: build-docker-e2e-real_network-msg
+build-docker-e2e-real_network-msg: ## Builds a docker image with the zkevm bridge binary for e2e BridgeMessage tests with real network
+	docker build  -f DockerfileE2ETest .  -t bridge-e2e-realnetwork-msg --target MSG
 
 .PHONY: run-db-node
 run-db-node: ## Runs the node database
@@ -270,8 +278,10 @@ test-e2ecompress: build-docker stop run ## Runs all tests checking race conditio
 
 .PHONY: build-test-e2e-real_network
 build-test-e2e-real_network: ## Build binary for e2e tests with real network
-	go test -c ./test/e2e/ -o dist/zkevm-bridge-e2e-real_network -tags='e2e_real_network_erc20'
-	./dist/zkevm-bridge-e2e-real_network -test.failfast -test.list Test
+	go test -c ./test/e2e/ -o dist/zkevm-bridge-e2e-real_network-erc20 -tags='e2e_real_network_erc20'
+	go test -c ./test/e2e/ -o dist/zkevm-bridge-e2e-real_network-bridgemsg -tags='e2e_real_network_msg'
+	./dist/zkevm-bridge-e2e-real_network-erc20 -test.failfast -test.list Test
+	./dist/zkevm-bridge-e2e-real_network-bridgemsg -test.failfast -test.list Test
 
 .PHONY: validate
 validate: lint build test-full ## Validates the whole integrity of the code base
