@@ -21,6 +21,13 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func newMetadata(starting byte) []byte {
+	var res []byte
+	for i := 0; i < 32; i++ {
+		res = append(res, starting+byte(i))
+	}
+	return res
+}
 func TestMessageTransferL1toL2(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
@@ -29,17 +36,23 @@ func TestMessageTransferL1toL2(t *testing.T) {
 	ctx := context.TODO()
 	testData, err := NewBridge2e2TestData(ctx, nil)
 	require.NoError(t, err)
+	balances, err := getcurrentBalance(ctx, testData)
+	require.NoError(t, err)
+	log.Infof("MSG [L1->L2]  balances: %s", balances.String())
 	log.Infof("MSG [L1->L2]  deploying contract to L2 to recieve message")
 	contractDeployedAdrr, pingContract, blockDeployed, err := deployBridgeMessagePingReceiver(ctx, testData.auth[operations.L2], testData.L2Client, testData.cfg.ConnectionConfig.L2BridgeAddr)
+	//contractDeployedAdrr, pingContract, blockDeployed, err := deployBridgeMessagePingReceiver2(ctx, testData.cfg.TestL2AddrPrivate, testData.L2Client, testData.cfg.ConnectionConfig.L2BridgeAddr)
+
 	require.NoError(t, err)
 	log.Infof("MSG [L1->L2] Setting to PingReceiver Contract the sender of the message, if not is refused")
 	log.Infof("MSG [L1->L2]  deployed contract to recieve message: %s", contractDeployedAdrr.String())
-	tx, err := pingContract.SetSender(testData.auth[operations.L2], testData.cfg.ConnectionConfig.L2BridgeAddr)
+	tx, err := pingContract.SetSender(testData.auth[operations.L2], testData.auth[operations.L1].From)
 	require.NoError(t, err)
 	log.Infof("MSG [L1->L2] SetSender(%s) tx: %s", testData.cfg.ConnectionConfig.L2BridgeAddr, tx.Hash().String())
 	log.Infof("MSG [L1->L2] send BridgeMessage to L1 bridge metadata:")
 	amount := new(big.Int).SetUint64(1000000000000004444)
-	txAssetHash := assetMsgL1ToL2(ctx, testData, t, contractDeployedAdrr, amount, []byte{1, 2, 3, 4})
+
+	txAssetHash := assetMsgL1ToL2(ctx, testData, t, contractDeployedAdrr, amount, newMetadata(1))
 	log.Infof("MSG [L1->L2] txAssetHash: %s", txAssetHash.String())
 	log.Infof("MSG [L1->L2] waitDepositToBeReadyToClaim")
 	deposit, err := waitDepositToBeReadyToClaim(ctx, testData, txAssetHash, maxTimeToClaimReady, contractDeployedAdrr.String())
@@ -48,16 +61,6 @@ func TestMessageTransferL1toL2(t *testing.T) {
 	err = manualClaimDepositL2(ctx, testData, deposit)
 	require.NoError(t, err)
 	checkThatPingReceivedIsEmitted(ctx, t, blockDeployed, pingContract)
-}
-func TestKK(t *testing.T) {
-	ctx := context.TODO()
-	testData, err := NewBridge2e2TestData(ctx, nil)
-	require.NoError(t, err)
-	NetworkId := uint32(1)
-	DepositCnt := uint64(27453)
-	proof, err := testData.l1BridgeService.GetMerkleProof(NetworkId, DepositCnt)
-	require.NoError(t, err)
-	fmt.Println(proof)
 }
 
 func TestMessageTransferL2toL1(t *testing.T) {
@@ -69,14 +72,21 @@ func TestMessageTransferL2toL1(t *testing.T) {
 	testData, err := NewBridge2e2TestData(ctx, nil)
 	require.NoError(t, err)
 	log.Infof("MSG [L2->L1]  deploying contract to L1 to recieve message")
+	v, err := testData.L1Client.Bridge.NetworkID(nil)
+	require.NoError(t, err)
+	log.Infof("MSG [L2->L1] L1 Network ID: %d", v)
+	//contractDeployedAdrr, _, err := deployBridgeMessageReceiver(ctx, testData.auth[operations.L2], testData.L2Client)
 	contractDeployedAdrr, pingContract, blockDeployed, err := deployBridgeMessagePingReceiver(ctx, testData.auth[operations.L1], testData.L1Client, testData.cfg.ConnectionConfig.L1BridgeAddr)
 	require.NoError(t, err)
-	log.Infof("MSG [L2->L1] Setting to PingReceiver Contract the sender of the message, if not is refused")
-	pingContract.SetSender(testData.auth[operations.L1], testData.auth[operations.L1].From)
 	log.Infof("MSG [L2->L1]  deployed contract to recieve message: %s", contractDeployedAdrr.String())
+	log.Infof("MSG [L2->L1] Setting to PingReceiver Contract the sender of the message, if not is refused")
+	tx, err := pingContract.SetSender(testData.auth[operations.L1], testData.auth[operations.L2].From)
+	require.NoError(t, err)
+	log.Infof("MSG [L2->L1] SetSender(%s) tx: %s", testData.auth[operations.L2].From, tx.Hash().String())
+
 	log.Infof("MSG [L2->L1] send BridgeMessage to L1 bridge metadata: ")
 	amount := new(big.Int).SetUint64(1000000000000005555)
-	txAssetHash := assetMsgL2ToL1(ctx, testData, t, contractDeployedAdrr, amount, []byte{5, 6, 7, 8})
+	txAssetHash := assetMsgL2ToL1(ctx, testData, t, contractDeployedAdrr, amount, newMetadata(4))
 	log.Infof("MSG [L2->L1] txAssetHash: %s", txAssetHash.String())
 	log.Infof("MSG [L2->L1] waitDepositToBeReadyToClaim")
 	deposit, err := waitDepositToBeReadyToClaim(ctx, testData, txAssetHash, maxTimeToClaimReady, contractDeployedAdrr.String())
@@ -113,7 +123,7 @@ func assetMsgL2ToL1(ctx context.Context, testData *bridge2e2TestData, t *testing
 	destNetworkId, err := testData.L1Client.Bridge.NetworkID(nil)
 	require.NoError(t, err)
 	auth := testData.auth[operations.L2]
-	log.Infof("MSG [L2->2L1] L1 Network ID: %d. BridgeMessage(destContract: %s) metadata:%+v from L2 -> L1 (from addr=%s)\n", destNetworkId, destAddr.String(), metadata, auth.From.String())
+	log.Infof("MSG [L2->L1] L1 Network ID: %d. L2->BridgeMessage(destContract: %s) metadata:%+v from L2 -> L1 (from addr=%s)\n", destNetworkId, destAddr.String(), metadata, auth.From.String())
 	txHash, err := assetMsgGeneric(ctx, testData.L2Client, destNetworkId, auth, destAddr, amount, metadata)
 	require.NoError(t, err)
 	return txHash

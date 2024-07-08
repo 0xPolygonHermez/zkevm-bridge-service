@@ -120,17 +120,17 @@ func NewBridge2e2TestData(ctx context.Context, cfg *bridge2e2TestConfig) (*bridg
 
 	l1Client, err := utils.NewClient(ctx, cfg.ConnectionConfig.L1NodeURL, cfg.ConnectionConfig.L1BridgeAddr)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Error connecting L1 url: %s Err:%w", cfg.ConnectionConfig.L1NodeURL, err)
 	}
 	l2Client, err := utils.NewClient(ctx, cfg.ConnectionConfig.L2NodeURL, cfg.ConnectionConfig.L2BridgeAddr)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Error connecting L2 url: %s Err:%w", cfg.ConnectionConfig.L2NodeURL, err)
 	}
 	l1BridgeService := client.NewRestClient(cfg.ConnectionConfig.BridgeURL)
 
 	L1auth, err := l1Client.GetSigner(ctx, cfg.TestL1AddrPrivate)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Error auth from L1:  Err:%w", err)
 	}
 	/*
 		if cfg.TestAddr == "" {
@@ -143,7 +143,7 @@ func NewBridge2e2TestData(ctx context.Context, cfg *bridge2e2TestConfig) (*bridg
 	*/
 	L2auth, err := l2Client.GetSigner(ctx, cfg.TestL2AddrPrivate)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Error auth from L2:  Err:%w", err)
 	}
 	return &bridge2e2TestData{
 		L1Client:        l1Client,
@@ -234,8 +234,10 @@ func manualClaimDeposit(ctx context.Context, testData *bridge2e2TestData, deposi
 		ExitRoots: []common.Hash{common.HexToHash(proof.MainExitRoot), common.HexToHash(proof.RollupExitRoot)},
 	}
 	if L1 {
+		log.Infof(" L1.Claim()")
 		err = testData.L1Client.SendClaim(ctx, deposit, smtProof, smtRollupProof, ger, testData.auth[operations.L1])
 	} else {
+		log.Infof(" L2.Claim()")
 		err = testData.L2Client.SendClaim(ctx, deposit, smtProof, smtRollupProof, ger, testData.auth[operations.L2])
 	}
 	return err

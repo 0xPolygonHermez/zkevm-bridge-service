@@ -2,7 +2,6 @@ package synchronizer
 
 import (
 	context "context"
-	"fmt"
 	"math/big"
 	"testing"
 	"time"
@@ -23,13 +22,6 @@ type mocks struct {
 	Storage     *storageMock
 	DbTx        *dbTxMock
 	ZkEVMClient *zkEVMClientMock
-}
-
-func TestKK(t *testing.T) {
-	//GenerateGlobalIndex(mainnetFlag bool, rollupIndex uint, localExitRootIndex uint) *big.Int {
-	a := etherman.GenerateGlobalIndex(false, 0xffffffffff, 11)
-	fmt.Print(a)
-
 }
 
 func TestSyncGer(t *testing.T) {
