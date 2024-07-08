@@ -265,38 +265,6 @@ func printMkerkleProof(mkProof [mtHeight][32]byte, title string) {
 	}
 }
 
-func waitDepositToBeReadyToClaim(ctx context.Context, testData *bridge2e2TestData, asssetTxHash common.Hash, timeout time.Duration, destAddr string) (*pb.Deposit, error) {
-	startTime := time.Now()
-	if len(destAddr) < 1 {
-		destAddr = testData.auth[operations.L1].From.String()
-	}
-	for true {
-		fmt.Println("Waiting to deposit (", destAddr, ") fo assetTx: ", asssetTxHash.Hex(), "...")
-		deposits, _, err := testData.l1BridgeService.GetBridges(destAddr, 0, 100)
-		if err != nil {
-			return nil, err
-		}
-
-		for _, deposit := range deposits {
-			depositHash := common.HexToHash(deposit.TxHash)
-			if depositHash == asssetTxHash {
-				fmt.Println("Deposit found: ", deposit, " ready:", deposit.ReadyForClaim)
-
-				if deposit.ReadyForClaim {
-					fmt.Println("Found claim! Claim Is ready  Elapsed time: ", time.Since(startTime))
-					return deposit, nil
-				}
-			}
-		}
-		if time.Since(startTime) > timeout {
-			return nil, fmt.Errorf("Timeout waiting for deposit to be ready to be claimed")
-		}
-		fmt.Println("Sleeping ", timeBetweenCheckClaim.String(), "Elapsed time: ", time.Since(startTime))
-		time.Sleep(timeBetweenCheckClaim)
-	}
-	return nil, nil
-}
-
 func waitDepositByTxHash(ctx context.Context, testData *bridge2e2TestData, asssetTxHash common.Hash, timeout time.Duration) (*pb.Deposit, error) {
 	startTime := time.Now()
 	for true {
@@ -380,7 +348,74 @@ func assetEthGeneric(ctx context.Context, client *utils.Client, destNetwork uint
 	return tx.Hash(), err
 }
 
+func waitDepositToBeReadyToClaim(ctx context.Context, testData *bridge2e2TestData, asssetTxHash common.Hash, timeout time.Duration, destAddr string) (*pb.Deposit, error) {
+	startTime := time.Now()
+	if len(destAddr) < 1 {
+		destAddr = testData.auth[operations.L1].From.String()
+	}
+	for true {
+		fmt.Println("Waiting to deposit (", destAddr, ") fo assetTx: ", asssetTxHash.Hex(), "...")
+		deposits, _, err := testData.l1BridgeService.GetBridges(destAddr, 0, 100)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, deposit := range deposits {
+			depositHash := common.HexToHash(deposit.TxHash)
+			if depositHash == asssetTxHash {
+				fmt.Println("Deposit found: ", deposit, " ready:", deposit.ReadyForClaim)
+
+				if deposit.ReadyForClaim {
+					fmt.Println("Found claim! Claim Is ready  Elapsed time: ", time.Since(startTime))
+					return deposit, nil
+				}
+			}
+		}
+		if time.Since(startTime) > timeout {
+			return nil, fmt.Errorf("Timeout waiting for deposit to be ready to be claimed")
+		}
+		fmt.Println("Sleeping ", timeBetweenCheckClaim.String(), "Elapsed time: ", time.Since(startTime))
+		time.Sleep(timeBetweenCheckClaim)
+	}
+	return nil, nil
+}
+
 func waitToAutoClaim(t *testing.T, ctx context.Context, testData *bridge2e2TestData, asssetTxHash common.Hash, timeout time.Duration) {
+	startTime := time.Now()
+	deposit, err := waitDepositToBeReadyToClaim(ctx, testData, asssetTxHash, timeout, testData.auth[operations.L1].From.String())
+	require.NoError(t, err)
+	emptyHash := common.Hash{}
+	claimTxHash := common.HexToHash(deposit.ClaimTxHash)
+	if claimTxHash != emptyHash {
+		fmt.Println("Found claim! Claim Tx Hash: ", claimTxHash.Hex())
+		// The claim from L1 -> L2 is done by the bridge service to L2
+		receipt, err := waitTxToBeMinedByTxHash(ctx, testData.L2Client, claimTxHash, 60*time.Second)
+		require.NoError(t, err)
+		fmt.Println("Receipt: ", receipt, " Elapsed time: ", time.Since(startTime))
+		return
+	}
+	require.Fail(t, "No auto-claim done, deposit:", deposit)
+}
+
+func waitToAutoClaimTx(t *testing.T, ctx context.Context, testData *bridge2e2TestData, deposit *pb.Deposit, timeout time.Duration) error {
+	startTime := time.Now()
+	emptyHash := common.Hash{}
+	claimTxHash := common.HexToHash(deposit.ClaimTxHash)
+	if claimTxHash != emptyHash {
+		log.Debugf("Found claim! Claim Tx Hash: ", claimTxHash.Hex())
+		// The claim from L1 -> L2 is done by the bridge service to L2
+		receipt, err := waitTxToBeMinedByTxHash(ctx, testData.L2Client, claimTxHash, 60*time.Second)
+		if err != nil {
+			return err
+		}
+		log.Debug("Receipt: ", receipt, " Elapsed time: ", time.Since(startTime))
+		return nil
+	}
+	return fmt.Errorf("No auto-claim tx, deposit: %+v", deposit)
+
+}
+
+func waitToAutoClaim2(t *testing.T, ctx context.Context, testData *bridge2e2TestData, asssetTxHash common.Hash, timeout time.Duration) {
 	startTime := time.Now()
 	for true {
 		fmt.Println("Waiting to deposit fo assetTx: ", asssetTxHash.Hex(), "...")
@@ -393,6 +428,7 @@ func waitToAutoClaim(t *testing.T, ctx context.Context, testData *bridge2e2TestD
 				fmt.Println("Deposit: ", deposit, " Elapsed time: ", time.Since(startTime))
 				claimTxHash := common.HexToHash(deposit.ClaimTxHash)
 				emptyHash := common.Hash{}
+
 				if claimTxHash != emptyHash {
 					fmt.Println("Found claim! Claim Tx Hash: ", claimTxHash.Hex())
 					// The claim from L1 -> L2 is done by the bridge service to L2
@@ -401,12 +437,16 @@ func waitToAutoClaim(t *testing.T, ctx context.Context, testData *bridge2e2TestD
 					fmt.Println("Receipt: ", receipt, " Elapsed time: ", time.Since(startTime))
 					return
 				}
+				if deposit.ReadyForClaim && claimTxHash == emptyHash {
+					log.Warnf("Deposit is ready for claim but no claim tx hash found,maybe autoclaim is disabled?. Deposit: %+v", deposit)
+				}
 			}
 		}
 		if time.Since(startTime) > timeout {
 			require.Fail(t, "Timeout waiting for deposit to be automatically claimed by Bridge Service")
 		}
-		time.Sleep(5 * time.Second)
+		fmt.Println("Sleeping ", timeBetweenCheckClaim.String(), "Elapsed time: ", time.Since(startTime))
+		time.Sleep(timeBetweenCheckClaim)
 	}
 }
 
