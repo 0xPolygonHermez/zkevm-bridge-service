@@ -1,6 +1,10 @@
 name: Regression Tests
 
 on:
+  pull_request:
+    types: [opened, synchronize]  # Trigger on new PR and existing with new commits
+    branches:
+      - develop
   workflow_dispatch:
     inputs:
       zkevm_agglayer:
