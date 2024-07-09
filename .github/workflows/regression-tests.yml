@@ -1,32 +1,46 @@
 name: Regression Tests
 
 on:
-  pull_request:
-    types: [opened, synchronize]  # Trigger on new PR and existing with new commits
-    branches:
-      - develop
+  workflow_dispatch:
+    inputs:
+      zkevm_agglayer:
+        description: 0xPolygon/agglayer (short commit hash or release tag)
+        required: true
+        default: 0.1.4
+      zkevm_bridge_service:
+        description: 0xPolygonHermez/zkevm-bridge-service (short commit hash or release tag)
+        required: true
+        default: ${git_hash}
+      zkevm_bridge_ui:
+        description: 0xPolygonHermez/zkevm-bridge-ui (short commit hash or release tag)
+        required: true
+        default: '0006445'
+      zkevm_dac:
+        description: 0xPolygon/cdk-data-availability (short commit hash or release tag)
+        required: true
+        default: 0.0.7
+      zkevm_node:
+        description: 0xPolygon/cdk-validium-node (short commit hash or release tag)
+        required: true
+        default: 0.6.5-cdk
+      kurtosis_cli:
+        description: kurtosis-tech/kurtosis (release tag)
+        required: false
+        default: 0.89.3
+      kurtosis_cdk:
+        description: 0xPolygon/kurtosis-cdk (release tag)
+        required: false
+        default: v0.2.0
+      bake_time:
+        description: bake time (minutes)
+        required: false
+        default: 30
 
 jobs:
-  deploy_devnet:
+  regression_tests:
     runs-on: ubuntu-latest
-    
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Build image (with proposed code changes) locally
-        id: build
-        run: |
-          if [ "$GITHUB_EVENT_NAME" == "pull_request" ]; then
-              GITHUB_SHA_SHORT=$(jq -r .pull_request.head.sha "$GITHUB_EVENT_PATH" | cut -c 1-7)
-              echo $GITHUB_SHA_SHORT
-              echo "::set-output name=GITHUB_SHA_SHORT::$GITHUB_SHA_SHORT"
-          fi
-
-      - name: Set up Docker
-        uses: docker/setup-buildx-action@v1
-
-      - name: Run regression tests against JIT container image
-        uses: 0xPolygon/kurtosis-cdk@v0.2.1
-        with:
-          zkevm_bridge_service: ${{ steps.build.outputs.GITHUB_SHA_SHORT }}
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+      - name: Run Regression Tests
+        uses: 0xPolygon/kurtosis-cdk@v0.1.9
