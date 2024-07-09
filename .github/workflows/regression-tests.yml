@@ -9,7 +9,7 @@ on:
 jobs:
   deploy_devnet:
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -27,8 +27,6 @@ jobs:
         uses: docker/setup-buildx-action@v1
 
       - name: Run regression tests against JIT container image
-        uses: 0xPolygon/kurtosis-cdk@v0.1.9
+        uses: 0xPolygon/kurtosis-cdk
         with:
           zkevm_bridge_service: ${{ steps.build.outputs.GITHUB_SHA_SHORT }}
-          kurtosis_cli: 0.89.3
-          kurtosis_cdk: v0.2.0
