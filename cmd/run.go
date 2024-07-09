@@ -41,8 +41,8 @@ func start(ctx *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	fmt.Print("kzevm", c.NetworkConfig.PolygonZkEvmAddress.String())
-	fmt.Print("rum", c.NetworkConfig.PolygonRollupManagerAddress.String())
+	log.Infof("kzevmAddr = %s", c.NetworkConfig.PolygonZkEvmAddress.String())
+	log.Infof("RollupManagerAddress = %s", c.NetworkConfig.PolygonRollupManagerAddress.String())
 	setupLog(c.Log)
 	err = db.RunMigrations(c.SyncDB)
 	if err != nil {
@@ -57,11 +57,11 @@ func start(ctx *cli.Context) error {
 	}
 
 	networkID, err := l1Etherman.GetNetworkID(ctx.Context)
-	log.Infof("main network id: %d", networkID)
 	if err != nil {
 		log.Error(err)
 		return err
 	}
+	log.Infof("main network id: %d", networkID)
 
 	var networkIDs = []uint{networkID}
 	for _, client := range l2Ethermans {
@@ -116,46 +116,29 @@ func start(ctx *cli.Context) error {
 		go runSynchronizer(ctx.Context, 0, bridgeController, client, c.Synchronizer, storage, zkEVMClient, chExitRootEvent, chSynced)
 	}
 
-	if c.ClaimTxManager.Enabled {
-		for i := 0; i < len(c.Etherman.L2URLs); i++ {
-			// we should match the orders of L2URLs between etherman and claimtxman
-			// since we are using the networkIDs in the same order
-			ctx := context.Background()
-			client, err := utils.NewClient(ctx, c.Etherman.L2URLs[i], c.NetworkConfig.L2PolygonBridgeAddresses[i])
-			if err != nil {
-				log.Fatalf("error creating client for L2 %s. Error: %v", c.Etherman.L2URLs[i], err)
-			}
-			nonceCache, err := claimtxman.NewNonceCache(ctx, client)
-			if err != nil {
-				log.Fatalf("error creating nonceCache for L2 %s. Error: %v", c.Etherman.L2URLs[i], err)
-			}
-			auth, err := client.GetSignerFromKeystore(ctx, c.ClaimTxManager.PrivateKey)
-			if err != nil {
-				log.Fatalf("error creating signer for L2 %s. Error: %v", c.Etherman.L2URLs[i], err)
-			}
-
-			claimTxManager, err := claimtxman.NewClaimTxManager(ctx, c.ClaimTxManager, chExitRootEvent, chSynced,
-				c.Etherman.L2URLs[i], networkIDs[i+1], c.NetworkConfig.L2PolygonBridgeAddresses[i], bridgeService, storage, rollupID, l2Ethermans[i], nonceCache, auth)
-			if err != nil {
-				log.Fatalf("error creating claim tx manager for L2 %s. Error: %v", c.Etherman.L2URLs[i], err)
-			}
-			go claimTxManager.Start()
+	for i := 0; i < len(c.Etherman.L2URLs); i++ {
+		// we should match the orders of L2URLs between etherman and claimtxman
+		// since we are using the networkIDs in the same order
+		ctx := context.Background()
+		client, err := utils.NewClient(ctx, c.Etherman.L2URLs[i], c.NetworkConfig.L2PolygonBridgeAddresses[i])
+		if err != nil {
+			log.Fatalf("error creating client for L2 %s. Error: %v", c.Etherman.L2URLs[i], err)
 		}
-	} else {
-		log.Warn("ClaimTxManager not configured")
-		go func() {
-			for {
-				select {
-				case <-chExitRootEvent:
-					log.Debug("New GER received")
-				case netID := <-chSynced:
-					log.Debug("NetworkID synced: ", netID)
-				case <-ctx.Context.Done():
-					log.Debug("Stopping goroutine that listen new GER updates")
-					return
-				}
-			}
-		}()
+		nonceCache, err := claimtxman.NewNonceCache(ctx, client)
+		if err != nil {
+			log.Fatalf("error creating nonceCache for L2 %s. Error: %v", c.Etherman.L2URLs[i], err)
+		}
+		auth, err := client.GetSignerFromKeystore(ctx, c.ClaimTxManager.PrivateKey)
+		if err != nil {
+			log.Fatalf("error creating signer for L2 %s. Error: %v", c.Etherman.L2URLs[i], err)
+		}
+
+		claimTxManager, err := claimtxman.NewClaimTxManager(ctx, c.ClaimTxManager, chExitRootEvent, chSynced,
+			c.Etherman.L2URLs[i], networkIDs[i+1], c.NetworkConfig.L2PolygonBridgeAddresses[i], bridgeService, storage, rollupID, l2Ethermans[i], nonceCache, auth)
+		if err != nil {
+			log.Fatalf("error creating claim tx manager for L2 %s. Error: %v", c.Etherman.L2URLs[i], err)
+		}
+		go claimTxManager.Start()
 	}
 
 	// Wait for an in interrupt.
