@@ -53,3 +53,4 @@ jobs:
         with:
           zkevm_bridge_service: ${{ steps.build.outputs.GITHUB_SHA_SHORT }}
           kurtosis_cdk: 
+          kurtosis_cli: 0.89.3  
