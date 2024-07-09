@@ -1,0 +1,12 @@
+#!/bin/bash
+# This is a postinstallation script so the service can be configured and started when requested
+#
+sudo adduser --disabled-password --disabled-login --shell /usr/sbin/nologin --quiet --system --no-create-home --home /nonexistent zkevm-bridge
+if [ -d "/opt/zkevm-bridge" ]
+then
+    echo "Directory /opt/zkevm-bridge exists."
+else
+    sudo mkdir -p /opt/zkevm-bridge
+    sudo chown -R zkevm-bridge /opt/zkevm-bridge
+fi
+sudo systemctl daemon-reload
