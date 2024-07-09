@@ -31,10 +31,6 @@ on:
         description: kurtosis-tech/kurtosis (release tag)
         required: false
         default: 0.89.3
-      kurtosis_cdk:
-        description: 0xPolygon/kurtosis-cdk (release tag)
-        required: false
-        default: v0.2.0
       bake_time:
         description: bake time (minutes)
         required: false
@@ -47,4 +43,7 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v2
       - name: Run Regression Tests
-        uses: 0xPolygon/kurtosis-cdk@main
+        uses: 0xPolygon/kurtosis-cdk@joanestebanr/fix_178
+        with:
+          zkevm_bridge_service: ${git_hash}
+          kurtosis_cdk: 
