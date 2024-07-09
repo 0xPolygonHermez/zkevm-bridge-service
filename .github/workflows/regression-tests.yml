@@ -27,6 +27,6 @@ jobs:
         uses: docker/setup-buildx-action@v1
 
       - name: Run regression tests against JIT container image
-        uses: 0xPolygon/kurtosis-cdk@main
+        uses: 0xPolygon/kurtosis-cdk@v0.2.1
         with:
           zkevm_bridge_service: ${{ steps.build.outputs.GITHUB_SHA_SHORT }}
