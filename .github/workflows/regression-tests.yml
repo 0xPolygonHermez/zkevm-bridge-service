@@ -47,4 +47,4 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v2
       - name: Run Regression Tests
-        uses: 0xPolygon/kurtosis-cdk@v0.1.9
+        uses: 0xPolygon/kurtosis-cdk@main
