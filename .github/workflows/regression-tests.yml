@@ -40,10 +40,16 @@ jobs:
   regression_tests:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v2
+      - name: Build image (with proposed code changes) locally
+        id: build
+        run: |
+          if [ "$GITHUB_EVENT_NAME" == "pull_request" ]; then
+              GITHUB_SHA_SHORT=$(jq -r .pull_request.head.sha "$GITHUB_EVENT_PATH" | cut -c 1-7)
+              echo $GITHUB_SHA_SHORT
+              echo "::set-output name=GITHUB_SHA_SHORT::$GITHUB_SHA_SHORT"
+          fi
       - name: Run Regression Tests
         uses: 0xPolygon/kurtosis-cdk@joanestebanr/fix_178
         with:
-          zkevm_bridge_service: ${git_hash}
+          zkevm_bridge_service: ${{ steps.build.outputs.GITHUB_SHA_SHORT }}
           kurtosis_cdk: 
