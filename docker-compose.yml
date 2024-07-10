@@ -199,6 +199,7 @@ services:
       - ZKEVM_BRIDGE_DATABASE_NAME=test_db
       - ZKEVM_BRIDGE_DATABASE_HOST=zkevm-bridge-db
       - ZKEVM_BRIDGE_DATABASE_PORT=5432
+      - ZKEVM_BRIDGE_CLAIMTXMANAGER_ENABLED=false
       - ZKEVM_BRIDGE_CLAIMTXMANAGER_GROUPINGCLAIMS_ENABLED=${ZKEVM_BRIDGE_CLAIMTXMANAGER_GROUPINGCLAIMS_ENABLED}
     volumes:
       - ./test/test.keystore.claimtx:/pk/keystore.claimtxmanager

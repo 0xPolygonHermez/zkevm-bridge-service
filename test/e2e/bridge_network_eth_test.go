@@ -1,5 +1,5 @@
-//go:build e2e_real_network
-// +build e2e_real_network
+//go:build e2e_real_network_eth
+// +build e2e_real_network_eth
 
 package e2e
 

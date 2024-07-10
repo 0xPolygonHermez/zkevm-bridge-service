@@ -89,14 +89,17 @@ func deployToken(ctx context.Context, client *utils.Client, auth *bind.TransactO
 	amountTokens := new(big.Int).SetUint64(1000000000000000000)
 	err = client.ApproveERC20(ctx, tokenAddr, bridgeAddr, amountTokens, auth)
 	if err != nil {
+		log.Errorf("Token Addr: %s, ApproveERC20 err: %w", tokenAddr.Hex(), err)
 		return tokenAddr, err
 	}
 	err = client.MintERC20(ctx, tokenAddr, amountTokens, auth)
 	if err != nil {
+		log.Errorf("Token Addr: %s, MintERC20 err: %w", tokenAddr.Hex(), err)
 		return tokenAddr, err
 	}
 	erc20Balance, err := getAccountTokenBalance(ctx, auth, client, tokenAddr, nil)
 	if err != nil {
+		log.Errorf("Token Addr: %s, getAccountTokenBalance err: %w", tokenAddr.Hex(), err)
 		return tokenAddr, err
 	}
 	log.Info("ERC20 Balance: ", erc20Balance.String())
