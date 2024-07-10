@@ -8,6 +8,11 @@ COPY . /src
 RUN cd /src && make build-test-e2e-real_network
 
 # CONTAINER FOR RUNNING BINARY
-FROM alpine:3.16.0
-COPY --from=build /src/dist/zkevm-bridge-e2e-real_network /app/zkevm-bridge-e2e-real_network
-CMD ["/bin/sh", "-c", "/app/zkevm-bridge-e2e-real_network -test.failfast  -test.v"]
+FROM alpine:3.16.0 AS ERC20
+COPY --from=build /src/dist/zkevm-bridge-e2e-real_network-erc20 /app/zkevm-bridge-e2e-real_network-erc20
+CMD ["/bin/sh", "-c", "/app/zkevm-bridge-e2e-real_network-erc20 -test.failfast  -test.v"]
+
+# CONTAINER FOR RUNNING BINARY
+FROM alpine:3.16.0 AS MSG 
+COPY --from=build /src/dist/zkevm-bridge-e2e-real_network-bridgemsg /app/zkevm-bridge-e2e-real_network-bridgemsg
+CMD ["/bin/sh", "-c", "/app/zkevm-bridge-e2e-real_network-bridgemsg -test.failfast  -test.v"]

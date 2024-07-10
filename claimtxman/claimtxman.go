@@ -182,6 +182,10 @@ func (tm *ClaimTxManager) processDepositStatus(ger *etherman.GlobalExitRoot, dbT
 			log.Errorf("error getting and updating L1DepositsStatus. Error: %v", err)
 			return err
 		}
+		if !tm.cfg.Enabled {
+			log.Infof("ClaimTxManager is disabled. No auto-claim")
+			return nil
+		}
 		for _, deposit := range deposits {
 			if tm.l2NetworkID != deposit.DestinationNetwork {
 				log.Infof("Ignoring deposit: %d: dest_net: %d, we are:%d", deposit.DepositCount, deposit.DestinationNetwork, tm.l2NetworkID)
@@ -223,6 +227,7 @@ func (tm *ClaimTxManager) processDepositStatus(ger *etherman.GlobalExitRoot, dbT
 				log.Errorf("error BuildSendClaim tx for deposit %d. Error: %v", deposit.DepositCount, err)
 				return err
 			}
+
 			if err = tm.addClaimTx(deposit.DepositCount, tm.auth.From, tx.To(), nil, tx.Data(), ger.GlobalExitRoot, dbTx); err != nil {
 				log.Errorf("error adding claim tx for deposit %d. Error: %v", deposit.DepositCount, err)
 				return err
