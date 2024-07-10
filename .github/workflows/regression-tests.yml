@@ -49,7 +49,7 @@ jobs:
               echo "::set-output name=GITHUB_SHA_SHORT::$GITHUB_SHA_SHORT"
           fi
       - name: Run Regression Tests
-        uses: 0xPolygon/kurtosis-cdk@joanestebanr/fix_178
+        uses: 0xPolygon/kurtosis-cdk@v0.2.3
         with:
           zkevm_bridge_service: ${{ steps.build.outputs.GITHUB_SHA_SHORT }}
           kurtosis_cdk: 
