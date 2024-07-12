@@ -38,3 +38,7 @@ L2BridgeAddr="${{ BRIDGE_ADDR_L2 }}"
 EOF
 docker run  --volume "./tmp/:/config/" --env BRIDGE_TEST_CONFIG_FILE=/config/test.toml bridge-e2e-realnetwork-erc20
 ```
+
+## Contact
+
+For more discussions, please head to the [R&D Discord](https://discord.gg/0xPolygonRnD)
