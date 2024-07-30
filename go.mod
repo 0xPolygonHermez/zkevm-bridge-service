@@ -3,7 +3,7 @@ module github.com/0xPolygonHermez/zkevm-bridge-service
 go 1.21
 
 require (
-	github.com/0xPolygonHermez/zkevm-node v0.6.8-RC8
+	github.com/0xPolygonHermez/zkevm-node v0.7.1-RC3
 	github.com/barkimedes/go-deepcopy v0.0.0-20220514131651-17c30cfc62df
 	github.com/ethereum/go-ethereum v1.13.11
 	github.com/gobuffalo/packr/v2 v2.8.3
@@ -30,7 +30,7 @@ require (
 
 require (
 	dario.cat/mergo v1.0.0 // indirect
-	github.com/0xPolygonHermez/zkevm-data-streamer v0.2.3-0.20240426122934-6f47d2485fc1 // indirect
+	github.com/0xPolygonHermez/zkevm-data-streamer v0.2.3-RC8 // indirect
 	github.com/DataDog/zstd v1.5.2 // indirect
 	github.com/Microsoft/go-winio v0.6.1 // indirect
 	github.com/ProtonMail/go-crypto v0.0.0-20230828082145-3c4c8a2d2371 // indirect
