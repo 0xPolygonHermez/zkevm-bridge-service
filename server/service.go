@@ -131,6 +131,7 @@ func (s *bridgeService) getRollupExitProof(rollupIndex uint, root common.Hash, d
 	// Get leaves given the root
 	leaves, err := s.storage.GetRollupExitLeavesByRoot(ctx, root, dbTx)
 	if err != nil {
+		err = fmt.Errorf("error getting leaves by ger: %s, error: %w", root.String(), err)
 		return nil, common.Hash{}, err
 	}
 	// Compute Siblings
@@ -144,8 +145,8 @@ func (s *bridgeService) getRollupExitProof(rollupIndex uint, root common.Hash, d
 	if err != nil {
 		return nil, common.Hash{}, err
 	} else if root != r {
-		log.Warnf("error checking calculated root: %s, %s", root.String(), r.String())
-		//return nil, common.Hash{}, fmt.Errorf("error checking calculated root: %s, %s", root.String(), r.String())
+		log.Warnf("error checking calculated root: required: %s, calculated:%s", root.String(), r.String())
+		return nil, common.Hash{}, fmt.Errorf("error checking calculated root: required:%s, calculated: %s", root.String(), r.String())
 	}
 	if len(siblings) == 0 || len(ls) == 0 {
 		return nil, common.Hash{}, fmt.Errorf("no siblings found for root: %s", root.String())
@@ -213,6 +214,7 @@ func (s *bridgeService) GetClaimProofbyGER(depositCnt, networkID uint, GER commo
 	if dbTx == nil { // if the call comes from the rest API
 		deposit, err := s.storage.GetDeposit(ctx, depositCnt, networkID, nil)
 		if err != nil {
+			err = fmt.Errorf("error getting deposit %d for network: %d. Err: %w", depositCnt, networkID, err)
 			return nil, nil, nil, err
 		}
 
@@ -224,10 +226,12 @@ func (s *bridgeService) GetClaimProofbyGER(depositCnt, networkID uint, GER commo
 
 	tID, err := s.getNetworkID(networkID)
 	if err != nil {
+		err = fmt.Errorf("error getting network: %d. Err: %w", networkID, err)
 		return nil, nil, nil, err
 	}
 	globalExitRoot, err := s.storage.GetExitRootByGER(ctx, GER, dbTx)
 	if err != nil {
+		err = fmt.Errorf("error getting GlobalExitRoot data for GER: %s. Err: %w", GER.String(), err)
 		return nil, nil, nil, err
 	}
 
@@ -239,20 +243,20 @@ func (s *bridgeService) GetClaimProofbyGER(depositCnt, networkID uint, GER commo
 	if networkID == 0 { // Mainnet
 		merkleProof, err = s.getProof(depositCnt, globalExitRoot.ExitRoots[tID], dbTx)
 		if err != nil {
-			log.Error("error getting merkleProof. Error: ", err)
-			return nil, nil, nil, fmt.Errorf("getting the proof failed, error: %v, network: %d", err, networkID)
+			log.Errorf("error getting merkleProof. Error: %w", err)
+			return nil, nil, nil, fmt.Errorf("getting the proof failed (MAINNET), error: %v, network: %d", err, networkID)
 		}
 		rollupMerkleProof = emptyProof()
 	} else { // Rollup
 		rollupMerkleProof, rollupLeaf, err = s.getRollupExitProof(s.rollupID-1, globalExitRoot.ExitRoots[tID], dbTx)
 		if err != nil {
-			log.Error("error getting rollupProof. Error: ", err)
-			return nil, nil, nil, fmt.Errorf("getting the rollup proof failed, error: %v, network: %d", err, networkID)
+			log.Errorf("error getting rollupProof. Error: %w", err)
+			return nil, nil, nil, fmt.Errorf("getting the rollupexit proof failed, error: %v, network: %d", err, networkID)
 		}
 		merkleProof, err = s.getProof(depositCnt, rollupLeaf, dbTx)
 		if err != nil {
-			log.Error("error getting merkleProof. Error: ", err)
-			return nil, nil, nil, fmt.Errorf("getting the proof failed, error: %v, network: %d", err, networkID)
+			log.Errorf("error getting merkleProof. Error: %w", err)
+			return nil, nil, nil, fmt.Errorf("getting the proof failed (ROLLUP), error: %v, network: %d", err, networkID)
 		}
 	}
 
