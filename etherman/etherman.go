@@ -158,6 +158,9 @@ func NewClient(cfg Config, polygonBridgeAddr, polygonZkEVMGlobalExitRootAddress,
 		return nil, err
 	}
 	log.Debug("rollupID: ", rollupID)
+	if rollupID == 0 {
+		return nil, fmt.Errorf("rollupID is 0, this is not allowed. Check the rollup contract (%s)", polygonZkEvmAddress.String())
+	}
 	var scAddresses []common.Address
 	scAddresses = append(scAddresses, polygonZkEVMGlobalExitRootAddress, polygonBridgeAddr, polygonRollupManagerAddress)
 

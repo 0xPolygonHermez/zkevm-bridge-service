@@ -1,5 +1,5 @@
-//go:build e2e_real_network_eth || e2e_real_network_erc20
-// +build e2e_real_network_eth e2e_real_network_erc20
+//go:build e2e_real_network_eth || e2e_real_network_erc20 || e2e_real_network_msg
+// +build e2e_real_network_eth e2e_real_network_erc20 e2e_real_network_msg
 
 package e2e
 
@@ -32,10 +32,10 @@ import (
 )
 
 type bridge2e2TestConfig struct {
-	ConnectionConfig client.Config
-	ChainID          int
-	TestAddr         string
-	TestAddrPrivate  string
+	ConnectionConfig  client.Config
+	ChainID           int
+	TestL1AddrPrivate string
+	TestL2AddrPrivate string
 }
 
 const (
@@ -120,28 +120,30 @@ func NewBridge2e2TestData(ctx context.Context, cfg *bridge2e2TestConfig) (*bridg
 
 	l1Client, err := utils.NewClient(ctx, cfg.ConnectionConfig.L1NodeURL, cfg.ConnectionConfig.L1BridgeAddr)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Error connecting L1 url: %s Err:%w", cfg.ConnectionConfig.L1NodeURL, err)
 	}
 	l2Client, err := utils.NewClient(ctx, cfg.ConnectionConfig.L2NodeURL, cfg.ConnectionConfig.L2BridgeAddr)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Error connecting L2 url: %s Err:%w", cfg.ConnectionConfig.L2NodeURL, err)
 	}
 	l1BridgeService := client.NewRestClient(cfg.ConnectionConfig.BridgeURL)
 
-	L1auth, err := l1Client.GetSigner(ctx, cfg.TestAddrPrivate)
+	L1auth, err := l1Client.GetSigner(ctx, cfg.TestL1AddrPrivate)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Error auth from L1:  Err:%w", err)
 	}
-	if cfg.TestAddr == "" {
-		cfg.TestAddr = L1auth.From.String()
-	} else {
-		if cfg.TestAddr != L1auth.From.String() {
-			return nil, fmt.Errorf("TestAddr: %s is different from the one in the private key: %s", cfg.TestAddr, L1auth.From.String())
+	/*
+		if cfg.TestAddr == "" {
+			cfg.TestAddr = L1auth.From.String()
+		} else {
+			if cfg.TestAddr != L1auth.From.String() {
+				return nil, fmt.Errorf("TestAddr: %s is different from the one in the private key: %s", cfg.TestAddr, L1auth.From.String())
+			}
 		}
-	}
-	L2auth, err := l2Client.GetSigner(ctx, cfg.TestAddrPrivate)
+	*/
+	L2auth, err := l2Client.GetSigner(ctx, cfg.TestL2AddrPrivate)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Error auth from L2:  Err:%w", err)
 	}
 	return &bridge2e2TestData{
 		L1Client:        l1Client,
@@ -199,14 +201,22 @@ func showCurrentStatus(t *testing.T, ctx context.Context, testData *bridge2e2Tes
 	require.NoError(t, err)
 	fmt.Println("Chain ID L2: ", chainL2.String())
 
-	deposits, _, err := testData.l1BridgeService.GetBridges(testData.cfg.TestAddr, 0, 10)
+	deposits, _, err := testData.l1BridgeService.GetBridges(testData.auth[operations.L1].From.String(), 0, 10)
 	require.NoError(t, err)
 	for _, deposit := range deposits {
 		fmt.Println("Deposit: ", deposit)
 	}
 }
 
-func manualClaimDeposit(ctx context.Context, testData *bridge2e2TestData, deposit *pb.Deposit) error {
+func manualClaimDepositL1(ctx context.Context, testData *bridge2e2TestData, deposit *pb.Deposit) error {
+	return manualClaimDeposit(ctx, testData, deposit, true)
+}
+
+func manualClaimDepositL2(ctx context.Context, testData *bridge2e2TestData, deposit *pb.Deposit) error {
+	return manualClaimDeposit(ctx, testData, deposit, false)
+}
+
+func manualClaimDeposit(ctx context.Context, testData *bridge2e2TestData, deposit *pb.Deposit, L1 bool) error {
 	proof, err := testData.l1BridgeService.GetMerkleProof(deposit.NetworkId, deposit.DepositCnt)
 	if err != nil {
 		log.Fatal("error: ", err)
@@ -223,7 +233,13 @@ func manualClaimDeposit(ctx context.Context, testData *bridge2e2TestData, deposi
 	ger := &etherman.GlobalExitRoot{
 		ExitRoots: []common.Hash{common.HexToHash(proof.MainExitRoot), common.HexToHash(proof.RollupExitRoot)},
 	}
-	err = testData.L1Client.SendClaim(ctx, deposit, smtProof, smtRollupProof, ger, testData.auth[operations.L1])
+	if L1 {
+		log.Infof(" L1.Claim()")
+		err = testData.L1Client.SendClaim(ctx, deposit, smtProof, smtRollupProof, ger, testData.auth[operations.L1])
+	} else {
+		log.Infof(" L2.Claim()")
+		err = testData.L2Client.SendClaim(ctx, deposit, smtProof, smtRollupProof, ger, testData.auth[operations.L2])
+	}
 	return err
 }
 
@@ -249,40 +265,11 @@ func printMkerkleProof(mkProof [mtHeight][32]byte, title string) {
 	}
 }
 
-func waitDepositToBeReadyToClaim(ctx context.Context, testData *bridge2e2TestData, asssetTxHash common.Hash, timeout time.Duration) (*pb.Deposit, error) {
-	startTime := time.Now()
-	for true {
-		fmt.Println("Waiting to deposit fo assetTx: ", asssetTxHash.Hex(), "...")
-		deposits, _, err := testData.l1BridgeService.GetBridges(testData.cfg.TestAddr, 0, 10)
-		if err != nil {
-			return nil, err
-		}
-
-		for _, deposit := range deposits {
-			depositHash := common.HexToHash(deposit.TxHash)
-			if depositHash == asssetTxHash {
-				fmt.Println("Deposit: ", deposit)
-
-				if deposit.ReadyForClaim {
-					fmt.Println("Found claim! Claim Is ready  Elapsed time: ", time.Since(startTime))
-					return deposit, nil
-				}
-			}
-		}
-		if time.Since(startTime) > timeout {
-			return nil, fmt.Errorf("Timeout waiting for deposit to be ready to be claimed")
-		}
-		fmt.Println("Sleeping ", timeBetweenCheckClaim.String(), "Elapsed time: ", time.Since(startTime))
-		time.Sleep(timeBetweenCheckClaim)
-	}
-	return nil, nil
-}
-
 func waitDepositByTxHash(ctx context.Context, testData *bridge2e2TestData, asssetTxHash common.Hash, timeout time.Duration) (*pb.Deposit, error) {
 	startTime := time.Now()
 	for true {
 		fmt.Println("Waiting to deposit fo assetTx: ", asssetTxHash.Hex(), "...")
-		deposits, _, err := testData.l1BridgeService.GetBridges(testData.cfg.TestAddr, 0, 10)
+		deposits, _, err := testData.l1BridgeService.GetBridges(testData.auth[operations.L1].From.String(), 0, 10)
 		if err != nil {
 			return nil, err
 		}
@@ -303,11 +290,11 @@ func waitDepositByTxHash(ctx context.Context, testData *bridge2e2TestData, assse
 	return nil, nil
 }
 func getcurrentBalance(ctx context.Context, testData *bridge2e2TestData) (*ethBalances, error) {
-	balanceL1, err := getBalance(ctx, testData.L1Client, testData.cfg.TestAddrPrivate, nil)
+	balanceL1, err := getBalance(ctx, testData.L1Client, testData.cfg.TestL1AddrPrivate, nil)
 	if err != nil {
 		return nil, err
 	}
-	balanceL2, err := getBalance(ctx, testData.L2Client, testData.cfg.TestAddrPrivate, nil)
+	balanceL2, err := getBalance(ctx, testData.L2Client, testData.cfg.TestL2AddrPrivate, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -361,11 +348,78 @@ func assetEthGeneric(ctx context.Context, client *utils.Client, destNetwork uint
 	return tx.Hash(), err
 }
 
+func waitDepositToBeReadyToClaim(ctx context.Context, testData *bridge2e2TestData, asssetTxHash common.Hash, timeout time.Duration, destAddr string) (*pb.Deposit, error) {
+	startTime := time.Now()
+	if len(destAddr) < 1 {
+		destAddr = testData.auth[operations.L1].From.String()
+	}
+	for true {
+		fmt.Println("Waiting to deposit (", destAddr, ") fo assetTx: ", asssetTxHash.Hex(), "...")
+		deposits, _, err := testData.l1BridgeService.GetBridges(destAddr, 0, 100)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, deposit := range deposits {
+			depositHash := common.HexToHash(deposit.TxHash)
+			if depositHash == asssetTxHash {
+				fmt.Println("Deposit found: ", deposit, " ready:", deposit.ReadyForClaim)
+
+				if deposit.ReadyForClaim {
+					fmt.Println("Found claim! Claim Is ready  Elapsed time: ", time.Since(startTime))
+					return deposit, nil
+				}
+			}
+		}
+		if time.Since(startTime) > timeout {
+			return nil, fmt.Errorf("Timeout waiting for deposit to be ready to be claimed")
+		}
+		fmt.Println("Sleeping ", timeBetweenCheckClaim.String(), "Elapsed time: ", time.Since(startTime))
+		time.Sleep(timeBetweenCheckClaim)
+	}
+	return nil, nil
+}
+
 func waitToAutoClaim(t *testing.T, ctx context.Context, testData *bridge2e2TestData, asssetTxHash common.Hash, timeout time.Duration) {
+	startTime := time.Now()
+	deposit, err := waitDepositToBeReadyToClaim(ctx, testData, asssetTxHash, timeout, testData.auth[operations.L1].From.String())
+	require.NoError(t, err)
+	emptyHash := common.Hash{}
+	claimTxHash := common.HexToHash(deposit.ClaimTxHash)
+	if claimTxHash != emptyHash {
+		fmt.Println("Found claim! Claim Tx Hash: ", claimTxHash.Hex())
+		// The claim from L1 -> L2 is done by the bridge service to L2
+		receipt, err := waitTxToBeMinedByTxHash(ctx, testData.L2Client, claimTxHash, 60*time.Second)
+		require.NoError(t, err)
+		fmt.Println("Receipt: ", receipt, " Elapsed time: ", time.Since(startTime))
+		return
+	}
+	require.Fail(t, "No auto-claim done, deposit:", deposit)
+}
+
+func waitToAutoClaimTx(t *testing.T, ctx context.Context, testData *bridge2e2TestData, deposit *pb.Deposit, timeout time.Duration) error {
+	startTime := time.Now()
+	emptyHash := common.Hash{}
+	claimTxHash := common.HexToHash(deposit.ClaimTxHash)
+	if claimTxHash != emptyHash {
+		log.Debugf("Found claim! Claim Tx Hash: ", claimTxHash.Hex())
+		// The claim from L1 -> L2 is done by the bridge service to L2
+		receipt, err := waitTxToBeMinedByTxHash(ctx, testData.L2Client, claimTxHash, 60*time.Second)
+		if err != nil {
+			return err
+		}
+		log.Debug("Receipt: ", receipt, " Elapsed time: ", time.Since(startTime))
+		return nil
+	}
+	return fmt.Errorf("No auto-claim tx, deposit: %+v", deposit)
+
+}
+
+func waitToAutoClaim2(t *testing.T, ctx context.Context, testData *bridge2e2TestData, asssetTxHash common.Hash, timeout time.Duration) {
 	startTime := time.Now()
 	for true {
 		fmt.Println("Waiting to deposit fo assetTx: ", asssetTxHash.Hex(), "...")
-		deposits, _, err := testData.l1BridgeService.GetBridges(testData.cfg.TestAddr, 0, 10)
+		deposits, _, err := testData.l1BridgeService.GetBridges(testData.auth[operations.L1].From.String(), 0, 10)
 		require.NoError(t, err)
 
 		for _, deposit := range deposits {
@@ -374,6 +428,7 @@ func waitToAutoClaim(t *testing.T, ctx context.Context, testData *bridge2e2TestD
 				fmt.Println("Deposit: ", deposit, " Elapsed time: ", time.Since(startTime))
 				claimTxHash := common.HexToHash(deposit.ClaimTxHash)
 				emptyHash := common.Hash{}
+
 				if claimTxHash != emptyHash {
 					fmt.Println("Found claim! Claim Tx Hash: ", claimTxHash.Hex())
 					// The claim from L1 -> L2 is done by the bridge service to L2
@@ -382,12 +437,16 @@ func waitToAutoClaim(t *testing.T, ctx context.Context, testData *bridge2e2TestD
 					fmt.Println("Receipt: ", receipt, " Elapsed time: ", time.Since(startTime))
 					return
 				}
+				if deposit.ReadyForClaim && claimTxHash == emptyHash {
+					log.Warnf("Deposit is ready for claim but no claim tx hash found,maybe autoclaim is disabled?. Deposit: %+v", deposit)
+				}
 			}
 		}
 		if time.Since(startTime) > timeout {
 			require.Fail(t, "Timeout waiting for deposit to be automatically claimed by Bridge Service")
 		}
-		time.Sleep(5 * time.Second)
+		fmt.Println("Sleeping ", timeBetweenCheckClaim.String(), "Elapsed time: ", time.Since(startTime))
+		time.Sleep(timeBetweenCheckClaim)
 	}
 }
 
