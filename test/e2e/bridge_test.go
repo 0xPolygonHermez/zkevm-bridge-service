@@ -626,9 +626,11 @@ func TestE2E(t *testing.T) {
 	})
 }
 
+const mtProofHeight = 32
+
 type claimResult struct {
-	smtProof       [mtHeight][bridgectrl.KeyLen]byte
-	smtRollupProof [mtHeight][bridgectrl.KeyLen]byte
+	smtProof       [mtProofHeight][bridgectrl.KeyLen]byte
+	smtRollupProof [mtProofHeight][bridgectrl.KeyLen]byte
 	globaExitRoot  *etherman.GlobalExitRoot
 }
 
