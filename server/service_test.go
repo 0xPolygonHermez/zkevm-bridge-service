@@ -21,7 +21,7 @@ func TestGetClaimProofbyGER(t *testing.T) {
 	deposit := &etherman.Deposit{}
 	mockStorage.EXPECT().GetDeposit(mock.Anything, depositCnt, networkID, mock.Anything).Return(deposit, nil)
 	exitRoot := etherman.GlobalExitRoot{
-		ExitRoots: []common.Hash{common.Hash{}, common.Hash{}},
+		ExitRoots: []common.Hash{{}, {}},
 	}
 	mockStorage.EXPECT().GetExitRootByGER(mock.Anything, GER, mock.Anything).Return(&exitRoot, nil)
 	node := [][]byte{{}, {}}
