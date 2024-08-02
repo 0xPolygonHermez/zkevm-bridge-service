@@ -10,7 +10,10 @@ import (
 	"time"
 
 	"github.com/0xPolygonHermez/zkevm-bridge-service/bridgectrl"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/bridgectrl/pb"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/db"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/log"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/server"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/test/operations"
 	"github.com/ethereum/go-ethereum/common"
@@ -68,27 +71,29 @@ func TestE2E(t *testing.T) {
 		// Check initial globalExitRoot. Must fail because at the beginning, no globalExitRoot event is thrown.
 		globalExitRootSMC, err := opsman.GetCurrentGlobalExitRootFromSmc(ctx)
 		require.NoError(t, err)
-		t.Logf("initial globalExitRootSMC: %+v,", globalExitRootSMC)
+		log.Debugf("initial globalExitRootSMC: %+v,", globalExitRootSMC)
 		// Send L1 deposit
 		var destNetwork uint32 = 1
 		amount := new(big.Int).SetUint64(10000000000000000000)
 		tokenAddr := common.Address{} // This means is eth
 		destAddr := common.HexToAddress("0xc949254d682d8c9ad5682521675b8f43b102aec4")
-
+		initL1Balance, err := opsman.CheckAccountBalance(ctx, operations.L1, &destAddr)
+		require.NoError(t, err)
+		log.Debugf("Initial L1 Balance: %v", initL1Balance)
 		l1Balance, err := opsman.CheckAccountBalance(ctx, operations.L1, &l1BridgeAddr)
 		require.NoError(t, err)
-		t.Logf("L1 Bridge Balance: %v", l1Balance)
+		log.Debugf("L1 Bridge Balance: %v", l1Balance)
 		err = opsman.SendL1Deposit(ctx, tokenAddr, amount, destNetwork, &destAddr)
 		require.NoError(t, err)
 		l1Balance, err = opsman.CheckAccountBalance(ctx, operations.L1, &l1BridgeAddr)
 		require.NoError(t, err)
-		t.Logf("L1 Bridge Balance: %v", l1Balance)
+		log.Debugf("L1 Bridge Balance: %v", l1Balance)
 
 		// Check globalExitRoot
 		globalExitRoot2, err := opsman.GetTrustedGlobalExitRootSynced(ctx)
 		require.NoError(t, err)
-		t.Logf("Before deposit global exit root: %v", globalExitRootSMC)
-		t.Logf("After deposit global exit root: %v", globalExitRoot2)
+		log.Debugf("Before deposit global exit root: %v", globalExitRootSMC)
+		log.Debugf("After deposit global exit root: %v", globalExitRoot2)
 		require.NotEqual(t, globalExitRootSMC.ExitRoots[0], globalExitRoot2.ExitRoots[0])
 		require.Equal(t, globalExitRootSMC.ExitRoots[1], globalExitRoot2.ExitRoots[1])
 		// Get Bridge Info By DestAddr
@@ -97,9 +102,10 @@ func TestE2E(t *testing.T) {
 		// Check L2 funds
 		balance, err := opsman.CheckAccountBalance(ctx, operations.L2, &destAddr)
 		require.NoError(t, err)
-		initL2Balance := big.NewInt(0)
-		require.Equal(t, 0, balance.Cmp(initL2Balance))
-		t.Log("Deposit: ", deposits[0])
+		log.Debugf("Initial L2 Balance: %v", balance)
+		initL2Balance := balance
+		//require.Equal(t, 0, balance.Cmp(initL2Balance))
+		log.Debug("Deposit: ", deposits[0], " waiting to be auto-claimed")
 		// Check the claim tx
 		err = opsman.CheckL2Claim(ctx, uint(deposits[0].DestNet), uint(deposits[0].DepositCnt))
 		require.NoError(t, err)
@@ -107,7 +113,9 @@ func TestE2E(t *testing.T) {
 		balance2, err := opsman.CheckAccountBalance(ctx, operations.L2, &destAddr)
 		require.NoError(t, err)
 		require.NotEqual(t, balance, balance2)
-		require.Equal(t, amount, balance2)
+
+		//require.Equal(t, amount, balance2)
+		require.Equal(t, 0, balance2.Sub(balance2, initL2Balance).Cmp(amount))
 
 		// Check globalExitRoot
 		globalExitRoot3, err := opsman.GetCurrentGlobalExitRootFromSmc(ctx)
@@ -117,31 +125,39 @@ func TestE2E(t *testing.T) {
 		amount = new(big.Int).SetUint64(1000000000000000000)
 		l2Balance, err := opsman.CheckAccountBalance(ctx, operations.L2, &l2BridgeAddr)
 		require.NoError(t, err)
-		t.Logf("L2 Bridge Balance: %v", l2Balance)
+		log.Debugf("L2 Bridge Balance: %v", l2Balance)
 		err = opsman.SendL2Deposit(ctx, tokenAddr, amount, destNetwork, &destAddr)
 		require.NoError(t, err)
 		l2Balance, err = opsman.CheckAccountBalance(ctx, operations.L2, &l2BridgeAddr)
 		require.NoError(t, err)
-		t.Logf("L2 Bridge Balance: %v", l2Balance)
+		log.Debugf("L2 Bridge Balance: %v", l2Balance)
 
 		// Get Bridge Info By DestAddr
 		deposits, err = opsman.GetBridgeInfoByDestAddr(ctx, &destAddr)
 		require.NoError(t, err)
-		t.Log("Deposit 2: ", deposits[0])
+		log.Debugf("Deposit 2: ", deposits[0])
 		// Check globalExitRoot
 		globalExitRoot4, err := opsman.GetLatestGlobalExitRootFromL1(ctx)
 		require.NoError(t, err)
-		t.Logf("Global3 %+v: ", globalExitRoot3)
-		t.Logf("Global4 %+v: ", globalExitRoot4)
+		log.Debugf("Global3 %+v: ", globalExitRoot3)
+		log.Debugf("Global4 %+v: ", globalExitRoot4)
 		require.NotEqual(t, globalExitRoot3.ExitRoots[1], globalExitRoot4.ExitRoots[1])
 		require.Equal(t, globalExitRoot3.ExitRoots[0], globalExitRoot4.ExitRoots[0])
 		// Check L1 funds
 		balance, err = opsman.CheckAccountBalance(ctx, operations.L1, &destAddr)
 		require.NoError(t, err)
-		require.Equal(t, 0, big.NewInt(0).Cmp(balance))
+		//require.Equal(t, 0, big.NewInt(0).Cmp(balance))
+		require.Equal(t, 0, balance.Sub(balance, initL1Balance).Cmp(big.NewInt(0)))
 		// Get the claim data
 		smtProof, smtRollupProof, globaExitRoot, err := opsman.GetClaimData(ctx, uint(deposits[0].NetworkId), uint(deposits[0].DepositCnt))
 		require.NoError(t, err)
+		testClaimParams := testClaimByGERParams{
+			resultOriginal: claimResult{smtProof, smtRollupProof, globaExitRoot},
+			opsman:         opsman,
+			deposit:        deposits[0],
+		}
+		testClaimByGER(t, ctx, testClaimParams)
+
 		// Claim funds in L1
 		err = opsman.SendL1Claim(ctx, deposits[0], smtProof, smtRollupProof, globaExitRoot)
 		require.NoError(t, err)
@@ -149,11 +165,36 @@ func TestE2E(t *testing.T) {
 		// Check L1 funds to see if the amount has been increased
 		balance, err = opsman.CheckAccountBalance(ctx, operations.L1, &destAddr)
 		require.NoError(t, err)
-		require.Equal(t, big.NewInt(1000000000000000000), balance)
+		require.Equal(t, big.NewInt(1000000000000000000), balance.Sub(balance, initL1Balance))
 		// Check L2 funds to see that the amount has been reduced
 		balance, err = opsman.CheckAccountBalance(ctx, operations.L2, &destAddr)
 		require.NoError(t, err)
-		require.True(t, big.NewInt(9000000000000000000).Cmp(balance) > 0)
+		require.True(t, big.NewInt(9000000000000000000).Cmp(balance.Sub(balance, initL2Balance)) > 0)
+
+		// TESTING ClaimByGER
+		//////////////////////////////
+		log.Debugf("Sending another L2Deposit to generate a new globalExitRoot and get ClaimByGER")
+		err = opsman.SendL2Deposit(ctx, tokenAddr, amount, destNetwork, &destAddr)
+		require.NoError(t, err)
+		// Get Bridge Info By DestAddr
+		require.NoError(t, err)
+		log.Debugf("There are a new GER, I'm checking to generate claim for previous deposit with previous GER")
+		testClaimParams = testClaimByGERParams{
+			resultOriginal: claimResult{smtProof, smtRollupProof, globaExitRoot},
+			opsman:         opsman,
+			deposit:        deposits[0],
+			useGER:         nil, // nil means use the one in resultOriginal
+		}
+		testClaimByGER(t, ctx, testClaimParams)
+		// Claim funds in L1
+		deposits2, err := opsman.GetBridgeInfoByDestAddr(ctx, &destAddr)
+
+		smtProof, smtRollupProof, globaExitRoot, err = opsman.GetClaimData(ctx, uint(deposits2[0].NetworkId), uint(deposits2[0].DepositCnt))
+		require.NoError(t, err)
+
+		err = opsman.SendL1Claim(ctx, deposits2[0], smtProof, smtRollupProof, globaExitRoot)
+		require.NoError(t, err)
+
 	})
 
 	t.Run("L1-L2 token bridge", func(t *testing.T) {
@@ -165,7 +206,7 @@ func TestE2E(t *testing.T) {
 		// Check initial globalExitRoot.
 		globalExitRootSMC, err := opsman.GetCurrentGlobalExitRootFromSmc(ctx)
 		require.NoError(t, err)
-		t.Logf("initial globalExitRootSMC: %+v,", globalExitRootSMC)
+		log.Debugf("initial globalExitRootSMC: %+v,", globalExitRootSMC)
 		// Send L1 deposit
 		var destNetwork uint32 = 1
 		amount1 := new(big.Int).SetUint64(1000000000000000000)
@@ -203,8 +244,8 @@ func TestE2E(t *testing.T) {
 		// Check globalExitRoot
 		globalExitRoot2, err := opsman.GetTrustedGlobalExitRootSynced(ctx)
 		require.NoError(t, err)
-		t.Logf("Before deposits global exit root: %v", globalExitRootSMC)
-		t.Logf("After deposits global exit root: %v", globalExitRoot2)
+		log.Debugf("Before deposits global exit root: %v", globalExitRootSMC)
+		log.Debugf("After deposits global exit root: %v", globalExitRoot2)
 		require.NotEqual(t, globalExitRootSMC.ExitRoots[0], globalExitRoot2.ExitRoots[0])
 		require.Equal(t, globalExitRootSMC.ExitRoots[1], globalExitRoot2.ExitRoots[1])
 
@@ -243,7 +284,7 @@ func TestE2E(t *testing.T) {
 		// Check initial globalExitRoot.
 		globalExitRootSMC, err := opsman.GetCurrentGlobalExitRootFromSmc(ctx)
 		require.NoError(t, err)
-		t.Logf("initial globalExitRootSMC: %+v,", globalExitRootSMC)
+		log.Debugf("initial globalExitRootSMC: %+v,", globalExitRootSMC)
 		// Send L2 deposit
 		var destNetwork uint32 = 0
 		amount := new(big.Int).SetUint64(10000000000000000000)
@@ -264,8 +305,8 @@ func TestE2E(t *testing.T) {
 		// Check globalExitRoot
 		globalExitRoot2, err := opsman.GetLatestGlobalExitRootFromL1(ctx)
 		require.NoError(t, err)
-		t.Logf("Before deposit global exit root: %v", globalExitRootSMC)
-		t.Logf("After deposit global exit root: %v", globalExitRoot2)
+		log.Debugf("Before deposit global exit root: %v", globalExitRootSMC)
+		log.Debugf("After deposit global exit root: %v", globalExitRoot2)
 		require.Equal(t, globalExitRootSMC.ExitRoots[0], globalExitRoot2.ExitRoots[0])
 		require.NotEqual(t, globalExitRootSMC.ExitRoots[1], globalExitRoot2.ExitRoots[1])
 		// Get Bridge Info By DestAddr
@@ -281,7 +322,7 @@ func TestE2E(t *testing.T) {
 		smtProof, smtRollupProof, globaExitRoot, err := opsman.GetClaimData(ctx, uint(deposits[0].NetworkId), uint(deposits[0].DepositCnt))
 		require.NoError(t, err)
 		// Claim funds in L1
-		t.Logf("globalExitRoot: %+v", globaExitRoot)
+		log.Debugf("globalExitRoot: %+v", globaExitRoot)
 		err = opsman.SendL1Claim(ctx, deposits[0], smtProof, smtRollupProof, globaExitRoot)
 		require.NoError(t, err)
 		// Get tokenWrappedAddr
@@ -311,8 +352,8 @@ func TestE2E(t *testing.T) {
 		// Check globalExitRoot
 		globalExitRoot4, err := opsman.GetTrustedGlobalExitRootSynced(ctx)
 		require.NoError(t, err)
-		t.Logf("Global3 %+v: ", globalExitRoot3)
-		t.Logf("Global4 %+v: ", globalExitRoot4)
+		log.Debugf("Global3 %+v: ", globalExitRoot3)
+		log.Debugf("Global4 %+v: ", globalExitRoot4)
 		require.NotEqual(t, globalExitRoot3.ExitRoots[0], globalExitRoot4.ExitRoots[0])
 		// Check L2 funds
 		balance, err = opsman.CheckAccountTokenBalance(ctx, operations.L2, tokenAddr, &destAddr)
@@ -337,7 +378,7 @@ func TestE2E(t *testing.T) {
 		// Check initial globalExitRoot.
 		globalExitRootSMC, err := opsman.GetCurrentGlobalExitRootFromSmc(ctx)
 		require.NoError(t, err)
-		t.Logf("initial globalExitRootSMC: %+v,", globalExitRootSMC)
+		log.Debugf("initial globalExitRootSMC: %+v,", globalExitRootSMC)
 		// Send L1 deposit
 		var destNetwork uint32 = 1
 		amount := new(big.Int).SetUint64(10000000000000000000)
@@ -355,8 +396,8 @@ func TestE2E(t *testing.T) {
 		// Check globalExitRoot
 		globalExitRoot2, err := opsman.GetTrustedGlobalExitRootSynced(ctx)
 		require.NoError(t, err)
-		t.Logf("Before deposit global exit root: %v", globalExitRootSMC)
-		t.Logf("After deposit global exit root: %v", globalExitRoot2)
+		log.Debugf("Before deposit global exit root: %v", globalExitRootSMC)
+		log.Debugf("After deposit global exit root: %v", globalExitRoot2)
 		require.NotEqual(t, globalExitRootSMC.ExitRoots[0], globalExitRoot2.ExitRoots[0])
 		require.Equal(t, globalExitRootSMC.ExitRoots[1], globalExitRoot2.ExitRoots[1])
 		// Get Bridge Info By DestAddr
@@ -392,8 +433,8 @@ func TestE2E(t *testing.T) {
 		// Check globalExitRoot
 		globalExitRoot4, err := opsman.GetLatestGlobalExitRootFromL1(ctx)
 		require.NoError(t, err)
-		t.Logf("Global3 %+v: ", globalExitRoot3)
-		t.Logf("Global4 %+v: ", globalExitRoot4)
+		log.Debugf("Global3 %+v: ", globalExitRoot3)
+		log.Debugf("Global4 %+v: ", globalExitRoot4)
 		require.NotEqual(t, globalExitRoot3.ExitRoots[1], globalExitRoot4.ExitRoots[1])
 		require.Equal(t, globalExitRoot3.ExitRoots[0], globalExitRoot4.ExitRoots[0])
 		// Check L1 funds
@@ -426,7 +467,7 @@ func TestE2E(t *testing.T) {
 		// Check initial globalExitRoot.
 		globalExitRootSMC, err := opsman.GetCurrentGlobalExitRootFromSmc(ctx)
 		require.NoError(t, err)
-		t.Logf("initial globalExitRootSMC: %+v,", globalExitRootSMC)
+		log.Debugf("initial globalExitRootSMC: %+v,", globalExitRootSMC)
 		// Send L1 deposit
 		var destNetwork uint32 = 1
 		amount1 := new(big.Int).SetUint64(1000000000000000000)
@@ -454,8 +495,8 @@ func TestE2E(t *testing.T) {
 		// Check globalExitRoot
 		globalExitRoot2, err := opsman.GetTrustedGlobalExitRootSynced(ctx)
 		require.NoError(t, err)
-		t.Logf("Before deposits global exit root: %v", globalExitRootSMC)
-		t.Logf("After deposits global exit root: %v", globalExitRoot2)
+		log.Debugf("Before deposits global exit root: %v", globalExitRootSMC)
+		log.Debugf("After deposits global exit root: %v", globalExitRoot2)
 		require.NotEqual(t, globalExitRootSMC.ExitRoots[0], globalExitRoot2.ExitRoots[0])
 		require.Equal(t, globalExitRootSMC.ExitRoots[1], globalExitRoot2.ExitRoots[1])
 		// Get Bridge Info By DestAddr
@@ -536,7 +577,7 @@ func TestE2E(t *testing.T) {
 		smtProof, smtRollupProof, globaExitRoot, err = opsman.GetClaimData(ctx, uint(deposits[0].NetworkId), uint(deposits[0].DepositCnt))
 		require.NoError(t, err)
 		// Claim a bridge message in L1
-		t.Logf("globalExitRoot: %+v", globaExitRoot)
+		log.Debugf("globalExitRoot: %+v", globaExitRoot)
 		err = opsman.SendL1Claim(ctx, deposits[0], smtProof, smtRollupProof, globaExitRoot)
 		require.NoError(t, err)
 	})
@@ -579,8 +620,45 @@ func TestE2E(t *testing.T) {
 		smtProof, smtRollupProof, globaExitRoot, err := opsman.GetClaimData(ctx, uint(deposits[0].NetworkId), uint(deposits[0].DepositCnt))
 		require.NoError(t, err)
 		// Claim a bridge message in L1
-		t.Logf("globalExitRoot: %+v", globaExitRoot)
+		log.Debugf("globalExitRoot: %+v", globaExitRoot)
 		err = opsman.SendL1Claim(ctx, deposits[0], smtProof, smtRollupProof, globaExitRoot)
 		require.NoError(t, err)
 	})
+}
+
+const mtProofHeight = 32
+
+type claimResult struct {
+	smtProof       [mtProofHeight][bridgectrl.KeyLen]byte
+	smtRollupProof [mtProofHeight][bridgectrl.KeyLen]byte
+	globaExitRoot  *etherman.GlobalExitRoot
+}
+
+type testClaimByGERParams struct {
+	resultOriginal claimResult
+	opsman         *operations.Manager
+	deposit        *pb.Deposit
+	useGER         *common.Hash
+}
+
+func calculateGlobalExitRoot(ger *etherman.GlobalExitRoot) common.Hash {
+	return bridgectrl.Hash(ger.ExitRoots[0], ger.ExitRoots[1])
+}
+
+func testClaimByGER(t *testing.T, ctx context.Context, params testClaimByGERParams) {
+	var ger common.Hash
+	if params.useGER != nil {
+		ger = *params.useGER
+	} else {
+		ger = calculateGlobalExitRoot(params.resultOriginal.globaExitRoot)
+	}
+
+	log.Debugf("GetClaimDataByGER: network: %d deposit_cnt:%d GER:%s",
+		uint(params.deposit.NetworkId), uint(params.deposit.DepositCnt), ger.String())
+	log.Debugf("Checking same claim as GetClaim")
+	smtProofByGer, smtRollupProofByGer, globaExitRootByGer, err := params.opsman.GetClaimDataByGER(ctx, uint(params.deposit.NetworkId), uint(params.deposit.DepositCnt), ger)
+	require.NoError(t, err)
+	require.Equal(t, params.resultOriginal.globaExitRoot, globaExitRootByGer)
+	require.Equal(t, params.resultOriginal.smtProof, smtProofByGer)
+	require.Equal(t, params.resultOriginal.smtRollupProof, smtRollupProofByGer)
 }

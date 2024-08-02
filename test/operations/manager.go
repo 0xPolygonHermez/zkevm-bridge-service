@@ -554,6 +554,34 @@ func (m *Manager) CheckAccountTokenBalance(ctx context.Context, network NetworkS
 	return balance, nil
 }
 
+// GetClaimDataByGER gets the claim data by ger
+func (m *Manager) GetClaimDataByGER(ctx context.Context, networkID, depositCount uint, ger common.Hash) ([mtHeight][bridgectrl.KeyLen]byte, [mtHeight][bridgectrl.KeyLen]byte, *etherman.GlobalExitRoot, error) {
+	res, err := m.bridgeService.GetProofByGER(context.Background(), &pb.GetProofByGERRequest{
+		NetId:      uint32(networkID),
+		DepositCnt: uint64(depositCount),
+		Ger:        ger.String(),
+	})
+	if err != nil {
+		return [mtHeight][32]byte{}, [mtHeight][32]byte{}, nil, err
+	}
+	merkleproof := [mtHeight][bridgectrl.KeyLen]byte{}
+	rollupMerkleProof := [mtHeight][bridgectrl.KeyLen]byte{}
+	for i, p := range res.Proof.MerkleProof {
+		var proof [bridgectrl.KeyLen]byte
+		copy(proof[:], common.FromHex(p))
+		merkleproof[i] = proof
+		var rollupProof [bridgectrl.KeyLen]byte
+		copy(rollupProof[:], common.FromHex(res.Proof.RollupMerkleProof[i]))
+		rollupMerkleProof[i] = rollupProof
+	}
+	return merkleproof, rollupMerkleProof, &etherman.GlobalExitRoot{
+		ExitRoots: []common.Hash{
+			common.HexToHash(res.Proof.MainExitRoot),
+			common.HexToHash(res.Proof.RollupExitRoot),
+		},
+	}, nil
+}
+
 // GetClaimData gets the claim data
 func (m *Manager) GetClaimData(ctx context.Context, networkID, depositCount uint) ([mtHeight][bridgectrl.KeyLen]byte, [mtHeight][bridgectrl.KeyLen]byte, *etherman.GlobalExitRoot, error) {
 	res, err := m.bridgeService.GetProof(context.Background(), &pb.GetProofRequest{

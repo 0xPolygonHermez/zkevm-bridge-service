@@ -39,4 +39,5 @@ type StorageInterface interface {
 type BridgeServiceInterface interface {
 	GetBridges(ctx context.Context, req *pb.GetBridgesRequest) (*pb.GetBridgesResponse, error)
 	GetProof(ctx context.Context, req *pb.GetProofRequest) (*pb.GetProofResponse, error)
+	GetProofByGER(ctx context.Context, req *pb.GetProofByGERRequest) (*pb.GetProofResponse, error)
 }
