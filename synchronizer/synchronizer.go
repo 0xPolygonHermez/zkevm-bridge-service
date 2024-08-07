@@ -247,8 +247,8 @@ func (s *ClientSynchronizer) syncBlocks(lastBlockSynced *etherman.Block) (*ether
 	}
 	log.Debugf("NetworkID: %d, after checkReorg: no reorg detected", s.networkID)
 
-	var fromBlock uint64
-	if lastBlockSynced.BlockNumber > 0 {
+	fromBlock := lastBlockSynced.BlockNumber + 1
+	if lastBlockSynced.BlockNumber > 0 && s.synced{
 		fromBlock = lastBlockSynced.BlockNumber
 	}
 	toBlock := fromBlock + s.cfg.SyncChunkSize
@@ -257,6 +257,12 @@ func (s *ClientSynchronizer) syncBlocks(lastBlockSynced *etherman.Block) (*ether
 		if toBlock > lastKnownBlock.Uint64() {
 			log.Debug("Setting toBlock to the lastKnownBlock: ", lastKnownBlock)
 			toBlock = lastKnownBlock.Uint64()
+			if !s.synced {
+				log.Infof("NetworkID %d Synced!", s.networkID)
+				waitDuration = s.cfg.SyncInterval.Duration
+				s.synced = true
+				s.chSynced <- s.networkID
+			}
 		}
 		if fromBlock > toBlock {
 			log.Debug("FromBlock is higher than toBlock. Skipping...")
@@ -283,50 +289,52 @@ func (s *ClientSynchronizer) syncBlocks(lastBlockSynced *etherman.Block) (*ether
 			log.Warn(err)
 			return lastBlockSynced, err
 		}
-		var initBlockReceived *etherman.Block
-		if len(blocks) != 0 {
-			initBlockReceived = &blocks[0]
-			// First position of the array must be deleted
-			blocks = removeBlockElement(blocks, 0)
-		} else {
-			// Reorg detected
-			log.Infof("NetworkID: %d, reorg detected in block %d while querying GetRollupInfoByBlockRange. Rolling back to at least the previous block", s.networkID, fromBlock)
-			prevBlock, err := s.storage.GetPreviousBlock(s.ctx, s.networkID, 1, nil)
-			if errors.Is(err, gerror.ErrStorageNotFound) {
-				log.Warnf("networkID: %d, error checking reorg: previous block not found in db: %v", s.networkID, err)
-				prevBlock = &etherman.Block{}
-			} else if err != nil {
-				log.Errorf("networkID: %d, error getting previousBlock from db. Error: %v", s.networkID, err)
-				return lastBlockSynced, err
+		if s.synced {
+			var initBlockReceived *etherman.Block
+			if len(blocks) != 0 {
+				initBlockReceived = &blocks[0]
+				// First position of the array must be deleted
+				blocks = removeBlockElement(blocks, 0)
+			} else {
+				// Reorg detected
+				log.Infof("NetworkID: %d, reorg detected in block %d while querying GetRollupInfoByBlockRange. Rolling back to at least the previous block", s.networkID, fromBlock)
+				prevBlock, err := s.storage.GetPreviousBlock(s.ctx, s.networkID, 1, nil)
+				if errors.Is(err, gerror.ErrStorageNotFound) {
+					log.Warnf("networkID: %d, error checking reorg: previous block not found in db: %v", s.networkID, err)
+					prevBlock = &etherman.Block{}
+				} else if err != nil {
+					log.Errorf("networkID: %d, error getting previousBlock from db. Error: %v", s.networkID, err)
+					return lastBlockSynced, err
+				}
+				blockReorged, err := s.checkReorg(prevBlock, nil)
+				if err != nil {
+					log.Errorf("networkID: %d, error checking reorgs in previous blocks. Error: %v", s.networkID, err)
+					return lastBlockSynced, err
+				}
+				if blockReorged == nil {
+					blockReorged = prevBlock
+				}
+				err = s.resetState(blockReorged.BlockNumber)
+				if err != nil {
+					log.Errorf("networkID: %d, error resetting the state to a previous block. Retrying... Err: %v", s.networkID, err)
+					return lastBlockSynced, fmt.Errorf("error resetting the state to a previous block")
+				}
+				return blockReorged, nil
 			}
-			blockReorged, err := s.checkReorg(prevBlock, nil)
+			// Check reorg again to be sure that the chain has not changed between the previous checkReorg and the call GetRollupInfoByBlockRange
+			block, err := s.checkReorg(lastBlockSynced, initBlockReceived)
 			if err != nil {
-				log.Errorf("networkID: %d, error checking reorgs in previous blocks. Error: %v", s.networkID, err)
-				return lastBlockSynced, err
+				log.Errorf("networkID: %d, error checking reorgs. Retrying... Err: %v", s.networkID, err)
+				return lastBlockSynced, fmt.Errorf("networkID: %d, error checking reorgs", s.networkID)
 			}
-			if blockReorged == nil {
-				blockReorged = prevBlock
+			if block != nil {
+				err = s.resetState(block.BlockNumber)
+				if err != nil {
+					log.Errorf("networkID: %d, error resetting the state to a previous block. Retrying... Err: %v", s.networkID, err)
+					return lastBlockSynced, fmt.Errorf("networkID: %d, error resetting the state to a previous block", s.networkID)
+				}
+				return block, nil
 			}
-			err = s.resetState(blockReorged.BlockNumber)
-			if err != nil {
-				log.Errorf("networkID: %d, error resetting the state to a previous block. Retrying... Err: %v", s.networkID, err)
-				return lastBlockSynced, fmt.Errorf("error resetting the state to a previous block")
-			}
-			return blockReorged, nil
-		}
-		// Check reorg again to be sure that the chain has not changed between the previous checkReorg and the call GetRollupInfoByBlockRange
-		block, err := s.checkReorg(lastBlockSynced, initBlockReceived)
-		if err != nil {
-			log.Errorf("networkID: %d, error checking reorgs. Retrying... Err: %v", s.networkID, err)
-			return lastBlockSynced, fmt.Errorf("networkID: %d, error checking reorgs", s.networkID)
-		}
-		if block != nil {
-			err = s.resetState(block.BlockNumber)
-			if err != nil {
-				log.Errorf("networkID: %d, error resetting the state to a previous block. Retrying... Err: %v", s.networkID, err)
-				return lastBlockSynced, fmt.Errorf("networkID: %d, error resetting the state to a previous block", s.networkID)
-			}
-			return block, nil
 		}
 
 		err = s.processBlockRange(blocks, order)
@@ -348,9 +356,15 @@ func (s *ClientSynchronizer) syncBlocks(lastBlockSynced *etherman.Block) (*ether
 				s.chSynced <- s.networkID
 			}
 			break
+		} else if !s.synced {
+			fromBlock = toBlock + 1
+			toBlock = fromBlock + s.cfg.SyncChunkSize
+			log.Debugf("Not synced yet. Avoid check the same interval. New interval: from block %d, to block %d", fromBlock, toBlock)
+		} else {
+			fromBlock = lastBlockSynced.BlockNumber
+			toBlock = toBlock + s.cfg.SyncChunkSize
+			log.Debugf("Synced!. New interval: from block %d, to block %d", fromBlock, toBlock)
 		}
-		fromBlock = lastBlockSynced.BlockNumber
-		toBlock = toBlock + s.cfg.SyncChunkSize
 	}
 
 	return lastBlockSynced, nil

@@ -484,12 +484,6 @@ func TestE2E(t *testing.T) {
 		// Check the claim tx
 		err = opsman.CheckL2Claim(ctx, uint(deposits[0].DestNet), uint(deposits[0].DepositCnt))
 		require.NoError(t, err)
-		balance, err = opsman.CheckAccountTokenBalance(ctx, "l2", tokenWrapped.WrappedTokenAddress, &destAddr)
-		require.NoError(t, err)
-
-		// Check the claim tx
-		err = opsman.CheckL2Claim(ctx, uint(deposits[0].DestNet), uint(deposits[0].DepositCnt))
-		require.NoError(t, err)
 		// Check L2 funds to see if the amount has been increased
 		balance, err = opsman.CheckAccountTokenBalance(ctx, "l2", tokenWrapped.WrappedTokenAddress, &destAddr)
 		require.NoError(t, err)
