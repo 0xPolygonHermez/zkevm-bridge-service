@@ -585,9 +585,9 @@ func (s *ClientSynchronizer) checkReorg(latestStoredBlock, syncedBlock *etherman
 }
 
 func (s *ClientSynchronizer) processVerifyBatch(verifyBatch etherman.VerifiedBatch, blockID uint64, dbTx pgx.Tx) error {
-	if verifyBatch.RollupID == s.etherMan.GetRollupID()-1 {
+	if verifyBatch.RollupID == s.etherMan.GetRollupID() {
 		// Just check that the calculated RollupExitRoot is fine
-		network, err := s.bridgeCtrl.GetNetworkID(s.networkID)
+		network, err := s.bridgeCtrl.GetNetworkID(verifyBatch.RollupID)
 		if err != nil {
 			log.Errorf("networkID: %d, error getting NetworkID. Error: %v", s.networkID, err)
 			rollbackErr := s.storage.Rollback(s.ctx, dbTx)
