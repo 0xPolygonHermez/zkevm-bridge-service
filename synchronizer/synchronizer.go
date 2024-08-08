@@ -182,7 +182,7 @@ func (s *ClientSynchronizer) Sync() error {
 
 // Stop function stops the synchronizer
 func (s *ClientSynchronizer) Stop() {
-	log.Info("Stopping synchronizer and cancelling context")
+	log.Infof("NetworkID: %d, Stopping synchronizer and cancelling context", s.networkID)
 	s.cancelCtx()
 }
 
@@ -255,7 +255,7 @@ func (s *ClientSynchronizer) syncBlocks(lastBlockSynced *etherman.Block) (*ether
 
 	for {
 		if toBlock > lastKnownBlock.Uint64() {
-			log.Debug("Setting toBlock to the lastKnownBlock: ", lastKnownBlock)
+			log.Debugf("NetworkID: %d, Setting toBlock to the lastKnownBlock: %s", s.networkID, lastKnownBlock.String())
 			toBlock = lastKnownBlock.Uint64()
 			if !s.synced {
 				log.Infof("NetworkID %d Synced!", s.networkID)
@@ -265,7 +265,7 @@ func (s *ClientSynchronizer) syncBlocks(lastBlockSynced *etherman.Block) (*ether
 			}
 		}
 		if fromBlock > toBlock {
-			log.Debug("FromBlock is higher than toBlock. Skipping...")
+			log.Debugf("NetworkID: %d, FromBlock is higher than toBlock. Skipping...", s.networkID)
 			return lastBlockSynced, nil
 		}
 
@@ -285,7 +285,7 @@ func (s *ClientSynchronizer) syncBlocks(lastBlockSynced *etherman.Block) (*ether
 				blocks = append([]etherman.Block{{}}, blocks...)
 			}
 		} else if fromBlock < s.genBlockNumber {
-			err := fmt.Errorf("NetworkID: %d. fromBlock %d is lower than the genesisBlockNumber %d", s.networkID, fromBlock, s.genBlockNumber)
+			err := fmt.Errorf("networkID: %d. fromBlock %d is lower than the genesisBlockNumber %d", s.networkID, fromBlock, s.genBlockNumber)
 			log.Warn(err)
 			return lastBlockSynced, err
 		}
@@ -359,11 +359,11 @@ func (s *ClientSynchronizer) syncBlocks(lastBlockSynced *etherman.Block) (*ether
 		} else if !s.synced {
 			fromBlock = toBlock + 1
 			toBlock = fromBlock + s.cfg.SyncChunkSize
-			log.Debugf("Not synced yet. Avoid check the same interval. New interval: from block %d, to block %d", fromBlock, toBlock)
+			log.Debugf("NetworkID: %d, not synced yet. Avoid check the same interval. New interval: from block %d, to block %d", s.networkID, fromBlock, toBlock)
 		} else {
 			fromBlock = lastBlockSynced.BlockNumber
 			toBlock = toBlock + s.cfg.SyncChunkSize
-			log.Debugf("Synced!. New interval: from block %d, to block %d", fromBlock, toBlock)
+			log.Debugf("NetworkID: %d, synced!. New interval: from block %d, to block %d", s.networkID, fromBlock, toBlock)
 		}
 	}
 
@@ -431,7 +431,7 @@ func (s *ClientSynchronizer) processBlockRange(blocks []etherman.Block, order ma
 				}
 			case etherman.ActivateEtrogOrder:
 				// this is activated when the bridge detects the CreateNewRollup or the AddExistingRollup event from the rollupManager
-				log.Info("Event received. Activating LxLyEtrog...")
+				log.Infof("NetworkID: %d, Event received. Activating LxLyEtrog...", s.networkID)
 			}
 		}
 		err = s.storage.Commit(s.ctx, dbTx)
