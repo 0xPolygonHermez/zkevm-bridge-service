@@ -248,7 +248,7 @@ func (s *ClientSynchronizer) syncBlocks(lastBlockSynced *etherman.Block) (*ether
 	log.Debugf("NetworkID: %d, after checkReorg: no reorg detected", s.networkID)
 
 	fromBlock := lastBlockSynced.BlockNumber + 1
-	if lastBlockSynced.BlockNumber > 0 && s.synced{
+	if s.synced {
 		fromBlock = lastBlockSynced.BlockNumber
 	}
 	toBlock := fromBlock + s.cfg.SyncChunkSize
