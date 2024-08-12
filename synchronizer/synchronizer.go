@@ -587,18 +587,7 @@ func (s *ClientSynchronizer) checkReorg(latestStoredBlock, syncedBlock *etherman
 func (s *ClientSynchronizer) processVerifyBatch(verifyBatch etherman.VerifiedBatch, blockID uint64, dbTx pgx.Tx) error {
 	if verifyBatch.RollupID == s.etherMan.GetRollupID() {
 		// Just check that the calculated RollupExitRoot is fine
-		network, err := s.bridgeCtrl.GetNetworkID(verifyBatch.RollupID)
-		if err != nil {
-			log.Errorf("networkID: %d, error getting NetworkID. Error: %v", s.networkID, err)
-			rollbackErr := s.storage.Rollback(s.ctx, dbTx)
-			if rollbackErr != nil {
-				log.Errorf("networkID: %d, error rolling back state. BlockNumber: %d, rollbackErr: %v, error : %s",
-					s.networkID, verifyBatch.BlockNumber, rollbackErr, err.Error())
-				return rollbackErr
-			}
-			return err
-		}
-		ok, err := s.storage.CheckIfRootExists(s.ctx, verifyBatch.LocalExitRoot.Bytes(), network, dbTx)
+		ok, err := s.storage.CheckIfRootExists(s.ctx, verifyBatch.LocalExitRoot.Bytes(), uint8(verifyBatch.RollupID), dbTx)
 		if err != nil {
 			log.Errorf("networkID: %d, error Checking if root exists. Error: %v", s.networkID, err)
 			rollbackErr := s.storage.Rollback(s.ctx, dbTx)

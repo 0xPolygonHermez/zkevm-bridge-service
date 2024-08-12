@@ -29,8 +29,8 @@ func NewBridgeController(ctx context.Context, cfg Config, networks []uint, mtSto
 		exitTrees  []*MerkleTree
 	)
 
-	for _, network := range networks {
-		networkIDs[network] = uint8(network)
+	for i, network := range networks {
+		networkIDs[network] = uint8(i)
 		mt, err := NewMerkleTree(ctx, mtStore.(merkleTreeStore), cfg.Height, network)
 		if err != nil {
 			return nil, err
