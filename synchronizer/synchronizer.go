@@ -182,7 +182,7 @@ func (s *ClientSynchronizer) Sync() error {
 
 // Stop function stops the synchronizer
 func (s *ClientSynchronizer) Stop() {
-	log.Info("Stopping synchronizer and cancelling context")
+	log.Infof("NetworkID: %d, Stopping synchronizer and cancelling context", s.networkID)
 	s.cancelCtx()
 }
 
@@ -247,19 +247,25 @@ func (s *ClientSynchronizer) syncBlocks(lastBlockSynced *etherman.Block) (*ether
 	}
 	log.Debugf("NetworkID: %d, after checkReorg: no reorg detected", s.networkID)
 
-	var fromBlock uint64
-	if lastBlockSynced.BlockNumber > 0 {
+	fromBlock := lastBlockSynced.BlockNumber + 1
+	if s.synced {
 		fromBlock = lastBlockSynced.BlockNumber
 	}
 	toBlock := fromBlock + s.cfg.SyncChunkSize
 
 	for {
 		if toBlock > lastKnownBlock.Uint64() {
-			log.Debug("Setting toBlock to the lastKnownBlock: ", lastKnownBlock)
+			log.Debugf("NetworkID: %d, Setting toBlock to the lastKnownBlock: %s", s.networkID, lastKnownBlock.String())
 			toBlock = lastKnownBlock.Uint64()
+			if !s.synced {
+				log.Infof("NetworkID %d Synced!", s.networkID)
+				waitDuration = s.cfg.SyncInterval.Duration
+				s.synced = true
+				s.chSynced <- s.networkID
+			}
 		}
 		if fromBlock > toBlock {
-			log.Debug("FromBlock is higher than toBlock. Skipping...")
+			log.Debugf("NetworkID: %d, FromBlock is higher than toBlock. Skipping...", s.networkID)
 			return lastBlockSynced, nil
 		}
 
@@ -279,54 +285,56 @@ func (s *ClientSynchronizer) syncBlocks(lastBlockSynced *etherman.Block) (*ether
 				blocks = append([]etherman.Block{{}}, blocks...)
 			}
 		} else if fromBlock < s.genBlockNumber {
-			err := fmt.Errorf("NetworkID: %d. fromBlock %d is lower than the genesisBlockNumber %d", s.networkID, fromBlock, s.genBlockNumber)
+			err := fmt.Errorf("networkID: %d. fromBlock %d is lower than the genesisBlockNumber %d", s.networkID, fromBlock, s.genBlockNumber)
 			log.Warn(err)
 			return lastBlockSynced, err
 		}
-		var initBlockReceived *etherman.Block
-		if len(blocks) != 0 {
-			initBlockReceived = &blocks[0]
-			// First position of the array must be deleted
-			blocks = removeBlockElement(blocks, 0)
-		} else {
-			// Reorg detected
-			log.Infof("NetworkID: %d, reorg detected in block %d while querying GetRollupInfoByBlockRange. Rolling back to at least the previous block", s.networkID, fromBlock)
-			prevBlock, err := s.storage.GetPreviousBlock(s.ctx, s.networkID, 1, nil)
-			if errors.Is(err, gerror.ErrStorageNotFound) {
-				log.Warnf("networkID: %d, error checking reorg: previous block not found in db: %v", s.networkID, err)
-				prevBlock = &etherman.Block{}
-			} else if err != nil {
-				log.Errorf("networkID: %d, error getting previousBlock from db. Error: %v", s.networkID, err)
-				return lastBlockSynced, err
+		if s.synced {
+			var initBlockReceived *etherman.Block
+			if len(blocks) != 0 {
+				initBlockReceived = &blocks[0]
+				// First position of the array must be deleted
+				blocks = removeBlockElement(blocks, 0)
+			} else {
+				// Reorg detected
+				log.Infof("NetworkID: %d, reorg detected in block %d while querying GetRollupInfoByBlockRange. Rolling back to at least the previous block", s.networkID, fromBlock)
+				prevBlock, err := s.storage.GetPreviousBlock(s.ctx, s.networkID, 1, nil)
+				if errors.Is(err, gerror.ErrStorageNotFound) {
+					log.Warnf("networkID: %d, error checking reorg: previous block not found in db: %v", s.networkID, err)
+					prevBlock = &etherman.Block{}
+				} else if err != nil {
+					log.Errorf("networkID: %d, error getting previousBlock from db. Error: %v", s.networkID, err)
+					return lastBlockSynced, err
+				}
+				blockReorged, err := s.checkReorg(prevBlock, nil)
+				if err != nil {
+					log.Errorf("networkID: %d, error checking reorgs in previous blocks. Error: %v", s.networkID, err)
+					return lastBlockSynced, err
+				}
+				if blockReorged == nil {
+					blockReorged = prevBlock
+				}
+				err = s.resetState(blockReorged.BlockNumber)
+				if err != nil {
+					log.Errorf("networkID: %d, error resetting the state to a previous block. Retrying... Err: %v", s.networkID, err)
+					return lastBlockSynced, fmt.Errorf("error resetting the state to a previous block")
+				}
+				return blockReorged, nil
 			}
-			blockReorged, err := s.checkReorg(prevBlock, nil)
+			// Check reorg again to be sure that the chain has not changed between the previous checkReorg and the call GetRollupInfoByBlockRange
+			block, err := s.checkReorg(lastBlockSynced, initBlockReceived)
 			if err != nil {
-				log.Errorf("networkID: %d, error checking reorgs in previous blocks. Error: %v", s.networkID, err)
-				return lastBlockSynced, err
+				log.Errorf("networkID: %d, error checking reorgs. Retrying... Err: %v", s.networkID, err)
+				return lastBlockSynced, fmt.Errorf("networkID: %d, error checking reorgs", s.networkID)
 			}
-			if blockReorged == nil {
-				blockReorged = prevBlock
+			if block != nil {
+				err = s.resetState(block.BlockNumber)
+				if err != nil {
+					log.Errorf("networkID: %d, error resetting the state to a previous block. Retrying... Err: %v", s.networkID, err)
+					return lastBlockSynced, fmt.Errorf("networkID: %d, error resetting the state to a previous block", s.networkID)
+				}
+				return block, nil
 			}
-			err = s.resetState(blockReorged.BlockNumber)
-			if err != nil {
-				log.Errorf("networkID: %d, error resetting the state to a previous block. Retrying... Err: %v", s.networkID, err)
-				return lastBlockSynced, fmt.Errorf("error resetting the state to a previous block")
-			}
-			return blockReorged, nil
-		}
-		// Check reorg again to be sure that the chain has not changed between the previous checkReorg and the call GetRollupInfoByBlockRange
-		block, err := s.checkReorg(lastBlockSynced, initBlockReceived)
-		if err != nil {
-			log.Errorf("networkID: %d, error checking reorgs. Retrying... Err: %v", s.networkID, err)
-			return lastBlockSynced, fmt.Errorf("networkID: %d, error checking reorgs", s.networkID)
-		}
-		if block != nil {
-			err = s.resetState(block.BlockNumber)
-			if err != nil {
-				log.Errorf("networkID: %d, error resetting the state to a previous block. Retrying... Err: %v", s.networkID, err)
-				return lastBlockSynced, fmt.Errorf("networkID: %d, error resetting the state to a previous block", s.networkID)
-			}
-			return block, nil
 		}
 
 		err = s.processBlockRange(blocks, order)
@@ -348,9 +356,15 @@ func (s *ClientSynchronizer) syncBlocks(lastBlockSynced *etherman.Block) (*ether
 				s.chSynced <- s.networkID
 			}
 			break
+		} else if !s.synced {
+			fromBlock = toBlock + 1
+			toBlock = fromBlock + s.cfg.SyncChunkSize
+			log.Debugf("NetworkID: %d, not synced yet. Avoid check the same interval. New interval: from block %d, to block %d", s.networkID, fromBlock, toBlock)
+		} else {
+			fromBlock = lastBlockSynced.BlockNumber
+			toBlock = toBlock + s.cfg.SyncChunkSize
+			log.Debugf("NetworkID: %d, synced!. New interval: from block %d, to block %d", s.networkID, fromBlock, toBlock)
 		}
-		fromBlock = lastBlockSynced.BlockNumber
-		toBlock = toBlock + s.cfg.SyncChunkSize
 	}
 
 	return lastBlockSynced, nil
@@ -417,7 +431,7 @@ func (s *ClientSynchronizer) processBlockRange(blocks []etherman.Block, order ma
 				}
 			case etherman.ActivateEtrogOrder:
 				// this is activated when the bridge detects the CreateNewRollup or the AddExistingRollup event from the rollupManager
-				log.Info("Event received. Activating LxLyEtrog...")
+				log.Infof("NetworkID: %d, Event received. Activating LxLyEtrog...", s.networkID)
 			}
 		}
 		err = s.storage.Commit(s.ctx, dbTx)
@@ -585,20 +599,13 @@ func (s *ClientSynchronizer) checkReorg(latestStoredBlock, syncedBlock *etherman
 }
 
 func (s *ClientSynchronizer) processVerifyBatch(verifyBatch etherman.VerifiedBatch, blockID uint64, dbTx pgx.Tx) error {
-	if verifyBatch.RollupID == s.etherMan.GetRollupID()-1 {
-		// Just check that the calculated RollupExitRoot is fine
-		network, err := s.bridgeCtrl.GetNetworkID(s.networkID)
-		if err != nil {
-			log.Errorf("networkID: %d, error getting NetworkID. Error: %v", s.networkID, err)
-			rollbackErr := s.storage.Rollback(s.ctx, dbTx)
-			if rollbackErr != nil {
-				log.Errorf("networkID: %d, error rolling back state. BlockNumber: %d, rollbackErr: %v, error : %s",
-					s.networkID, verifyBatch.BlockNumber, rollbackErr, err.Error())
-				return rollbackErr
-			}
-			return err
+	if verifyBatch.RollupID == s.etherMan.GetRollupID() {
+		if verifyBatch.LocalExitRoot == (common.Hash{}) {
+			log.Debugf("networkID: %d, skipping empty local exit root in verifyBatch event. VerifyBatch: %+v", s.networkID, verifyBatch)
+			return nil
 		}
-		ok, err := s.storage.CheckIfRootExists(s.ctx, verifyBatch.LocalExitRoot.Bytes(), network, dbTx)
+		// Just check that the calculated RollupExitRoot is fine
+		ok, err := s.storage.CheckIfRootExists(s.ctx, verifyBatch.LocalExitRoot.Bytes(), uint8(verifyBatch.RollupID), dbTx)
 		if err != nil {
 			log.Errorf("networkID: %d, error Checking if root exists. Error: %v", s.networkID, err)
 			rollbackErr := s.storage.Rollback(s.ctx, dbTx)
