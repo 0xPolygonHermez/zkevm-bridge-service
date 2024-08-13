@@ -586,6 +586,10 @@ func (s *ClientSynchronizer) checkReorg(latestStoredBlock, syncedBlock *etherman
 
 func (s *ClientSynchronizer) processVerifyBatch(verifyBatch etherman.VerifiedBatch, blockID uint64, dbTx pgx.Tx) error {
 	if verifyBatch.RollupID == s.etherMan.GetRollupID() {
+		if verifyBatch.LocalExitRoot == (common.Hash{}) {
+			log.Debugf("networkID: %d, skipping empty local exit root in verifyBatch event. VerifyBatch: %+v", s.networkID, verifyBatch)
+			return nil
+		}
 		// Just check that the calculated RollupExitRoot is fine
 		ok, err := s.storage.CheckIfRootExists(s.ctx, verifyBatch.LocalExitRoot.Bytes(), uint8(verifyBatch.RollupID), dbTx)
 		if err != nil {
