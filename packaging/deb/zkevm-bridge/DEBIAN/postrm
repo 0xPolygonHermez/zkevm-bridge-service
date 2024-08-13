@@ -1,0 +1,8 @@
+#!/bin/bash
+#
+###############
+# Remove zkevm-bridge installs
+##############
+sudo rm -rf /lib/systemd/system/zkevm-bridge.service
+sudo deluser zkevm-bridge
+sudo systemctl daemon-reload

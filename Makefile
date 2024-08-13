@@ -1,6 +1,6 @@
 include version.mk
 
-DOCKER_COMPOSE := docker-compose -f docker-compose.yml
+DOCKER_COMPOSE := docker compose -f docker-compose.yml
 DOCKER_COMPOSE_STATE_DB := zkevm-state-db
 DOCKER_COMPOSE_POOL_DB := zkevm-pool-db
 DOCKER_COMPOSE_RPC_DB := zkevm-rpc-db
@@ -86,6 +86,18 @@ install-linter: ## Installs the linter
 .PHONY: build-docker
 build-docker: ## Builds a docker image with the zkevm bridge binary
 	docker build -t zkevm-bridge-service -f ./Dockerfile .
+
+.PHONY: build-docker-e2e-real_network
+build-docker-e2e-real_network:  build-docker-e2e-real_network-erc20 build-docker-e2e-real_network-msg ## Builds a docker image with the zkevm bridge binary for e2e tests with real network
+	
+
+.PHONY: build-docker-e2e-real_network-erc20
+build-docker-e2e-real_network-erc20: ## Builds a docker image with the zkevm bridge binary for e2e ERC20 tests with real network
+	docker build  -f DockerfileE2ETest .  -t bridge-e2e-realnetwork-erc20 --target ERC20
+
+.PHONY: build-docker-e2e-real_network-msg
+build-docker-e2e-real_network-msg: ## Builds a docker image with the zkevm bridge binary for e2e BridgeMessage tests with real network
+	docker build  -f DockerfileE2ETest .  -t bridge-e2e-realnetwork-msg --target MSG
 
 .PHONY: run-db-node
 run-db-node: ## Runs the node database
@@ -264,6 +276,13 @@ test-e2ecompress: build-docker stop run ## Runs all tests checking race conditio
 	sleep 3
 	trap '$(STOP)' EXIT; MallocNanoZone=0 go test -v -failfast -race -p 1 -timeout 2400s ./test/e2e/... -count 1 -tags='e2ecompress'
 
+.PHONY: build-test-e2e-real_network
+build-test-e2e-real_network: ## Build binary for e2e tests with real network
+	go test -c ./test/e2e/ -o dist/zkevm-bridge-e2e-real_network-erc20 -tags='e2e_real_network_erc20'
+	go test -c ./test/e2e/ -o dist/zkevm-bridge-e2e-real_network-bridgemsg -tags='e2e_real_network_msg'
+	./dist/zkevm-bridge-e2e-real_network-erc20 -test.failfast -test.list Test
+	./dist/zkevm-bridge-e2e-real_network-bridgemsg -test.failfast -test.list Test
+
 .PHONY: validate
 validate: lint build test-full ## Validates the whole integrity of the code base
 
@@ -285,14 +304,13 @@ generate-mocks: ## Generates mocks for the tests, using mockery tool
 	mockery --name=storageInterface --dir=synchronizer --output=synchronizer --outpkg=synchronizer --structname=storageMock --filename=mock_storage.go ${COMMON_MOCKERY_PARAMS}
 	mockery --name=bridgectrlInterface --dir=synchronizer --output=synchronizer --outpkg=synchronizer --structname=bridgectrlMock --filename=mock_bridgectrl.go ${COMMON_MOCKERY_PARAMS}
 	mockery --name=Tx --srcpkg=github.com/jackc/pgx/v4 --output=synchronizer --outpkg=synchronizer --structname=dbTxMock --filename=mock_dbtx.go ${COMMON_MOCKERY_PARAMS}
-	mockery --name=zkEVMClientInterface --dir=synchronizer --output=synchronizer --outpkg=synchronizer --structname=zkEVMClientMock --filename=mock_zkevmclient.go ${COMMON_MOCKERY_PARAMS}
+	mockery --name=bridgeServiceStorage --dir=server --output=server --outpkg=server --structname=bridgeServiceStorageMock --filename=mock_bridgeServiceStorage.go ${COMMON_MOCKERY_PARAMS}
+	
 	rm -Rf claimtxman/mocks
 	export "GOROOT=$$(go env GOROOT)" && $$(go env GOPATH)/bin/mockery --all --case snake --dir claimtxman/ --output claimtxman/mocks --outpkg mock_txcompressor ${COMMON_MOCKERY_PARAMS}
 	
 
-.PHONY: generate-smart-contracts-bindings
+.PHONY: generate-smartcontracts-bindings
 generate-smartcontracts-bindings:	## Generates the smart contracts bindings
-	@for contract in `ls -1 etherman/smartcontracts/json/*.json | xargs -l basename`; do \
-		 ./scripts/generate-smartcontracts-bindings.sh $${contract%.*}; \
-	done
+	cd scripts && ./generate-smartcontracts-bindings.sh
 	
