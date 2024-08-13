@@ -1,0 +1,35 @@
+name: Regression Tests
+
+on:
+  pull_request:
+    types: [opened, synchronize]  # Trigger on new PR and existing with new commits
+    branches:
+      - develop
+  
+
+jobs:
+  regression_tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+
+      - name: Build image (with proposed code changes) locally
+        id: build
+        run: |
+          if [ "$GITHUB_EVENT_NAME" == "pull_request" ]; then
+              GITHUB_SHA_SHORT=$(jq -r .pull_request.head.sha "$GITHUB_EVENT_PATH" | cut -c 1-7)
+              echo $GITHUB_SHA_SHORT
+              echo "::set-output name=GITHUB_SHA_SHORT::$GITHUB_SHA_SHORT"
+          fi
+      - name: Run Regression Tests
+        uses: 0xPolygon/kurtosis-cdk@v0.1.9
+        with:
+          zkevm_bridge_service: ${{ steps.build.outputs.GITHUB_SHA_SHORT }}
+          zkevm_agglayer: '0.1.4'
+          zkevm_bridge_ui: '0006445'
+          zkevm_dac: '0.0.7'
+          zkevm_node: '0.6.5-cdk'
+          kurtosis_cdk: 'v0.2.3'
+          kurtosis_cli: '0.89.3'
+          bake_time: 30

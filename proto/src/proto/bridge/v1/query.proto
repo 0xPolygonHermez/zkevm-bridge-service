@@ -32,6 +32,12 @@ service BridgeService {
         };
     }
 
+    /// Get the merkle proof for the specific deposit and GER
+    rpc GetProofByGER(GetProofByGERRequest) returns (GetProofResponse) {
+        option (google.api.http) = {
+            get: "/merkle-proof-by-ger"
+        };
+    }
     /// Get the specific deposit
     rpc GetBridge(GetBridgeRequest) returns (GetBridgeResponse) {
         option (google.api.http) = {
@@ -118,6 +124,12 @@ message GetBridgesRequest {
 message GetProofRequest {
     uint32 net_id = 1;
     uint64 deposit_cnt = 2;
+}
+
+message GetProofByGERRequest {
+    uint32 net_id = 1;
+    uint64 deposit_cnt = 2;
+    string ger = 3;
 }
 
 message GetTokenWrappedRequest {
