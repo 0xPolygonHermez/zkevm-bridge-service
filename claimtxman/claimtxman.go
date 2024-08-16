@@ -99,6 +99,7 @@ func (tm *ClaimTxManager) Start() {
 	for {
 		select {
 		case <-tm.ctx.Done():
+			ticker.Stop()
 			return
 		case netID := <-tm.chSynced:
 			if netID == tm.l2NetworkID && !tm.synced {

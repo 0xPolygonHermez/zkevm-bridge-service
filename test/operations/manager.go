@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math/big"
+	"errors"
 	"os"
 	"os/exec"
 	"time"
@@ -130,31 +131,78 @@ func NewManager(ctx context.Context, cfg *Config) (*Manager, error) {
 	return opsman, err
 }
 
-// CheckL2Claim checks if the claim is already in the L2 network.
-func (m *Manager) CheckL2Claim(ctx context.Context, networkID, depositCnt uint) error {
+// CheckClaim checks if the claim is already in the network
+func (m *Manager) CheckClaim(ctx context.Context, deposit *pb.Deposit) error {
 	return operations.Poll(defaultInterval, defaultDeadline, func() (bool, error) {
-		_, err := m.storage.GetClaim(ctx, depositCnt, networkID, nil)
-		if err != nil {
-			if err == gerror.ErrStorageNotFound {
-				return false, nil
-			}
-			return false, err
-		}
-		return true, nil
+		return m.claimChecker(ctx, deposit)
 	})
 }
 
-// CustomCheckL2Claim checks if the claim is already in the L2 network.
-func (m *Manager) CustomCheckL2Claim(ctx context.Context, networkID, depositCnt uint, interval, deadline time.Duration) error {
-	return operations.Poll(interval, deadline, func() (bool, error) {
-		_, err := m.storage.GetClaim(ctx, depositCnt, networkID, nil)
+func (m *Manager) claimChecker(ctx context.Context, deposit *pb.Deposit) (bool, error) {
+	// Check that claim exist on GetClaims endpoint
+	req := pb.GetClaimsRequest{
+		DestAddr: deposit.DestAddr,
+	}
+	claims, err := m.bridgeService.GetClaims(ctx, &req)
+	if err != nil {
+		return false, err
+	}
+	idx, succ := big.NewInt(0).SetString(deposit.GlobalIndex, 10) //nolint:gomnd
+	if !succ {
+		return false, errors.New("error setting big int")
+	}
+	mainnetFlag, rollupIndex, _, err := etherman.DecodeGlobalIndex(idx)
+	if err != nil {
+		return false, err
+	}
+	claimFound := false
+	var claimTxHash string
+	for _, c := range claims.Claims {
+		if c.Index == deposit.DepositCnt && c.MainnetFlag == mainnetFlag && c.RollupIndex == rollupIndex {
+			log.Debugf("deposit claimed with th hash: %s", c.TxHash)
+			claimFound = true
+			claimTxHash = c.TxHash
+			break
+		}
+	}
+	if !claimFound {
+		return false, nil
+	}
+
+	// Check that claim tx has been added on GetBridges response
+	reqB := &pb.GetBridgesRequest{
+		DestAddr: deposit.DestAddr,
+	}
+	bridges, err := m.bridgeService.GetBridges(ctx, reqB)
+	if err != nil {
+		return false, err
+	}
+	claimFound = false
+	for _, d := range bridges.Deposits {
+		dIdx, succ := big.NewInt(0).SetString(deposit.GlobalIndex, 10) //nolint:gomnd
+		if !succ {
+			return false, errors.New("error setting big int")
+		}
+		dMainnetFlag, dRollupIndex, _, err := etherman.DecodeGlobalIndex(dIdx)
 		if err != nil {
-			if err == gerror.ErrStorageNotFound {
-				return false, nil
-			}
 			return false, err
 		}
-		return true, nil
+		if d.DepositCnt == deposit.DepositCnt && dMainnetFlag == mainnetFlag && dRollupIndex == rollupIndex {
+			if d.ClaimTxHash == claimTxHash {
+				claimFound = true
+				break
+			} else {
+				return false, errors.New("claim tx not linked to the deposit")
+			}
+		}
+	}
+	return claimFound, nil
+}
+
+// CustomCheckClaim checks if the claim is already in the L2 network.
+func (m *Manager) CustomCheckClaim(ctx context.Context, deposit *pb.Deposit, interval, deadline time.Duration) error {
+	return operations.Poll(interval, deadline, func() (bool, error) {
+		return m.claimChecker(ctx, deposit)
 	})
 }
 
@@ -583,11 +631,11 @@ func (m *Manager) GetClaimData(ctx context.Context, networkID, depositCount uint
 
 // GetBridgeInfoByDestAddr gets the bridge info
 func (m *Manager) GetBridgeInfoByDestAddr(ctx context.Context, addr *common.Address) ([]*pb.Deposit, error) {
-	auth, err := m.clients[L2].GetSigner(ctx, accHexPrivateKeys[L2])
-	if err != nil {
-		return []*pb.Deposit{}, err
-	}
 	if addr == nil {
+		auth, err := m.clients[L2].GetSigner(ctx, accHexPrivateKeys[L2])
+		if err != nil {
+			return []*pb.Deposit{}, err
+		}
 		addr = &auth.From
 	}
 	req := pb.GetBridgesRequest{
