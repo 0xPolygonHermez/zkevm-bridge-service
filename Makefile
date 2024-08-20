@@ -381,6 +381,16 @@ test-edge: build-docker stop run ## Runs all tests checking race conditions
 	sleep 3
 	trap '$(STOP)' EXIT; MallocNanoZone=0 go test -v -failfast -race -p 1 -timeout 2400s ./test/e2e/... -count 1 -tags='edge'
 
+.PHONY: test-multiplerollups
+test-multiplerollups: build-docker stop run-multi ## Runs all tests checking race conditions
+	sleep 3
+	trap '$(STOP)' EXIT; MallocNanoZone=0 go test -v -failfast -race -p 1 -timeout 2400s ./test/e2e/... -count 1 -tags='multiplerollups'
+
+.PHONY: test-l2l2
+test-l2l2: build-docker stop run-multi ## Runs all tests checking race conditions
+	sleep 3
+	trap '$(STOP)' EXIT; MallocNanoZone=0 go test -v -failfast -race -p 1 -timeout 2400s ./test/e2e/... -count 1 -tags='l2l2'
+
 .PHONY: test-e2ecompress
 test-e2ecompress: build-docker stop run ## Runs all tests checking race conditions
 	sleep 3

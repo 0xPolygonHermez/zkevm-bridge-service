@@ -1,4 +1,5 @@
-
+//go:build l2l2
+// +build l2l2
 
 package e2e
 

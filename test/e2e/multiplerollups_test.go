@@ -1,3 +1,5 @@
+//go:build multiplerollups
+// +build multiplerollups
 
 package e2e
 
