@@ -930,6 +930,7 @@ func (m *Manager) GetL2Balance(ctx context.Context, originalNetwork uint32, orig
 }
 
 func GetOpsman(ctx context.Context, l2NetworkURL, dbName, bridgeServiceHTTPPort, bridgeServiceGRPCPort, port string, networkID uint) (*Manager, error) {
+	//nolint:gomnd
 	opsCfg := &Config{
 		L1NetworkURL: "http://localhost:8545",
 		L2NetworkURL: l2NetworkURL,
