@@ -34,8 +34,8 @@ type NetworkSID string
 
 // NetworkSID constants
 const (
-	L1 NetworkSID = "l1"
-	L2 NetworkSID = "l2"
+	L1  NetworkSID = "l1"
+	L2  NetworkSID = "l2"
 	L22 NetworkSID = "l22"
 
 	waitRootSyncDeadline = 120 * time.Second
@@ -59,8 +59,8 @@ const (
 )
 
 var accHexPrivateKeys = map[NetworkSID]string{
-	L1: "0x5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a", //0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC
-	L2: "0xdfd01798f92667dbf91df722434e8fbe96af0211d4d1b82bbbbc8f1def7a814f", //0xc949254d682d8c9ad5682521675b8f43b102aec4
+	L1:  "0x5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a", //0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC
+	L2:  "0xdfd01798f92667dbf91df722434e8fbe96af0211d4d1b82bbbbc8f1def7a814f", //0xc949254d682d8c9ad5682521675b8f43b102aec4
 	L22: "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80", //0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
 }
 
@@ -903,7 +903,7 @@ func (m *Manager) GetL1Balance(ctx context.Context, originalNetwork uint32, orig
 	}
 }
 
-func (m *Manager) GetL2Balance(ctx context.Context, originalNetwork uint32, originalTokenAddr, holder common.Address,) (*big.Int, error) {
+func (m *Manager) GetL2Balance(ctx context.Context, originalNetwork uint32, originalTokenAddr, holder common.Address) (*big.Int, error) {
 	zeroAddr := common.Address{}
 	if originalNetwork == 0 && originalTokenAddr == zeroAddr {
 		return m.CheckAccountBalance(ctx, L2, &holder)
