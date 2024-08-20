@@ -29,7 +29,7 @@ func depositFromL1(ctx context.Context, opsman *operations.Manager, t *testing.T
 	deposits, err := opsman.GetBridgeInfoByDestAddr(ctx, &destAddr)
 	require.NoError(t, err)
 	// Check a L2 claim tx
-	err = opsman.CheckL2Claim(ctx, uint(deposits[0].DestNet), uint(deposits[0].DepositCnt))
+	err = opsman.CheckClaim(ctx, deposits[0])
 	require.NoError(t, err)
 }
 
@@ -39,7 +39,7 @@ func depositFromL2(ctx context.Context, opsman *operations.Manager, t *testing.T
 	amount := new(big.Int).SetUint64(100000000000000000)
 	tokenAddr := common.Address{} // This means is eth
 	destAddr := common.HexToAddress("0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC")
-	err := opsman.SendL2Deposit(ctx, tokenAddr, amount, destNetwork, &destAddr)
+	err := opsman.SendL2Deposit(ctx, tokenAddr, amount, destNetwork, &destAddr, operations.L2)
 	require.NoError(t, err)
 
 	// Get Bridge Info By DestAddr
@@ -61,6 +61,9 @@ func TestEdgeCase(t *testing.T) {
 
 	ctx := context.Background()
 	opsCfg := &operations.Config{
+		L1NetworkURL: "http://localhost:8545",
+		L2NetworkURL: "http://localhost:8123",
+		L2NetworkID:  1,
 		Storage: db.Config{
 			Database: "postgres",
 			Name:     "test_db",

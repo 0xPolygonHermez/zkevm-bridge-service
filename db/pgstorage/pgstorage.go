@@ -229,7 +229,7 @@ func (p *PostgresStorage) GetClaim(ctx context.Context, depositCount, originNetw
 			QueryRow(ctx, getClaimSQLOriginRollup, depositCount, originNetworkID, networkID)
 	}
 
-	err := row.Scan(&claim.Index, &claim.OriginalNetwork, &claim.OriginalAddress, &amount, &claim.DestinationAddress, &claim.BlockID, &claim.NetworkID, &claim.TxHash, &claim.RollupIndex, &claim.MainnetFlag)
+	err := row.Scan(&claim.Index, &claim.OriginalNetwork, &claim.OriginalAddress, &amount, &claim.DestinationAddress, &claim.BlockID, &claim.NetworkID, &claim.TxHash, &claim.RollupIndex)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, gerror.ErrStorageNotFound
 	}

@@ -308,6 +308,21 @@ run-2: ## runs all services
 	sleep 7
 	$(RUN_BRIDGE_2)
 
+.PHONY: run-multi
+run-multi: ## runs all services
+	$(RUN_DBS)
+	$(RUN_DBS_2)
+	$(RUN_L1_NETWORK_MULTI_ROLLUP)
+	sleep 5
+	$(RUN_ZKPROVER_1)
+	$(RUN_ZKPROVER_2)
+	sleep 3
+	$(RUN_NODE_1)
+	$(RUN_NODE_2)
+	sleep 7
+	$(RUN_BRIDGE_1)
+	$(RUN_BRIDGE_2)
+
 .PHONY: run-bridge-dependencies
 run-bridge-dependencies: stop ## runs all services
 	$(RUN_DBS)

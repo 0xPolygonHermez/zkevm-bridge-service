@@ -14,6 +14,7 @@ import (
 	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/log"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/test/mocksmartcontracts/BridgeMessageReceiver"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/test/mocksmartcontracts/erc20permitmock"
 	zkevmtypes "github.com/0xPolygonHermez/zkevm-node/config/types"
 	"github.com/0xPolygonHermez/zkevm-node/encoding"
 	"github.com/0xPolygonHermez/zkevm-node/etherman/smartcontracts/polygonzkevmbridge"
@@ -101,6 +102,15 @@ func (c *Client) CheckTxWasMined(ctx context.Context, txHash common.Hash) (bool,
 	}
 
 	return true, receipt, nil
+}
+
+// GetNetworkID gets the networkID stored in the bridge contract
+func (c *Client) GetNetworkID() (uint32, error) {
+	networkID, err := c.Bridge.NetworkID(&bind.CallOpts{Pending: false})
+	if err != nil {
+		return 0, err
+	}
+	return networkID, nil
 }
 
 // DeployERC20 deploys erc20 smc.
@@ -254,4 +264,32 @@ func (c *Client) SendClaim(ctx context.Context, deposit *pb.Deposit, smtProof [m
 // WaitTxToBeMined waits until a tx is mined or forged.
 func WaitTxToBeMined(ctx context.Context, client *ethclient.Client, tx *types.Transaction, timeout time.Duration) error {
 	return ops.WaitTxToBeMined(ctx, client, tx, timeout)
+}
+
+// ERC20Transfer send tokens.
+func (c *Client) ERC20Transfer(ctx context.Context, erc20Addr, to common.Address, amount *big.Int, auth *bind.TransactOpts) error {
+	erc20sc, err := ERC20.NewERC20(erc20Addr, c.Client)
+	if err != nil {
+		return err
+	}
+	tx, err := erc20sc.Transfer(auth, to, amount)
+	if err != nil {
+		return err
+	}
+	const txMinedTimeoutLimit = 60 * time.Second
+	return WaitTxToBeMined(ctx, c.Client, tx, txMinedTimeoutLimit)
+}
+
+// MintPOL mint POL tokens.
+func (c *Client) MintPOL(ctx context.Context, polAddr common.Address, amount *big.Int, auth *bind.TransactOpts) error {
+	pol, err := erc20permitmock.NewErc20permitmock(polAddr, c.Client)
+	if err != nil {
+		return err
+	}
+	tx, err := pol.Mint(auth, auth.From, amount)
+	if err != nil {
+		return err
+	}
+	const txMinedTimeoutLimit = 60 * time.Second
+	return WaitTxToBeMined(ctx, c.Client, tx, txMinedTimeoutLimit)
 }
