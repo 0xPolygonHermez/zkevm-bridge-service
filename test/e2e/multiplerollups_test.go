@@ -25,9 +25,9 @@ func TestMultipleRollups(t *testing.T) {
 		rollup2ID uint = 2
 	)
 	ctx := context.Background()
-	opsman1, err := getOpsman(ctx, "http://localhost:8123", "test_db", "8080", "9090", "5435", 1)
+	opsman1, err := operations.GetOpsman(ctx, "http://localhost:8123", "test_db", "8080", "9090", "5435", 1)
 	require.NoError(t, err)
-	opsman2, err := getOpsman(ctx, "http://localhost:8124", "test_db", "8081", "9091", "5438", 2)
+	opsman2, err := operations.GetOpsman(ctx, "http://localhost:8124", "test_db", "8081", "9091", "5438", 2)
 	require.NoError(t, err)
 
 	// Fund L2 sequencer for rollup 2. This is super dirty, but have no better way to do this at the moment

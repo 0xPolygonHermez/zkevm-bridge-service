@@ -928,3 +928,33 @@ func (m *Manager) GetL2Balance(ctx context.Context, originalNetwork uint32, orig
 	}
 	return m.CheckAccountTokenBalance(ctx, L2, rollupAddr, &holder)
 }
+
+func GetOpsman(ctx context.Context, l2NetworkURL, dbName, bridgeServiceHTTPPort, bridgeServiceGRPCPort, port string, networkID uint) (*Manager, error) {
+	opsCfg := &Config{
+		L1NetworkURL: "http://localhost:8545",
+		L2NetworkURL: l2NetworkURL,
+		L2NetworkID:  networkID,
+		Storage: db.Config{
+			Database: "postgres",
+			Name:     dbName,
+			User:     "test_user",
+			Password: "test_password",
+			Host:     "localhost",
+			Port:     port,
+			MaxConns: 10,
+		},
+		BT: bridgectrl.Config{
+			Store:  "postgres",
+			Height: uint8(32),
+		},
+		BS: server.Config{
+			GRPCPort:         bridgeServiceGRPCPort,
+			HTTPPort:         bridgeServiceHTTPPort,
+			CacheSize:        100000,
+			DefaultPageLimit: 25,
+			MaxPageLimit:     100,
+			BridgeVersion:    "v1",
+		},
+	}
+	return NewManager(ctx, opsCfg)
+}

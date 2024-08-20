@@ -24,9 +24,9 @@ func TestL2L2(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	opsman1, err := getOpsman(ctx, "http://localhost:8123", "test_db", "8080", "9090", "5435", 1)
+	opsman1, err := operations.GetOpsman(ctx, "http://localhost:8123", "test_db", "8080", "9090", "5435", 1)
 	require.NoError(t, err)
-	opsman2, err := getOpsman(ctx, "http://localhost:8124", "test_db", "8081", "9091", "5438", 2)
+	opsman2, err := operations.GetOpsman(ctx, "http://localhost:8124", "test_db", "8081", "9091", "5438", 2)
 	require.NoError(t, err)
 
 	t.Run("L2-L2 eth bridge", func(t *testing.T) {
@@ -82,34 +82,4 @@ func TestL2L2(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, 1, v.Cmp(balance))
 	})
-}
-
-func getOpsman(ctx context.Context, l2NetworkURL, dbName, bridgeServiceHTTPPort, bridgeServiceGRPCPort, port string, networkID uint) (*operations.Manager, error) {
-	opsCfg := &operations.Config{
-		L1NetworkURL: "http://localhost:8545",
-		L2NetworkURL: l2NetworkURL,
-		L2NetworkID:  networkID,
-		Storage: db.Config{
-			Database: "postgres",
-			Name:     dbName,
-			User:     "test_user",
-			Password: "test_password",
-			Host:     "localhost",
-			Port:     port,
-			MaxConns: 10,
-		},
-		BT: bridgectrl.Config{
-			Store:  "postgres",
-			Height: uint8(32),
-		},
-		BS: server.Config{
-			GRPCPort:         bridgeServiceGRPCPort,
-			HTTPPort:         bridgeServiceHTTPPort,
-			CacheSize:        100000,
-			DefaultPageLimit: 25,
-			MaxPageLimit:     100,
-			BridgeVersion:    "v1",
-		},
-	}
-	return operations.NewManager(ctx, opsCfg)
 }
