@@ -198,13 +198,38 @@ func (p *PostgresStorage) AddTrustedGlobalExitRoot(ctx context.Context, trustedE
 }
 
 // GetClaim gets a specific claim from the storage.
-func (p *PostgresStorage) GetClaim(ctx context.Context, depositCount, networkID uint, dbTx pgx.Tx) (*etherman.Claim, error) {
+func (p *PostgresStorage) GetClaim(ctx context.Context, depositCount, originNetworkID, networkID uint, dbTx pgx.Tx) (*etherman.Claim, error) {
 	var (
 		claim  etherman.Claim
 		amount string
 	)
-	const getClaimSQL = "SELECT index, orig_net, orig_addr, amount, dest_addr, block_id, network_id, tx_hash, rollup_index, mainnet_flag FROM sync.claim WHERE index = $1 AND network_id = $2"
-	err := p.getExecQuerier(dbTx).QueryRow(ctx, getClaimSQL, depositCount, networkID).Scan(&claim.Index, &claim.OriginalNetwork, &claim.OriginalAddress, &amount, &claim.DestinationAddress, &claim.BlockID, &claim.NetworkID, &claim.TxHash, &claim.RollupIndex, &claim.MainnetFlag)
+	// origin rollup ID is calculated as follows:
+	// // if mainnet_flag: 0
+	// // else: rollup_index + 1
+	// destination rollup ID == network_id: network that has received the claim, therefore, the destination rollupID of the claim
+
+	const getClaimSQLOriginMainnet = `
+	SELECT index, orig_net, orig_addr, amount, dest_addr, block_id, network_id, tx_hash, rollup_index 
+	FROM sync.claim 
+	WHERE index = $1 AND mainnet_flag AND network_id = $2;
+	`
+
+	const getClaimSQLOriginRollup = `
+	SELECT index, orig_net, orig_addr, amount, dest_addr, block_id, network_id, tx_hash, rollup_index 
+	FROM sync.claim 
+	WHERE index = $1 AND NOT mainnet_flag AND rollup_index + 1 = $2 AND network_id = $3;
+	`
+	var row pgx.Row
+	if originNetworkID == 0 {
+		claim.MainnetFlag = true
+		row = p.getExecQuerier(dbTx).
+			QueryRow(ctx, getClaimSQLOriginMainnet, depositCount, networkID)
+	} else {
+		row = p.getExecQuerier(dbTx).
+			QueryRow(ctx, getClaimSQLOriginRollup, depositCount, originNetworkID, networkID)
+	}
+
+	err := row.Scan(&claim.Index, &claim.OriginalNetwork, &claim.OriginalAddress, &amount, &claim.DestinationAddress, &claim.BlockID, &claim.NetworkID, &claim.TxHash, &claim.RollupIndex)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, gerror.ErrStorageNotFound
 	}

@@ -25,5 +25,5 @@ type StorageInterface interface {
 
 type bridgeServiceInterface interface {
 	GetClaimProofForCompressed(ger common.Hash, depositCnt, networkID uint, dbTx pgx.Tx) (*etherman.GlobalExitRoot, [][bridgectrl.KeyLen]byte, [][bridgectrl.KeyLen]byte, error)
-	GetDepositStatus(ctx context.Context, depositCount uint, destNetworkID uint) (string, error)
+	GetDepositStatus(ctx context.Context, depositCount, networkID, destNetworkID uint) (string, error)
 }

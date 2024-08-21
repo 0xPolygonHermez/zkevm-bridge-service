@@ -35,7 +35,7 @@ func multiDepositFromL1(ctx context.Context, opsman *operations.Manager, destAdd
 	require.NoError(t, err)
 	time.Sleep(5 * time.Second) // Delay to give time to the synchronizer to read all events
 	// Check a L2 claim tx
-	err = opsman.CustomCheckL2Claim(ctx, uint(deposits[0].DestNet), uint(deposits[0].DepositCnt), defaultInterval, defaultDeadline)
+	err = opsman.CustomCheckClaim(ctx, deposits[0], defaultInterval, defaultDeadline)
 	require.NoError(t, err)
 }
 
@@ -46,6 +46,9 @@ func TestClaimCompressor(t *testing.T) {
 
 	ctx := context.Background()
 	opsCfg := &operations.Config{
+		L1NetworkURL: "http://localhost:8545",
+		L2NetworkURL: "http://localhost:8123",
+		L2NetworkID:  1,
 		Storage: db.Config{
 			Database: "postgres",
 			Name:     "test_db",

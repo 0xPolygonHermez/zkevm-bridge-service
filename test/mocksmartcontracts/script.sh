@@ -18,4 +18,5 @@ compilegen() {
 }
 
 gen polygonzkevmbridge
+gen erc20permitmock
 compilegen BridgeMessageReceiver
