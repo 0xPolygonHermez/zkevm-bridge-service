@@ -19,7 +19,7 @@ const (
 )
 
 type StorageCompressedInterface interface {
-	GetClaimTxsByStatus(ctx context.Context, statuses []ctmtypes.MonitoredTxStatus, dbTx pgx.Tx) ([]ctmtypes.MonitoredTx, error)
+	GetClaimTxsByStatus(ctx context.Context, statuses []ctmtypes.MonitoredTxStatus, rollupID uint, dbTx pgx.Tx) ([]ctmtypes.MonitoredTx, error)
 	GetMonitoredTxsGroups(ctx context.Context, groupIds []uint64, dbTx pgx.Tx) (map[uint64]ctmtypes.MonitoredTxGroupDBEntry, error)
 
 	AddMonitoredTxsGroup(ctx context.Context, mTxGroup *ctmtypes.MonitoredTxGroupDBEntry, dbTx pgx.Tx) error
@@ -49,6 +49,7 @@ type MonitorCompressedTxs struct {
 	timeProvider          utils.TimeProvider
 	triggerGroups         *GroupsTrigger
 	gasOffset             uint64
+	rollupID              uint
 }
 
 func NewMonitorCompressedTxs(ctx context.Context,
@@ -59,7 +60,8 @@ func NewMonitorCompressedTxs(ctx context.Context,
 	auth *bind.TransactOpts,
 	etherMan EthermanI,
 	timeProvider utils.TimeProvider,
-	gasOffset uint64) *MonitorCompressedTxs {
+	gasOffset uint64,
+	rollupID uint) *MonitorCompressedTxs {
 	composer, err := NewComposeCompressClaim()
 	if err != nil {
 		log.Fatal("failed to create ComposeCompressClaim: %v", err)
@@ -76,6 +78,7 @@ func NewMonitorCompressedTxs(ctx context.Context,
 		timeProvider:          timeProvider,
 		triggerGroups:         NewGroupsTrigger(cfg.GroupingClaims),
 		gasOffset:             gasOffset,
+		rollupID:              rollupID,
 	}
 }
 
@@ -99,7 +102,7 @@ func (tm *MonitorCompressedTxs) getPendingTxs(ctx context.Context, dbTx pgx.Tx) 
 	statusesFilter := []ctmtypes.MonitoredTxStatus{ctmtypes.MonitoredTxStatusCreated,
 		ctmtypes.MonitoredTxStatusCompressing,
 		ctmtypes.MonitoredTxStatusClaiming}
-	mTxs, err := tm.storage.GetClaimTxsByStatus(ctx, statusesFilter, dbTx)
+	mTxs, err := tm.storage.GetClaimTxsByStatus(ctx, statusesFilter, tm.rollupID, dbTx)
 	if err != nil {
 		return PendingTxs{}, fmt.Errorf("failed to get get monitored txs: %v", err)
 	}

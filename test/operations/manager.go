@@ -122,7 +122,7 @@ func NewManager(ctx context.Context, cfg *Config) (*Manager, error) {
 	if err != nil {
 		return nil, err
 	}
-	bService := server.NewBridgeService(cfg.BS, cfg.BT.Height, []uint{0, cfg.L2NetworkID}, pgst, cfg.L2NetworkID)
+	bService := server.NewBridgeService(cfg.BS, cfg.BT.Height, []uint{0, cfg.L2NetworkID}, pgst)
 	opsman.storage = st.(StorageInterface)
 	opsman.bridgetree = bt
 	opsman.bridgeService = bService

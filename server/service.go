@@ -16,7 +16,6 @@ import (
 )
 
 type bridgeService struct {
-	rollupID         uint
 	storage          bridgeServiceStorage
 	networkIDs       map[uint]uint8
 	height           uint8
@@ -28,7 +27,7 @@ type bridgeService struct {
 }
 
 // NewBridgeService creates new bridge service.
-func NewBridgeService(cfg Config, height uint8, networks []uint, storage interface{}, rollupID uint) *bridgeService {
+func NewBridgeService(cfg Config, height uint8, networks []uint, storage interface{}) *bridgeService {
 	var networkIDs = make(map[uint]uint8)
 	for i, network := range networks {
 		networkIDs[network] = uint8(i)
@@ -38,7 +37,6 @@ func NewBridgeService(cfg Config, height uint8, networks []uint, storage interfa
 		panic(err)
 	}
 	return &bridgeService{
-		rollupID:         rollupID,
 		storage:          storage.(bridgeServiceStorage),
 		height:           height,
 		networkIDs:       networkIDs,
@@ -180,14 +178,14 @@ func (s *bridgeService) GetClaimProof(depositCnt, networkID uint, dbTx pgx.Tx) (
 		rollupLeaf        common.Hash
 	)
 	if networkID == 0 { // Mainnet
-		merkleProof, err = s.getProof(depositCnt, globalExitRoot.ExitRoots[tID], dbTx)
+		merkleProof, err = s.getProof(depositCnt, globalExitRoot.ExitRoots[0], dbTx)
 		if err != nil {
 			log.Error("error getting merkleProof. Error: ", err)
 			return nil, nil, nil, fmt.Errorf("getting the proof failed, error: %v, network: %d", err, networkID)
 		}
 		rollupMerkleProof = emptyProof()
 	} else { // Rollup
-		rollupMerkleProof, rollupLeaf, err = s.getRollupExitProof(s.rollupID-1, globalExitRoot.ExitRoots[tID], dbTx)
+		rollupMerkleProof, rollupLeaf, err = s.getRollupExitProof(networkID-1, globalExitRoot.ExitRoots[1], dbTx)
 		if err != nil {
 			log.Error("error getting rollupProof. Error: ", err)
 			return nil, nil, nil, fmt.Errorf("getting the rollup proof failed, error: %v, network: %d", err, networkID)
@@ -217,11 +215,6 @@ func (s *bridgeService) GetClaimProofForCompressed(ger common.Hash, depositCnt, 
 		}
 	}
 
-	tID, err := s.getNetworkID(networkID)
-	if err != nil {
-		return nil, nil, nil, err
-	}
-
 	globalExitRoot, err := s.storage.GetExitRootByGER(ctx, ger, dbTx)
 	if err != nil {
 		return nil, nil, nil, err
@@ -233,14 +226,14 @@ func (s *bridgeService) GetClaimProofForCompressed(ger common.Hash, depositCnt, 
 		rollupLeaf        common.Hash
 	)
 	if networkID == 0 { // Mainnet
-		merkleProof, err = s.getProof(depositCnt, globalExitRoot.ExitRoots[tID], dbTx)
+		merkleProof, err = s.getProof(depositCnt, globalExitRoot.ExitRoots[0], dbTx)
 		if err != nil {
 			log.Error("error getting merkleProof. Error: ", err)
 			return nil, nil, nil, fmt.Errorf("getting the proof failed, error: %v, network: %d", err, networkID)
 		}
 		rollupMerkleProof = emptyProof()
 	} else { // Rollup
-		rollupMerkleProof, rollupLeaf, err = s.getRollupExitProof(s.rollupID-1, globalExitRoot.ExitRoots[tID], dbTx)
+		rollupMerkleProof, rollupLeaf, err = s.getRollupExitProof(networkID-1, globalExitRoot.ExitRoots[1], dbTx)
 		if err != nil {
 			log.Error("error getting rollupProof. Error: ", err)
 			return nil, nil, nil, fmt.Errorf("getting the rollup proof failed, error: %v, network: %d", err, networkID)
@@ -314,7 +307,10 @@ func (s *bridgeService) GetBridges(ctx context.Context, req *pb.GetBridgesReques
 			return nil, err
 		}
 		mainnetFlag := deposit.NetworkID == 0
-		rollupIndex := s.rollupID - 1
+		var rollupIndex uint
+		if !mainnetFlag {
+			rollupIndex = deposit.NetworkID - 1
+		}
 		localExitRootIndex := deposit.DepositCount
 		pbDeposits = append(
 			pbDeposits, &pb.Deposit{

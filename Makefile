@@ -23,6 +23,7 @@ DOCKER_COMPOSE_BRIDGE := zkevm-bridge-service
 DOCKER_COMPOSE_BRIDGE_V1TOV2 := zkevm-bridge-service-v1tov2
 DOCKER_COMPOSE_BRIDGE_1 := zkevm-bridge-service-1
 DOCKER_COMPOSE_BRIDGE_2 := zkevm-bridge-service-2
+DOCKER_COMPOSE_BRIDGE_3 := zkevm-bridge-service-3
 
 RUN_STATE_DB := $(DOCKER_COMPOSE) up -d $(DOCKER_COMPOSE_STATE_DB)
 RUN_POOL_DB := $(DOCKER_COMPOSE) up -d $(DOCKER_COMPOSE_POOL_DB)
@@ -47,6 +48,7 @@ RUN_ZKPROVER_V1TOV2 := $(DOCKER_COMPOSE) up -d $(DOCKER_COMPOSE_ZKPROVER_V1TOV2)
 RUN_BRIDGE := $(DOCKER_COMPOSE) up -d $(DOCKER_COMPOSE_BRIDGE)
 RUN_BRIDGE_1 := $(DOCKER_COMPOSE) up -d $(DOCKER_COMPOSE_BRIDGE_1)
 RUN_BRIDGE_2 := $(DOCKER_COMPOSE) up -d $(DOCKER_COMPOSE_BRIDGE_2)
+RUN_BRIDGE_3 := $(DOCKER_COMPOSE) up -d $(DOCKER_COMPOSE_BRIDGE_3)
 RUN_BRIDGE_V1TOV2 := $(DOCKER_COMPOSE) up -d $(DOCKER_COMPOSE_BRIDGE_V1TOV2)
 
 STOP_NODE_DB := $(DOCKER_COMPOSE) stop $(DOCKER_COMPOSE_NODE_DB) && $(DOCKER_COMPOSE) rm -f $(DOCKER_COMPOSE_NODE_DB)
@@ -67,6 +69,7 @@ STOP_ZKPROVER_V1TOV2 := $(DOCKER_COMPOSE) stop $(DOCKER_COMPOSE_ZKPROVER_V1TOV2)
 STOP_BRIDGE := $(DOCKER_COMPOSE) stop $(DOCKER_COMPOSE_BRIDGE) && $(DOCKER_COMPOSE) rm -f $(DOCKER_COMPOSE_BRIDGE)
 STOP_BRIDGE_1 := $(DOCKER_COMPOSE) stop $(DOCKER_COMPOSE_BRIDGE_1) && $(DOCKER_COMPOSE) rm -f $(DOCKER_COMPOSE_BRIDGE_1)
 STOP_BRIDGE_2 := $(DOCKER_COMPOSE) stop $(DOCKER_COMPOSE_BRIDGE_2) && $(DOCKER_COMPOSE) rm -f $(DOCKER_COMPOSE_BRIDGE_2)
+STOP_BRIDGE_3 := $(DOCKER_COMPOSE) stop $(DOCKER_COMPOSE_BRIDGE_3) && $(DOCKER_COMPOSE) rm -f $(DOCKER_COMPOSE_BRIDGE_3)
 STOP_BRIDGE_V1TOV2 := $(DOCKER_COMPOSE) stop $(DOCKER_COMPOSE_BRIDGE_V1TOV2) && $(DOCKER_COMPOSE) rm -f $(DOCKER_COMPOSE_BRIDGE_V1TOV2)
 STOP := $(DOCKER_COMPOSE) down --remove-orphans
 
@@ -260,6 +263,14 @@ run-bridge-2: ## Runs the bridge service
 stop-bridge-2: ## Stops the bridge service
 	$(STOP_BRIDGE_2)
 
+.PHONY: run-bridge-3
+run-bridge-3: ## Runs the bridge service
+	$(RUN_BRIDGE_3)
+
+.PHONY: stop-bridge-3
+stop-bridge-3: ## Stops the bridge service
+	$(STOP_BRIDGE_3)
+
 .PHONY: run-bridge-v1tov2
 run-bridge-v1tov2: ## Runs the bridge service
 	$(RUN_BRIDGE_V1TOV2)
@@ -322,6 +333,20 @@ run-multi: ## runs all services
 	sleep 7
 	$(RUN_BRIDGE_1)
 	$(RUN_BRIDGE_2)
+
+.PHONY: run-multi-single-bridge
+run-multi-single-bridge: ## runs all services
+	$(RUN_DBS)
+	$(RUN_DBS_2)
+	$(RUN_L1_NETWORK_MULTI_ROLLUP)
+	sleep 5
+	$(RUN_ZKPROVER_1)
+	$(RUN_ZKPROVER_2)
+	sleep 3
+	$(RUN_NODE_1)
+	$(RUN_NODE_2)
+	sleep 7
+	$(RUN_BRIDGE_3)
 
 .PHONY: run-bridge-dependencies
 run-bridge-dependencies: stop ## runs all services

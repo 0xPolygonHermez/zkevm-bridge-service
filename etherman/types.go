@@ -33,6 +33,7 @@ type GlobalExitRoot struct {
 
 // Deposit struct
 type Deposit struct {
+	Id                 uint64
 	LeafType           uint8
 	OriginalNetwork    uint
 	OriginalAddress    common.Address

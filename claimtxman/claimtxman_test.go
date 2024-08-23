@@ -80,11 +80,11 @@ func TestMonitoredTxStorage(t *testing.T) {
 	err = pg.AddClaimTx(ctx, mTx, tx)
 	require.NoError(t, err)
 
-	mTxs, err := pg.GetClaimTxsByStatus(ctx, []ctmtypes.MonitoredTxStatus{ctmtypes.MonitoredTxStatusCreated}, tx)
+	mTxs, err := pg.GetClaimTxsByStatus(ctx, []ctmtypes.MonitoredTxStatus{ctmtypes.MonitoredTxStatusCreated}, 1, tx)
 	require.NoError(t, err)
 	require.Len(t, mTxs, 1)
 
-	mTxs, err = pg.GetClaimTxsByStatus(ctx, []ctmtypes.MonitoredTxStatus{ctmtypes.MonitoredTxStatusCreated, ctmtypes.MonitoredTxStatusConfirmed}, tx)
+	mTxs, err = pg.GetClaimTxsByStatus(ctx, []ctmtypes.MonitoredTxStatus{ctmtypes.MonitoredTxStatusCreated, ctmtypes.MonitoredTxStatusConfirmed}, 1, tx)
 	require.NoError(t, err)
 	require.Len(t, mTxs, 2)
 
@@ -174,7 +174,7 @@ func TestUpdateDepositStatus(t *testing.T) {
 	l2Root1 := common.FromHex("0xda7bce9f4e8618b6bd2f4132ce798cdc7a60e7e1460a7299e3c6342a579626d2")
 	require.NoError(t, pg.SetRoot(ctx, l2Root1, depositID, deposit.NetworkID, nil))
 
-	deposits, err := pg.UpdateL1DepositsStatus(ctx, l1Root, nil)
+	deposits, err := pg.UpdateL1DepositsStatus(ctx, l1Root, deposit.DestinationNetwork, nil)
 	require.NoError(t, err)
 	require.Len(t, deposits, 1)
 	require.True(t, deposits[0].ReadyForClaim)

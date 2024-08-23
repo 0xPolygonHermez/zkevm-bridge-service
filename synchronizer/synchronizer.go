@@ -30,7 +30,7 @@ type ClientSynchronizer struct {
 	genBlockNumber   uint64
 	cfg              Config
 	networkID        uint
-	chExitRootEvent  chan *etherman.GlobalExitRoot
+	chsExitRootEvent []chan *etherman.GlobalExitRoot
 	chSynced         chan uint
 	zkEVMClient      zkEVMClientInterface
 	synced           bool
@@ -45,14 +45,11 @@ func NewSynchronizer(
 	ethMan ethermanInterface,
 	zkEVMClient zkEVMClientInterface,
 	genBlockNumber uint64,
-	chExitRootEvent chan *etherman.GlobalExitRoot,
+	chsExitRootEvent []chan *etherman.GlobalExitRoot,
 	chSynced chan uint,
 	cfg Config) (Synchronizer, error) {
 	ctx, cancel := context.WithCancel(parentCtx)
-	networkID, err := ethMan.GetNetworkID(ctx)
-	if err != nil {
-		log.Fatal("error getting networkID. Error: ", err)
-	}
+	networkID := ethMan.GetNetworkID()
 	ger, err := storage.(storageInterface).GetLatestL1SyncedExitRoot(ctx, nil)
 	if err != nil {
 		if err == gerror.ErrStorageNotFound {
@@ -62,14 +59,6 @@ func NewSynchronizer(
 		}
 	}
 
-	// Read db to see if the LxLy is already activated
-	isActivated, err := storage.(storageInterface).IsLxLyActivated(ctx, nil)
-	if err != nil {
-		log.Fatal("error checking if LxLyEtrog is activated. Error: ", err)
-	}
-	if isActivated {
-		log.Info("LxLyEtrog already activated")
-	}
 	if networkID == 0 {
 		return &ClientSynchronizer{
 			bridgeCtrl:       bridge,
@@ -80,7 +69,7 @@ func NewSynchronizer(
 			genBlockNumber:   genBlockNumber,
 			cfg:              cfg,
 			networkID:        networkID,
-			chExitRootEvent:  chExitRootEvent,
+			chsExitRootEvent:  chsExitRootEvent,
 			chSynced:         chSynced,
 			zkEVMClient:      zkEVMClient,
 			l1RollupExitRoot: ger.ExitRoots[1],
@@ -218,7 +207,10 @@ func (s *ClientSynchronizer) syncTrustedState() error {
 		return err
 	}
 	if isUpdated {
-		s.chExitRootEvent <- ger
+		for _, ch := range s.chsExitRootEvent {
+			log.Debug("adding trusted ger to the channels. GER: ", lastGER)
+			ch <- ger
+		}
 	}
 	return nil
 }
@@ -429,9 +421,6 @@ func (s *ClientSynchronizer) processBlockRange(blocks []etherman.Block, order ma
 				if err != nil {
 					return err
 				}
-			case etherman.ActivateEtrogOrder:
-				// this is activated when the bridge detects the CreateNewRollup or the AddExistingRollup event from the rollupManager
-				log.Infof("NetworkID: %d, Event received. Activating LxLyEtrog...", s.networkID)
 			}
 		}
 		err = s.storage.Commit(s.ctx, dbTx)
@@ -457,7 +446,9 @@ func (s *ClientSynchronizer) processBlockRange(blocks []etherman.Block, order ma
 		if s.l1RollupExitRoot != ger.ExitRoots[1] {
 			log.Debugf("Updating ger: %+v", ger)
 			s.l1RollupExitRoot = ger.ExitRoots[1]
-			s.chExitRootEvent <- ger
+			for _, ch := range s.chsExitRootEvent {
+				ch <- ger
+			}
 		}
 	}
 	return nil
@@ -599,33 +590,31 @@ func (s *ClientSynchronizer) checkReorg(latestStoredBlock, syncedBlock *etherman
 }
 
 func (s *ClientSynchronizer) processVerifyBatch(verifyBatch etherman.VerifiedBatch, blockID uint64, dbTx pgx.Tx) error {
-	if verifyBatch.RollupID == s.etherMan.GetRollupID() {
-		if verifyBatch.LocalExitRoot == (common.Hash{}) {
-			log.Debugf("networkID: %d, skipping empty local exit root in verifyBatch event. VerifyBatch: %+v", s.networkID, verifyBatch)
-			return nil
+	if verifyBatch.LocalExitRoot == (common.Hash{}) {
+		log.Debugf("networkID: %d, skipping empty local exit root in verifyBatch event. VerifyBatch: %+v", s.networkID, verifyBatch)
+		return nil
+	}
+	// Just check that the calculated RollupExitRoot is fine
+	ok, err := s.storage.CheckIfRootExists(s.ctx, verifyBatch.LocalExitRoot.Bytes(), uint8(verifyBatch.RollupID), dbTx)
+	if err != nil {
+		log.Errorf("networkID: %d, error Checking if root exists. Error: %v", s.networkID, err)
+		rollbackErr := s.storage.Rollback(s.ctx, dbTx)
+		if rollbackErr != nil {
+			log.Errorf("networkID: %d, error rolling back state. BlockNumber: %d, rollbackErr: %v, error : %s",
+				s.networkID, verifyBatch.BlockNumber, rollbackErr, err.Error())
+			return rollbackErr
 		}
-		// Just check that the calculated RollupExitRoot is fine
-		ok, err := s.storage.CheckIfRootExists(s.ctx, verifyBatch.LocalExitRoot.Bytes(), uint8(verifyBatch.RollupID), dbTx)
-		if err != nil {
-			log.Errorf("networkID: %d, error Checking if root exists. Error: %v", s.networkID, err)
-			rollbackErr := s.storage.Rollback(s.ctx, dbTx)
-			if rollbackErr != nil {
-				log.Errorf("networkID: %d, error rolling back state. BlockNumber: %d, rollbackErr: %v, error : %s",
-					s.networkID, verifyBatch.BlockNumber, rollbackErr, err.Error())
-				return rollbackErr
-			}
-			return err
+		return err
+	}
+	if !ok {
+		log.Errorf("networkID: %d, Root: %s doesn't exist!", s.networkID, verifyBatch.LocalExitRoot.String())
+		rollbackErr := s.storage.Rollback(s.ctx, dbTx)
+		if rollbackErr != nil {
+			log.Errorf("networkID: %d, error rolling back state. BlockNumber: %d, rollbackErr: %v, error : %s",
+				s.networkID, verifyBatch.BlockNumber, rollbackErr, err.Error())
+			return rollbackErr
 		}
-		if !ok {
-			log.Errorf("networkID: %d, Root: %s doesn't exist!", s.networkID, verifyBatch.LocalExitRoot.String())
-			rollbackErr := s.storage.Rollback(s.ctx, dbTx)
-			if rollbackErr != nil {
-				log.Errorf("networkID: %d, error rolling back state. BlockNumber: %d, rollbackErr: %v, error : %s",
-					s.networkID, verifyBatch.BlockNumber, rollbackErr, err.Error())
-				return rollbackErr
-			}
-			return fmt.Errorf("networkID: %d, Root: %s doesn't exist!", s.networkID, verifyBatch.LocalExitRoot.String())
-		}
+		return fmt.Errorf("networkID: %d, Root: %s doesn't exist!", s.networkID, verifyBatch.LocalExitRoot.String())
 	}
 	rollupLeaf := etherman.RollupExitLeaf{
 		BlockID:  blockID,
@@ -633,7 +622,7 @@ func (s *ClientSynchronizer) processVerifyBatch(verifyBatch etherman.VerifiedBat
 		RollupId: verifyBatch.RollupID,
 	}
 	// Update rollupExitRoot
-	err := s.bridgeCtrl.AddRollupExitLeaf(s.ctx, rollupLeaf, dbTx)
+	err = s.bridgeCtrl.AddRollupExitLeaf(s.ctx, rollupLeaf, dbTx)
 	if err != nil {
 		log.Errorf("networkID: %d, error adding rollup exit leaf. Error: %v", s.networkID, err)
 		rollbackErr := s.storage.Rollback(s.ctx, dbTx)

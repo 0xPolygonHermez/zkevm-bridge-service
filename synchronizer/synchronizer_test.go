@@ -32,14 +32,11 @@ func NewSynchronizerTest(
 	ethMan ethermanInterface,
 	zkEVMClient zkEVMClientInterface,
 	genBlockNumber uint64,
-	chExitRootEvent chan *etherman.GlobalExitRoot,
+	chsExitRootEvent []chan *etherman.GlobalExitRoot,
 	chSynced chan uint,
 	cfg Config) (Synchronizer, error) {
 	ctx, cancel := context.WithCancel(parentCtx)
-	networkID, err := ethMan.GetNetworkID(ctx)
-	if err != nil {
-		log.Fatal("error getting networkID. Error: ", err)
-	}
+	networkID := ethMan.GetNetworkID()
 	ger, err := storage.(storageInterface).GetLatestL1SyncedExitRoot(ctx, nil)
 	if err != nil {
 		if err == gerror.ErrStorageNotFound {
@@ -49,14 +46,6 @@ func NewSynchronizerTest(
 		}
 	}
 
-	// Read db to see if the LxLy is already activated
-	isActivated, err := storage.(storageInterface).IsLxLyActivated(ctx, nil)
-	if err != nil {
-		log.Fatal("error checking if LxLyEtrog is activated. Error: ", err)
-	}
-	if isActivated {
-		log.Info("LxLyEtrog already activated")
-	}
 	if networkID == 0 {
 		return &ClientSynchronizer{
 			bridgeCtrl:       bridge,
@@ -67,7 +56,7 @@ func NewSynchronizerTest(
 			genBlockNumber:   genBlockNumber,
 			cfg:              cfg,
 			networkID:        networkID,
-			chExitRootEvent:  chExitRootEvent,
+			chsExitRootEvent:  chsExitRootEvent,
 			chSynced:         chSynced,
 			zkEVMClient:      zkEVMClient,
 			l1RollupExitRoot: ger.ExitRoots[1],
@@ -102,7 +91,7 @@ func TestSyncGer(t *testing.T) {
 		chEvent := make(chan *etherman.GlobalExitRoot)
 		chSynced := make(chan uint)
 		parentCtx := context.Background()
-		sync, err := NewSynchronizerTest(parentCtx, m.Storage, m.BridgeCtrl, m.Etherman, m.ZkEVMClient, genBlockNumber, chEvent, chSynced, cfg)
+		sync, err := NewSynchronizerTest(parentCtx, m.Storage, m.BridgeCtrl, m.Etherman, m.ZkEVMClient, genBlockNumber, []chan *etherman.GlobalExitRoot{chEvent}, chSynced, cfg)
 		require.NoError(t, err)
 
 		go func() {
@@ -268,7 +257,7 @@ func TestReorg(t *testing.T) {
 		m.Storage.On("IsLxLyActivated", ctx, nil).Return(true, nil).Once()
 		chEvent := make(chan *etherman.GlobalExitRoot)
 		chSynced := make(chan uint)
-		sync, err := NewSynchronizerTest(parentContext, m.Storage, m.BridgeCtrl, m.Etherman, m.ZkEVMClient, genBlockNumber, chEvent, chSynced, cfg)
+		sync, err := NewSynchronizerTest(parentContext, m.Storage, m.BridgeCtrl, m.Etherman, m.ZkEVMClient, genBlockNumber, []chan *etherman.GlobalExitRoot{chEvent}, chSynced, cfg)
 		require.NoError(t, err)
 
 		go func() {
@@ -550,7 +539,7 @@ func TestLatestSyncedBlockEmpty(t *testing.T) {
 		m.Storage.On("IsLxLyActivated", ctx, nil).Return(true, nil).Once()
 		chEvent := make(chan *etherman.GlobalExitRoot)
 		chSynced := make(chan uint)
-		sync, err := NewSynchronizerTest(parentContext, m.Storage, m.BridgeCtrl, m.Etherman, m.ZkEVMClient, genBlockNumber, chEvent, chSynced, cfg)
+		sync, err := NewSynchronizerTest(parentContext, m.Storage, m.BridgeCtrl, m.Etherman, m.ZkEVMClient, genBlockNumber, []chan *etherman.GlobalExitRoot{chEvent}, chSynced, cfg)
 		require.NoError(t, err)
 
 		go func() {
@@ -744,7 +733,7 @@ func TestRegularReorg(t *testing.T) {
 		m.Storage.On("IsLxLyActivated", ctx, nil).Return(true, nil).Once()
 		chEvent := make(chan *etherman.GlobalExitRoot)
 		chSynced := make(chan uint)
-		sync, err := NewSynchronizerTest(parentContext, m.Storage, m.BridgeCtrl, m.Etherman, m.ZkEVMClient, genBlockNumber, chEvent, chSynced, cfg)
+		sync, err := NewSynchronizerTest(parentContext, m.Storage, m.BridgeCtrl, m.Etherman, m.ZkEVMClient, genBlockNumber, []chan *etherman.GlobalExitRoot{chEvent}, chSynced, cfg)
 		require.NoError(t, err)
 
 		go func() {
@@ -988,7 +977,7 @@ func TestLatestSyncedBlockEmptyWithExtraReorg(t *testing.T) {
 		m.Storage.On("IsLxLyActivated", ctx, nil).Return(true, nil).Once()
 		chEvent := make(chan *etherman.GlobalExitRoot)
 		chSynced := make(chan uint)
-		sync, err := NewSynchronizerTest(parentContext, m.Storage, m.BridgeCtrl, m.Etherman, m.ZkEVMClient, genBlockNumber, chEvent, chSynced, cfg)
+		sync, err := NewSynchronizerTest(parentContext, m.Storage, m.BridgeCtrl, m.Etherman, m.ZkEVMClient, genBlockNumber, []chan *etherman.GlobalExitRoot{chEvent}, chSynced, cfg)
 		require.NoError(t, err)
 
 		go func() {
@@ -1228,7 +1217,7 @@ func TestCallFromEmptyBlockAndReorg(t *testing.T) {
 		m.Storage.On("IsLxLyActivated", ctx, nil).Return(true, nil).Once()
 		chEvent := make(chan *etherman.GlobalExitRoot)
 		chSynced := make(chan uint)
-		sync, err := NewSynchronizerTest(parentContext, m.Storage, m.BridgeCtrl, m.Etherman, m.ZkEVMClient, genBlockNumber, chEvent, chSynced, cfg)
+		sync, err := NewSynchronizerTest(parentContext, m.Storage, m.BridgeCtrl, m.Etherman, m.ZkEVMClient, genBlockNumber, []chan *etherman.GlobalExitRoot{chEvent}, chSynced, cfg)
 		require.NoError(t, err)
 
 		go func() {

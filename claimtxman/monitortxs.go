@@ -25,6 +25,7 @@ type MonitorTxs struct {
 	// client is the ethereum client
 	l2Node     *utils.Client
 	cfg        Config
+	rollupID   uint
 	nonceCache *NonceCache
 	auth       *bind.TransactOpts
 }
@@ -34,8 +35,10 @@ func NewMonitorTxs(ctx context.Context,
 	l2Node *utils.Client,
 	cfg Config,
 	nonceCache *NonceCache,
+	rollupID uint,
 	auth *bind.TransactOpts) *MonitorTxs {
 	return &MonitorTxs{
+		rollupID:   rollupID,
 		storage:    storage,
 		ctx:        ctx,
 		l2Node:     l2Node,
@@ -53,22 +56,22 @@ func (tm *MonitorTxs) MonitorTxs(ctx context.Context) error {
 	}
 
 	statusesFilter := []ctmtypes.MonitoredTxStatus{ctmtypes.MonitoredTxStatusCreated}
-	mTxs, err := tm.storage.GetClaimTxsByStatus(ctx, statusesFilter, dbTx)
+	mTxs, err := tm.storage.GetClaimTxsByStatus(ctx, statusesFilter, tm.rollupID, dbTx)
 	if err != nil {
-		log.Errorf("failed to get created monitored txs: %v", err)
+		log.Errorf("rollupID: %d, failed to get created monitored txs: %v", tm.rollupID, err)
 		rollbackErr := tm.storage.Rollback(tm.ctx, dbTx)
 		if rollbackErr != nil {
-			log.Errorf("claimtxman error rolling back state. RollbackErr: %s, err: %v", rollbackErr.Error(), err)
+			log.Errorf("rollupID: %d, claimtxman error rolling back state. RollbackErr: %s, err: %v", tm.rollupID, rollbackErr.Error(), err)
 			return rollbackErr
 		}
-		return fmt.Errorf("failed to get created monitored txs: %v", err)
+		return fmt.Errorf("rollupID: %d, failed to get created monitored txs: %v", tm.rollupID, err)
 	}
 
 	isResetNonce := false // it will reset the nonce in one cycle
-	log.Infof("found %v monitored tx to process", len(mTxs))
+	log.Infof("rollupID: %d, found %v monitored tx to process", tm.rollupID, len(mTxs))
 	for _, mTx := range mTxs {
 		mTx := mTx // force variable shadowing to avoid pointer conflicts
-		mTxLog := log.WithFields("monitoredTx", mTx.DepositID)
+		mTxLog := log.WithFields("monitoredTx", mTx.DepositID, "rollupID", tm.rollupID)
 		mTxLog.Infof("processing tx with nonce %d", mTx.Nonce)
 
 		// if the tx is not mined yet, check that not all the tx were mined and go to the next
@@ -131,7 +134,7 @@ func (tm *MonitorTxs) MonitorTxs(ctx context.Context) error {
 			}
 			//Multiply gasPrice by 10 to increase the efficiency of the tx in the sequence
 			mTx.GasPrice = big.NewInt(0).Mul(gasPrice, big.NewInt(10)) //nolint:gomnd
-			log.Infof("Using gasPrice: %s. The gasPrice suggested by the network is %s", mTx.GasPrice.String(), gasPrice.String())
+			mTxLog.Infof("Using gasPrice: %s. The gasPrice suggested by the network is %s", mTx.GasPrice.String(), gasPrice.String())
 
 			// rebuild transaction
 			tx := mTx.Tx()
@@ -196,10 +199,10 @@ func (tm *MonitorTxs) MonitorTxs(ctx context.Context) error {
 
 	err = tm.storage.Commit(tm.ctx, dbTx)
 	if err != nil {
-		log.Errorf("UpdateClaimTx committing dbTx, err: %v", err)
+		log.Errorf("rollupID: %d, UpdateClaimTx committing dbTx, err: %v", tm.rollupID, err)
 		rollbackErr := tm.storage.Rollback(tm.ctx, dbTx)
 		if rollbackErr != nil {
-			log.Errorf("claimtxman error rolling back state. RollbackErr: %s, err: %v", rollbackErr.Error(), err)
+			log.Errorf("rollupID: %d, claimtxman error rolling back state. RollbackErr: %s, err: %v", tm.rollupID, rollbackErr.Error(), err)
 			return rollbackErr
 		}
 		return err
@@ -242,7 +245,7 @@ func (tm *MonitorTxs) checkTxHistory(ctx context.Context, mTx ctmtypes.Monitored
 					continue
 				}
 			}
-			log.Infof("tx: %s not mined yet", txHash.String())
+			mTxLog.Infof("tx: %s not mined yet", txHash.String())
 
 			allHistoryTxMined = false
 			continue
@@ -263,7 +266,7 @@ func (tm *MonitorTxs) checkTxHistory(ctx context.Context, mTx ctmtypes.Monitored
 // accordingly to the current information stored and the current
 // state of the blockchain
 func (tm *MonitorTxs) ReviewMonitoredTx(ctx context.Context, mTx *ctmtypes.MonitoredTx, reviewNonce bool) error {
-	mTxLog := log.WithFields("monitoredTx", mTx.DepositID)
+	mTxLog := log.WithFields("monitoredTx", mTx.DepositID, "rollupID", tm.rollupID)
 	mTxLog.Debug("reviewing")
 	// get gas
 	tx := ethereum.CallMsg{
