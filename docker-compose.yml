@@ -232,6 +232,7 @@ services:
       - ZKEVM_BRIDGE_ETHERMAN_L2URLS=http://zkevm-node-v1tov2:8123
       - ZKEVM_BRIDGE_NETWORKCONFIG_POLYGONBRIDGEADDRESS=0x80a540502706aa690476D5534e26939894559c05
       - ZKEVM_BRIDGE_NETWORKCONFIG_L2POLYGONBRIDGEADDRESSES=0x80a540502706aa690476D5534e26939894559c05
+      - ZKEVM_BRIDGE_CLAIMTXMANAGER_GROUPINGCLAIMS_ENABLED=${ZKEVM_BRIDGE_CLAIMTXMANAGER_GROUPINGCLAIMS_ENABLED}
     volumes:
       - ./test/test.keystore.claimtx:/pk/keystore.claimtxmanager
       - ./config/config.local.toml:/app/config.toml
@@ -410,6 +411,7 @@ services:
       - ZKEVM_BRIDGE_NETWORKCONFIG_POLYGONROLLUPMANAGERADDRESS=0xA51c1fc2f0D1a1b8494Ed1FE312d7C3a78Ed91C0
       - ZKEVM_BRIDGE_NETWORKCONFIG_POLYGONBRIDGEADDRESS=0xFe12ABaa190Ef0c8638Ee0ba9F828BF41368Ca0E
       - ZKEVM_BRIDGE_NETWORKCONFIG_L2POLYGONBRIDGEADDRESSES=0xFe12ABaa190Ef0c8638Ee0ba9F828BF41368Ca0E
+      - ZKEVM_BRIDGE_CLAIMTXMANAGER_GROUPINGCLAIMS_ENABLED=${ZKEVM_BRIDGE_CLAIMTXMANAGER_GROUPINGCLAIMS_ENABLED}
     volumes:
       - ./test/test.keystore.claimtx:/pk/keystore.claimtxmanager
       - ./config/config.local.toml:/app/config.toml
@@ -441,6 +443,7 @@ services:
       - ZKEVM_BRIDGE_NETWORKCONFIG_POLYGONROLLUPMANAGERADDRESS=0xA51c1fc2f0D1a1b8494Ed1FE312d7C3a78Ed91C0
       - ZKEVM_BRIDGE_NETWORKCONFIG_POLYGONBRIDGEADDRESS=0xFe12ABaa190Ef0c8638Ee0ba9F828BF41368Ca0E
       - ZKEVM_BRIDGE_NETWORKCONFIG_L2POLYGONBRIDGEADDRESSES=0xFe12ABaa190Ef0c8638Ee0ba9F828BF41368Ca0E
+      - ZKEVM_BRIDGE_CLAIMTXMANAGER_GROUPINGCLAIMS_ENABLED=${ZKEVM_BRIDGE_CLAIMTXMANAGER_GROUPINGCLAIMS_ENABLED}
     volumes:
       - ./test/test.keystore.claimtx:/pk/keystore.claimtxmanager
       - ./config/config.local.toml:/app/config.toml
@@ -472,10 +475,13 @@ services:
       - ZKEVM_BRIDGE_NETWORKCONFIG_POLYGONROLLUPMANAGERADDRESS=0xA51c1fc2f0D1a1b8494Ed1FE312d7C3a78Ed91C0
       - ZKEVM_BRIDGE_NETWORKCONFIG_POLYGONBRIDGEADDRESS=0xFe12ABaa190Ef0c8638Ee0ba9F828BF41368Ca0E
       - ZKEVM_BRIDGE_NETWORKCONFIG_L2POLYGONBRIDGEADDRESSES=0xFe12ABaa190Ef0c8638Ee0ba9F828BF41368Ca0E,0xFe12ABaa190Ef0c8638Ee0ba9F828BF41368Ca0E
+      - ZKEVM_BRIDGE_CLAIMTXMANAGER_GROUPINGCLAIMS_ENABLED=${ZKEVM_BRIDGE_CLAIMTXMANAGER_GROUPINGCLAIMS_ENABLED}
     volumes:
       - ./test/test.keystore.claimtx:/pk/keystore.claimtxmanager
       - ./config/config.local.toml:/app/config.toml
     command:
       - "/bin/sh"
       - "-c"
-      - "/app/zkevm-bridge run --cfg /app/config.toml"
+      - "/app/test-deploy-claimcompressor deploy --url \"http://zkevm-node-1:8123\" --bridgeAddress \"0xFe12ABaa190Ef0c8638Ee0ba9F828BF41368Ca0E\" --walletFile /pk/keystore.claimtxmanager --password \"testonly\" &&
+        /app/test-deploy-claimcompressor deploy --url \"http://zkevm-node-2:8124\" --bridgeAddress \"0xFe12ABaa190Ef0c8638Ee0ba9F828BF41368Ca0E\" --walletFile /pk/keystore.claimtxmanager --password \"testonly\" &&
+        /app/zkevm-bridge run --cfg /app/config.toml"

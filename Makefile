@@ -337,7 +337,8 @@ run-multi: ## runs all services
 .PHONY: run-multi-single-bridge
 run-multi-single-bridge: ## runs all services
 	$(RUN_DBS)
-	$(RUN_DBS_2)
+	${RUN_STATE_DB_2}
+	${RUN_POOL_DB_2}
 	$(RUN_L1_NETWORK_MULTI_ROLLUP)
 	sleep 5
 	$(RUN_ZKPROVER_1)
@@ -407,12 +408,12 @@ test-edge: build-docker stop run ## Runs all tests checking race conditions
 	trap '$(STOP)' EXIT; MallocNanoZone=0 go test -v -failfast -race -p 1 -timeout 2400s ./test/e2e/... -count 1 -tags='edge'
 
 .PHONY: test-multiplerollups
-test-multiplerollups: build-docker stop run-multi ## Runs all tests checking race conditions
+test-multiplerollups: build-docker stop run-multi-single-bridge ## Runs all tests checking race conditions
 	sleep 3
 	trap '$(STOP)' EXIT; MallocNanoZone=0 go test -v -failfast -race -p 1 -timeout 2400s ./test/e2e/... -count 1 -tags='multiplerollups'
 
 .PHONY: test-l2l2
-test-l2l2: build-docker stop run-multi ## Runs all tests checking race conditions
+test-l2l2: build-docker stop run-multi-single-bridge ## Runs all tests checking race conditions
 	sleep 3
 	trap '$(STOP)' EXIT; MallocNanoZone=0 go test -v -failfast -race -p 1 -timeout 2400s ./test/e2e/... -count 1 -tags='l2l2'
 

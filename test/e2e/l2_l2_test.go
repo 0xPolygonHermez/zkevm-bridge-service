@@ -23,7 +23,7 @@ func TestL2L2(t *testing.T) {
 	ctx := context.Background()
 	opsman1, err := operations.GetOpsman(ctx, "http://localhost:8123", "test_db", "8080", "9090", "5435", 1)
 	require.NoError(t, err)
-	opsman2, err := operations.GetOpsman(ctx, "http://localhost:8124", "test_db", "8081", "9091", "5438", 2)
+	opsman2, err := operations.GetOpsman(ctx, "http://localhost:8124", "test_db", "8080", "9090", "5435", 2)
 	require.NoError(t, err)
 
 	t.Run("L2-L2 eth bridge", func(t *testing.T) {

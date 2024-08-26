@@ -178,7 +178,6 @@ func (tm *ClaimTxManager) processDepositStatus(ger *etherman.GlobalExitRoot, dbT
 			return err
 		}
 	} else { // L1 exit root is updated in the trusted state
-		// TODO crear un logger para identificar la red en la cual funciona el autoclaim
 		log.Infof("RollupID: %d, Mainnet exitroot %v is updated", tm.rollupID, ger.ExitRoots[0])
 		deposits, err := tm.storage.UpdateL1DepositsStatus(tm.ctx, ger.ExitRoots[0][:], tm.l2NetworkID, dbTx)
 		if err != nil {
@@ -261,6 +260,23 @@ func (tm *ClaimTxManager) addClaimTx(depositID uint64, from common.Address, to *
 		gas, err = tm.l2Node.EstimateGas(tm.ctx, tx)
 	}
 	if err != nil {
+		var b string
+		block, err2 := tm.l2Node.Client.BlockByNumber(tm.ctx, nil)
+		if err2 != nil {
+			log.Error("error getting blockNumber. Error: ", err2)
+			b = "latest"
+		} else {
+			b = fmt.Sprintf("%x", block.Number())
+		}
+		log.Warnf(`Use the next command to debug it manually.
+		curl --location --request POST 'http://localhost:8545' \
+		--header 'Content-Type: application/json' \
+		--data-raw '{
+			"jsonrpc": "2.0",
+			"method": "eth_call",
+			"params": [{"from": "%s","to":"%s","data":"0x%s"},"0x%s"],
+			"id": 1
+		}'`, from, to, common.Bytes2Hex(data), b)
 		log.Errorf("rollupID: %d, failed to estimate gas. Ignoring tx... Error: %v, data: %s", tm.rollupID, err, common.Bytes2Hex(data))
 		return nil
 	}
