@@ -244,6 +244,22 @@ func (c *Client) SendClaim(ctx context.Context, deposit *pb.Deposit, smtProof [m
 	globalIndex, _ := big.NewInt(0).SetString(deposit.GlobalIndex, 0)
 	if deposit.LeafType == LeafTypeAsset {
 		tx, err = c.Bridge.ClaimAsset(auth, smtProof, smtRollupProof, globalIndex, globalExitRoot.ExitRoots[0], globalExitRoot.ExitRoots[1], deposit.OrigNet, common.HexToAddress(deposit.OrigAddr), deposit.DestNet, common.HexToAddress(deposit.DestAddr), amount, common.FromHex(deposit.Metadata))
+		if err != nil {
+			a, _ := polygonzkevmbridge.PolygonzkevmbridgeMetaData.GetAbi()
+			input, err3 := a.Pack("claimAsset", smtProof, smtRollupProof, globalIndex, globalExitRoot.ExitRoots[0], globalExitRoot.ExitRoots[1], deposit.OrigNet, common.HexToAddress(deposit.OrigAddr), deposit.DestNet, common.HexToAddress(deposit.DestAddr), amount, common.FromHex(deposit.Metadata))
+			if err3 != nil {
+				log.Error("error packing call. Error: ", err3)
+			}
+			log.Warnf(`Use the next command to debug it manually.
+			curl --location --request POST 'http://localhost:8123' \
+			--header 'Content-Type: application/json' \
+			--data-raw '{
+				"jsonrpc": "2.0",
+				"method": "eth_call",
+				"params": [{"from": "%s","to":"%s","data":"0x%s"},"latest"],
+				"id": 1
+			}'`, auth.From, "<To address>", common.Bytes2Hex(input))
+		}
 	} else if deposit.LeafType == LeafTypeMessage {
 		tx, err = c.Bridge.ClaimMessage(auth, smtProof, smtRollupProof, globalIndex, globalExitRoot.ExitRoots[0], globalExitRoot.ExitRoots[1], deposit.OrigNet, common.HexToAddress(deposit.OrigAddr), deposit.DestNet, common.HexToAddress(deposit.DestAddr), amount, common.FromHex(deposit.Metadata))
 	}

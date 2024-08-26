@@ -545,11 +545,7 @@ func (s *ClientSynchronizer) checkReorg(latestStoredBlock, syncedBlock *etherman
 				log.Error("error: ", err)
 				return nil, err
 			}
-		} else {
-			log.Infof("NetworkID: %d, [checkReorg function] Using block %d from GetRollupInfoByBlockRange", s.networkID, block.BlockNumber)
 		}
-		log.Infof("NetworkID: %d, [checkReorg function] BlockNumber: %d BlockHash got from L1 provider: %s", s.networkID, block.BlockNumber, block.BlockHash.String())
-		log.Infof("NetworkID: %d, [checkReorg function] reorgedBlockNumber: %d reorgedBlockHash already synced: %s", s.networkID, reorgedBlock.BlockNumber, reorgedBlock.BlockHash.String())
 
 		// Compare hashes
 		if (block.BlockHash != reorgedBlock.BlockHash || block.ParentHash != reorgedBlock.ParentHash) && reorgedBlock.BlockNumber > s.genBlockNumber {
