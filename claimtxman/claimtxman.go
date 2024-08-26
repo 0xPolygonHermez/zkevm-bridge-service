@@ -124,7 +124,7 @@ func (tm *ClaimTxManager) Start() {
 			}
 		case <-compressorTicker.C:
 			if tm.synced && tm.cfg.GroupingClaims.Enabled && ger.GlobalExitRoot != latestProcessedGer {
-				log.Infof("RollupID: %d,Processing deposits for ger: ", tm.rollupID, ger.GlobalExitRoot)
+				log.Infof("RollupID: %d,Processing deposits for ger: %s", tm.rollupID, ger.GlobalExitRoot.String())
 				go func() {
 					err := tm.updateDepositsStatus(ger)
 					if err != nil {
@@ -277,7 +277,7 @@ func (tm *ClaimTxManager) addClaimTx(depositID uint64, from common.Address, to *
 			"params": [{"from": "%s","to":"%s","data":"0x%s"},"0x%s"],
 			"id": 1
 		}'`, from, to, common.Bytes2Hex(data), b)
-		log.Errorf("rollupID: %d, failed to estimate gas. Ignoring tx... Error: %v, data: %s", tm.rollupID, err, common.Bytes2Hex(data))
+		log.Errorf("rollupID: %d, failed to estimate gas. Ignoring tx... Error: %v, data: %s, GER: %s", tm.rollupID, err, common.Bytes2Hex(data), ger.String())
 		return nil
 	}
 	// get next nonce

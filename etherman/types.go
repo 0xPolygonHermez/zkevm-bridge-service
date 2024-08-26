@@ -29,6 +29,7 @@ type GlobalExitRoot struct {
 	BlockNumber    uint64
 	ExitRoots      []common.Hash
 	GlobalExitRoot common.Hash
+	NetworkID      uint
 }
 
 // Deposit struct

@@ -190,10 +190,10 @@ func (p *PostgresStorage) GetNumberDeposits(ctx context.Context, networkID uint,
 // AddTrustedGlobalExitRoot adds new global exit root which comes from the trusted sequencer.
 func (p *PostgresStorage) AddTrustedGlobalExitRoot(ctx context.Context, trustedExitRoot *etherman.GlobalExitRoot, dbTx pgx.Tx) (bool, error) {
 	const addTrustedGerSQL = `
-		INSERT INTO sync.exit_root (block_id, global_exit_root, exit_roots) 
-		VALUES (0, $1, $2)
+		INSERT INTO sync.exit_root (block_id, global_exit_root, exit_roots, network_id)
+		VALUES (0, $1, $2, $3)
 		ON CONFLICT ON CONSTRAINT UC DO NOTHING;`
-	res, err := p.getExecQuerier(dbTx).Exec(ctx, addTrustedGerSQL, trustedExitRoot.GlobalExitRoot, pq.Array([][]byte{trustedExitRoot.ExitRoots[0][:], trustedExitRoot.ExitRoots[1][:]}))
+	res, err := p.getExecQuerier(dbTx).Exec(ctx, addTrustedGerSQL, trustedExitRoot.GlobalExitRoot, pq.Array([][]byte{trustedExitRoot.ExitRoots[0][:], trustedExitRoot.ExitRoots[1][:]}), trustedExitRoot.NetworkID)
 	return res.RowsAffected() > 0, err
 }
 

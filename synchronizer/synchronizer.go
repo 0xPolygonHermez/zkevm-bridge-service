@@ -32,7 +32,7 @@ type ClientSynchronizer struct {
 	networkID        uint
 	chsExitRootEvent []chan *etherman.GlobalExitRoot
 	chSynced         chan uint
-	zkEVMClient      zkEVMClientInterface
+	zkEVMClients     []zkEVMClientInterface
 	synced           bool
 	l1RollupExitRoot common.Hash
 }
@@ -43,7 +43,7 @@ func NewSynchronizer(
 	storage interface{},
 	bridge bridgectrlInterface,
 	ethMan ethermanInterface,
-	zkEVMClient zkEVMClientInterface,
+	zkEVMClients []interface{},
 	genBlockNumber uint64,
 	chsExitRootEvent []chan *etherman.GlobalExitRoot,
 	chSynced chan uint,
@@ -58,6 +58,10 @@ func NewSynchronizer(
 			log.Fatal("error getting last L1 synced exitroot. Error: ", err)
 		}
 	}
+	var zkClients []zkEVMClientInterface
+	for _, zkClient := range zkEVMClients {
+		zkClients = append(zkClients, zkClient.(zkEVMClientInterface))
+	}
 
 	if networkID == 0 {
 		return &ClientSynchronizer{
@@ -71,7 +75,7 @@ func NewSynchronizer(
 			networkID:        networkID,
 			chsExitRootEvent:  chsExitRootEvent,
 			chSynced:         chSynced,
-			zkEVMClient:      zkEVMClient,
+			zkEVMClients:     zkClients,
 			l1RollupExitRoot: ger.ExitRoots[1],
 		}, nil
 	}
@@ -176,40 +180,41 @@ func (s *ClientSynchronizer) Stop() {
 }
 
 func (s *ClientSynchronizer) syncTrustedState() error {
-	lastGER, err := s.zkEVMClient.GetLatestGlobalExitRoot(s.ctx)
-	if err != nil {
-		log.Warnf("networkID: %d, failed to get latest ger from trusted state. Error: %v", s.networkID, err)
-		return err
-	}
-	if lastGER == (common.Hash{}) {
-		log.Debugf("networkID: %d, syncTrustedState: skipping GlobalExitRoot because there is no result", s.networkID)
-		return nil
-	}
-	exitRoots, err := s.zkEVMClient.ExitRootsByGER(s.ctx, lastGER)
-	if err != nil {
-		log.Warnf("networkID: %d, failed to get exitRoots from trusted state. Error: %v", s.networkID, err)
-		return err
-	}
-	if exitRoots == nil {
-		log.Debugf("networkID: %d, syncTrustedState: skipping exitRoots because there is no result", s.networkID)
-		return nil
-	}
-	ger := &etherman.GlobalExitRoot{
-		GlobalExitRoot: lastGER,
-		ExitRoots: []common.Hash{
-			exitRoots.MainnetExitRoot,
-			exitRoots.RollupExitRoot,
-		},
-	}
-	isUpdated, err := s.storage.AddTrustedGlobalExitRoot(s.ctx, ger, nil)
-	if err != nil {
-		log.Error("networkID: %d, error storing latest trusted globalExitRoot. Error: %v", s.networkID, err)
-		return err
-	}
-	if isUpdated {
-		for _, ch := range s.chsExitRootEvent {
-			log.Debug("adding trusted ger to the channels. GER: ", lastGER)
-			ch <- ger
+	for i := range s.zkEVMClients {
+		lastGER, err := s.zkEVMClients[i].GetLatestGlobalExitRoot(s.ctx)
+		if err != nil {
+			log.Warnf("networkID: %d, failed to get latest ger from trusted state. Error: %v", s.networkID, err)
+			return err
+		}
+		if lastGER == (common.Hash{}) {
+			log.Debugf("networkID: %d, syncTrustedState: skipping GlobalExitRoot because there is no result", s.networkID)
+			return nil
+		}
+		exitRoots, err := s.zkEVMClients[i].ExitRootsByGER(s.ctx, lastGER)
+		if err != nil {
+			log.Warnf("networkID: %d, failed to get exitRoots from trusted state. Error: %v", s.networkID, err)
+			return err
+		}
+		if exitRoots == nil {
+			log.Debugf("networkID: %d, syncTrustedState: skipping exitRoots because there is no result", s.networkID)
+			return nil
+		}
+		ger := &etherman.GlobalExitRoot{
+			NetworkID:      uint(i+1),
+			GlobalExitRoot: lastGER,
+			ExitRoots: []common.Hash{
+				exitRoots.MainnetExitRoot,
+				exitRoots.RollupExitRoot,
+			},
+		}
+		isUpdated, err := s.storage.AddTrustedGlobalExitRoot(s.ctx, ger, nil)
+		if err != nil {
+			log.Error("networkID: %d, error storing latest trusted globalExitRoot. Error: %v", s.networkID, err)
+			return err
+		}
+		if isUpdated {
+				log.Debug("adding trusted ger to the channels. GER: ", lastGER)
+				s.chsExitRootEvent[i] <- ger
 		}
 	}
 	return nil
