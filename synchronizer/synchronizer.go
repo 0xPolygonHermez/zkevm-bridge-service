@@ -250,6 +250,7 @@ func (s *ClientSynchronizer) syncBlocks(lastBlockSynced *etherman.Block) (*ether
 			log.Debugf("NetworkID: %d, Setting toBlock to the lastKnownBlock: %s", s.networkID, lastKnownBlock.String())
 			toBlock = lastKnownBlock.Uint64()
 			if !s.synced {
+				fromBlock = lastBlockSynced.BlockNumber
 				log.Infof("NetworkID %d Synced!", s.networkID)
 				waitDuration = s.cfg.SyncInterval.Duration
 				s.synced = true
@@ -340,7 +341,7 @@ func (s *ClientSynchronizer) syncBlocks(lastBlockSynced *etherman.Block) (*ether
 			}
 		}
 
-		if lastKnownBlock.Cmp(new(big.Int).SetUint64(toBlock)) < 1 {
+		if lastKnownBlock.Cmp(new(big.Int).SetUint64(toBlock)) < 1 { // lastKnownBlock <= toBlock
 			if !s.synced {
 				log.Infof("NetworkID %d Synced!", s.networkID)
 				waitDuration = s.cfg.SyncInterval.Duration
