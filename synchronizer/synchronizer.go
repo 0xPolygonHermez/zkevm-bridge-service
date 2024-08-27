@@ -31,7 +31,7 @@ type ClientSynchronizer struct {
 	cfg               Config
 	networkID         uint
 	chExitRootEventL2 chan *etherman.GlobalExitRoot
-	chsExitRootEvent   []chan *etherman.GlobalExitRoot
+	chsExitRootEvent  []chan *etherman.GlobalExitRoot
 	chSynced          chan uint
 	zkEVMClient       zkEVMClientInterface
 	synced            bool
@@ -211,8 +211,8 @@ func (s *ClientSynchronizer) syncTrustedState() error {
 		return err
 	}
 	if isUpdated {
-			log.Debug("adding trusted ger to the channels. GER: ", lastGER)
-			s.chExitRootEventL2 <- ger
+		log.Debug("adding trusted ger to the channels. GER: ", lastGER)
+		s.chExitRootEventL2 <- ger
 	}
 	return nil
 }

@@ -11,7 +11,7 @@ import (
 const (
 	gerManAddr = "0xa40d5f56745a118d0906a34e69aec8c0db1cb8fa"
 
-	nodeURL       = "http://localhost:8124"
+	nodeURL = "http://localhost:8124"
 )
 
 func main() {
@@ -20,6 +20,9 @@ func main() {
 		log.Fatal("error conecting to the node. Error: ", err)
 	}
 	g, err := polygonzkevmglobalexitroot.NewPolygonzkevmglobalexitroot(common.HexToAddress(gerManAddr), client)
+	if err != nil {
+		log.Fatal("Error: ", err)
+	}
 	rollupExitRoot, err := g.LastRollupExitRoot(&bind.CallOpts{})
 	if err != nil {
 		log.Fatal("Error: ", err)

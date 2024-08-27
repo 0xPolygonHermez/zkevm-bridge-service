@@ -491,7 +491,7 @@ func TestCheckMerkleProof2(t *testing.T) {
 		common.HexToHash("0x8448818bb4ae4562849e949e17ac16e0be16688e156b5cf15e098c627c0056a9"),
 	}
 	root := calculateRoot(leafHash, smtProof, index, height)
-	t.Log("root: ",root)
+	t.Log("root: ", root)
 	assert.Equal(t, expectedRollup1Root, root)
 
 	leafHash2 := expectedRollup1Root
@@ -530,7 +530,7 @@ func TestCheckMerkleProof2(t *testing.T) {
 		common.HexToHash("0x8448818bb4ae4562849e949e17ac16e0be16688e156b5cf15e098c627c0056a9"),
 	}
 	root2 := calculateRoot(leafHash2, smtProof2, index, height)
-	t.Log("rollupsExitRoot: ",root2)
+	t.Log("rollupsExitRoot: ", root2)
 	assert.Equal(t, expectedRollupsTreeRoot, root2)
 }
 

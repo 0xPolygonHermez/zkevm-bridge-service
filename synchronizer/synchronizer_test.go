@@ -57,7 +57,7 @@ func NewSynchronizerTest(
 			genBlockNumber:   genBlockNumber,
 			cfg:              cfg,
 			networkID:        networkID,
-			chsExitRootEvent:  chsExitRootEvent,
+			chsExitRootEvent: chsExitRootEvent,
 			chSynced:         chSynced,
 			l1RollupExitRoot: ger.ExitRoots[1],
 			synced:           true,
@@ -215,7 +215,6 @@ func TestSyncGer(t *testing.T) {
 	})
 }
 
-
 func TestSyncTrustedGer(t *testing.T) {
 	setupMocks := func(m *mocks) Synchronizer {
 		genBlockNumber := uint64(0)
@@ -274,9 +273,9 @@ func TestSyncTrustedGer(t *testing.T) {
 			NetworkID: 1,
 		}
 		ethermanBlock1 := etherman.Block{
-			BlockNumber:     ethBlock0.NumberU64(),
-			BlockHash:       ethBlock1.Hash(),
-			NetworkID:       1,
+			BlockNumber: ethBlock0.NumberU64(),
+			BlockHash:   ethBlock1.Hash(),
+			NetworkID:   1,
 		}
 		blocks := []etherman.Block{ethermanBlock0, ethermanBlock1}
 		order := map[common.Hash][]etherman.Order{

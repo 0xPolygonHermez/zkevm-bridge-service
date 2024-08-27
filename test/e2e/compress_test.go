@@ -1,4 +1,3 @@
-
 package e2e
 
 import (
@@ -10,12 +9,13 @@ import (
 
 	"github.com/0xPolygonHermez/zkevm-bridge-service/bridgectrl"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/db"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/log"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/server"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/test/operations"
-	"github.com/0xPolygonHermez/zkevm-bridge-service/log"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/stretchr/testify/require"
 )
+
 const (
 	defaultInterval = 10 * time.Second
 	defaultDeadline = 600 * time.Second
@@ -84,7 +84,8 @@ func TestClaimCompressor(t *testing.T) {
 		},
 	}
 
-	os.Setenv("ZKEVM_BRIDGE_CLAIMTXMANAGER_GROUPINGCLAIMS_ENABLED", "true")
+	err := os.Setenv("ZKEVM_BRIDGE_CLAIMTXMANAGER_GROUPINGCLAIMS_ENABLED", "true")
+	require.NoError(t, err)
 	require.NoError(t, operations.StartBridge3())
 	opsman, err := operations.NewManager(ctx, opsCfg)
 	require.NoError(t, err)
