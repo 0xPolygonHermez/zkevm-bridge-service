@@ -47,14 +47,6 @@ func NewBridgeService(cfg Config, height uint8, networks []uint, storage interfa
 	}
 }
 
-func (s *bridgeService) getNetworkID(networkID uint) (uint8, error) {
-	tID, found := s.networkIDs[networkID]
-	if !found {
-		return 0, gerror.ErrNetworkNotRegister
-	}
-	return tID, nil
-}
-
 // getNode returns the children hash pairs for a given parent hash.
 func (s *bridgeService) getNode(ctx context.Context, parentHash [bridgectrl.KeyLen]byte, dbTx pgx.Tx) (left, right [bridgectrl.KeyLen]byte, err error) {
 	value, ok := s.cache.Get(string(parentHash[:]))
@@ -162,12 +154,7 @@ func (s *bridgeService) GetClaimProof(depositCnt, networkID uint, dbTx pgx.Tx) (
 		}
 	}
 
-	tID, err := s.getNetworkID(networkID)
-	if err != nil {
-		return nil, nil, nil, err
-	}
-
-	globalExitRoot, err := s.storage.GetLatestExitRoot(ctx, tID != 0, dbTx)
+	globalExitRoot, err := s.storage.GetLatestExitRoot(ctx, networkID, dbTx)
 	if err != nil {
 		return nil, nil, nil, err
 	}

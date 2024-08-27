@@ -108,7 +108,7 @@ func (tm *ClaimTxManager) Start() {
 			}
 		case ger = <-tm.chExitRootEvent:
 			if tm.synced {
-				log.Debugf("rollupID: %d UpdateDepositsStatus for ger: %s", tm.rollupID, ger.GlobalExitRoot.String())
+				log.Debugf("RollupID: %d UpdateDepositsStatus for ger: %s", tm.rollupID, ger.GlobalExitRoot.String())
 				if tm.cfg.GroupingClaims.Enabled {
 					log.Debugf("rollupID: %d, Ger value updated and ready to be processed...", tm.rollupID)
 					continue
