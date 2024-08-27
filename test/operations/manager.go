@@ -455,31 +455,6 @@ func (m *Manager) AddFunds(ctx context.Context) error {
 	return WaitTxToBeMined(ctx, client.Client, tx, txPolTransferTimeout)
 }
 
-// Teardown stops all the components.
-func Teardown() error {
-	err := StopBridge()
-	if err != nil {
-		return err
-	}
-
-	err = stopZKEVMNode()
-	if err != nil {
-		return err
-	}
-
-	err = stopProver()
-	if err != nil {
-		return err
-	}
-
-	err = stopNetwork()
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
 func (m *Manager) startNetwork() error {
 	if err := stopNetwork(); err != nil {
 		return err
@@ -539,6 +514,26 @@ func runCmd(c *exec.Cmd) error {
 	c.Stdout = os.Stdout
 	c.Stderr = os.Stderr
 	return c.Run()
+}
+
+// StartBridge3 restarts the bridge service.
+func StartBridge3() error {
+	if err := StopBridge3(); err != nil {
+		return err
+	}
+	cmd := exec.Command(makeCmd, "run-bridge-3")
+	err := runCmd(cmd)
+	if err != nil {
+		return err
+	}
+	// Wait bridge to be ready
+	return poll(defaultInterval, defaultDeadline, bridgeUpCondition)
+}
+
+// StopBridge3 stops the bridge service.
+func StopBridge3() error {
+	cmd := exec.Command(makeCmd, "stop-bridge-3")
+	return runCmd(cmd)
 }
 
 // StartBridge restarts the bridge service.
