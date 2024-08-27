@@ -27,7 +27,7 @@ func TestMonitoredTxStorage(t *testing.T) {
 	tx, err := pg.BeginDBTransaction(ctx)
 	require.NoError(t, err)
 
-	deposit := &etherman.Deposit{
+	deposit1 := &etherman.Deposit{
 		NetworkID:          0,
 		OriginalNetwork:    0,
 		OriginalAddress:    common.HexToAddress("0x6B175474E89094C44Da98b954EedeAC495271d0F"),
@@ -38,7 +38,21 @@ func TestMonitoredTxStorage(t *testing.T) {
 		DepositCount:       1,
 		Metadata:           common.FromHex("0x0"),
 	}
-	_, err = pg.AddDeposit(ctx, deposit, tx)
+	_, err = pg.AddDeposit(ctx, deposit1, tx)
+	require.NoError(t, err)
+
+	deposit2 := &etherman.Deposit{
+		NetworkID:          0,
+		OriginalNetwork:    0,
+		OriginalAddress:    common.HexToAddress("0x6B175474E89094C44Da98b954EedeAC495271d0F"),
+		Amount:             big.NewInt(1000000),
+		DestinationNetwork: 1,
+		DestinationAddress: common.HexToAddress("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"),
+		BlockNumber:        1,
+		DepositCount:       2,
+		Metadata:           common.FromHex("0x0"),
+	}
+	_, err = pg.AddDeposit(ctx, deposit2, tx)
 	require.NoError(t, err)
 
 	toAdr := common.HexToAddress("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266")
@@ -70,7 +84,7 @@ func TestMonitoredTxStorage(t *testing.T) {
 		DepositID: 2,
 		From:      common.HexToAddress("0x6B175474E89094C44Da98b954EedeAC495271d0F"),
 		To:        &toAdr,
-		Nonce:     1,
+		Nonce:     2,
 		Value:     big.NewInt(1000000),
 		Data:      common.FromHex("0x0"),
 		Gas:       1000000,
