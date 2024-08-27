@@ -218,9 +218,7 @@ func (m *Manager) GetNumberClaims(ctx context.Context, destAddr string) (int, er
 }
 
 // SendL1Deposit sends a deposit from l1 to l2.
-func (m *Manager) SendL1Deposit(ctx context.Context, tokenAddr common.Address, amount *big.Int,
-	destNetwork uint32, destAddr *common.Address,
-) error {
+func (m *Manager) SendL1Deposit(ctx context.Context, tokenAddr common.Address, amount *big.Int, destNetwork uint32, destAddr *common.Address) error {
 	client := m.clients[L1]
 	auth, err := client.GetSigner(ctx, accHexPrivateKeys[L1])
 	if err != nil {
@@ -238,7 +236,7 @@ func (m *Manager) SendL1Deposit(ctx context.Context, tokenAddr common.Address, a
 	}
 
 	// sync for new exit root
-	return m.WaitExitRootToBeSynced(ctx, orgExitRoot, 0)
+	return m.WaitExitRootToBeSynced(ctx, orgExitRoot, uint(destNetwork))
 }
 
 // SendMultipleL1Deposit sends a deposit from l1 to l2.
@@ -288,7 +286,7 @@ func (m *Manager) SendL2Deposit(ctx context.Context, tokenAddr common.Address, a
 	}
 
 	// sync for new exit root
-	return m.WaitExitRootToBeSynced(ctx, orgExitRoot, uint(networkID))
+	return m.WaitExitRootToBeSynced(ctx, orgExitRoot, uint(destNetwork))
 }
 
 // SendL1BridgeMessage bridges a message from l1 to l2.
@@ -317,7 +315,7 @@ func (m *Manager) SendL1BridgeMessage(ctx context.Context, destAddr common.Addre
 	}
 
 	// sync for new exit root
-	return m.WaitExitRootToBeSynced(ctx, orgExitRoot, 0)
+	return m.WaitExitRootToBeSynced(ctx, orgExitRoot, uint(destNetwork))
 }
 
 // SendL2BridgeMessage bridges a message from l2 to l1.
@@ -346,7 +344,7 @@ func (m *Manager) SendL2BridgeMessage(ctx context.Context, destAddr common.Addre
 	}
 
 	// sync for new exit root
-	return m.WaitExitRootToBeSynced(ctx, orgExitRoot, uint(networkID))
+	return m.WaitExitRootToBeSynced(ctx, orgExitRoot, uint(destNetwork))
 }
 
 // Setup creates all the required components and initializes them according to
@@ -805,7 +803,7 @@ func (m *Manager) WaitExitRootToBeSynced(ctx context.Context, orgExitRoot *ether
 			return false, err
 		}
 		tID := 0
-		if networkID != 0 {
+		if networkID == 0 {
 			tID = 1
 		}
 		return exitRoot.ExitRoots[tID] != orgExitRoot.ExitRoots[tID], nil
