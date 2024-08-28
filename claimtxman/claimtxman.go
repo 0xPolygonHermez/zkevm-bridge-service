@@ -190,7 +190,7 @@ func (tm *ClaimTxManager) processDepositStatus(ger *etherman.GlobalExitRoot, dbT
 				continue
 			}
 
-			claimHash, err := tm.bridgeService.GetDepositStatus(tm.ctx, deposit.DepositCount, deposit.NetworkID, deposit.DestinationNetwork) // TODO si fallan los test del autoclaim podria ser por esto
+			claimHash, err := tm.bridgeService.GetDepositStatus(tm.ctx, deposit.DepositCount, deposit.NetworkID, deposit.DestinationNetwork)
 			if err != nil {
 				log.Errorf("rollupID: %d, error getting deposit status for deposit id %d. Error: %v", tm.rollupID, deposit.Id, err)
 				return err

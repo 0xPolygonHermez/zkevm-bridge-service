@@ -283,7 +283,7 @@ func TestE2E(t *testing.T) {
 		require.Equal(t, amount, balance2)
 
 		// Check globalExitRoot
-		globalExitRoot3, err := opsman.GetLatestGlobalExitRootFromL1(ctx) // TODO UY aqui no me cuadra que consulte al de trusted en vez de al normal. Seria GetLatestGlobalExitRootFromL1
+		globalExitRoot3, err := opsman.GetLatestGlobalExitRootFromL1(ctx)
 		require.NoError(t, err)
 		// Check L2 funds
 		balance, err = opsman.CheckAccountTokenBalance(ctx, operations.L2, tokenAddr, &destAddr)
