@@ -200,7 +200,7 @@ func bridge(
 	} else {
 		tokenAddr, err := opsman.GetTokenAddress(ctx, operations.L2, bd.originTokenNet, bd.originTokenAddr)
 		require.NoError(t, err)
-		log.Debugf("depositing %d tokens of addr %s on Rollup %d to Network %d", bd.amount.Uint64(), tokenAddr, bd.destNet)
+		log.Debugf("depositing %d tokens of addr %s to Network %d", bd.amount.Uint64(), tokenAddr, bd.destNet)
 		err = opsman.SendL2Deposit(ctx, tokenAddr, bd.amount, uint32(bd.destNet), &destAddr, operations.L2)
 		require.NoError(t, err)
 	}

@@ -84,7 +84,7 @@ func TestL1GlobalExitRoot(t *testing.T) {
 	require.Equal(t, ger.BlockID, l1GER.BlockID)
 	require.Equal(t, ger.GlobalExitRoot, l1GER.GlobalExitRoot)
 
-	latestGER, err := pg.GetLatestExitRoot(ctx, 0, tx)
+	latestGER, err := pg.GetLatestExitRoot(ctx, 1, 0, tx)
 	require.NoError(t, err)
 	require.Equal(t, latestGER.GlobalExitRoot, l1GER.GlobalExitRoot)
 	require.Equal(t, latestGER.BlockNumber, l1GER.BlockNumber)
@@ -161,7 +161,7 @@ func TestAddTrustedGERDuplicated(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, tGER.GlobalExitRoot, ger1.GlobalExitRoot)
 
-	latestGER, err := pg.GetLatestExitRoot(ctx, 0, tx)
+	latestGER, err := pg.GetLatestExitRoot(ctx, 0, 1, tx)
 	require.NoError(t, err)
 	require.Equal(t, latestGER.GlobalExitRoot, ger1.GlobalExitRoot)
 	require.Equal(t, latestGER.BlockNumber, ger1.BlockNumber)

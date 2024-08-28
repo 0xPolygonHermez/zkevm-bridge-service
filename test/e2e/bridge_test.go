@@ -126,7 +126,6 @@ func TestE2E(t *testing.T) {
 		balance, err = opsman.CheckAccountBalance(ctx, operations.L1, &destAddr)
 		require.NoError(t, err)
 		require.Equal(t, 0, big.NewInt(0).Cmp(balance))
-		time.Sleep(6 * time.Second)
 		// Get the claim data
 		smtProof, smtRollupProof, globaExitRoot, err := opsman.GetClaimData(ctx, uint(deposits[0].NetworkId), uint(deposits[0].DepositCnt))
 		require.NoError(t, err)
@@ -199,7 +198,6 @@ func TestE2E(t *testing.T) {
 		// L2 deposit
 		err = opsman.SendL2Deposit(ctx, tokenWrapped.WrappedTokenAddress, amount4, destNetwork, &origAddr, operations.L2)
 		require.NoError(t, err)
-		time.Sleep(6 * time.Second)
 		deposits, err = opsman.GetBridgeInfoByDestAddr(ctx, &origAddr)
 		require.NoError(t, err)
 		t.Log("deposit: ", deposits[0])
@@ -265,7 +263,6 @@ func TestE2E(t *testing.T) {
 		require.Equal(t, 0, balance.Cmp(big.NewInt(9000000000000000000)))
 		t.Log("Deposit: ", deposits[0])
 		t.Log("Before getClaimData: ", deposits[0].NetworkId, deposits[0].DepositCnt)
-		time.Sleep(6 * time.Second)
 		// Get the claim data
 		smtProof, smtRollupProof, globaExitRoot, err := opsman.GetClaimData(ctx, uint(deposits[0].NetworkId), uint(deposits[0].DepositCnt))
 		require.NoError(t, err)
@@ -301,7 +298,7 @@ func TestE2E(t *testing.T) {
 		// Check the claim tx
 		err = opsman.CheckClaim(ctx, deposits[0])
 		require.NoError(t, err)
-		time.Sleep(6 * time.Second)
+		time.Sleep(2 * time.Second)
 		// Check globalExitRoot
 		globalExitRoot4, err := opsman.GetTrustedGlobalExitRootSynced(ctx, uint(destNetwork))
 		require.NoError(t, err)
@@ -371,7 +368,6 @@ func TestE2E(t *testing.T) {
 		amount = new(big.Int).SetUint64(8000000000000000000)
 		err = opsman.SendL2Deposit(ctx, tokenWrapped.WrappedTokenAddress, amount, destNetwork, &destAddr, operations.L2)
 		require.NoError(t, err)
-		time.Sleep(6 * time.Second)
 		// Get Bridge Info By DestAddr
 		deposits, err = opsman.GetBridgeInfoByDestAddr(ctx, &destAddr)
 		require.NoError(t, err)
@@ -486,7 +482,6 @@ func TestE2E(t *testing.T) {
 
 		err = opsman.SendL1BridgeMessage(ctx, destAddr, destNetwork, amount, []byte("metadata 1"), nil)
 		require.NoError(t, err)
-		time.Sleep(6 * time.Second)
 
 		// Get Bridge Info By DestAddr
 		deposits, err := opsman.GetBridgeInfoByDestAddr(ctx, &destAddr)
@@ -507,7 +502,6 @@ func TestE2E(t *testing.T) {
 
 		err = opsman.SendL2BridgeMessage(ctx, destAddr, destNetwork, amount, []byte("metadata 2"))
 		require.NoError(t, err)
-		time.Sleep(6 * time.Second)
 
 		// Get Bridge Info By DestAddr
 		deposits, err = opsman.GetBridgeInfoByDestAddr(ctx, &destAddr)
@@ -552,7 +546,6 @@ func TestE2E(t *testing.T) {
 
 		err = opsman.SendL2BridgeMessage(ctx, destAddr, destNetwork, amount, []byte("metadata 4"))
 		require.NoError(t, err)
-		time.Sleep(6 * time.Second)
 		// Get Bridge Info By DestAddr
 		deposits, err = opsman.GetBridgeInfoByDestAddr(ctx, &destAddr)
 		require.NoError(t, err)

@@ -136,6 +136,9 @@ func (s *bridgeService) getRollupExitProof(rollupIndex uint, root common.Hash, d
 	} else if root != r {
 		return nil, common.Hash{}, fmt.Errorf("error checking calculated root: %s, %s", root.String(), r.String())
 	}
+	if len(ls) <= int(rollupIndex) {
+		return siblings, common.Hash{}, fmt.Errorf("error getting rollupLeaf. Not synced yet")
+	}
 	return siblings, ls[rollupIndex], nil
 }
 
@@ -143,18 +146,16 @@ func (s *bridgeService) getRollupExitProof(rollupIndex uint, root common.Hash, d
 func (s *bridgeService) GetClaimProof(depositCnt, networkID uint, dbTx pgx.Tx) (*etherman.GlobalExitRoot, [][bridgectrl.KeyLen]byte, [][bridgectrl.KeyLen]byte, error) {
 	ctx := context.Background()
 
-	if dbTx == nil { // if the call comes from the rest API
-		deposit, err := s.storage.GetDeposit(ctx, depositCnt, networkID, nil)
-		if err != nil {
-			return nil, nil, nil, err
-		}
-
-		if !deposit.ReadyForClaim {
-			return nil, nil, nil, gerror.ErrDepositNotSynced
-		}
+	deposit, err := s.storage.GetDeposit(ctx, depositCnt, networkID, dbTx)
+	if err != nil {
+		return nil, nil, nil, err
 	}
 
-	globalExitRoot, err := s.storage.GetLatestExitRoot(ctx, networkID, dbTx)
+	if !deposit.ReadyForClaim {
+		return nil, nil, nil, gerror.ErrDepositNotSynced
+	}
+
+	globalExitRoot, err := s.storage.GetLatestExitRoot(ctx, networkID, deposit.DestinationNetwork, dbTx)
 	if err != nil {
 		return nil, nil, nil, err
 	}
