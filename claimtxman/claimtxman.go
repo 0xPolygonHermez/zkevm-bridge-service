@@ -66,10 +66,10 @@ func NewClaimTxManager(ctx context.Context, cfg Config, chExitRootEvent chan *et
 	var monitorTx ctmtypes.TxMonitorer
 	if cfg.GroupingClaims.Enabled {
 		log.Info("ClaimTxManager working in compressor mode to group claim txs")
-		monitorTx = NewMonitorCompressedTxs(ctx, storage.(StorageCompressedInterface), client, cfg, nonceCache, auth, etherMan, utils.NewTimeProviderSystemLocalTime(), cfg.GroupingClaims.GasOffset)
+		monitorTx = NewMonitorCompressedTxs(ctx, storage.(StorageCompressedInterface), client, cfg, nonceCache, auth, etherMan, utils.NewTimeProviderSystemLocalTime(), cfg.GroupingClaims.GasOffset, rollupID)
 	} else {
 		log.Info("ClaimTxManager working in regular mode to send claim txs individually")
-		monitorTx = NewMonitorTxs(ctx, storage.(StorageInterface), client, cfg, nonceCache, auth)
+		monitorTx = NewMonitorTxs(ctx, storage.(StorageInterface), client, cfg, nonceCache, rollupID, auth)
 	}
 	return &ClaimTxManager{
 		ctx:             ctx,
@@ -108,15 +108,15 @@ func (tm *ClaimTxManager) Start() {
 			}
 		case ger = <-tm.chExitRootEvent:
 			if tm.synced {
-				log.Debug("UpdateDepositsStatus for ger: ", ger.GlobalExitRoot)
+				log.Debugf("RollupID: %d UpdateDepositsStatus for ger: %s", tm.rollupID, ger.GlobalExitRoot.String())
 				if tm.cfg.GroupingClaims.Enabled {
-					log.Debug("Ger value updated and ready to be processed...")
+					log.Debugf("rollupID: %d, Ger value updated and ready to be processed...", tm.rollupID)
 					continue
 				}
 				go func() {
 					err := tm.updateDepositsStatus(ger)
 					if err != nil {
-						log.Errorf("failed to update deposits status: %v", err)
+						log.Errorf("rollupID: %d, failed to update deposits status: %v", tm.rollupID, err)
 					}
 				}()
 			} else {
@@ -124,11 +124,11 @@ func (tm *ClaimTxManager) Start() {
 			}
 		case <-compressorTicker.C:
 			if tm.synced && tm.cfg.GroupingClaims.Enabled && ger.GlobalExitRoot != latestProcessedGer {
-				log.Info("Processing deposits for ger: ", ger.GlobalExitRoot)
+				log.Infof("RollupID: %d,Processing deposits for ger: %s", tm.rollupID, ger.GlobalExitRoot.String())
 				go func() {
 					err := tm.updateDepositsStatus(ger)
 					if err != nil {
-						log.Errorf("failed to update deposits status: %v", err)
+						log.Errorf("rollupID: %d, failed to update deposits status: %v", tm.rollupID, err)
 					}
 				}()
 				latestProcessedGer = ger.GlobalExitRoot
@@ -136,7 +136,7 @@ func (tm *ClaimTxManager) Start() {
 		case <-ticker.C:
 			err := tm.monitorTxs.MonitorTxs(tm.ctx)
 			if err != nil {
-				log.Errorf("failed to monitor txs: %v", err)
+				log.Errorf("rollupID: %d, failed to monitor txs: %v", tm.rollupID, err)
 			}
 		}
 	}
@@ -149,38 +149,39 @@ func (tm *ClaimTxManager) updateDepositsStatus(ger *etherman.GlobalExitRoot) err
 	}
 	err = tm.processDepositStatus(ger, dbTx)
 	if err != nil {
-		log.Errorf("error processing ger. Error: %v", err)
+		log.Errorf("rollupID: %d, error processing ger. Error: %v", tm.rollupID, err)
 		rollbackErr := tm.storage.Rollback(tm.ctx, dbTx)
 		if rollbackErr != nil {
-			log.Errorf("claimtxman error rolling back state. RollbackErr: %v, err: %s", rollbackErr, err.Error())
+			log.Errorf("rollupID: %d, claimtxman error rolling back state. RollbackErr: %v, err: %s", tm.rollupID, rollbackErr, err.Error())
 			return rollbackErr
 		}
 		return err
 	}
 	err = tm.storage.Commit(tm.ctx, dbTx)
 	if err != nil {
-		log.Errorf("AddClaimTx committing dbTx. Err: %v", err)
+		log.Errorf("rollupID: %d, AddClaimTx committing dbTx. Err: %v", tm.rollupID, err)
 		rollbackErr := tm.storage.Rollback(tm.ctx, dbTx)
 		if rollbackErr != nil {
-			log.Fatalf("claimtxman error rolling back state. RollbackErr: %s, err: %s", rollbackErr.Error(), err.Error())
+			log.Errorf("rollupID: %d, claimtxman error rolling back state. RollbackErr: %s, err: %s", tm.rollupID, rollbackErr.Error(), err.Error())
+			return rollbackErr
 		}
-		log.Fatalf("AddClaimTx committing dbTx, err: %s", err.Error())
+		return err
 	}
 	return nil
 }
 
 func (tm *ClaimTxManager) processDepositStatus(ger *etherman.GlobalExitRoot, dbTx pgx.Tx) error {
 	if ger.BlockID != 0 { // L2 exit root is updated
-		log.Infof("Rollup exitroot %v is updated", ger.ExitRoots[1])
+		log.Infof("RollupID: %d, Rollup exitroot %v is updated", tm.rollupID, ger.ExitRoots[1])
 		if err := tm.storage.UpdateL2DepositsStatus(tm.ctx, ger.ExitRoots[1][:], tm.rollupID, tm.l2NetworkID, dbTx); err != nil {
-			log.Errorf("error updating L2DepositsStatus. Error: %v", err)
+			log.Errorf("rollupID: %d, error updating L2DepositsStatus. Error: %v", tm.rollupID, err)
 			return err
 		}
 	} else { // L1 exit root is updated in the trusted state
-		log.Infof("Mainnet exitroot %v is updated", ger.ExitRoots[0])
-		deposits, err := tm.storage.UpdateL1DepositsStatus(tm.ctx, ger.ExitRoots[0][:], dbTx)
+		log.Infof("RollupID: %d, Mainnet exitroot %v is updated", tm.rollupID, ger.ExitRoots[0])
+		deposits, err := tm.storage.UpdateL1DepositsStatus(tm.ctx, ger.ExitRoots[0][:], tm.l2NetworkID, dbTx)
 		if err != nil {
-			log.Errorf("error getting and updating L1DepositsStatus. Error: %v", err)
+			log.Errorf("rollupID: %d, error getting and updating L1DepositsStatus. Error: %v", tm.rollupID, err)
 			return err
 		}
 		if !tm.cfg.Enabled {
@@ -189,24 +190,24 @@ func (tm *ClaimTxManager) processDepositStatus(ger *etherman.GlobalExitRoot, dbT
 		}
 		for _, deposit := range deposits {
 			if tm.l2NetworkID != deposit.DestinationNetwork {
-				log.Infof("Ignoring deposit: %d: dest_net: %d, we are:%d", deposit.DepositCount, deposit.DestinationNetwork, tm.l2NetworkID)
+				log.Infof("Ignoring deposit id: %d deposit count:%d dest_net: %d, we are:%d", deposit.Id, deposit.DepositCount, deposit.DestinationNetwork, tm.l2NetworkID)
 				continue
 			}
 
-			claimHash, err := tm.bridgeService.GetDepositStatus(tm.ctx, deposit.DepositCount, deposit.OriginalNetwork, deposit.DestinationNetwork)
+			claimHash, err := tm.bridgeService.GetDepositStatus(tm.ctx, deposit.DepositCount, deposit.NetworkID, deposit.DestinationNetwork)
 			if err != nil {
-				log.Errorf("error getting deposit status for deposit %d. Error: %v", deposit.DepositCount, err)
+				log.Errorf("rollupID: %d, error getting deposit status for deposit id %d. Error: %v", tm.rollupID, deposit.Id, err)
 				return err
 			}
 			if len(claimHash) > 0 || deposit.LeafType == LeafTypeMessage && !tm.isDepositMessageAllowed(deposit) {
-				log.Infof("Ignoring deposit: %d, leafType: %d, claimHash: %s, deposit.OriginalAddress: %s", deposit.DepositCount, deposit.LeafType, claimHash, deposit.OriginalAddress.String())
+				log.Infof("RollupID: %d, Ignoring deposit Id: %d, leafType: %d, claimHash: %s, deposit.OriginalAddress: %s", tm.rollupID, deposit.Id, deposit.LeafType, claimHash, deposit.OriginalAddress.String())
 				continue
 			}
 
-			log.Infof("create the claim tx for the deposit %d", deposit.DepositCount)
+			log.Infof("RollupID: %d, create the claim tx for the deposit count %d. Deposit Id: %d", tm.rollupID, deposit.DepositCount, deposit.Id)
 			ger, proof, rollupProof, err := tm.bridgeService.GetClaimProofForCompressed(ger.GlobalExitRoot, deposit.DepositCount, deposit.NetworkID, dbTx)
 			if err != nil {
-				log.Errorf("error getting Claim Proof for deposit %d. Error: %v", deposit.DepositCount, err)
+				log.Errorf("rollupID: %d, error getting Claim Proof for deposit Id %d. Error: %v", tm.rollupID, deposit.Id, err)
 				return err
 			}
 			var (
@@ -225,12 +226,11 @@ func (tm *ClaimTxManager) processDepositStatus(ger *etherman.GlobalExitRoot, dbT
 					}}, 1, 1, 1, tm.rollupID,
 				tm.auth)
 			if err != nil {
-				log.Errorf("error BuildSendClaim tx for deposit %d. Error: %v", deposit.DepositCount, err)
+				log.Errorf("rollupID: %d, error BuildSendClaim tx for deposit Id: %d. Error: %v", tm.rollupID, deposit.Id, err)
 				return err
 			}
-
-			if err = tm.addClaimTx(deposit.DepositCount, tm.auth.From, tx.To(), nil, tx.Data(), ger.GlobalExitRoot, dbTx); err != nil {
-				log.Errorf("error adding claim tx for deposit %d. Error: %v", deposit.DepositCount, err)
+			if err = tm.addClaimTx(deposit.Id, tm.auth.From, tx.To(), nil, tx.Data(), ger.GlobalExitRoot, dbTx); err != nil {
+				log.Errorf("rollupID: %d, error adding claim tx for deposit Id: %d Error: %v", tm.rollupID, deposit.Id, err)
 				return err
 			}
 		}
@@ -241,15 +241,15 @@ func (tm *ClaimTxManager) processDepositStatus(ger *etherman.GlobalExitRoot, dbT
 func (tm *ClaimTxManager) isDepositMessageAllowed(deposit *etherman.Deposit) bool {
 	for _, addr := range tm.cfg.AuthorizedClaimMessageAddresses {
 		if deposit.OriginalAddress == addr {
-			log.Infof("MessageBridge from authorized account detected: %+v, account: %s", deposit, addr.String())
+			log.Infof("RollupID: %d, MessageBridge from authorized account detected: %+v, account: %s", tm.rollupID, deposit, addr.String())
 			return true
 		}
 	}
-	log.Infof("MessageBridge Not authorized. DepositCount: %d", deposit.DepositCount)
+	log.Infof("RollupID: %d, MessageBridge Not authorized. DepositCount: %d. DepositID: %d", tm.rollupID, deposit.DepositCount, deposit.Id)
 	return false
 }
 
-func (tm *ClaimTxManager) addClaimTx(depositCount uint, from common.Address, to *common.Address, value *big.Int, data []byte, ger common.Hash, dbTx pgx.Tx) error {
+func (tm *ClaimTxManager) addClaimTx(depositID uint64, from common.Address, to *common.Address, value *big.Int, data []byte, ger common.Hash, dbTx pgx.Tx) error {
 	// get gas
 	tx := ethereum.CallMsg{
 		From:  from,
@@ -259,25 +259,42 @@ func (tm *ClaimTxManager) addClaimTx(depositCount uint, from common.Address, to 
 	}
 	gas, err := tm.l2Node.EstimateGas(tm.ctx, tx)
 	for i := 1; err != nil && err.Error() != runtime.ErrExecutionReverted.Error() && i < tm.cfg.RetryNumber; i++ {
-		log.Warnf("error while doing gas estimation. Retrying... Error: %v, Data: %s", err, common.Bytes2Hex(data))
+		log.Warnf("rollupID: %d, error while doing gas estimation. Retrying... Error: %v, Data: %s", tm.rollupID, err, common.Bytes2Hex(data))
 		time.Sleep(tm.cfg.RetryInterval.Duration)
 		gas, err = tm.l2Node.EstimateGas(tm.ctx, tx)
 	}
 	if err != nil {
-		log.Errorf("failed to estimate gas. Ignoring tx... Error: %v, data: %s", err, common.Bytes2Hex(data))
+		var b string
+		block, err2 := tm.l2Node.Client.BlockByNumber(tm.ctx, nil)
+		if err2 != nil {
+			log.Error("error getting blockNumber. Error: ", err2)
+			b = "latest"
+		} else {
+			b = fmt.Sprintf("%x", block.Number())
+		}
+		log.Warnf(`Use the next command to debug it manually.
+		curl --location --request POST 'http://localhost:8545' \
+		--header 'Content-Type: application/json' \
+		--data-raw '{
+			"jsonrpc": "2.0",
+			"method": "eth_call",
+			"params": [{"from": "%s","to":"%s","data":"0x%s"},"0x%s"],
+			"id": 1
+		}'`, from, to, common.Bytes2Hex(data), b)
+		log.Errorf("rollupID: %d, failed to estimate gas. Ignoring tx... Error: %v, data: %s, GER: %s", tm.rollupID, err, common.Bytes2Hex(data), ger.String())
 		return nil
 	}
 	// get next nonce
 	nonce, err := tm.nonceCache.GetNextNonce(from)
 	if err != nil {
-		err := fmt.Errorf("failed to get current nonce: %v", err)
+		err := fmt.Errorf("rollupID: %d, failed to get current nonce: %v", tm.rollupID, err)
 		log.Errorf("error getting next nonce. Error: %s", err.Error())
 		return err
 	}
 
 	// create monitored tx
 	mTx := ctmtypes.MonitoredTx{
-		DepositID: depositCount, From: from, To: to,
+		DepositID: depositID, From: from, To: to,
 		Nonce: nonce, Value: value, Data: data,
 		Gas: gas, Status: ctmtypes.MonitoredTxStatusCreated,
 		GlobalExitRoot: ger,
@@ -286,7 +303,7 @@ func (tm *ClaimTxManager) addClaimTx(depositCount uint, from common.Address, to 
 	// add to storage
 	err = tm.storage.AddClaimTx(tm.ctx, mTx, dbTx)
 	if err != nil {
-		err := fmt.Errorf("failed to add tx to get monitored: %v", err)
+		err := fmt.Errorf("rollupID: %d, failed to add tx to get monitored: %v", tm.rollupID, err)
 		log.Errorf("error adding claim tx to db. Error: %s", err.Error())
 		return err
 	}
@@ -298,7 +315,7 @@ func (tm *ClaimTxManager) addClaimTx(depositCount uint, from common.Address, to 
 // accordingly to the current information stored and the current
 // state of the blockchain
 func (tm *ClaimTxManager) ReviewMonitoredTx(ctx context.Context, mTx *ctmtypes.MonitoredTx, reviewNonce bool) error {
-	mTxLog := log.WithFields("monitoredTx", mTx.DepositID)
+	mTxLog := log.WithFields("monitoredTx", mTx.DepositID, "rollupID", tm.rollupID)
 	mTxLog.Debug("reviewing")
 	// get gas
 	tx := ethereum.CallMsg{

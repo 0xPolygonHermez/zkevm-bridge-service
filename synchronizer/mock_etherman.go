@@ -87,68 +87,12 @@ func (_c *ethermanMock_EthBlockByNumber_Call) RunAndReturn(run func(context.Cont
 	return _c
 }
 
-// GetNetworkID provides a mock function with given fields: ctx
-func (_m *ethermanMock) GetNetworkID(ctx context.Context) (uint, error) {
-	ret := _m.Called(ctx)
-
-	if len(ret) == 0 {
-		panic("no return value specified for GetNetworkID")
-	}
-
-	var r0 uint
-	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context) (uint, error)); ok {
-		return rf(ctx)
-	}
-	if rf, ok := ret.Get(0).(func(context.Context) uint); ok {
-		r0 = rf(ctx)
-	} else {
-		r0 = ret.Get(0).(uint)
-	}
-
-	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
-		r1 = rf(ctx)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
-// ethermanMock_GetNetworkID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetNetworkID'
-type ethermanMock_GetNetworkID_Call struct {
-	*mock.Call
-}
-
-// GetNetworkID is a helper method to define mock.On call
-//   - ctx context.Context
-func (_e *ethermanMock_Expecter) GetNetworkID(ctx interface{}) *ethermanMock_GetNetworkID_Call {
-	return &ethermanMock_GetNetworkID_Call{Call: _e.mock.On("GetNetworkID", ctx)}
-}
-
-func (_c *ethermanMock_GetNetworkID_Call) Run(run func(ctx context.Context)) *ethermanMock_GetNetworkID_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context))
-	})
-	return _c
-}
-
-func (_c *ethermanMock_GetNetworkID_Call) Return(_a0 uint, _a1 error) *ethermanMock_GetNetworkID_Call {
-	_c.Call.Return(_a0, _a1)
-	return _c
-}
-
-func (_c *ethermanMock_GetNetworkID_Call) RunAndReturn(run func(context.Context) (uint, error)) *ethermanMock_GetNetworkID_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// GetRollupID provides a mock function with given fields:
-func (_m *ethermanMock) GetRollupID() uint {
+// GetNetworkID provides a mock function with given fields:
+func (_m *ethermanMock) GetNetworkID() uint {
 	ret := _m.Called()
 
 	if len(ret) == 0 {
-		panic("no return value specified for GetRollupID")
+		panic("no return value specified for GetNetworkID")
 	}
 
 	var r0 uint
@@ -161,29 +105,29 @@ func (_m *ethermanMock) GetRollupID() uint {
 	return r0
 }
 
-// ethermanMock_GetRollupID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetRollupID'
-type ethermanMock_GetRollupID_Call struct {
+// ethermanMock_GetNetworkID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetNetworkID'
+type ethermanMock_GetNetworkID_Call struct {
 	*mock.Call
 }
 
-// GetRollupID is a helper method to define mock.On call
-func (_e *ethermanMock_Expecter) GetRollupID() *ethermanMock_GetRollupID_Call {
-	return &ethermanMock_GetRollupID_Call{Call: _e.mock.On("GetRollupID")}
+// GetNetworkID is a helper method to define mock.On call
+func (_e *ethermanMock_Expecter) GetNetworkID() *ethermanMock_GetNetworkID_Call {
+	return &ethermanMock_GetNetworkID_Call{Call: _e.mock.On("GetNetworkID")}
 }
 
-func (_c *ethermanMock_GetRollupID_Call) Run(run func()) *ethermanMock_GetRollupID_Call {
+func (_c *ethermanMock_GetNetworkID_Call) Run(run func()) *ethermanMock_GetNetworkID_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		run()
 	})
 	return _c
 }
 
-func (_c *ethermanMock_GetRollupID_Call) Return(_a0 uint) *ethermanMock_GetRollupID_Call {
+func (_c *ethermanMock_GetNetworkID_Call) Return(_a0 uint) *ethermanMock_GetNetworkID_Call {
 	_c.Call.Return(_a0)
 	return _c
 }
 
-func (_c *ethermanMock_GetRollupID_Call) RunAndReturn(run func() uint) *ethermanMock_GetRollupID_Call {
+func (_c *ethermanMock_GetNetworkID_Call) RunAndReturn(run func() uint) *ethermanMock_GetNetworkID_Call {
 	_c.Call.Return(run)
 	return _c
 }
