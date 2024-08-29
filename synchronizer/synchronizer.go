@@ -158,7 +158,7 @@ func (s *ClientSynchronizer) Sync() error {
 						}
 					}
 				}
-			} else { // Sync Trusted GlobalExitRoots if L1 is synced
+			} else { // Sync Trusted GlobalExitRoots if L2 network is synced
 				if s.networkID == 0 {
 					continue
 				}
