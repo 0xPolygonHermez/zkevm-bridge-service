@@ -333,7 +333,7 @@ func TestBSStorage(t *testing.T) {
 		DestinationAddress: common.HexToAddress("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"),
 		BlockID:            1,
 		BlockNumber:        2,
-		NetworkID:          0,
+		NetworkID:          1,
 		TxHash:             common.HexToHash("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9f2"),
 		RollupIndex:        1,
 		MainnetFlag:        true,
@@ -365,7 +365,7 @@ func TestBSStorage(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, count, uint64(1))
 
-	rClaim, err := pg.GetClaim(ctx, 1, 0, tx)
+	rClaim, err := pg.GetClaim(ctx, deposit.DepositCount, deposit.NetworkID, claim.NetworkID, tx)
 	require.NoError(t, err)
 	require.Equal(t, rClaim.DestinationAddress, claim.DestinationAddress)
 	require.Equal(t, rClaim.NetworkID, claim.NetworkID)
