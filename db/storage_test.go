@@ -84,7 +84,7 @@ func TestL1GlobalExitRoot(t *testing.T) {
 	require.Equal(t, ger.BlockID, l1GER.BlockID)
 	require.Equal(t, ger.GlobalExitRoot, l1GER.GlobalExitRoot)
 
-	latestGER, err := pg.GetLatestExitRoot(ctx, true, tx)
+	latestGER, err := pg.GetLatestExitRoot(ctx, 1, 0, tx)
 	require.NoError(t, err)
 	require.Equal(t, latestGER.GlobalExitRoot, l1GER.GlobalExitRoot)
 	require.Equal(t, latestGER.BlockNumber, l1GER.BlockNumber)
@@ -106,6 +106,7 @@ func TestAddTrustedGERDuplicated(t *testing.T) {
 	require.NoError(t, err)
 
 	ger := &etherman.GlobalExitRoot{
+		NetworkID:      1,
 		ExitRoots:      []common.Hash{common.HexToHash("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9f1"), common.HexToHash("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9f1")},
 		GlobalExitRoot: common.HexToHash("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9f1"),
 	}
@@ -129,6 +130,7 @@ func TestAddTrustedGERDuplicated(t *testing.T) {
 	require.NoError(t, err)
 
 	ger1 := &etherman.GlobalExitRoot{
+		NetworkID:      1,
 		ExitRoots:      []common.Hash{common.HexToHash("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9f2"), common.HexToHash("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9f2")},
 		GlobalExitRoot: common.HexToHash("0x29e885edaf8e4b51e1d2e05f9da28161d2fb4f6b1d53827d9b80a23cf2d7d9f2"),
 	}
@@ -146,11 +148,20 @@ func TestAddTrustedGERDuplicated(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, 2, result)
 
-	tGER, err := pg.GetLatestTrustedExitRoot(ctx, tx)
+	_, err = pg.AddBlock(ctx, &etherman.Block{
+		BlockNumber: 1,
+	}, tx)
+	require.NoError(t, err)
+	ger2 := ger1
+	ger2.BlockID = 1
+	err = pg.AddGlobalExitRoot(ctx, ger2, tx)
+	require.NoError(t, err)
+
+	tGER, err := pg.GetLatestTrustedExitRoot(ctx, 1, tx)
 	require.NoError(t, err)
 	require.Equal(t, tGER.GlobalExitRoot, ger1.GlobalExitRoot)
 
-	latestGER, err := pg.GetLatestExitRoot(ctx, false, tx)
+	latestGER, err := pg.GetLatestExitRoot(ctx, 0, 1, tx)
 	require.NoError(t, err)
 	require.Equal(t, latestGER.GlobalExitRoot, ger1.GlobalExitRoot)
 	require.Equal(t, latestGER.BlockNumber, ger1.BlockNumber)

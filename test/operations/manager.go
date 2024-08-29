@@ -122,7 +122,7 @@ func NewManager(ctx context.Context, cfg *Config) (*Manager, error) {
 	if err != nil {
 		return nil, err
 	}
-	bService := server.NewBridgeService(cfg.BS, cfg.BT.Height, []uint{0, cfg.L2NetworkID}, pgst, cfg.L2NetworkID)
+	bService := server.NewBridgeService(cfg.BS, cfg.BT.Height, []uint{0, cfg.L2NetworkID}, pgst)
 	opsman.storage = st.(StorageInterface)
 	opsman.bridgetree = bt
 	opsman.bridgeService = bService
@@ -218,16 +218,14 @@ func (m *Manager) GetNumberClaims(ctx context.Context, destAddr string) (int, er
 }
 
 // SendL1Deposit sends a deposit from l1 to l2.
-func (m *Manager) SendL1Deposit(ctx context.Context, tokenAddr common.Address, amount *big.Int,
-	destNetwork uint32, destAddr *common.Address,
-) error {
+func (m *Manager) SendL1Deposit(ctx context.Context, tokenAddr common.Address, amount *big.Int, destNetwork uint32, destAddr *common.Address) error {
 	client := m.clients[L1]
 	auth, err := client.GetSigner(ctx, accHexPrivateKeys[L1])
 	if err != nil {
 		return err
 	}
 
-	orgExitRoot, err := m.storage.GetLatestExitRoot(ctx, false, nil)
+	orgExitRoot, err := m.storage.GetLatestExitRoot(ctx, 0, uint(destNetwork), nil)
 	if err != nil && err != gerror.ErrStorageNotFound {
 		return err
 	}
@@ -238,7 +236,7 @@ func (m *Manager) SendL1Deposit(ctx context.Context, tokenAddr common.Address, a
 	}
 
 	// sync for new exit root
-	return m.WaitExitRootToBeSynced(ctx, orgExitRoot, false)
+	return m.WaitExitRootToBeSynced(ctx, orgExitRoot, 0, uint(destNetwork))
 }
 
 // SendMultipleL1Deposit sends a deposit from l1 to l2.
@@ -272,8 +270,12 @@ func (m *Manager) SendL2Deposit(ctx context.Context, tokenAddr common.Address, a
 	if err != nil {
 		return err
 	}
-
-	orgExitRoot, err := m.storage.GetLatestExitRoot(ctx, true, nil)
+	networkID, err := client.Bridge.NetworkID(&bind.CallOpts{Pending: false})
+	if err != nil {
+		log.Error("error getting networkID: ", networkID)
+		return err
+	}
+	orgExitRoot, err := m.storage.GetLatestExitRoot(ctx, uint(networkID), uint(destNetwork), nil)
 	if err != nil && err != gerror.ErrStorageNotFound {
 		return err
 	}
@@ -284,7 +286,7 @@ func (m *Manager) SendL2Deposit(ctx context.Context, tokenAddr common.Address, a
 	}
 
 	// sync for new exit root
-	return m.WaitExitRootToBeSynced(ctx, orgExitRoot, true)
+	return m.WaitExitRootToBeSynced(ctx, orgExitRoot, uint(networkID), uint(destNetwork))
 }
 
 // SendL1BridgeMessage bridges a message from l1 to l2.
@@ -301,7 +303,7 @@ func (m *Manager) SendL1BridgeMessage(ctx context.Context, destAddr common.Addre
 		}
 	}
 
-	orgExitRoot, err := m.storage.GetLatestExitRoot(ctx, true, nil)
+	orgExitRoot, err := m.storage.GetLatestExitRoot(ctx, 0, uint(destNetwork), nil)
 	if err != nil && err != gerror.ErrStorageNotFound {
 		return err
 	}
@@ -313,7 +315,7 @@ func (m *Manager) SendL1BridgeMessage(ctx context.Context, destAddr common.Addre
 	}
 
 	// sync for new exit root
-	return m.WaitExitRootToBeSynced(ctx, orgExitRoot, false)
+	return m.WaitExitRootToBeSynced(ctx, orgExitRoot, 0, uint(destNetwork))
 }
 
 // SendL2BridgeMessage bridges a message from l2 to l1.
@@ -324,7 +326,13 @@ func (m *Manager) SendL2BridgeMessage(ctx context.Context, destAddr common.Addre
 		return err
 	}
 
-	orgExitRoot, err := m.storage.GetLatestExitRoot(ctx, true, nil)
+	networkID, err := client.Bridge.NetworkID(&bind.CallOpts{Pending: false})
+	if err != nil {
+		log.Error("error getting networkID: ", networkID)
+		return err
+	}
+
+	orgExitRoot, err := m.storage.GetLatestExitRoot(ctx, uint(networkID), uint(destNetwork), nil)
 	if err != nil && err != gerror.ErrStorageNotFound {
 		return err
 	}
@@ -336,7 +344,7 @@ func (m *Manager) SendL2BridgeMessage(ctx context.Context, destAddr common.Addre
 	}
 
 	// sync for new exit root
-	return m.WaitExitRootToBeSynced(ctx, orgExitRoot, true)
+	return m.WaitExitRootToBeSynced(ctx, orgExitRoot, uint(networkID), uint(destNetwork))
 }
 
 // Setup creates all the required components and initializes them according to
@@ -455,31 +463,6 @@ func (m *Manager) AddFunds(ctx context.Context) error {
 	return WaitTxToBeMined(ctx, client.Client, tx, txPolTransferTimeout)
 }
 
-// Teardown stops all the components.
-func Teardown() error {
-	err := StopBridge()
-	if err != nil {
-		return err
-	}
-
-	err = stopZKEVMNode()
-	if err != nil {
-		return err
-	}
-
-	err = stopProver()
-	if err != nil {
-		return err
-	}
-
-	err = stopNetwork()
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
 func (m *Manager) startNetwork() error {
 	if err := stopNetwork(); err != nil {
 		return err
@@ -539,6 +522,26 @@ func runCmd(c *exec.Cmd) error {
 	c.Stdout = os.Stdout
 	c.Stderr = os.Stderr
 	return c.Run()
+}
+
+// StartBridge3 restarts the bridge service.
+func StartBridge3() error {
+	if err := StopBridge3(); err != nil {
+		return err
+	}
+	cmd := exec.Command(makeCmd, "run-bridge-3")
+	err := runCmd(cmd)
+	if err != nil {
+		return err
+	}
+	// Wait bridge to be ready
+	return poll(defaultInterval, defaultDeadline, bridgeUpCondition)
+}
+
+// StopBridge3 stops the bridge service.
+func StopBridge3() error {
+	cmd := exec.Command(makeCmd, "stop-bridge-3")
+	return runCmd(cmd)
 }
 
 // StartBridge restarts the bridge service.
@@ -671,8 +674,8 @@ func (m *Manager) SendL2Claim(ctx context.Context, deposit *pb.Deposit, smtProof
 }
 
 // GetTrustedGlobalExitRootSynced reads the latest globalexitroot of a batch proposal from db
-func (m *Manager) GetTrustedGlobalExitRootSynced(ctx context.Context) (*etherman.GlobalExitRoot, error) {
-	return m.storage.GetLatestTrustedExitRoot(ctx, nil)
+func (m *Manager) GetTrustedGlobalExitRootSynced(ctx context.Context, networkID uint) (*etherman.GlobalExitRoot, error) {
+	return m.storage.GetLatestTrustedExitRoot(ctx, networkID, nil)
 }
 
 // GetLatestGlobalExitRootFromL1 reads the latest synced globalexitroot in l1 from db
@@ -784,7 +787,7 @@ func (m *Manager) UpdateBlocksForTesting(ctx context.Context, networkID uint, bl
 }
 
 // WaitExitRootToBeSynced waits until new exit root is synced.
-func (m *Manager) WaitExitRootToBeSynced(ctx context.Context, orgExitRoot *etherman.GlobalExitRoot, isRollup bool) error {
+func (m *Manager) WaitExitRootToBeSynced(ctx context.Context, orgExitRoot *etherman.GlobalExitRoot, networkID, destNetwork uint) error {
 	log.Debugf("WaitExitRootToBeSynced: %+v", orgExitRoot)
 	if orgExitRoot == nil {
 		orgExitRoot = &etherman.GlobalExitRoot{
@@ -792,7 +795,7 @@ func (m *Manager) WaitExitRootToBeSynced(ctx context.Context, orgExitRoot *ether
 		}
 	}
 	return operations.Poll(defaultInterval, waitRootSyncDeadline, func() (bool, error) {
-		exitRoot, err := m.storage.GetLatestExitRoot(ctx, isRollup, nil)
+		exitRoot, err := m.storage.GetLatestExitRoot(ctx, networkID, destNetwork, nil)
 		if err != nil {
 			if err == gerror.ErrStorageNotFound {
 				return false, nil
@@ -800,7 +803,7 @@ func (m *Manager) WaitExitRootToBeSynced(ctx context.Context, orgExitRoot *ether
 			return false, err
 		}
 		tID := 0
-		if isRollup {
+		if networkID != 0 {
 			tID = 1
 		}
 		return exitRoot.ExitRoots[tID] != orgExitRoot.ExitRoots[tID], nil

@@ -60,7 +60,7 @@ func main() {
 	for i := 0; i < len(proof.MerkleProof); i++ {
 		log.Debug("smtProof: ", proof.MerkleProof[i])
 		smtProof[i] = common.HexToHash(proof.MerkleProof[i])
-		log.Debug("smtRollupProof: ", proof.MerkleProof[i])
+		log.Debug("smtRollupProof: ", proof.RollupMerkleProof[i])
 		smtRollupProof[i] = common.HexToHash(proof.RollupMerkleProof[i])
 	}
 	globalExitRoot := &etherman.GlobalExitRoot{

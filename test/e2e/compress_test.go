@@ -12,12 +12,13 @@ import (
 
 	"github.com/0xPolygonHermez/zkevm-bridge-service/bridgectrl"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/db"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/log"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/server"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/test/operations"
-	"github.com/0xPolygonHermez/zkevm-bridge-service/log"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/stretchr/testify/require"
 )
+
 const (
 	defaultInterval = 10 * time.Second
 	defaultDeadline = 600 * time.Second
@@ -27,8 +28,13 @@ func multiDepositFromL1(ctx context.Context, opsman *operations.Manager, destAdd
 	amount := new(big.Int).SetUint64(250000000000000000)
 	tokenAddr := common.Address{} // This means is eth
 	var destNetwork uint32 = 1
-	// L1 Deposit
+	// L1 Deposit to R1
 	err := opsman.SendMultipleL1Deposit(ctx, tokenAddr, amount, destNetwork, &destAddr, 30)
+	require.NoError(t, err)
+
+	// L1 Deposit to R2
+	destNetwork = 2
+	err = opsman.SendMultipleL1Deposit(ctx, tokenAddr, amount, destNetwork, &destAddr, 30)
 	require.NoError(t, err)
 
 	deposits, err := opsman.GetBridgeInfoByDestAddr(ctx, &destAddr)
@@ -81,8 +87,9 @@ func TestClaimCompressor(t *testing.T) {
 		},
 	}
 
-	os.Setenv("ZKEVM_BRIDGE_CLAIMTXMANAGER_GROUPINGCLAIMS_ENABLED", "true")
-	require.NoError(t, operations.StartBridge())
+	err := os.Setenv("ZKEVM_BRIDGE_CLAIMTXMANAGER_GROUPINGCLAIMS_ENABLED", "true")
+	require.NoError(t, err)
+	require.NoError(t, operations.StartBridge3())
 	opsman, err := operations.NewManager(ctx, opsCfg)
 	require.NoError(t, err)
 	const st time.Duration = 20 // wait until the syncing is finished
@@ -95,13 +102,13 @@ func TestClaimCompressor(t *testing.T) {
 		// Check number claim events
 		numberClaims, err := opsman.GetNumberClaims(ctx, destAddr.String())
 		require.NoError(t, err)
-		require.Equal(t, 30, numberClaims)
+		require.Equal(t, 60, numberClaims)
 		// Check L2 balance
 		balance, err := opsman.CheckAccountBalance(ctx, "l2", &destAddr)
 		require.NoError(t, err)
 		require.Equal(t, "7500000000000000435", balance.String())
 		maxGroupID, err := opsman.GetLatestMonitoredTxGroupID(ctx)
 		require.NoError(t, err)
-		require.Equal(t, uint64(2), maxGroupID)
+		require.Equal(t, uint64(4), maxGroupID)
 	})
 }
