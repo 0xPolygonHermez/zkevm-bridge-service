@@ -105,10 +105,10 @@ func start(ctx *cli.Context) error {
 		chSyncedL2 := make(chan uint)
 		chsExitRootEvent = append(chsExitRootEvent, chExitRootEventL2)
 		chsSyncedL2 = append(chsSyncedL2, chSyncedL2)
-		go runSynchronizer(ctx.Context, 0, bridgeController, l2EthermanClient, c.Synchronizer, storage, zkEVMClient, chExitRootEventL2, nil, chSyncedL2)
+		go runSynchronizer(ctx.Context, 0, bridgeController, l2EthermanClient, c.Synchronizer, storage, zkEVMClient, chExitRootEventL2, nil, chSyncedL2, []uint{})
 	}
 	chSynced := make(chan uint)
-	go runSynchronizer(ctx.Context, c.NetworkConfig.GenBlockNumber, bridgeController, l1Etherman, c.Synchronizer, storage, nil, nil, chsExitRootEvent, chSynced)
+	go runSynchronizer(ctx.Context, c.NetworkConfig.GenBlockNumber, bridgeController, l1Etherman, c.Synchronizer, storage, nil, nil, chsExitRootEvent, chSynced, networkIDs)
 	go func() {
 		for {
 			select {
@@ -203,8 +203,8 @@ func newEthermans(c *config.Config) (*etherman.Client, []*etherman.Client, error
 	return l1Etherman, l2Ethermans, nil
 }
 
-func runSynchronizer(ctx context.Context, genBlockNumber uint64, brdigeCtrl *bridgectrl.BridgeController, etherman *etherman.Client, cfg synchronizer.Config, storage db.Storage, zkEVMClient *client.Client, chExitRootEventL2 chan *etherman.GlobalExitRoot, chsExitRootEvent []chan *etherman.GlobalExitRoot, chSynced chan uint) {
-	sy, err := synchronizer.NewSynchronizer(ctx, storage, brdigeCtrl, etherman, zkEVMClient, genBlockNumber, chExitRootEventL2, chsExitRootEvent, chSynced, cfg)
+func runSynchronizer(ctx context.Context, genBlockNumber uint64, brdigeCtrl *bridgectrl.BridgeController, etherman *etherman.Client, cfg synchronizer.Config, storage db.Storage, zkEVMClient *client.Client, chExitRootEventL2 chan *etherman.GlobalExitRoot, chsExitRootEvent []chan *etherman.GlobalExitRoot, chSynced chan uint, allNetworkIDs []uint) {
+	sy, err := synchronizer.NewSynchronizer(ctx, storage, brdigeCtrl, etherman, zkEVMClient, genBlockNumber, chExitRootEventL2, chsExitRootEvent, chSynced, cfg, allNetworkIDs)
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -36,6 +36,7 @@ type ClientSynchronizer struct {
 	zkEVMClient       zkEVMClientInterface
 	synced            bool
 	l1RollupExitRoot  common.Hash
+	allNetworkIDs     []uint
 }
 
 // NewSynchronizer creates and initializes an instance of Synchronizer
@@ -49,7 +50,8 @@ func NewSynchronizer(
 	chExitRootEventL2 chan *etherman.GlobalExitRoot,
 	chsExitRootEvent []chan *etherman.GlobalExitRoot,
 	chSynced chan uint,
-	cfg Config) (Synchronizer, error) {
+	cfg Config,
+	allNetworkIDs []uint) (Synchronizer, error) {
 	ctx, cancel := context.WithCancel(parentCtx)
 	networkID := ethMan.GetNetworkID()
 	ger, err := storage.(storageInterface).GetLatestL1SyncedExitRoot(ctx, nil)
@@ -74,6 +76,7 @@ func NewSynchronizer(
 			chSynced:         chSynced,
 			chsExitRootEvent: chsExitRootEvent,
 			l1RollupExitRoot: ger.ExitRoots[1],
+			allNetworkIDs:    allNetworkIDs,
 		}, nil
 	}
 	return &ClientSynchronizer{
@@ -593,27 +596,35 @@ func (s *ClientSynchronizer) processVerifyBatch(verifyBatch etherman.VerifiedBat
 		log.Debugf("networkID: %d, skipping empty local exit root in verifyBatch event. VerifyBatch: %+v", s.networkID, verifyBatch)
 		return nil
 	}
-	// Just check that the calculated RollupExitRoot is fine
-	ok, err := s.storage.CheckIfRootExists(s.ctx, verifyBatch.LocalExitRoot.Bytes(), uint8(verifyBatch.RollupID), dbTx)
-	if err != nil {
-		log.Errorf("networkID: %d, error Checking if root exists. Error: %v", s.networkID, err)
-		rollbackErr := s.storage.Rollback(s.ctx, dbTx)
-		if rollbackErr != nil {
-			log.Errorf("networkID: %d, error rolling back state. BlockNumber: %d, rollbackErr: %v, error : %s",
-				s.networkID, verifyBatch.BlockNumber, rollbackErr, err.Error())
-			return rollbackErr
+	var isRollupSyncing bool
+	for _, n := range s.allNetworkIDs {
+		if verifyBatch.RollupID == n {
+			isRollupSyncing = true
 		}
-		return err
 	}
-	if !ok {
-		log.Errorf("networkID: %d, Root: %s doesn't exist!", s.networkID, verifyBatch.LocalExitRoot.String())
-		rollbackErr := s.storage.Rollback(s.ctx, dbTx)
-		if rollbackErr != nil {
-			log.Errorf("networkID: %d, error rolling back state. BlockNumber: %d, rollbackErr: %v, error : %s",
-				s.networkID, verifyBatch.BlockNumber, rollbackErr, err.Error())
-			return rollbackErr
+	if isRollupSyncing {
+		// Just check that the calculated RollupExitRoot is fine
+		ok, err := s.storage.CheckIfRootExists(s.ctx, verifyBatch.LocalExitRoot.Bytes(), uint8(verifyBatch.RollupID), dbTx)
+		if err != nil {
+			log.Errorf("networkID: %d, error Checking if root exists. Error: %v", s.networkID, err)
+			rollbackErr := s.storage.Rollback(s.ctx, dbTx)
+			if rollbackErr != nil {
+				log.Errorf("networkID: %d, error rolling back state. BlockNumber: %d, rollbackErr: %v, error : %s",
+					s.networkID, verifyBatch.BlockNumber, rollbackErr, err.Error())
+				return rollbackErr
+			}
+			return err
 		}
-		return fmt.Errorf("networkID: %d, Root: %s doesn't exist!", s.networkID, verifyBatch.LocalExitRoot.String())
+		if !ok {
+			log.Errorf("networkID: %d, Root: %s doesn't exist!", s.networkID, verifyBatch.LocalExitRoot.String())
+			rollbackErr := s.storage.Rollback(s.ctx, dbTx)
+			if rollbackErr != nil {
+				log.Errorf("networkID: %d, error rolling back state. BlockNumber: %d, rollbackErr: %v, error : %s",
+					s.networkID, verifyBatch.BlockNumber, rollbackErr, err.Error())
+				return rollbackErr
+			}
+			return fmt.Errorf("networkID: %d, Root: %s doesn't exist!", s.networkID, verifyBatch.LocalExitRoot.String())
+		}
 	}
 	rollupLeaf := etherman.RollupExitLeaf{
 		BlockID:  blockID,
@@ -621,7 +632,7 @@ func (s *ClientSynchronizer) processVerifyBatch(verifyBatch etherman.VerifiedBat
 		RollupId: verifyBatch.RollupID,
 	}
 	// Update rollupExitRoot
-	err = s.bridgeCtrl.AddRollupExitLeaf(s.ctx, rollupLeaf, dbTx)
+	err := s.bridgeCtrl.AddRollupExitLeaf(s.ctx, rollupLeaf, dbTx)
 	if err != nil {
 		log.Errorf("networkID: %d, error adding rollup exit leaf. Error: %v", s.networkID, err)
 		rollbackErr := s.storage.Rollback(s.ctx, dbTx)
