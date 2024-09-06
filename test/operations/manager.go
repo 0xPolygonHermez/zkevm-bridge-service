@@ -54,7 +54,7 @@ const (
 	makeCmd = "make"
 	cmdDir  = "../.."
 
-	mtHeight = 32
+	MtHeight = 32
 	rollupID = 1
 )
 
@@ -605,17 +605,17 @@ func (m *Manager) CheckAccountTokenBalance(ctx context.Context, network NetworkS
 }
 
 // GetClaimDataByGER gets the claim data by ger
-func (m *Manager) GetClaimDataByGER(ctx context.Context, networkID, depositCount uint, ger common.Hash) ([mtHeight][bridgectrl.KeyLen]byte, [mtHeight][bridgectrl.KeyLen]byte, *etherman.GlobalExitRoot, error) {
+func (m *Manager) GetClaimDataByGER(ctx context.Context, networkID, depositCount uint, ger common.Hash) ([MtHeight][bridgectrl.KeyLen]byte, [MtHeight][bridgectrl.KeyLen]byte, *etherman.GlobalExitRoot, error) {
 	res, err := m.bridgeService.GetProofByGER(context.Background(), &pb.GetProofByGERRequest{
 		NetId:      uint32(networkID),
 		DepositCnt: uint64(depositCount),
 		Ger:        ger.String(),
 	})
 	if err != nil {
-		return [mtHeight][32]byte{}, [mtHeight][32]byte{}, nil, err
+		return [MtHeight][32]byte{}, [MtHeight][32]byte{}, nil, err
 	}
-	merkleproof := [mtHeight][bridgectrl.KeyLen]byte{}
-	rollupMerkleProof := [mtHeight][bridgectrl.KeyLen]byte{}
+	merkleproof := [MtHeight][bridgectrl.KeyLen]byte{}
+	rollupMerkleProof := [MtHeight][bridgectrl.KeyLen]byte{}
 	for i, p := range res.Proof.MerkleProof {
 		var proof [bridgectrl.KeyLen]byte
 		copy(proof[:], common.FromHex(p))
@@ -625,6 +625,7 @@ func (m *Manager) GetClaimDataByGER(ctx context.Context, networkID, depositCount
 		rollupMerkleProof[i] = rollupProof
 	}
 	return merkleproof, rollupMerkleProof, &etherman.GlobalExitRoot{
+		GlobalExitRoot: ger,
 		ExitRoots: []common.Hash{
 			common.HexToHash(res.Proof.MainExitRoot),
 			common.HexToHash(res.Proof.RollupExitRoot),
@@ -633,16 +634,16 @@ func (m *Manager) GetClaimDataByGER(ctx context.Context, networkID, depositCount
 }
 
 // GetClaimData gets the claim data
-func (m *Manager) GetClaimData(ctx context.Context, networkID, depositCount uint) ([mtHeight][bridgectrl.KeyLen]byte, [mtHeight][bridgectrl.KeyLen]byte, *etherman.GlobalExitRoot, error) {
+func (m *Manager) GetClaimData(ctx context.Context, networkID, depositCount uint) ([MtHeight][bridgectrl.KeyLen]byte, [MtHeight][bridgectrl.KeyLen]byte, *etherman.GlobalExitRoot, error) {
 	res, err := m.bridgeService.GetProof(context.Background(), &pb.GetProofRequest{
 		NetId:      uint32(networkID),
 		DepositCnt: uint64(depositCount),
 	})
 	if err != nil {
-		return [mtHeight][32]byte{}, [mtHeight][32]byte{}, nil, err
+		return [MtHeight][32]byte{}, [MtHeight][32]byte{}, nil, err
 	}
-	merkleproof := [mtHeight][bridgectrl.KeyLen]byte{}
-	rollupMerkleProof := [mtHeight][bridgectrl.KeyLen]byte{}
+	merkleproof := [MtHeight][bridgectrl.KeyLen]byte{}
+	rollupMerkleProof := [MtHeight][bridgectrl.KeyLen]byte{}
 	for i, p := range res.Proof.MerkleProof {
 		var proof [bridgectrl.KeyLen]byte
 		copy(proof[:], common.FromHex(p))
@@ -679,7 +680,7 @@ func (m *Manager) GetBridgeInfoByDestAddr(ctx context.Context, addr *common.Addr
 }
 
 // SendL1Claim send an L1 claim
-func (m *Manager) SendL1Claim(ctx context.Context, deposit *pb.Deposit, smtProof, smtRollupProof [mtHeight][32]byte, globalExitRoot *etherman.GlobalExitRoot) error {
+func (m *Manager) SendL1Claim(ctx context.Context, deposit *pb.Deposit, smtProof, smtRollupProof [MtHeight][32]byte, globalExitRoot *etherman.GlobalExitRoot) error {
 	client := m.clients[L1]
 	auth, err := client.GetSigner(ctx, accHexPrivateKeys[L1])
 	if err != nil {
@@ -690,7 +691,7 @@ func (m *Manager) SendL1Claim(ctx context.Context, deposit *pb.Deposit, smtProof
 }
 
 // SendL2Claim send an L2 claim
-func (m *Manager) SendL2Claim(ctx context.Context, deposit *pb.Deposit, smtProof, smtRollupProof [mtHeight][32]byte, globalExitRoot *etherman.GlobalExitRoot, l2 NetworkSID) error {
+func (m *Manager) SendL2Claim(ctx context.Context, deposit *pb.Deposit, smtProof, smtRollupProof [MtHeight][32]byte, globalExitRoot *etherman.GlobalExitRoot, l2 NetworkSID) error {
 	client := m.clients[L2]
 	auth, err := client.GetSigner(ctx, accHexPrivateKeys[l2])
 	if err != nil {

@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/0xPolygonHermez/zkevm-bridge-service/bridgectrl"
-	"github.com/0xPolygonHermez/zkevm-bridge-service/bridgectrl/pb"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/db"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/log"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/server"
@@ -128,15 +127,18 @@ func TestE2E(t *testing.T) {
 		// Check L1 funds
 		balance, err = opsman.CheckAccountBalance(ctx, operations.L1, &destAddr)
 		require.NoError(t, err)
-		//require.Equal(t, 0, big.NewInt(0).Cmp(balance))
-		require.Equal(t, 0, balance.Sub(balance, initL1Balance).Cmp(big.NewInt(0)))
+		require.Equal(t, 0, big.NewInt(0).Cmp(balance))
 		// Get the claim data
 		smtProof, smtRollupProof, globaExitRoot, err := opsman.GetClaimData(ctx, uint(deposits[0].NetworkId), uint(deposits[0].DepositCnt))
 		require.NoError(t, err)
 		testClaimParams := testClaimByGERParams{
-			resultOriginal: claimResult{smtProof, smtRollupProof, globaExitRoot},
-			opsman:         opsman,
-			deposit:        deposits[0],
+			smtProof:        smtProof,
+			smtRollupProof:  smtRollupProof,
+			mainnetExitRoot: globaExitRoot.ExitRoots[0],
+			rollupExitRoot:  globaExitRoot.ExitRoots[1],
+			opsman:          opsman,
+			networkId:       uint(deposits[0].NetworkId),
+			depositCnt:      uint(deposits[0].DepositCnt),
 		}
 		testClaimByGER(t, ctx, testClaimParams)
 
@@ -147,7 +149,7 @@ func TestE2E(t *testing.T) {
 		// Check L1 funds to see if the amount has been increased
 		balance, err = opsman.CheckAccountBalance(ctx, operations.L1, &destAddr)
 		require.NoError(t, err)
-		require.Equal(t, big.NewInt(1000000000000000000), balance.Sub(balance, initL1Balance))
+		require.Equal(t, big.NewInt(1000000000000000000), balance)
 		// Check L2 funds to see that the amount has been reduced
 		balance, err = opsman.CheckAccountBalance(ctx, operations.L2, &destAddr)
 		require.NoError(t, err)
@@ -157,16 +159,17 @@ func TestE2E(t *testing.T) {
 		// TESTING ClaimByGER
 		//////////////////////////////
 		t.Log("Sending another L2Deposit to generate a new globalExitRoot and get ClaimByGER")
-		err = opsman.SendL2Deposit(ctx, tokenAddr, amount, destNetwork, &destAddr)
+		err = opsman.SendL2Deposit(ctx, tokenAddr, amount, destNetwork, &destAddr, operations.L2)
 		require.NoError(t, err)
 		// Get Bridge Info By DestAddr
-		require.NoError(t, err)
-		t.Log("There are a new GER, I'm checking to generate claim for previous deposit with previous GER")
 		testClaimParams = testClaimByGERParams{
-			resultOriginal: claimResult{smtProof, smtRollupProof, globaExitRoot},
-			opsman:         opsman,
-			deposit:        deposits[0],
-			useGER:         nil, // nil means use the one in resultOriginal
+			smtProof:        smtProof,
+			smtRollupProof:  smtRollupProof,
+			mainnetExitRoot: globaExitRoot.ExitRoots[0],
+			rollupExitRoot:  globaExitRoot.ExitRoots[1],
+			opsman:          opsman,
+			networkId:       uint(deposits[0].NetworkId),
+			depositCnt:      uint(deposits[0].DepositCnt),
 		}
 		testClaimByGER(t, ctx, testClaimParams)
 		// Claim funds in L1
@@ -177,7 +180,7 @@ func TestE2E(t *testing.T) {
 
 		err = opsman.SendL1Claim(ctx, deposits2[0], smtProof, smtRollupProof, globaExitRoot)
 		require.NoError(t, err)
-
+		log.Debug("TESTING ClaimByGER end")
 	})
 
 	t.Run("L1-L2 token bridge", func(t *testing.T) {
@@ -596,39 +599,26 @@ func TestE2E(t *testing.T) {
 	})
 }
 
-const mtProofHeight = 32
-
-type claimResult struct {
-	smtProof       [mtProofHeight][bridgectrl.KeyLen]byte
-	smtRollupProof [mtProofHeight][bridgectrl.KeyLen]byte
-	globaExitRoot  *etherman.GlobalExitRoot
-}
-
 type testClaimByGERParams struct {
-	resultOriginal claimResult
-	opsman         *operations.Manager
-	deposit        *pb.Deposit
-	useGER         *common.Hash
-}
-
-func calculateGlobalExitRoot(ger *etherman.GlobalExitRoot) common.Hash {
-	return bridgectrl.Hash(ger.ExitRoots[0], ger.ExitRoots[1])
+	smtProof        [operations.MtHeight][bridgectrl.KeyLen]byte
+	smtRollupProof  [operations.MtHeight][bridgectrl.KeyLen]byte
+	mainnetExitRoot common.Hash
+	rollupExitRoot  common.Hash
+	opsman          *operations.Manager
+	networkId       uint
+	depositCnt      uint
 }
 
 func testClaimByGER(t *testing.T, ctx context.Context, params testClaimByGERParams) {
-	var ger common.Hash
-	if params.useGER != nil {
-		ger = *params.useGER
-	} else {
-		ger = calculateGlobalExitRoot(params.resultOriginal.globaExitRoot)
-	}
+	var ger common.Hash = bridgectrl.Hash(params.mainnetExitRoot, params.rollupExitRoot)
 
-	log.Debugf("GetClaimDataByGER: network: %d deposit_cnt:%d GER:%s",
-		uint(params.deposit.NetworkId), uint(params.deposit.DepositCnt), ger.String())
-	log.Debugf("Checking same claim as GetClaim")
-	smtProofByGer, smtRollupProofByGer, globaExitRootByGer, err := params.opsman.GetClaimDataByGER(ctx, uint(params.deposit.NetworkId), uint(params.deposit.DepositCnt), ger)
+	t.Logf("GetClaimDataByGER: network: %d deposit_cnt:%d GER:%s", uint(params.networkId), uint(params.depositCnt), ger.String())
+	t.Logf("Checking same claim as GetClaim")
+	smtProofByGer, smtRollupProofByGer, globaExitRootByGer, err := params.opsman.GetClaimDataByGER(ctx, params.networkId, params.depositCnt, ger)
 	require.NoError(t, err)
-	require.Equal(t, params.resultOriginal.globaExitRoot, globaExitRootByGer)
-	require.Equal(t, params.resultOriginal.smtProof, smtProofByGer)
-	require.Equal(t, params.resultOriginal.smtRollupProof, smtRollupProofByGer)
+	require.Equal(t, ger, globaExitRootByGer.GlobalExitRoot)
+	require.Equal(t, params.rollupExitRoot, globaExitRootByGer.ExitRoots[1])
+	require.Equal(t, params.mainnetExitRoot, globaExitRootByGer.ExitRoots[0])
+	require.Equal(t, params.smtProof, smtProofByGer)
+	require.Equal(t, params.smtRollupProof, smtRollupProofByGer)
 }
