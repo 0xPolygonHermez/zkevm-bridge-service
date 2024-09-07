@@ -14,6 +14,7 @@ import (
 	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/log"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/test/mocksmartcontracts/BridgeMessageReceiver"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/test/mocksmartcontracts/erc20permitmock"
 	zkevmtypes "github.com/0xPolygonHermez/zkevm-node/config/types"
 	"github.com/0xPolygonHermez/zkevm-node/encoding"
 	"github.com/0xPolygonHermez/zkevm-node/etherman/smartcontracts/polygonzkevmbridge"
@@ -106,6 +107,15 @@ func (c *Client) CheckTxWasMined(ctx context.Context, txHash common.Hash) (bool,
 	}
 
 	return true, receipt, nil
+}
+
+// GetNetworkID gets the networkID stored in the bridge contract
+func (c *Client) GetNetworkID() (uint32, error) {
+	networkID, err := c.Bridge.NetworkID(&bind.CallOpts{Pending: false})
+	if err != nil {
+		return 0, err
+	}
+	return networkID, nil
 }
 
 // DeployERC20 deploys erc20 smc.
@@ -239,8 +249,23 @@ func (c *Client) SendClaim(ctx context.Context, deposit *pb.Deposit, smtProof [m
 	)
 	globalIndex, _ := big.NewInt(0).SetString(deposit.GlobalIndex, 0)
 	if deposit.LeafType == LeafTypeAsset {
-		metadata := common.FromHex(deposit.Metadata)
-		tx, err = c.Bridge.ClaimAsset(auth, smtProof, smtRollupProof, globalIndex, globalExitRoot.ExitRoots[0], globalExitRoot.ExitRoots[1], deposit.OrigNet, common.HexToAddress(deposit.OrigAddr), deposit.DestNet, common.HexToAddress(deposit.DestAddr), amount, metadata)
+		tx, err = c.Bridge.ClaimAsset(auth, smtProof, smtRollupProof, globalIndex, globalExitRoot.ExitRoots[0], globalExitRoot.ExitRoots[1], deposit.OrigNet, common.HexToAddress(deposit.OrigAddr), deposit.DestNet, common.HexToAddress(deposit.DestAddr), amount, common.FromHex(deposit.Metadata))
+		if err != nil {
+			a, _ := polygonzkevmbridge.PolygonzkevmbridgeMetaData.GetAbi()
+			input, err3 := a.Pack("claimAsset", smtProof, smtRollupProof, globalIndex, globalExitRoot.ExitRoots[0], globalExitRoot.ExitRoots[1], deposit.OrigNet, common.HexToAddress(deposit.OrigAddr), deposit.DestNet, common.HexToAddress(deposit.DestAddr), amount, common.FromHex(deposit.Metadata))
+			if err3 != nil {
+				log.Error("error packing call. Error: ", err3)
+			}
+			log.Warnf(`Use the next command to debug it manually.
+			curl --location --request POST 'http://localhost:8123' \
+			--header 'Content-Type: application/json' \
+			--data-raw '{
+				"jsonrpc": "2.0",
+				"method": "eth_call",
+				"params": [{"from": "%s","to":"%s","data":"0x%s"},"latest"],
+				"id": 1
+			}'`, auth.From, "<To address>", common.Bytes2Hex(input))
+		}
 	} else if deposit.LeafType == LeafTypeMessage {
 		tx, err = c.Bridge.ClaimMessage(auth, smtProof, smtRollupProof, globalIndex, globalExitRoot.ExitRoots[0], globalExitRoot.ExitRoots[1], deposit.OrigNet, common.HexToAddress(deposit.OrigAddr), deposit.DestNet, common.HexToAddress(deposit.DestAddr), amount, common.FromHex(deposit.Metadata))
 	}
@@ -288,4 +313,32 @@ func (c *Client) GetGlobalExitRootFromSmc(ctx context.Context) (*etherman.Global
 		ExitRoots: []common.Hash{gMainnet, gRollup},
 	}
 	return &result, nil
+}
+
+// ERC20Transfer send tokens.
+func (c *Client) ERC20Transfer(ctx context.Context, erc20Addr, to common.Address, amount *big.Int, auth *bind.TransactOpts) error {
+	erc20sc, err := ERC20.NewERC20(erc20Addr, c.Client)
+	if err != nil {
+		return err
+	}
+	tx, err := erc20sc.Transfer(auth, to, amount)
+	if err != nil {
+		return err
+	}
+	const txMinedTimeoutLimit = 60 * time.Second
+	return WaitTxToBeMined(ctx, c.Client, tx, txMinedTimeoutLimit)
+}
+
+// MintPOL mint POL tokens.
+func (c *Client) MintPOL(ctx context.Context, polAddr common.Address, amount *big.Int, auth *bind.TransactOpts) error {
+	pol, err := erc20permitmock.NewErc20permitmock(polAddr, c.Client)
+	if err != nil {
+		return err
+	}
+	tx, err := pol.Mint(auth, auth.From, amount)
+	if err != nil {
+		return err
+	}
+	const txMinedTimeoutLimit = 60 * time.Second
+	return WaitTxToBeMined(ctx, c.Client, tx, txMinedTimeoutLimit)
 }

@@ -108,6 +108,7 @@ func initServer(b *testing.B, bench benchmark) *bridgectrl.BridgeController {
 		} else {
 			var isUpdated bool
 			isUpdated, err = store.AddTrustedGlobalExitRoot(context.TODO(), &etherman.GlobalExitRoot{
+				NetworkID:      1,
 				GlobalExitRoot: bridgectrl.Hash(common.BytesToHash(roots[0]), common.BytesToHash(roots[1])),
 				ExitRoots:      []common.Hash{common.BytesToHash(roots[0]), common.BytesToHash(roots[1])},
 			}, dbTx)

@@ -2,6 +2,7 @@ package operations
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math/big"
 	"os"
@@ -33,16 +34,14 @@ type NetworkSID string
 
 // NetworkSID constants
 const (
-	L1 NetworkSID = "l1"
-	L2 NetworkSID = "l2"
+	L1  NetworkSID = "l1"
+	L2  NetworkSID = "l2"
+	L22 NetworkSID = "l22"
 
 	waitRootSyncDeadline = 120 * time.Second
 )
 
 const (
-	l1NetworkURL = "http://localhost:8545"
-	l2NetworkURL = "http://localhost:8123"
-
 	// PolTokenAddress token address
 	PolTokenAddress = "0x5FbDB2315678afecb367f032d93F642f64180aa3" //nolint:gosec
 	l1BridgeAddr    = "0xFe12ABaa190Ef0c8638Ee0ba9F828BF41368Ca0E"
@@ -55,23 +54,24 @@ const (
 	makeCmd = "make"
 	cmdDir  = "../.."
 
-	mtHeight = 32
+	MtHeight = 32
 	rollupID = 1
 )
 
-var (
-	dbConfig          = pgstorage.NewConfigFromEnv()
-	accHexPrivateKeys = map[NetworkSID]string{
-		L1: "0x5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a", //0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC
-		L2: "0xdfd01798f92667dbf91df722434e8fbe96af0211d4d1b82bbbbc8f1def7a814f", //0xc949254d682d8c9ad5682521675b8f43b102aec4
-	}
-)
+var accHexPrivateKeys = map[NetworkSID]string{
+	L1:  "0x5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a", //0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC
+	L2:  "0xdfd01798f92667dbf91df722434e8fbe96af0211d4d1b82bbbbc8f1def7a814f", //0xc949254d682d8c9ad5682521675b8f43b102aec4
+	L22: "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80", //0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
+}
 
 // Config is the main Manager configuration.
 type Config struct {
-	Storage db.Config
-	BT      bridgectrl.Config
-	BS      server.Config
+	L1NetworkURL string
+	L2NetworkURL string
+	L2NetworkID  uint
+	Storage      db.Config
+	BT           bridgectrl.Config
+	BS           server.Config
 }
 
 // Manager controls operations and has knowledge about how to set up and tear
@@ -94,13 +94,15 @@ func NewManager(ctx context.Context, cfg *Config) (*Manager, error) {
 		cfg: cfg,
 		ctx: ctx,
 	}
-	//Init storage and mt
-	// err := pgstorage.InitOrReset(dbConfig)
-	// if err != nil {
-	// 	return nil, err
-	// }
 
-	pgst, err := pgstorage.NewPostgresStorage(dbConfig)
+	pgst, err := pgstorage.NewPostgresStorage(pgstorage.Config{
+		Name:     cfg.Storage.Name,
+		User:     cfg.Storage.User,
+		Password: cfg.Storage.Password,
+		Host:     cfg.Storage.Host,
+		Port:     cfg.Storage.Port,
+		MaxConns: cfg.Storage.MaxConns,
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -108,19 +110,19 @@ func NewManager(ctx context.Context, cfg *Config) (*Manager, error) {
 	if err != nil {
 		return nil, err
 	}
-	bt, err := bridgectrl.NewBridgeController(ctx, cfg.BT, []uint{0, 1}, pgst)
+	bt, err := bridgectrl.NewBridgeController(ctx, cfg.BT, []uint{0, cfg.L2NetworkID}, pgst)
 	if err != nil {
 		return nil, err
 	}
-	l1Client, err := utils.NewClient(ctx, l1NetworkURL, common.HexToAddress(l1BridgeAddr))
+	l1Client, err := utils.NewClient(ctx, cfg.L1NetworkURL, common.HexToAddress(l1BridgeAddr))
 	if err != nil {
 		return nil, err
 	}
-	l2Client, err := utils.NewClient(ctx, l2NetworkURL, common.HexToAddress(l2BridgeAddr))
+	l2Client, err := utils.NewClient(ctx, cfg.L2NetworkURL, common.HexToAddress(l2BridgeAddr))
 	if err != nil {
 		return nil, err
 	}
-	bService := server.NewBridgeService(cfg.BS, cfg.BT.Height, []uint{0, 1}, pgst, rollupID)
+	bService := server.NewBridgeService(cfg.BS, cfg.BT.Height, []uint{0, cfg.L2NetworkID}, pgst)
 	opsman.storage = st.(StorageInterface)
 	opsman.bridgetree = bt
 	opsman.bridgeService = bService
@@ -130,31 +132,78 @@ func NewManager(ctx context.Context, cfg *Config) (*Manager, error) {
 	return opsman, err
 }
 
-// CheckL2Claim checks if the claim is already in the L2 network.
-func (m *Manager) CheckL2Claim(ctx context.Context, networkID, depositCnt uint) error {
+// CheckClaim checks if the claim is already in the network
+func (m *Manager) CheckClaim(ctx context.Context, deposit *pb.Deposit) error {
 	return operations.Poll(defaultInterval, defaultDeadline, func() (bool, error) {
-		_, err := m.storage.GetClaim(ctx, depositCnt, networkID, nil)
-		if err != nil {
-			if err == gerror.ErrStorageNotFound {
-				return false, nil
-			}
-			return false, err
-		}
-		return true, nil
+		return m.claimChecker(ctx, deposit)
 	})
 }
 
-// CustomCheckL2Claim checks if the claim is already in the L2 network.
-func (m *Manager) CustomCheckL2Claim(ctx context.Context, networkID, depositCnt uint, interval, deadline time.Duration) error {
-	return operations.Poll(interval, deadline, func() (bool, error) {
-		_, err := m.storage.GetClaim(ctx, depositCnt, networkID, nil)
+func (m *Manager) claimChecker(ctx context.Context, deposit *pb.Deposit) (bool, error) {
+	// Check that claim exist on GetClaims endpoint
+	req := pb.GetClaimsRequest{
+		DestAddr: deposit.DestAddr,
+	}
+	claims, err := m.bridgeService.GetClaims(ctx, &req)
+	if err != nil {
+		return false, err
+	}
+	idx, succ := big.NewInt(0).SetString(deposit.GlobalIndex, 10) //nolint:gomnd
+	if !succ {
+		return false, errors.New("error setting big int")
+	}
+	mainnetFlag, rollupIndex, _, err := etherman.DecodeGlobalIndex(idx)
+	if err != nil {
+		return false, err
+	}
+	claimFound := false
+	var claimTxHash string
+	for _, c := range claims.Claims {
+		if c.Index == deposit.DepositCnt && c.MainnetFlag == mainnetFlag && c.RollupIndex == rollupIndex {
+			log.Debugf("deposit claimed with hash: %s", c.TxHash)
+			claimFound = true
+			claimTxHash = c.TxHash
+			break
+		}
+	}
+	if !claimFound {
+		return false, nil
+	}
+
+	// Check that claim tx has been added on GetBridges response
+	reqB := &pb.GetBridgesRequest{
+		DestAddr: deposit.DestAddr,
+	}
+	bridges, err := m.bridgeService.GetBridges(ctx, reqB)
+	if err != nil {
+		return false, err
+	}
+	claimFound = false
+	for _, d := range bridges.Deposits {
+		dIdx, succ := big.NewInt(0).SetString(deposit.GlobalIndex, 10) //nolint:gomnd
+		if !succ {
+			return false, errors.New("error setting big int")
+		}
+		dMainnetFlag, dRollupIndex, _, err := etherman.DecodeGlobalIndex(dIdx)
 		if err != nil {
-			if err == gerror.ErrStorageNotFound {
-				return false, nil
-			}
 			return false, err
 		}
-		return true, nil
+		if d.DepositCnt == deposit.DepositCnt && dMainnetFlag == mainnetFlag && dRollupIndex == rollupIndex {
+			if d.ClaimTxHash == claimTxHash {
+				claimFound = true
+				break
+			} else {
+				return false, errors.New("claim tx not linked to the deposit")
+			}
+		}
+	}
+	return claimFound, nil
+}
+
+// CustomCheckClaim checks if the claim is already in the L2 network.
+func (m *Manager) CustomCheckClaim(ctx context.Context, deposit *pb.Deposit, interval, deadline time.Duration) error {
+	return operations.Poll(interval, deadline, func() (bool, error) {
+		return m.claimChecker(ctx, deposit)
 	})
 }
 
@@ -169,16 +218,14 @@ func (m *Manager) GetNumberClaims(ctx context.Context, destAddr string) (int, er
 }
 
 // SendL1Deposit sends a deposit from l1 to l2.
-func (m *Manager) SendL1Deposit(ctx context.Context, tokenAddr common.Address, amount *big.Int,
-	destNetwork uint32, destAddr *common.Address,
-) error {
+func (m *Manager) SendL1Deposit(ctx context.Context, tokenAddr common.Address, amount *big.Int, destNetwork uint32, destAddr *common.Address) error {
 	client := m.clients[L1]
 	auth, err := client.GetSigner(ctx, accHexPrivateKeys[L1])
 	if err != nil {
 		return err
 	}
 
-	orgExitRoot, err := m.storage.GetLatestExitRoot(ctx, false, nil)
+	orgExitRoot, err := m.storage.GetLatestExitRoot(ctx, 0, uint(destNetwork), nil)
 	if err != nil && err != gerror.ErrStorageNotFound {
 		return err
 	}
@@ -189,7 +236,7 @@ func (m *Manager) SendL1Deposit(ctx context.Context, tokenAddr common.Address, a
 	}
 
 	// sync for new exit root
-	return m.WaitExitRootToBeSynced(ctx, orgExitRoot, false)
+	return m.WaitExitRootToBeSynced(ctx, orgExitRoot, 0, uint(destNetwork))
 }
 
 // SendMultipleL1Deposit sends a deposit from l1 to l2.
@@ -217,16 +264,18 @@ func (m *Manager) SendMultipleL1Deposit(ctx context.Context, tokenAddr common.Ad
 }
 
 // SendL2Deposit sends a deposit from l2 to l1.
-func (m *Manager) SendL2Deposit(ctx context.Context, tokenAddr common.Address, amount *big.Int,
-	destNetwork uint32, destAddr *common.Address,
-) error {
+func (m *Manager) SendL2Deposit(ctx context.Context, tokenAddr common.Address, amount *big.Int, destNetwork uint32, destAddr *common.Address, l2 NetworkSID) error {
 	client := m.clients[L2]
-	auth, err := client.GetSigner(ctx, accHexPrivateKeys[L2])
+	auth, err := client.GetSigner(ctx, accHexPrivateKeys[l2])
 	if err != nil {
 		return err
 	}
-
-	orgExitRoot, err := m.storage.GetLatestExitRoot(ctx, true, nil)
+	networkID, err := client.Bridge.NetworkID(&bind.CallOpts{Pending: false})
+	if err != nil {
+		log.Error("error getting networkID: ", networkID)
+		return err
+	}
+	orgExitRoot, err := m.storage.GetLatestExitRoot(ctx, uint(networkID), uint(destNetwork), nil)
 	if err != nil && err != gerror.ErrStorageNotFound {
 		return err
 	}
@@ -237,7 +286,7 @@ func (m *Manager) SendL2Deposit(ctx context.Context, tokenAddr common.Address, a
 	}
 
 	// sync for new exit root
-	return m.WaitExitRootToBeSynced(ctx, orgExitRoot, true)
+	return m.WaitExitRootToBeSynced(ctx, orgExitRoot, uint(networkID), uint(destNetwork))
 }
 
 // SendL1BridgeMessage bridges a message from l1 to l2.
@@ -254,7 +303,7 @@ func (m *Manager) SendL1BridgeMessage(ctx context.Context, destAddr common.Addre
 		}
 	}
 
-	orgExitRoot, err := m.storage.GetLatestExitRoot(ctx, true, nil)
+	orgExitRoot, err := m.storage.GetLatestExitRoot(ctx, 0, uint(destNetwork), nil)
 	if err != nil && err != gerror.ErrStorageNotFound {
 		return err
 	}
@@ -266,7 +315,7 @@ func (m *Manager) SendL1BridgeMessage(ctx context.Context, destAddr common.Addre
 	}
 
 	// sync for new exit root
-	return m.WaitExitRootToBeSynced(ctx, orgExitRoot, false)
+	return m.WaitExitRootToBeSynced(ctx, orgExitRoot, 0, uint(destNetwork))
 }
 
 // SendL2BridgeMessage bridges a message from l2 to l1.
@@ -277,7 +326,13 @@ func (m *Manager) SendL2BridgeMessage(ctx context.Context, destAddr common.Addre
 		return err
 	}
 
-	orgExitRoot, err := m.storage.GetLatestExitRoot(ctx, true, nil)
+	networkID, err := client.Bridge.NetworkID(&bind.CallOpts{Pending: false})
+	if err != nil {
+		log.Error("error getting networkID: ", networkID)
+		return err
+	}
+
+	orgExitRoot, err := m.storage.GetLatestExitRoot(ctx, uint(networkID), uint(destNetwork), nil)
 	if err != nil && err != gerror.ErrStorageNotFound {
 		return err
 	}
@@ -289,7 +344,7 @@ func (m *Manager) SendL2BridgeMessage(ctx context.Context, destAddr common.Addre
 	}
 
 	// sync for new exit root
-	return m.WaitExitRootToBeSynced(ctx, orgExitRoot, true)
+	return m.WaitExitRootToBeSynced(ctx, orgExitRoot, uint(networkID), uint(destNetwork))
 }
 
 // Setup creates all the required components and initializes them according to
@@ -408,31 +463,6 @@ func (m *Manager) AddFunds(ctx context.Context) error {
 	return WaitTxToBeMined(ctx, client.Client, tx, txPolTransferTimeout)
 }
 
-// Teardown stops all the components.
-func Teardown() error {
-	err := StopBridge()
-	if err != nil {
-		return err
-	}
-
-	err = stopZKEVMNode()
-	if err != nil {
-		return err
-	}
-
-	err = stopProver()
-	if err != nil {
-		return err
-	}
-
-	err = stopNetwork()
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
 func (m *Manager) startNetwork() error {
 	if err := stopNetwork(); err != nil {
 		return err
@@ -443,7 +473,7 @@ func (m *Manager) startNetwork() error {
 		return err
 	}
 	// Wait network to be ready
-	return poll(defaultInterval, defaultDeadline, networkUpCondition)
+	return poll(defaultInterval, defaultDeadline, m.networkUpCondition)
 }
 
 func stopNetwork() error {
@@ -461,7 +491,7 @@ func (m *Manager) startZKEVMNode() error {
 		return err
 	}
 	// Wait zkevm node to be ready
-	return poll(defaultInterval, defaultDeadline, zkevmNodeUpCondition)
+	return poll(defaultInterval, defaultDeadline, m.zkevmNodeUpCondition)
 }
 
 func stopZKEVMNode() error {
@@ -492,6 +522,26 @@ func runCmd(c *exec.Cmd) error {
 	c.Stdout = os.Stdout
 	c.Stderr = os.Stderr
 	return c.Run()
+}
+
+// StartBridge3 restarts the bridge service.
+func StartBridge3() error {
+	if err := StopBridge3(); err != nil {
+		return err
+	}
+	cmd := exec.Command(makeCmd, "run-bridge-3")
+	err := runCmd(cmd)
+	if err != nil {
+		return err
+	}
+	// Wait bridge to be ready
+	return poll(defaultInterval, defaultDeadline, bridgeUpCondition)
+}
+
+// StopBridge3 stops the bridge service.
+func StopBridge3() error {
+	cmd := exec.Command(makeCmd, "stop-bridge-3")
+	return runCmd(cmd)
 }
 
 // StartBridge restarts the bridge service.
@@ -555,17 +605,17 @@ func (m *Manager) CheckAccountTokenBalance(ctx context.Context, network NetworkS
 }
 
 // GetClaimDataByGER gets the claim data by ger
-func (m *Manager) GetClaimDataByGER(ctx context.Context, networkID, depositCount uint, ger common.Hash) ([mtHeight][bridgectrl.KeyLen]byte, [mtHeight][bridgectrl.KeyLen]byte, *etherman.GlobalExitRoot, error) {
+func (m *Manager) GetClaimDataByGER(ctx context.Context, networkID, depositCount uint, ger common.Hash) ([MtHeight][bridgectrl.KeyLen]byte, [MtHeight][bridgectrl.KeyLen]byte, *etherman.GlobalExitRoot, error) {
 	res, err := m.bridgeService.GetProofByGER(context.Background(), &pb.GetProofByGERRequest{
 		NetId:      uint32(networkID),
 		DepositCnt: uint64(depositCount),
 		Ger:        ger.String(),
 	})
 	if err != nil {
-		return [mtHeight][32]byte{}, [mtHeight][32]byte{}, nil, err
+		return [MtHeight][32]byte{}, [MtHeight][32]byte{}, nil, err
 	}
-	merkleproof := [mtHeight][bridgectrl.KeyLen]byte{}
-	rollupMerkleProof := [mtHeight][bridgectrl.KeyLen]byte{}
+	merkleproof := [MtHeight][bridgectrl.KeyLen]byte{}
+	rollupMerkleProof := [MtHeight][bridgectrl.KeyLen]byte{}
 	for i, p := range res.Proof.MerkleProof {
 		var proof [bridgectrl.KeyLen]byte
 		copy(proof[:], common.FromHex(p))
@@ -575,6 +625,7 @@ func (m *Manager) GetClaimDataByGER(ctx context.Context, networkID, depositCount
 		rollupMerkleProof[i] = rollupProof
 	}
 	return merkleproof, rollupMerkleProof, &etherman.GlobalExitRoot{
+		GlobalExitRoot: ger,
 		ExitRoots: []common.Hash{
 			common.HexToHash(res.Proof.MainExitRoot),
 			common.HexToHash(res.Proof.RollupExitRoot),
@@ -583,16 +634,16 @@ func (m *Manager) GetClaimDataByGER(ctx context.Context, networkID, depositCount
 }
 
 // GetClaimData gets the claim data
-func (m *Manager) GetClaimData(ctx context.Context, networkID, depositCount uint) ([mtHeight][bridgectrl.KeyLen]byte, [mtHeight][bridgectrl.KeyLen]byte, *etherman.GlobalExitRoot, error) {
+func (m *Manager) GetClaimData(ctx context.Context, networkID, depositCount uint) ([MtHeight][bridgectrl.KeyLen]byte, [MtHeight][bridgectrl.KeyLen]byte, *etherman.GlobalExitRoot, error) {
 	res, err := m.bridgeService.GetProof(context.Background(), &pb.GetProofRequest{
 		NetId:      uint32(networkID),
 		DepositCnt: uint64(depositCount),
 	})
 	if err != nil {
-		return [mtHeight][32]byte{}, [mtHeight][32]byte{}, nil, err
+		return [MtHeight][32]byte{}, [MtHeight][32]byte{}, nil, err
 	}
-	merkleproof := [mtHeight][bridgectrl.KeyLen]byte{}
-	rollupMerkleProof := [mtHeight][bridgectrl.KeyLen]byte{}
+	merkleproof := [MtHeight][bridgectrl.KeyLen]byte{}
+	rollupMerkleProof := [MtHeight][bridgectrl.KeyLen]byte{}
 	for i, p := range res.Proof.MerkleProof {
 		var proof [bridgectrl.KeyLen]byte
 		copy(proof[:], common.FromHex(p))
@@ -611,11 +662,11 @@ func (m *Manager) GetClaimData(ctx context.Context, networkID, depositCount uint
 
 // GetBridgeInfoByDestAddr gets the bridge info
 func (m *Manager) GetBridgeInfoByDestAddr(ctx context.Context, addr *common.Address) ([]*pb.Deposit, error) {
-	auth, err := m.clients[L2].GetSigner(ctx, accHexPrivateKeys[L2])
-	if err != nil {
-		return []*pb.Deposit{}, err
-	}
 	if addr == nil {
+		auth, err := m.clients[L2].GetSigner(ctx, accHexPrivateKeys[L2])
+		if err != nil {
+			return []*pb.Deposit{}, err
+		}
 		addr = &auth.From
 	}
 	req := pb.GetBridgesRequest{
@@ -629,7 +680,7 @@ func (m *Manager) GetBridgeInfoByDestAddr(ctx context.Context, addr *common.Addr
 }
 
 // SendL1Claim send an L1 claim
-func (m *Manager) SendL1Claim(ctx context.Context, deposit *pb.Deposit, smtProof, smtRollupProof [mtHeight][32]byte, globalExitRoot *etherman.GlobalExitRoot) error {
+func (m *Manager) SendL1Claim(ctx context.Context, deposit *pb.Deposit, smtProof, smtRollupProof [MtHeight][32]byte, globalExitRoot *etherman.GlobalExitRoot) error {
 	client := m.clients[L1]
 	auth, err := client.GetSigner(ctx, accHexPrivateKeys[L1])
 	if err != nil {
@@ -640,9 +691,9 @@ func (m *Manager) SendL1Claim(ctx context.Context, deposit *pb.Deposit, smtProof
 }
 
 // SendL2Claim send an L2 claim
-func (m *Manager) SendL2Claim(ctx context.Context, deposit *pb.Deposit, smtProof, smtRollupProof [mtHeight][32]byte, globalExitRoot *etherman.GlobalExitRoot) error {
+func (m *Manager) SendL2Claim(ctx context.Context, deposit *pb.Deposit, smtProof, smtRollupProof [MtHeight][32]byte, globalExitRoot *etherman.GlobalExitRoot, l2 NetworkSID) error {
 	client := m.clients[L2]
-	auth, err := client.GetSigner(ctx, accHexPrivateKeys[L2])
+	auth, err := client.GetSigner(ctx, accHexPrivateKeys[l2])
 	if err != nil {
 		return err
 	}
@@ -652,8 +703,8 @@ func (m *Manager) SendL2Claim(ctx context.Context, deposit *pb.Deposit, smtProof
 }
 
 // GetTrustedGlobalExitRootSynced reads the latest globalexitroot of a batch proposal from db
-func (m *Manager) GetTrustedGlobalExitRootSynced(ctx context.Context) (*etherman.GlobalExitRoot, error) {
-	return m.storage.GetLatestTrustedExitRoot(ctx, nil)
+func (m *Manager) GetTrustedGlobalExitRootSynced(ctx context.Context, networkID uint) (*etherman.GlobalExitRoot, error) {
+	return m.storage.GetLatestTrustedExitRoot(ctx, networkID, nil)
 }
 
 // GetLatestGlobalExitRootFromL1 reads the latest synced globalexitroot in l1 from db
@@ -765,15 +816,15 @@ func (m *Manager) UpdateBlocksForTesting(ctx context.Context, networkID uint, bl
 }
 
 // WaitExitRootToBeSynced waits until new exit root is synced.
-func (m *Manager) WaitExitRootToBeSynced(ctx context.Context, orgExitRoot *etherman.GlobalExitRoot, isRollup bool) error {
-	log.Debugf("WaitExitRootToBeSynced: %v", orgExitRoot)
+func (m *Manager) WaitExitRootToBeSynced(ctx context.Context, orgExitRoot *etherman.GlobalExitRoot, networkID, destNetwork uint) error {
+	log.Debugf("WaitExitRootToBeSynced: %+v", orgExitRoot)
 	if orgExitRoot == nil {
 		orgExitRoot = &etherman.GlobalExitRoot{
 			ExitRoots: []common.Hash{{}, {}},
 		}
 	}
 	return operations.Poll(defaultInterval, waitRootSyncDeadline, func() (bool, error) {
-		exitRoot, err := m.storage.GetLatestExitRoot(ctx, isRollup, nil)
+		exitRoot, err := m.storage.GetLatestExitRoot(ctx, networkID, destNetwork, nil)
 		if err != nil {
 			if err == gerror.ErrStorageNotFound {
 				return false, nil
@@ -781,7 +832,7 @@ func (m *Manager) WaitExitRootToBeSynced(ctx context.Context, orgExitRoot *ether
 			return false, err
 		}
 		tID := 0
-		if isRollup {
+		if networkID != 0 {
 			tID = 1
 		}
 		return exitRoot.ExitRoots[tID] != orgExitRoot.ExitRoots[tID], nil
@@ -790,4 +841,153 @@ func (m *Manager) WaitExitRootToBeSynced(ctx context.Context, orgExitRoot *ether
 
 func (m *Manager) GetLatestMonitoredTxGroupID(ctx context.Context) (uint64, error) {
 	return m.storage.GetLatestMonitoredTxGroupID(ctx, nil)
+}
+
+// MintPOL mint POL tokens
+func (m *Manager) MintPOL(ctx context.Context, erc20Addr common.Address, amount *big.Int, network NetworkSID) error {
+	client := m.clients[network]
+	auth, err := client.GetSigner(ctx, accHexPrivateKeys[network])
+	if err != nil {
+		return err
+	}
+
+	var bridgeAddress = l1BridgeAddr
+	if network == L2 {
+		bridgeAddress = l2BridgeAddr
+	}
+
+	err = client.ApproveERC20(ctx, erc20Addr, common.HexToAddress(bridgeAddress), amount, auth)
+	if err != nil {
+		return err
+	}
+
+	return client.MintPOL(ctx, erc20Addr, amount, auth)
+}
+
+// ERC20Transfer send tokens
+func (m *Manager) ERC20Transfer(ctx context.Context, erc20Addr, to common.Address, amount *big.Int, network NetworkSID) error {
+	client := m.clients[network]
+	auth, err := client.GetSigner(ctx, accHexPrivateKeys[network])
+	if err != nil {
+		return err
+	}
+
+	return client.ERC20Transfer(ctx, erc20Addr, to, amount, auth)
+}
+
+func (m *Manager) GetTokenAddress(ctx context.Context, network NetworkSID, originalNetwork uint, originalTokenAddr common.Address) (common.Address, error) {
+	zeroAddr := common.Address{}
+	if network == L1 {
+		if originalNetwork == 0 {
+			return originalTokenAddr, nil
+		}
+		token, err := m.storage.GetTokenWrapped(ctx, uint(originalNetwork), originalTokenAddr, nil)
+		if err != nil {
+			return common.Address{}, err
+		}
+		return token.WrappedTokenAddress, nil
+	} else if network == L2 {
+		if originalNetwork == 0 && originalTokenAddr == zeroAddr {
+			return zeroAddr, nil
+		}
+		networkID, err := m.clients[network].GetNetworkID()
+		if err != nil {
+			return common.Address{}, err
+		}
+		if originalNetwork == uint(networkID) {
+			return originalTokenAddr, nil
+		}
+		token, err := m.storage.GetTokenWrapped(ctx, uint(originalNetwork), originalTokenAddr, nil)
+		if err != nil {
+			return common.Address{}, err
+		}
+		return token.WrappedTokenAddress, nil
+	} else {
+		return common.Address{}, errors.New("unexpected network")
+	}
+}
+
+func (m *Manager) GetBalances(ctx context.Context, originalNetwork uint32, originalTokenAddr, l1Holder, l2Holder common.Address) (l1Balance, l2Balance *big.Int, err error) {
+	l1Balance, err = m.GetL1Balance(ctx, originalNetwork, originalTokenAddr, l1Holder)
+	if err != nil {
+		return
+	}
+	l2Balance, err = m.GetL2Balance(ctx, originalNetwork, originalTokenAddr, l2Holder)
+	return
+}
+
+func (m *Manager) GetL1Balance(ctx context.Context, originalNetwork uint32, originalTokenAddr, holder common.Address) (*big.Int, error) {
+	zeroAddrr := common.Address{}
+	if originalNetwork == 0 {
+		if originalTokenAddr == zeroAddrr {
+			return m.CheckAccountBalance(ctx, L1, &holder)
+		} else {
+			return m.CheckAccountTokenBalance(ctx, L1, originalTokenAddr, &holder)
+		}
+	} else {
+		token, err := m.storage.GetTokenWrapped(ctx, uint(originalNetwork), originalTokenAddr, nil)
+		if err == gerror.ErrStorageNotFound {
+			return big.NewInt(0), nil
+		} else if err != nil {
+			return nil, err
+		}
+		return m.CheckAccountTokenBalance(ctx, L1, token.WrappedTokenAddress, &holder)
+	}
+}
+
+func (m *Manager) GetL2Balance(ctx context.Context, originalNetwork uint32, originalTokenAddr, holder common.Address) (*big.Int, error) {
+	zeroAddr := common.Address{}
+	if originalNetwork == 0 && originalTokenAddr == zeroAddr {
+		return m.CheckAccountBalance(ctx, L2, &holder)
+	}
+	var rollupAddr common.Address
+	networkID, err := m.clients[L2].GetNetworkID()
+	if err != nil {
+		return nil, err
+	}
+	if originalNetwork == networkID {
+		rollupAddr = originalTokenAddr
+	} else {
+		// If the token is not created on L1 or in this rollup, it's needed to calculate
+		// the addr of the token on the rollup
+		token, err := m.storage.GetTokenWrapped(ctx, uint(originalNetwork), originalTokenAddr, nil)
+		if err == gerror.ErrStorageNotFound {
+			return big.NewInt(0), nil
+		} else if err != nil {
+			return nil, err
+		}
+		rollupAddr = token.WrappedTokenAddress
+	}
+	return m.CheckAccountTokenBalance(ctx, L2, rollupAddr, &holder)
+}
+
+func GetOpsman(ctx context.Context, l2NetworkURL, dbName, bridgeServiceHTTPPort, bridgeServiceGRPCPort, port string, networkID uint) (*Manager, error) {
+	//nolint:gomnd
+	opsCfg := &Config{
+		L1NetworkURL: "http://localhost:8545",
+		L2NetworkURL: l2NetworkURL,
+		L2NetworkID:  networkID,
+		Storage: db.Config{
+			Database: "postgres",
+			Name:     dbName,
+			User:     "test_user",
+			Password: "test_password",
+			Host:     "localhost",
+			Port:     port,
+			MaxConns: 10,
+		},
+		BT: bridgectrl.Config{
+			Store:  "postgres",
+			Height: uint8(32),
+		},
+		BS: server.Config{
+			GRPCPort:         bridgeServiceGRPCPort,
+			HTTPPort:         bridgeServiceHTTPPort,
+			CacheSize:        100000,
+			DefaultPageLimit: 25,
+			MaxPageLimit:     100,
+			BridgeVersion:    "v1",
+		},
+	}
+	return NewManager(ctx, opsCfg)
 }

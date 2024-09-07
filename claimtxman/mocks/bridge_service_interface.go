@@ -106,9 +106,9 @@ func (_c *bridgeServiceInterface_GetClaimProofForCompressed_Call) RunAndReturn(r
 	return _c
 }
 
-// GetDepositStatus provides a mock function with given fields: ctx, depositCount, destNetworkID
-func (_m *bridgeServiceInterface) GetDepositStatus(ctx context.Context, depositCount uint, destNetworkID uint) (string, error) {
-	ret := _m.Called(ctx, depositCount, destNetworkID)
+// GetDepositStatus provides a mock function with given fields: ctx, depositCount, networkID, destNetworkID
+func (_m *bridgeServiceInterface) GetDepositStatus(ctx context.Context, depositCount uint, networkID uint, destNetworkID uint) (string, error) {
+	ret := _m.Called(ctx, depositCount, networkID, destNetworkID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetDepositStatus")
@@ -116,17 +116,17 @@ func (_m *bridgeServiceInterface) GetDepositStatus(ctx context.Context, depositC
 
 	var r0 string
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, uint, uint) (string, error)); ok {
-		return rf(ctx, depositCount, destNetworkID)
+	if rf, ok := ret.Get(0).(func(context.Context, uint, uint, uint) (string, error)); ok {
+		return rf(ctx, depositCount, networkID, destNetworkID)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, uint, uint) string); ok {
-		r0 = rf(ctx, depositCount, destNetworkID)
+	if rf, ok := ret.Get(0).(func(context.Context, uint, uint, uint) string); ok {
+		r0 = rf(ctx, depositCount, networkID, destNetworkID)
 	} else {
 		r0 = ret.Get(0).(string)
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, uint, uint) error); ok {
-		r1 = rf(ctx, depositCount, destNetworkID)
+	if rf, ok := ret.Get(1).(func(context.Context, uint, uint, uint) error); ok {
+		r1 = rf(ctx, depositCount, networkID, destNetworkID)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -142,14 +142,15 @@ type bridgeServiceInterface_GetDepositStatus_Call struct {
 // GetDepositStatus is a helper method to define mock.On call
 //   - ctx context.Context
 //   - depositCount uint
+//   - networkID uint
 //   - destNetworkID uint
-func (_e *bridgeServiceInterface_Expecter) GetDepositStatus(ctx interface{}, depositCount interface{}, destNetworkID interface{}) *bridgeServiceInterface_GetDepositStatus_Call {
-	return &bridgeServiceInterface_GetDepositStatus_Call{Call: _e.mock.On("GetDepositStatus", ctx, depositCount, destNetworkID)}
+func (_e *bridgeServiceInterface_Expecter) GetDepositStatus(ctx interface{}, depositCount interface{}, networkID interface{}, destNetworkID interface{}) *bridgeServiceInterface_GetDepositStatus_Call {
+	return &bridgeServiceInterface_GetDepositStatus_Call{Call: _e.mock.On("GetDepositStatus", ctx, depositCount, networkID, destNetworkID)}
 }
 
-func (_c *bridgeServiceInterface_GetDepositStatus_Call) Run(run func(ctx context.Context, depositCount uint, destNetworkID uint)) *bridgeServiceInterface_GetDepositStatus_Call {
+func (_c *bridgeServiceInterface_GetDepositStatus_Call) Run(run func(ctx context.Context, depositCount uint, networkID uint, destNetworkID uint)) *bridgeServiceInterface_GetDepositStatus_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(uint), args[2].(uint))
+		run(args[0].(context.Context), args[1].(uint), args[2].(uint), args[3].(uint))
 	})
 	return _c
 }
@@ -159,7 +160,7 @@ func (_c *bridgeServiceInterface_GetDepositStatus_Call) Return(_a0 string, _a1 e
 	return _c
 }
 
-func (_c *bridgeServiceInterface_GetDepositStatus_Call) RunAndReturn(run func(context.Context, uint, uint) (string, error)) *bridgeServiceInterface_GetDepositStatus_Call {
+func (_c *bridgeServiceInterface_GetDepositStatus_Call) RunAndReturn(run func(context.Context, uint, uint, uint) (string, error)) *bridgeServiceInterface_GetDepositStatus_Call {
 	_c.Call.Return(run)
 	return _c
 }

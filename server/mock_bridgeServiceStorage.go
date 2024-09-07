@@ -87,9 +87,9 @@ func (_c *bridgeServiceStorageMock_Get_Call) RunAndReturn(run func(context.Conte
 	return _c
 }
 
-// GetClaim provides a mock function with given fields: ctx, index, networkID, dbTx
-func (_m *bridgeServiceStorageMock) GetClaim(ctx context.Context, index uint, networkID uint, dbTx pgx.Tx) (*etherman.Claim, error) {
-	ret := _m.Called(ctx, index, networkID, dbTx)
+// GetClaim provides a mock function with given fields: ctx, index, originNetworkID, networkID, dbTx
+func (_m *bridgeServiceStorageMock) GetClaim(ctx context.Context, index uint, originNetworkID uint, networkID uint, dbTx pgx.Tx) (*etherman.Claim, error) {
+	ret := _m.Called(ctx, index, originNetworkID, networkID, dbTx)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetClaim")
@@ -97,19 +97,19 @@ func (_m *bridgeServiceStorageMock) GetClaim(ctx context.Context, index uint, ne
 
 	var r0 *etherman.Claim
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, uint, uint, pgx.Tx) (*etherman.Claim, error)); ok {
-		return rf(ctx, index, networkID, dbTx)
+	if rf, ok := ret.Get(0).(func(context.Context, uint, uint, uint, pgx.Tx) (*etherman.Claim, error)); ok {
+		return rf(ctx, index, originNetworkID, networkID, dbTx)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, uint, uint, pgx.Tx) *etherman.Claim); ok {
-		r0 = rf(ctx, index, networkID, dbTx)
+	if rf, ok := ret.Get(0).(func(context.Context, uint, uint, uint, pgx.Tx) *etherman.Claim); ok {
+		r0 = rf(ctx, index, originNetworkID, networkID, dbTx)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*etherman.Claim)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, uint, uint, pgx.Tx) error); ok {
-		r1 = rf(ctx, index, networkID, dbTx)
+	if rf, ok := ret.Get(1).(func(context.Context, uint, uint, uint, pgx.Tx) error); ok {
+		r1 = rf(ctx, index, originNetworkID, networkID, dbTx)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -125,15 +125,16 @@ type bridgeServiceStorageMock_GetClaim_Call struct {
 // GetClaim is a helper method to define mock.On call
 //   - ctx context.Context
 //   - index uint
+//   - originNetworkID uint
 //   - networkID uint
 //   - dbTx pgx.Tx
-func (_e *bridgeServiceStorageMock_Expecter) GetClaim(ctx interface{}, index interface{}, networkID interface{}, dbTx interface{}) *bridgeServiceStorageMock_GetClaim_Call {
-	return &bridgeServiceStorageMock_GetClaim_Call{Call: _e.mock.On("GetClaim", ctx, index, networkID, dbTx)}
+func (_e *bridgeServiceStorageMock_Expecter) GetClaim(ctx interface{}, index interface{}, originNetworkID interface{}, networkID interface{}, dbTx interface{}) *bridgeServiceStorageMock_GetClaim_Call {
+	return &bridgeServiceStorageMock_GetClaim_Call{Call: _e.mock.On("GetClaim", ctx, index, originNetworkID, networkID, dbTx)}
 }
 
-func (_c *bridgeServiceStorageMock_GetClaim_Call) Run(run func(ctx context.Context, index uint, networkID uint, dbTx pgx.Tx)) *bridgeServiceStorageMock_GetClaim_Call {
+func (_c *bridgeServiceStorageMock_GetClaim_Call) Run(run func(ctx context.Context, index uint, originNetworkID uint, networkID uint, dbTx pgx.Tx)) *bridgeServiceStorageMock_GetClaim_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(uint), args[2].(uint), args[3].(pgx.Tx))
+		run(args[0].(context.Context), args[1].(uint), args[2].(uint), args[3].(uint), args[4].(pgx.Tx))
 	})
 	return _c
 }
@@ -143,7 +144,7 @@ func (_c *bridgeServiceStorageMock_GetClaim_Call) Return(_a0 *etherman.Claim, _a
 	return _c
 }
 
-func (_c *bridgeServiceStorageMock_GetClaim_Call) RunAndReturn(run func(context.Context, uint, uint, pgx.Tx) (*etherman.Claim, error)) *bridgeServiceStorageMock_GetClaim_Call {
+func (_c *bridgeServiceStorageMock_GetClaim_Call) RunAndReturn(run func(context.Context, uint, uint, uint, pgx.Tx) (*etherman.Claim, error)) *bridgeServiceStorageMock_GetClaim_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -568,9 +569,9 @@ func (_c *bridgeServiceStorageMock_GetExitRootByGER_Call) RunAndReturn(run func(
 	return _c
 }
 
-// GetLatestExitRoot provides a mock function with given fields: ctx, isRollup, dbTx
-func (_m *bridgeServiceStorageMock) GetLatestExitRoot(ctx context.Context, isRollup bool, dbTx pgx.Tx) (*etherman.GlobalExitRoot, error) {
-	ret := _m.Called(ctx, isRollup, dbTx)
+// GetLatestExitRoot provides a mock function with given fields: ctx, networkID, destNetwork, dbTx
+func (_m *bridgeServiceStorageMock) GetLatestExitRoot(ctx context.Context, networkID uint, destNetwork uint, dbTx pgx.Tx) (*etherman.GlobalExitRoot, error) {
+	ret := _m.Called(ctx, networkID, destNetwork, dbTx)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetLatestExitRoot")
@@ -578,19 +579,19 @@ func (_m *bridgeServiceStorageMock) GetLatestExitRoot(ctx context.Context, isRol
 
 	var r0 *etherman.GlobalExitRoot
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, bool, pgx.Tx) (*etherman.GlobalExitRoot, error)); ok {
-		return rf(ctx, isRollup, dbTx)
+	if rf, ok := ret.Get(0).(func(context.Context, uint, uint, pgx.Tx) (*etherman.GlobalExitRoot, error)); ok {
+		return rf(ctx, networkID, destNetwork, dbTx)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, bool, pgx.Tx) *etherman.GlobalExitRoot); ok {
-		r0 = rf(ctx, isRollup, dbTx)
+	if rf, ok := ret.Get(0).(func(context.Context, uint, uint, pgx.Tx) *etherman.GlobalExitRoot); ok {
+		r0 = rf(ctx, networkID, destNetwork, dbTx)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*etherman.GlobalExitRoot)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, bool, pgx.Tx) error); ok {
-		r1 = rf(ctx, isRollup, dbTx)
+	if rf, ok := ret.Get(1).(func(context.Context, uint, uint, pgx.Tx) error); ok {
+		r1 = rf(ctx, networkID, destNetwork, dbTx)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -605,15 +606,16 @@ type bridgeServiceStorageMock_GetLatestExitRoot_Call struct {
 
 // GetLatestExitRoot is a helper method to define mock.On call
 //   - ctx context.Context
-//   - isRollup bool
+//   - networkID uint
+//   - destNetwork uint
 //   - dbTx pgx.Tx
-func (_e *bridgeServiceStorageMock_Expecter) GetLatestExitRoot(ctx interface{}, isRollup interface{}, dbTx interface{}) *bridgeServiceStorageMock_GetLatestExitRoot_Call {
-	return &bridgeServiceStorageMock_GetLatestExitRoot_Call{Call: _e.mock.On("GetLatestExitRoot", ctx, isRollup, dbTx)}
+func (_e *bridgeServiceStorageMock_Expecter) GetLatestExitRoot(ctx interface{}, networkID interface{}, destNetwork interface{}, dbTx interface{}) *bridgeServiceStorageMock_GetLatestExitRoot_Call {
+	return &bridgeServiceStorageMock_GetLatestExitRoot_Call{Call: _e.mock.On("GetLatestExitRoot", ctx, networkID, destNetwork, dbTx)}
 }
 
-func (_c *bridgeServiceStorageMock_GetLatestExitRoot_Call) Run(run func(ctx context.Context, isRollup bool, dbTx pgx.Tx)) *bridgeServiceStorageMock_GetLatestExitRoot_Call {
+func (_c *bridgeServiceStorageMock_GetLatestExitRoot_Call) Run(run func(ctx context.Context, networkID uint, destNetwork uint, dbTx pgx.Tx)) *bridgeServiceStorageMock_GetLatestExitRoot_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(bool), args[2].(pgx.Tx))
+		run(args[0].(context.Context), args[1].(uint), args[2].(uint), args[3].(pgx.Tx))
 	})
 	return _c
 }
@@ -623,7 +625,7 @@ func (_c *bridgeServiceStorageMock_GetLatestExitRoot_Call) Return(_a0 *etherman.
 	return _c
 }
 
-func (_c *bridgeServiceStorageMock_GetLatestExitRoot_Call) RunAndReturn(run func(context.Context, bool, pgx.Tx) (*etherman.GlobalExitRoot, error)) *bridgeServiceStorageMock_GetLatestExitRoot_Call {
+func (_c *bridgeServiceStorageMock_GetLatestExitRoot_Call) RunAndReturn(run func(context.Context, uint, uint, pgx.Tx) (*etherman.GlobalExitRoot, error)) *bridgeServiceStorageMock_GetLatestExitRoot_Call {
 	_c.Call.Return(run)
 	return _c
 }

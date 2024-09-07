@@ -20,4 +20,5 @@ compilegen() {
 
 gen  PingReceiver
 gen polygonzkevmbridge
+gen erc20permitmock
 compilegen BridgeMessageReceiver

@@ -190,5 +190,12 @@ func NewSimulatedEtherman(cfg Config, auth *bind.TransactOpts) (*Client, *simula
 	}
 
 	client.Commit()
-	return &Client{EtherClient: client.Client(), PolygonBridge: br, PolygonZkEVMGlobalExitRoot: globalExitRoot, PolygonRollupManager: rollupManager, SCAddresses: []common.Address{exitManagerAddr, bridgeAddr, mockRollupManagerAddr}}, client, polAddr, br, trueZkevm, nil
+	networkID, err := br.NetworkID(&bind.CallOpts{Pending: false})
+	if err != nil {
+		log.Error("error: ", err)
+		return nil, nil, common.Address{}, nil, nil, err
+	}
+	logger := log.WithFields("networkID", networkID)
+
+	return &Client{EtherClient: client.Client(), PolygonBridge: br, PolygonZkEVMGlobalExitRoot: globalExitRoot, PolygonRollupManager: rollupManager, SCAddresses: []common.Address{exitManagerAddr, bridgeAddr, mockRollupManagerAddr}, logger: logger}, client, polAddr, br, trueZkevm, nil
 }

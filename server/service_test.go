@@ -14,7 +14,7 @@ func TestGetClaimProofbyGER(t *testing.T) {
 		CacheSize: 32,
 	}
 	mockStorage := newBridgeServiceStorageMock(t)
-	sut := NewBridgeService(cfg, 32, []uint{0, 1}, mockStorage, 1)
+	sut := NewBridgeService(cfg, 32, []uint{0, 1}, mockStorage)
 	depositCnt := uint(0)
 	networkID := uint(0)
 	GER := common.Hash{}
