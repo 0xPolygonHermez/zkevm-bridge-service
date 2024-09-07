@@ -131,16 +131,6 @@ func TestE2E(t *testing.T) {
 		// Get the claim data
 		smtProof, smtRollupProof, globaExitRoot, err := opsman.GetClaimData(ctx, uint(deposits[0].NetworkId), uint(deposits[0].DepositCnt))
 		require.NoError(t, err)
-		testClaimParams := testClaimByGERParams{
-			smtProof:        smtProof,
-			smtRollupProof:  smtRollupProof,
-			mainnetExitRoot: globaExitRoot.ExitRoots[0],
-			rollupExitRoot:  globaExitRoot.ExitRoots[1],
-			opsman:          opsman,
-			networkId:       uint(deposits[0].NetworkId),
-			depositCnt:      uint(deposits[0].DepositCnt),
-		}
-		testClaimByGER(t, ctx, testClaimParams)
 
 		// Claim funds in L1
 		err = opsman.SendL1Claim(ctx, deposits[0], smtProof, smtRollupProof, globaExitRoot)
@@ -155,32 +145,6 @@ func TestE2E(t *testing.T) {
 		require.NoError(t, err)
 		require.True(t, big.NewInt(9000000000000000000).Cmp(balance) > 0)
 		log.Debug("L1-L2 eth bridge end")
-
-		// TESTING ClaimByGER
-		//////////////////////////////
-		t.Log("Sending another L2Deposit to generate a new globalExitRoot and get ClaimByGER")
-		err = opsman.SendL2Deposit(ctx, tokenAddr, amount, destNetwork, &destAddr, operations.L2)
-		require.NoError(t, err)
-		// Get Bridge Info By DestAddr
-		testClaimParams = testClaimByGERParams{
-			smtProof:        smtProof,
-			smtRollupProof:  smtRollupProof,
-			mainnetExitRoot: globaExitRoot.ExitRoots[0],
-			rollupExitRoot:  globaExitRoot.ExitRoots[1],
-			opsman:          opsman,
-			networkId:       uint(deposits[0].NetworkId),
-			depositCnt:      uint(deposits[0].DepositCnt),
-		}
-		testClaimByGER(t, ctx, testClaimParams)
-		// Claim funds in L1
-		deposits2, err := opsman.GetBridgeInfoByDestAddr(ctx, &destAddr)
-
-		smtProof, smtRollupProof, globaExitRoot, err = opsman.GetClaimData(ctx, uint(deposits2[0].NetworkId), uint(deposits2[0].DepositCnt))
-		require.NoError(t, err)
-
-		err = opsman.SendL1Claim(ctx, deposits2[0], smtProof, smtRollupProof, globaExitRoot)
-		require.NoError(t, err)
-		log.Debug("TESTING ClaimByGER end")
 	})
 
 	t.Run("L1-L2 token bridge", func(t *testing.T) {
@@ -597,28 +561,35 @@ func TestE2E(t *testing.T) {
 		require.NoError(t, err)
 		log.Debug("Bridge Message Authorized Account Test end")
 	})
-}
+	t.Run("Claim by ger Test", func(t *testing.T){
+		t.Log("Sending L2Deposit to generate a new globalExitRoot and get ClaimByGER")
+		tokenAddr := common.Address{} // This means is eth
+		amount := new(big.Int).SetUint64(10000000000000000)
+		var destNetwork uint32 = 0
+		destAddr := common.HexToAddress("0xc949254d682d8c9ad5682521675b8f43b102aec4")
+		err = opsman.SendL2Deposit(ctx, tokenAddr, amount, destNetwork, &destAddr, operations.L2)
+		require.NoError(t, err)
+		// Get Bridge Info By DestAddr
+		deposits, err := opsman.GetBridgeInfoByDestAddr(ctx, &destAddr)
+		require.NoError(t, err)
+		// Get the claim data
+		smtProof, smtRollupProof, globaExitRoot, err := opsman.GetClaimData(ctx, uint(deposits[0].NetworkId), uint(deposits[0].DepositCnt))
+		require.NoError(t, err)
 
-type testClaimByGERParams struct {
-	smtProof        [operations.MtHeight][bridgectrl.KeyLen]byte
-	smtRollupProof  [operations.MtHeight][bridgectrl.KeyLen]byte
-	mainnetExitRoot common.Hash
-	rollupExitRoot  common.Hash
-	opsman          *operations.Manager
-	networkId       uint
-	depositCnt      uint
-}
+		var ger common.Hash = bridgectrl.Hash(globaExitRoot.ExitRoots[0], globaExitRoot.ExitRoots[1])
 
-func testClaimByGER(t *testing.T, ctx context.Context, params testClaimByGERParams) {
-	var ger common.Hash = bridgectrl.Hash(params.mainnetExitRoot, params.rollupExitRoot)
-
-	t.Logf("GetClaimDataByGER: network: %d deposit_cnt:%d GER:%s", uint(params.networkId), uint(params.depositCnt), ger.String())
-	t.Logf("Checking same claim as GetClaim")
-	smtProofByGer, smtRollupProofByGer, globaExitRootByGer, err := params.opsman.GetClaimDataByGER(ctx, params.networkId, params.depositCnt, ger)
-	require.NoError(t, err)
-	require.Equal(t, ger, globaExitRootByGer.GlobalExitRoot)
-	require.Equal(t, params.rollupExitRoot, globaExitRootByGer.ExitRoots[1])
-	require.Equal(t, params.mainnetExitRoot, globaExitRootByGer.ExitRoots[0])
-	require.Equal(t, params.smtProof, smtProofByGer)
-	require.Equal(t, params.smtRollupProof, smtRollupProofByGer)
+		t.Logf("GetClaimDataByGER: network: %d deposit_cnt:%d GER:%s", deposits[0].NetworkId, deposits[0].DepositCnt, ger.String())
+		t.Logf("Checking same claim as GetClaim")
+		smtProofByGer, smtRollupProofByGer, globaExitRootByGer, err := opsman.GetClaimDataByGER(ctx, uint(deposits[0].NetworkId), uint(deposits[0].DepositCnt), ger)
+		require.NoError(t, err)
+		require.Equal(t, ger, globaExitRootByGer.GlobalExitRoot)
+		require.Equal(t, globaExitRoot.ExitRoots[1], globaExitRootByGer.ExitRoots[1])
+		require.Equal(t, globaExitRoot.ExitRoots[0], globaExitRootByGer.ExitRoots[0])
+		require.Equal(t, smtProof, smtProofByGer)
+		require.Equal(t, smtRollupProof, smtRollupProofByGer)
+		// Claim funds in L1
+		err = opsman.SendL1Claim(ctx, deposits[0], smtProof, smtRollupProof, globaExitRoot)
+		require.NoError(t, err)
+		log.Debug("Claim by ger Test end")
+	})
 }
