@@ -674,6 +674,32 @@ func (p *PostgresStorage) GetClaimTxsByStatus(ctx context.Context, statuses []ct
 	return mTxs, nil
 }
 
+// GetPendingDepositsToClaim gets the deposit list which is not claimed in the destination network.
+func (p *PostgresStorage) GetPendingDepositsToClaim(ctx context.Context, destNetwork, leafType uint, limit uint, offset uint, dbTx pgx.Tx) ([]*etherman.Deposit, error) {
+	const getPendingDepositsToClaimSQL = "SELECT d.id, leaf_type, orig_net, orig_addr, amount, dest_net, dest_addr, deposit_cnt, block_id, b.block_num, d.network_id, tx_hash, metadata, ready_for_claim FROM sync.deposit as d INNER JOIN sync.block as b ON d.block_id = b.id where dest_net = $1 and ready_for_claim = true and leaf_type = $2 and d.deposit_cnt not in (select index FROM sync.claim where sync.claim.network_id = $1) order by d.deposit_cnt ASC LIMIT $3 OFFSET $4"
+	rows, err := p.getExecQuerier(dbTx).Query(ctx, getPendingDepositsToClaimSQL, destNetwork, leafType, limit, offset)
+	if err != nil {
+		return nil, err
+	}
+
+	deposits := make([]*etherman.Deposit, 0, len(rows.RawValues()))
+
+	for rows.Next() {
+		var (
+			deposit etherman.Deposit
+			amount  string
+		)
+		err = rows.Scan(&deposit.Id, &deposit.LeafType, &deposit.OriginalNetwork, &deposit.OriginalAddress, &amount, &deposit.DestinationNetwork, &deposit.DestinationAddress, &deposit.DepositCount, &deposit.BlockID, &deposit.BlockNumber, &deposit.NetworkID, &deposit.TxHash, &deposit.Metadata, &deposit.ReadyForClaim)
+		if err != nil {
+			return nil, err
+		}
+		deposit.Amount, _ = new(big.Int).SetString(amount, 10) //nolint:gomnd
+		deposits = append(deposits, &deposit)
+	}
+
+	return deposits, nil
+}
+
 // UpdateDepositsStatusForTesting updates the ready_for_claim status of all deposits for testing.
 func (p *PostgresStorage) UpdateDepositsStatusForTesting(ctx context.Context, dbTx pgx.Tx) error {
 	const updateDepositsStatusSQL = "UPDATE sync.deposit SET ready_for_claim = true;"
