@@ -1,6 +1,7 @@
 package operations
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/0xPolygonHermez/zkevm-bridge-service/bridgectrl"
@@ -29,8 +30,8 @@ func RunMockServer(dbType string, height uint8, networks []uint) (*bridgectrl.Br
 		Height: height,
 		Store:  "postgres",
 	}
-
-	bt, err := bridgectrl.NewBridgeController(btCfg, networks, store)
+	ctx := context.Background()
+	bt, err := bridgectrl.NewBridgeController(ctx, btCfg, networks, store)
 	if err != nil {
 		return nil, nil, err
 	}

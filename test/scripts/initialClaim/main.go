@@ -6,11 +6,12 @@ import (
 	"time"
 
 	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/log"
 	clientUtils "github.com/0xPolygonHermez/zkevm-bridge-service/test/client"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/utils"
+	"github.com/0xPolygonHermez/zkevm-node/etherman/smartcontracts/polygonrollupmanager"
 	"github.com/0xPolygonHermez/zkevm-node/etherman/smartcontracts/polygonzkevm"
 	"github.com/0xPolygonHermez/zkevm-node/hex"
-	"github.com/0xPolygonHermez/zkevm-node/log"
 	"github.com/0xPolygonHermez/zkevm-node/state"
 	"github.com/0xPolygonHermez/zkevm-node/test/operations"
 	"github.com/ethereum/go-ethereum"
@@ -20,14 +21,17 @@ import (
 )
 
 const (
-	l2BridgeAddr = "0xff0EE8ea08cEf5cb4322777F5CC3E8A584B8A4A0"
-	zkevmAddr    = "0x610178dA211FEF7D417bC0e6FeD39F05609AD788"
+	l2BridgeAddr      = "0xFe12ABaa190Ef0c8638Ee0ba9F828BF41368Ca0E"
+	zkevmAddr         = "0x8dAF17A20c9DBA35f005b6324F493785D239719d"
+	rollupManagerAddr = "0xB7f8BC63BbcaD18155201308C8f3540b07f84F5e"
 
 	accHexAddress    = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
 	accHexPrivateKey = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
 	l1NetworkURL     = "http://localhost:8545"
 	l2NetworkURL     = "http://localhost:8123"
 	bridgeURL        = "http://localhost:8080"
+
+	forkID = 4
 
 	l2GasLimit = 1000000
 
@@ -70,10 +74,12 @@ func main() {
 	log.Debug("mainnetExitRoot: ", proof.MainExitRoot)
 	log.Debug("rollupExitRoot: ", proof.RollupExitRoot)
 
-	var smt [mtHeight][32]byte
+	var smtProof, smtRollupProof [mtHeight][32]byte
 	for i := 0; i < len(proof.MerkleProof); i++ {
-		log.Debug("smt: ", proof.MerkleProof[i])
-		smt[i] = common.HexToHash(proof.MerkleProof[i])
+		log.Debug("smtProof: ", proof.MerkleProof[i])
+		smtProof[i] = common.HexToHash(proof.MerkleProof[i])
+		log.Debug("smtRollupProof: ", proof.MerkleProof[i])
+		smtRollupProof[i] = common.HexToHash(proof.RollupMerkleProof[i])
 	}
 	globalExitRoot := &etherman.GlobalExitRoot{
 		ExitRoots: []common.Hash{common.HexToHash(proof.MainExitRoot), common.HexToHash(proof.RollupExitRoot)},
@@ -98,7 +104,22 @@ func main() {
 		Metadata:           metadata,
 		ReadyForClaim:      bridgeData.ReadyForClaim,
 	}
-	tx, err := c.BuildSendClaim(ctx, &e, smt, globalExitRoot, 0, 0, l2GasLimit, auth)
+	// Connect to ethereum node
+	ethClient, err := ethclient.Dial(l1NetworkURL)
+	if err != nil {
+		log.Fatalf("error connecting to %s: %+v", l1NetworkURL, err)
+	}
+	polygonRollupManagerAddress := common.HexToAddress(rollupManagerAddr)
+	polygonRollupManager, err := polygonrollupmanager.NewPolygonrollupmanager(polygonRollupManagerAddress, ethClient)
+	if err != nil {
+		log.Fatal("Error: ", err)
+	}
+	// Get RollupID
+	rollupID, err := polygonRollupManager.RollupAddressToID(&bind.CallOpts{Pending: false}, polygonRollupManagerAddress)
+	if err != nil {
+		log.Fatal("Error: ", err)
+	}
+	tx, err := c.BuildSendClaim(ctx, &e, smtProof, smtRollupProof, globalExitRoot, 0, 0, l2GasLimit, uint(rollupID), auth)
 	if err != nil {
 		log.Fatal("error: ", err)
 	}
@@ -112,7 +133,7 @@ func main() {
 	}
 	encoded := hex.EncodeToHex(b)
 	log.Info("tx encoded: ", encoded)
-	byt, err := state.EncodeTransaction(*tx)
+	byt, err := state.EncodeTransaction(*tx, state.MaxEffectivePercentage, forkID)
 	if err != nil {
 		log.Fatal("error: ", err)
 	}
@@ -120,11 +141,6 @@ func main() {
 
 	log.Info("Using address: ", auth.From)
 
-	// Connect to ethereum node
-	ethClient, err := ethclient.Dial(l1NetworkURL)
-	if err != nil {
-		log.Fatalf("error connecting to %s: %+v", l1NetworkURL, err)
-	}
 	chainID, err := ethClient.ChainID(ctx)
 	if err != nil {
 		log.Fatal("error getting l1 chainID: ", err)
@@ -152,7 +168,7 @@ func main() {
 	log.Debug("currentBlock.Time(): ", currentBlock.Time())
 
 	// Get tip
-	tip, err := zkevm.GetForcedBatchFee(&bind.CallOpts{Pending: false})
+	tip, err := polygonRollupManager.GetForcedBatchFee(&bind.CallOpts{Pending: false})
 	if err != nil {
 		log.Fatal("error getting tip. Error: ", err)
 	}

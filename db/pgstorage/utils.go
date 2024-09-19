@@ -5,7 +5,7 @@ import (
 	"strconv"
 
 	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman"
-	"github.com/0xPolygonHermez/zkevm-node/log"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/log"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/gobuffalo/packr/v2"
 	"github.com/jackc/pgx/v4"
@@ -21,6 +21,28 @@ func RunMigrationsUp(cfg Config) error {
 // RunMigrationsDown migrate down.
 func RunMigrationsDown(cfg Config) error {
 	return runMigrations(cfg, migrate.Down)
+}
+
+// ResetDB.
+func ResetDB(cfg Config) error {
+	c, err := pgx.ParseConfig("postgres://" + cfg.User + ":" + cfg.Password + "@" + cfg.Host + ":" + cfg.Port + "/" + cfg.Name)
+	if err != nil {
+		return err
+	}
+	db := stdlib.OpenDB(*c)
+	_, err = db.Exec("DROP SCHEMA IF EXISTS mt CASCADE;")
+	if err != nil {
+		return err
+	}
+	_, err = db.Exec("DROP SCHEMA IF EXISTS sync CASCADE;")
+	if err != nil {
+		return err
+	}
+	_, err = db.Exec("DROP TABLE IF EXISTS public.gorp_migrations;")
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // runMigrations will execute pending migrations if needed to keep
@@ -52,7 +74,7 @@ func InitOrReset(cfg Config) error {
 	}
 
 	// run migrations
-	if err := RunMigrationsDown(cfg); err != nil {
+	if err := ResetDB(cfg); err != nil {
 		return err
 	}
 	return RunMigrationsUp(cfg)

@@ -18,6 +18,8 @@ type Block struct {
 	Deposits        []Deposit
 	Claims          []Claim
 	Tokens          []TokenWrapped
+	VerifiedBatches []VerifiedBatch
+	ActivateEtrog   []bool
 	ReceivedAt      time.Time
 }
 
@@ -27,10 +29,12 @@ type GlobalExitRoot struct {
 	BlockNumber    uint64
 	ExitRoots      []common.Hash
 	GlobalExitRoot common.Hash
+	NetworkID      uint
 }
 
 // Deposit struct
 type Deposit struct {
+	Id                 uint64
 	LeafType           uint8
 	OriginalNetwork    uint
 	OriginalAddress    common.Address
@@ -49,6 +53,8 @@ type Deposit struct {
 
 // Claim struct
 type Claim struct {
+	MainnetFlag        bool
+	RollupIndex        uint64
 	Index              uint
 	OriginalNetwork    uint
 	OriginalAddress    common.Address
@@ -76,4 +82,23 @@ type TokenMetadata struct {
 	Name     string
 	Symbol   string
 	Decimals uint8
+}
+
+type VerifiedBatch struct {
+	BlockNumber   uint64
+	BatchNumber   uint64
+	RollupID      uint
+	LocalExitRoot common.Hash
+	TxHash        common.Hash
+	StateRoot     common.Hash
+	Aggregator    common.Address
+}
+
+// RollupExitLeaf struct
+type RollupExitLeaf struct {
+	ID       uint64
+	BlockID  uint64
+	Leaf     common.Hash
+	RollupId uint
+	Root     common.Hash
 }

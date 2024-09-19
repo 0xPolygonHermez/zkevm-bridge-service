@@ -40,8 +40,8 @@ func WaitGRPCHealthy(address string) error {
 	return ops.WaitGRPCHealthy(address)
 }
 
-func networkUpCondition() (bool, error) {
-	return ops.NodeUpCondition(l1NetworkURL)
+func (m *Manager) networkUpCondition() (bool, error) {
+	return ops.NodeUpCondition(m.cfg.L1NetworkURL)
 }
 
 func proverUpCondition() (bool, error) {
@@ -49,8 +49,8 @@ func proverUpCondition() (bool, error) {
 	// return ops.ProverUpCondition()
 }
 
-func zkevmNodeUpCondition() (done bool, err error) {
-	return ops.NodeUpCondition(l2NetworkURL)
+func (m *Manager) zkevmNodeUpCondition() (done bool, err error) {
+	return ops.NodeUpCondition(m.cfg.L2NetworkURL)
 }
 
 func bridgeUpCondition() (done bool, err error) {
