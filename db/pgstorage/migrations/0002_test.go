@@ -35,8 +35,6 @@ func (m migrationTest0002) InsertData(db *sql.DB) error {
 	return nil
 }
 
-var indexes = []string{"root_network_idx", "deposit_idx", "block_idx", "root_idx", "exit_roots_idx"}
-
 func (m migrationTest0002) RunAssertsAfterMigrationUp(t *testing.T, db *sql.DB) {
 	// Insert a new root
 	const addRoot = "INSERT INTO mt.root (root, deposit_cnt, network) VALUES ($1, $2, $3) RETURNING id"
@@ -52,6 +50,7 @@ func (m migrationTest0002) RunAssertsAfterMigrationUp(t *testing.T, db *sql.DB) 
 	}, rootID)
 	assert.NoError(t, err)
 
+	indexes := []string{"root_network_idx", "deposit_idx", "block_idx", "root_idx", "exit_roots_idx"}
 	// Check indexes adding
 	for _, idx := range indexes {
 		// getIndex
@@ -78,6 +77,7 @@ func (m migrationTest0002) RunAssertsAfterMigrationDown(t *testing.T, db *sql.DB
 	_, err = db.Exec(addOldRoot, common.FromHex("0xf4418588ed35a2458cffeb39b93d26f18d2ab13bdce6aee58e7b99359ec2dfd9"), 2, 0)
 	assert.NoError(t, err)
 
+	indexes := []string{"root_network_idx", "deposit_idx", "block_idx", "root_idx", "exit_roots_idx"}
 	// Check indexes removing
 	for _, idx := range indexes {
 		// getIndex

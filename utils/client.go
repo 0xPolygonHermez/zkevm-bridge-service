@@ -12,11 +12,12 @@ import (
 
 	"github.com/0xPolygonHermez/zkevm-bridge-service/bridgectrl/pb"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/log"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/test/mocksmartcontracts/BridgeMessageReceiver"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/test/mocksmartcontracts/erc20permitmock"
 	zkevmtypes "github.com/0xPolygonHermez/zkevm-node/config/types"
 	"github.com/0xPolygonHermez/zkevm-node/encoding"
 	"github.com/0xPolygonHermez/zkevm-node/etherman/smartcontracts/polygonzkevmbridge"
-	"github.com/0xPolygonHermez/zkevm-node/log"
 	"github.com/0xPolygonHermez/zkevm-node/test/contracts/bin/ERC20"
 	ops "github.com/0xPolygonHermez/zkevm-node/test/operations"
 	"github.com/ethereum/go-ethereum"
@@ -42,7 +43,7 @@ const (
 type Client struct {
 	// Client ethclient
 	*ethclient.Client
-	bridge *polygonzkevmbridge.Polygonzkevmbridge
+	Bridge *polygonzkevmbridge.Polygonzkevmbridge
 }
 
 // NewClient creates client.
@@ -52,12 +53,12 @@ func NewClient(ctx context.Context, nodeURL string, bridgeSCAddr common.Address)
 		return nil, err
 	}
 	var br *polygonzkevmbridge.Polygonzkevmbridge
-	if len(bridgeSCAddr) != 0 {
+	if bridgeSCAddr != (common.Address{}) {
 		br, err = polygonzkevmbridge.NewPolygonzkevmbridge(bridgeSCAddr, client)
 	}
 	return &Client{
 		Client: client,
-		bridge: br,
+		Bridge: br,
 	}, err
 }
 
@@ -67,7 +68,7 @@ func (c *Client) GetSigner(ctx context.Context, accHexPrivateKey string) (*bind.
 	if err != nil {
 		return nil, err
 	}
-	chainID, err := c.NetworkID(ctx)
+	chainID, err := c.ChainID(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -84,7 +85,7 @@ func (c *Client) GetSignerFromKeystore(ctx context.Context, ks zkevmtypes.Keysto
 	if err != nil {
 		return nil, err
 	}
-	chainID, err := c.NetworkID(ctx)
+	chainID, err := c.ChainID(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -101,6 +102,15 @@ func (c *Client) CheckTxWasMined(ctx context.Context, txHash common.Hash) (bool,
 	}
 
 	return true, receipt, nil
+}
+
+// GetNetworkID gets the networkID stored in the bridge contract
+func (c *Client) GetNetworkID() (uint32, error) {
+	networkID, err := c.Bridge.NetworkID(&bind.CallOpts{Pending: false})
+	if err != nil {
+		return 0, err
+	}
+	return networkID, nil
 }
 
 // DeployERC20 deploys erc20 smc.
@@ -166,9 +176,9 @@ func (c *Client) SendBridgeAsset(ctx context.Context, tokenAddr common.Address, 
 	if destAddr == nil {
 		destAddr = &auth.From
 	}
-	tx, err := c.bridge.BridgeAsset(auth, destNetwork, *destAddr, amount, tokenAddr, true, metadata)
+	tx, err := c.Bridge.BridgeAsset(auth, destNetwork, *destAddr, amount, tokenAddr, true, metadata)
 	if err != nil {
-		log.Error("Error: ", err)
+		log.Error("error sending deposit. Error: ", err)
 		return err
 	}
 	// wait transfer to be included in a batch
@@ -180,7 +190,7 @@ func (c *Client) SendBridgeAsset(ctx context.Context, tokenAddr common.Address, 
 func (c *Client) SendBridgeMessage(ctx context.Context, destNetwork uint32, destAddr common.Address, metadata []byte,
 	auth *bind.TransactOpts,
 ) error {
-	tx, err := c.bridge.BridgeMessage(auth, destNetwork, destAddr, true, metadata)
+	tx, err := c.Bridge.BridgeMessage(auth, destNetwork, destAddr, true, metadata)
 	if err != nil {
 		log.Error("Error: ", err)
 		return err
@@ -191,7 +201,7 @@ func (c *Client) SendBridgeMessage(ctx context.Context, destNetwork uint32, dest
 }
 
 // BuildSendClaim builds a tx data to be sent to the bridge method SendClaim.
-func (c *Client) BuildSendClaim(ctx context.Context, deposit *etherman.Deposit, smtProof [mtHeight][keyLen]byte, globalExitRoot *etherman.GlobalExitRoot, nonce, gasPrice int64, gasLimit uint64, auth *bind.TransactOpts) (*types.Transaction, error) {
+func (c *Client) BuildSendClaim(ctx context.Context, deposit *etherman.Deposit, smtProof [mtHeight][keyLen]byte, smtRollupProof [mtHeight][keyLen]byte, globalExitRoot *etherman.GlobalExitRoot, nonce, gasPrice int64, gasLimit uint64, rollupID uint, auth *bind.TransactOpts) (*types.Transaction, error) {
 	opts := *auth
 	opts.NoSend = true
 	// force nonce, gas limit and gas price to avoid querying it from the chain
@@ -203,10 +213,14 @@ func (c *Client) BuildSendClaim(ctx context.Context, deposit *etherman.Deposit, 
 		tx  *types.Transaction
 		err error
 	)
+	mainnetFlag := deposit.NetworkID == 0
+	rollupIndex := rollupID - 1
+	localExitRootIndex := deposit.DepositCount
+	globalIndex := etherman.GenerateGlobalIndex(mainnetFlag, rollupIndex, localExitRootIndex)
 	if deposit.LeafType == uint8(LeafTypeAsset) {
-		tx, err = c.bridge.ClaimAsset(&opts, smtProof, uint32(deposit.DepositCount), globalExitRoot.ExitRoots[0], globalExitRoot.ExitRoots[1], uint32(deposit.OriginalNetwork), deposit.OriginalAddress, uint32(deposit.DestinationNetwork), deposit.DestinationAddress, deposit.Amount, deposit.Metadata)
+		tx, err = c.Bridge.ClaimAsset(&opts, smtProof, smtRollupProof, globalIndex, globalExitRoot.ExitRoots[0], globalExitRoot.ExitRoots[1], uint32(deposit.OriginalNetwork), deposit.OriginalAddress, uint32(deposit.DestinationNetwork), deposit.DestinationAddress, deposit.Amount, deposit.Metadata)
 	} else if deposit.LeafType == uint8(LeafTypeMessage) {
-		tx, err = c.bridge.ClaimMessage(&opts, smtProof, uint32(deposit.DepositCount), globalExitRoot.ExitRoots[0], globalExitRoot.ExitRoots[1], uint32(deposit.OriginalNetwork), deposit.OriginalAddress, uint32(deposit.DestinationNetwork), deposit.DestinationAddress, deposit.Amount, deposit.Metadata)
+		tx, err = c.Bridge.ClaimMessage(&opts, smtProof, smtRollupProof, globalIndex, globalExitRoot.ExitRoots[0], globalExitRoot.ExitRoots[1], uint32(deposit.OriginalNetwork), deposit.OriginalAddress, uint32(deposit.DestinationNetwork), deposit.DestinationAddress, deposit.Amount, deposit.Metadata)
 	}
 	if err != nil {
 		txHash := ""
@@ -214,23 +228,40 @@ func (c *Client) BuildSendClaim(ctx context.Context, deposit *etherman.Deposit, 
 			txHash = tx.Hash().String()
 		}
 		log.Error("Error: ", err, ". Tx Hash: ", txHash)
-		return nil, fmt.Errorf("failed to build SendClaim tx, err: %w", err)
+		return nil, fmt.Errorf("failed to build SendClaim tx, err: %v", err)
 	}
 
 	return tx, nil
 }
 
 // SendClaim sends a claim transaction.
-func (c *Client) SendClaim(ctx context.Context, deposit *pb.Deposit, smtProof [mtHeight][keyLen]byte, globalExitRoot *etherman.GlobalExitRoot, auth *bind.TransactOpts) error {
+func (c *Client) SendClaim(ctx context.Context, deposit *pb.Deposit, smtProof [mtHeight][keyLen]byte, smtRollupProof [mtHeight][keyLen]byte, globalExitRoot *etherman.GlobalExitRoot, auth *bind.TransactOpts) error {
 	amount, _ := new(big.Int).SetString(deposit.Amount, encoding.Base10)
 	var (
 		tx  *types.Transaction
 		err error
 	)
+	globalIndex, _ := big.NewInt(0).SetString(deposit.GlobalIndex, 0)
 	if deposit.LeafType == LeafTypeAsset {
-		tx, err = c.bridge.ClaimAsset(auth, smtProof, uint32(deposit.DepositCnt), globalExitRoot.ExitRoots[0], globalExitRoot.ExitRoots[1], deposit.OrigNet, common.HexToAddress(deposit.OrigAddr), deposit.DestNet, common.HexToAddress(deposit.DestAddr), amount, common.FromHex(deposit.Metadata))
+		tx, err = c.Bridge.ClaimAsset(auth, smtProof, smtRollupProof, globalIndex, globalExitRoot.ExitRoots[0], globalExitRoot.ExitRoots[1], deposit.OrigNet, common.HexToAddress(deposit.OrigAddr), deposit.DestNet, common.HexToAddress(deposit.DestAddr), amount, common.FromHex(deposit.Metadata))
+		if err != nil {
+			a, _ := polygonzkevmbridge.PolygonzkevmbridgeMetaData.GetAbi()
+			input, err3 := a.Pack("claimAsset", smtProof, smtRollupProof, globalIndex, globalExitRoot.ExitRoots[0], globalExitRoot.ExitRoots[1], deposit.OrigNet, common.HexToAddress(deposit.OrigAddr), deposit.DestNet, common.HexToAddress(deposit.DestAddr), amount, common.FromHex(deposit.Metadata))
+			if err3 != nil {
+				log.Error("error packing call. Error: ", err3)
+			}
+			log.Warnf(`Use the next command to debug it manually.
+			curl --location --request POST 'http://localhost:8123' \
+			--header 'Content-Type: application/json' \
+			--data-raw '{
+				"jsonrpc": "2.0",
+				"method": "eth_call",
+				"params": [{"from": "%s","to":"%s","data":"0x%s"},"latest"],
+				"id": 1
+			}'`, auth.From, "<To address>", common.Bytes2Hex(input))
+		}
 	} else if deposit.LeafType == LeafTypeMessage {
-		tx, err = c.bridge.ClaimMessage(auth, smtProof, uint32(deposit.DepositCnt), globalExitRoot.ExitRoots[0], globalExitRoot.ExitRoots[1], deposit.OrigNet, common.HexToAddress(deposit.OrigAddr), deposit.DestNet, common.HexToAddress(deposit.DestAddr), amount, common.FromHex(deposit.Metadata))
+		tx, err = c.Bridge.ClaimMessage(auth, smtProof, smtRollupProof, globalIndex, globalExitRoot.ExitRoots[0], globalExitRoot.ExitRoots[1], deposit.OrigNet, common.HexToAddress(deposit.OrigAddr), deposit.DestNet, common.HexToAddress(deposit.DestAddr), amount, common.FromHex(deposit.Metadata))
 	}
 	if err != nil {
 		txHash := ""
@@ -249,4 +280,32 @@ func (c *Client) SendClaim(ctx context.Context, deposit *pb.Deposit, smtProof [m
 // WaitTxToBeMined waits until a tx is mined or forged.
 func WaitTxToBeMined(ctx context.Context, client *ethclient.Client, tx *types.Transaction, timeout time.Duration) error {
 	return ops.WaitTxToBeMined(ctx, client, tx, timeout)
+}
+
+// ERC20Transfer send tokens.
+func (c *Client) ERC20Transfer(ctx context.Context, erc20Addr, to common.Address, amount *big.Int, auth *bind.TransactOpts) error {
+	erc20sc, err := ERC20.NewERC20(erc20Addr, c.Client)
+	if err != nil {
+		return err
+	}
+	tx, err := erc20sc.Transfer(auth, to, amount)
+	if err != nil {
+		return err
+	}
+	const txMinedTimeoutLimit = 60 * time.Second
+	return WaitTxToBeMined(ctx, c.Client, tx, txMinedTimeoutLimit)
+}
+
+// MintPOL mint POL tokens.
+func (c *Client) MintPOL(ctx context.Context, polAddr common.Address, amount *big.Int, auth *bind.TransactOpts) error {
+	pol, err := erc20permitmock.NewErc20permitmock(polAddr, c.Client)
+	if err != nil {
+		return err
+	}
+	tx, err := pol.Mint(auth, auth.From, amount)
+	if err != nil {
+		return err
+	}
+	const txMinedTimeoutLimit = 60 * time.Second
+	return WaitTxToBeMined(ctx, c.Client, tx, txMinedTimeoutLimit)
 }
