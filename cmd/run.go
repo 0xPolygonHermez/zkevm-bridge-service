@@ -168,7 +168,7 @@ func monitorChannel(ctx context.Context, chExitRootEvent chan *etherman.GlobalEx
 	go func() {
 		for {
 			select {
-			case ger := <- chExitRootEvent:
+			case ger := <-chExitRootEvent:
 				log.Debug("New GER received")
 				s := storage.(claimtxman.StorageInterface)
 				dbTx, err := s.BeginDBTransaction(ctx)
