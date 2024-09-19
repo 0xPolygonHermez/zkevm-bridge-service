@@ -531,3 +531,53 @@ func (s *bridgeService) GetProofByGER(ctx context.Context, req *pb.GetProofByGER
 		},
 	}, nil
 }
+
+// GetPendingBridgesToClaim returns the pending bridges to claim by destination address, destination network and leaf type in L1 and L2's.
+// Bridge rest API endpoint
+func (s *bridgeService) GetPendingBridgesToClaim(ctx context.Context, req *pb.GetPendingBridgesRequest) (*pb.GetBridgesResponse, error) {
+	limit := req.Limit
+	if limit == 0 {
+		limit = s.defaultPageLimit
+	}
+	if limit > s.maxPageLimit {
+		limit = s.maxPageLimit
+	}
+	destAddr := common.HexToAddress(req.DestAddr)
+	deposits, totalDeposits, err := s.storage.GetPendingDepositsToClaim(ctx, destAddr, req.DestNet, req.LeafType, limit, req.Offset, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	var pbDeposits []*pb.Deposit
+	for _, deposit := range deposits {
+		mainnetFlag := deposit.NetworkID == 0
+		var rollupIndex uint
+		if !mainnetFlag {
+			rollupIndex = deposit.NetworkID - 1
+		}
+		localExitRootIndex := deposit.DepositCount
+		pbDeposits = append(
+			pbDeposits, &pb.Deposit{
+				LeafType:      uint32(deposit.LeafType),
+				OrigNet:       uint32(deposit.OriginalNetwork),
+				OrigAddr:      deposit.OriginalAddress.Hex(),
+				Amount:        deposit.Amount.String(),
+				DestNet:       uint32(deposit.DestinationNetwork),
+				DestAddr:      deposit.DestinationAddress.Hex(),
+				BlockNum:      deposit.BlockNumber,
+				DepositCnt:    uint64(deposit.DepositCount),
+				NetworkId:     uint32(deposit.NetworkID),
+				TxHash:        deposit.TxHash.String(),
+				ClaimTxHash:   "",
+				Metadata:      "0x" + hex.EncodeToString(deposit.Metadata),
+				ReadyForClaim: deposit.ReadyForClaim,
+				GlobalIndex:   etherman.GenerateGlobalIndex(mainnetFlag, rollupIndex, localExitRootIndex).String(),
+			},
+		)
+	}
+
+	return &pb.GetBridgesResponse{
+		Deposits: pbDeposits,
+		TotalCnt: totalDeposits,
+	}, nil
+}

@@ -148,7 +148,7 @@ func start(ctx *cli.Context) error {
 	} else {
 		log.Warn("ClaimTxManager not configured")
 		for i := range chsExitRootEvent {
-			monitorChannel(ctx.Context, chsExitRootEvent[i], chsSyncedL2[i])
+			monitorChannel(ctx.Context, chsExitRootEvent[i], chsSyncedL2[i], networkIDs[i+1], storage)
 		}
 	}
 
@@ -164,12 +164,46 @@ func setupLog(c log.Config) {
 	log.Init(c)
 }
 
-func monitorChannel(ctx context.Context, chExitRootEvent chan *etherman.GlobalExitRoot, chSynced chan uint) {
+func monitorChannel(ctx context.Context, chExitRootEvent chan *etherman.GlobalExitRoot, chSynced chan uint, networkID uint, storage db.Storage) {
 	go func() {
 		for {
 			select {
-			case <-chExitRootEvent:
+			case ger := <-chExitRootEvent:
 				log.Debug("New GER received")
+				s := storage.(claimtxman.StorageInterface)
+				dbTx, err := s.BeginDBTransaction(ctx)
+				if err != nil {
+					log.Error("networkId: %d, error creating dbTx. Error: %v", networkID, err)
+					continue
+				}
+				if ger.BlockID != 0 { // L2 exit root is updated
+					if err := s.UpdateL2DepositsStatus(ctx, ger.ExitRoots[1][:], networkID, networkID, dbTx); err != nil {
+						log.Errorf("networkId: %d, error updating L2DepositsStatus. Error: %v", networkID, err)
+						rollbackErr := s.Rollback(ctx, dbTx)
+						if rollbackErr != nil {
+							log.Errorf("networkId: %d, error rolling back state. RollbackErr: %s, err: %s", networkID, rollbackErr.Error(), err.Error())
+						}
+						continue
+					}
+				} else { // L1 exit root is updated in the trusted state
+					_, err := s.UpdateL1DepositsStatus(ctx, ger.ExitRoots[0][:], networkID, dbTx)
+					if err != nil {
+						log.Errorf("networkId: %d, error getting and updating L1DepositsStatus. Error: %v", networkID, err)
+						rollbackErr := s.Rollback(ctx, dbTx)
+						if rollbackErr != nil {
+							log.Errorf("networkId: %d, error rolling back state. RollbackErr: %s, err: %s", networkID, rollbackErr.Error(), err.Error())
+						}
+						continue
+					}
+				}
+				err = s.Commit(ctx, dbTx)
+				if err != nil {
+					log.Errorf("networkId: %d, error committing dbTx. Err: %v", networkID, err)
+					rollbackErr := s.Rollback(ctx, dbTx)
+					if rollbackErr != nil {
+						log.Errorf("networkId: %d, error rolling back state. RollbackErr: %s, err: %s", networkID, rollbackErr.Error(), err.Error())
+					}
+				}
 			case netID := <-chSynced:
 				log.Debug("NetworkID synced: ", netID)
 			case <-ctx.Done():

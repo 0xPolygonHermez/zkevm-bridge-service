@@ -22,4 +22,5 @@ type bridgeServiceStorage interface {
 	GetDepositCount(ctx context.Context, destAddr string, dbTx pgx.Tx) (uint64, error)
 	GetTokenWrapped(ctx context.Context, originalNetwork uint, originalTokenAddress common.Address, dbTx pgx.Tx) (*etherman.TokenWrapped, error)
 	GetRollupExitLeavesByRoot(ctx context.Context, root common.Hash, dbTx pgx.Tx) ([]etherman.RollupExitLeaf, error)
+	GetPendingDepositsToClaim(ctx context.Context, destAddress common.Address, destNetwork uint64, leafType, limit uint32, offset uint64, dbTx pgx.Tx) ([]*etherman.Deposit, uint64, error)
 }

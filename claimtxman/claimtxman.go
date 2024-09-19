@@ -184,10 +184,6 @@ func (tm *ClaimTxManager) processDepositStatus(ger *etherman.GlobalExitRoot, dbT
 			log.Errorf("rollupID: %d, error getting and updating L1DepositsStatus. Error: %v", tm.rollupID, err)
 			return err
 		}
-		if !tm.cfg.Enabled {
-			log.Infof("ClaimTxManager is disabled. No auto-claim")
-			return nil
-		}
 		for _, deposit := range deposits {
 			if tm.l2NetworkID != deposit.DestinationNetwork {
 				log.Infof("Ignoring deposit id: %d deposit count:%d dest_net: %d, we are:%d", deposit.Id, deposit.DepositCount, deposit.DestinationNetwork, tm.l2NetworkID)

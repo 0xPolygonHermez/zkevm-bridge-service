@@ -58,6 +58,13 @@ service BridgeService {
             get: "/tokenwrapped"
         };
     }
+
+    /// Get pending bridges to claim by the destination address, destination network and leaf type in L1 and L2's
+    rpc GetPendingBridgesToClaim(GetPendingBridgesRequest) returns (GetBridgesResponse) {
+        option (google.api.http) = {
+            get: "/pending-bridges"
+        };
+    }
 }
 
 // TokenWrapped message
@@ -119,6 +126,14 @@ message GetBridgesRequest {
     string dest_addr = 1;
     uint64 offset = 2;
     uint32 limit = 3;
+}
+
+message GetPendingBridgesRequest {
+    string dest_addr = 1;
+    uint64 dest_net = 2;
+    uint32 leaf_type = 3;
+    uint64 offset = 4;
+    uint32 limit = 5;
 }
 
 message GetProofRequest {

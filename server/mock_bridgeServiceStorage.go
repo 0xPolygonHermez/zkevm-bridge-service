@@ -630,6 +630,77 @@ func (_c *bridgeServiceStorageMock_GetLatestExitRoot_Call) RunAndReturn(run func
 	return _c
 }
 
+// GetPendingDepositsToClaim provides a mock function with given fields: ctx, destAddress, destNetwork, leafType, limit, offset, dbTx
+func (_m *bridgeServiceStorageMock) GetPendingDepositsToClaim(ctx context.Context, destAddress common.Address, destNetwork uint64, leafType uint32, limit uint32, offset uint64, dbTx pgx.Tx) ([]*etherman.Deposit, uint64, error) {
+	ret := _m.Called(ctx, destAddress, destNetwork, leafType, limit, offset, dbTx)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetPendingDepositsToClaim")
+	}
+
+	var r0 []*etherman.Deposit
+	var r1 uint64
+	var r2 error
+	if rf, ok := ret.Get(0).(func(context.Context, common.Address, uint64, uint32, uint32, uint64, pgx.Tx) ([]*etherman.Deposit, uint64, error)); ok {
+		return rf(ctx, destAddress, destNetwork, leafType, limit, offset, dbTx)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, common.Address, uint64, uint32, uint32, uint64, pgx.Tx) []*etherman.Deposit); ok {
+		r0 = rf(ctx, destAddress, destNetwork, leafType, limit, offset, dbTx)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*etherman.Deposit)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, common.Address, uint64, uint32, uint32, uint64, pgx.Tx) uint64); ok {
+		r1 = rf(ctx, destAddress, destNetwork, leafType, limit, offset, dbTx)
+	} else {
+		r1 = ret.Get(1).(uint64)
+	}
+
+	if rf, ok := ret.Get(2).(func(context.Context, common.Address, uint64, uint32, uint32, uint64, pgx.Tx) error); ok {
+		r2 = rf(ctx, destAddress, destNetwork, leafType, limit, offset, dbTx)
+	} else {
+		r2 = ret.Error(2)
+	}
+
+	return r0, r1, r2
+}
+
+// bridgeServiceStorageMock_GetPendingDepositsToClaim_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetPendingDepositsToClaim'
+type bridgeServiceStorageMock_GetPendingDepositsToClaim_Call struct {
+	*mock.Call
+}
+
+// GetPendingDepositsToClaim is a helper method to define mock.On call
+//   - ctx context.Context
+//   - destAddress common.Address
+//   - destNetwork uint64
+//   - leafType uint32
+//   - limit uint32
+//   - offset uint64
+//   - dbTx pgx.Tx
+func (_e *bridgeServiceStorageMock_Expecter) GetPendingDepositsToClaim(ctx interface{}, destAddress interface{}, destNetwork interface{}, leafType interface{}, limit interface{}, offset interface{}, dbTx interface{}) *bridgeServiceStorageMock_GetPendingDepositsToClaim_Call {
+	return &bridgeServiceStorageMock_GetPendingDepositsToClaim_Call{Call: _e.mock.On("GetPendingDepositsToClaim", ctx, destAddress, destNetwork, leafType, limit, offset, dbTx)}
+}
+
+func (_c *bridgeServiceStorageMock_GetPendingDepositsToClaim_Call) Run(run func(ctx context.Context, destAddress common.Address, destNetwork uint64, leafType uint32, limit uint32, offset uint64, dbTx pgx.Tx)) *bridgeServiceStorageMock_GetPendingDepositsToClaim_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(common.Address), args[2].(uint64), args[3].(uint32), args[4].(uint32), args[5].(uint64), args[6].(pgx.Tx))
+	})
+	return _c
+}
+
+func (_c *bridgeServiceStorageMock_GetPendingDepositsToClaim_Call) Return(_a0 []*etherman.Deposit, _a1 uint64, _a2 error) *bridgeServiceStorageMock_GetPendingDepositsToClaim_Call {
+	_c.Call.Return(_a0, _a1, _a2)
+	return _c
+}
+
+func (_c *bridgeServiceStorageMock_GetPendingDepositsToClaim_Call) RunAndReturn(run func(context.Context, common.Address, uint64, uint32, uint32, uint64, pgx.Tx) ([]*etherman.Deposit, uint64, error)) *bridgeServiceStorageMock_GetPendingDepositsToClaim_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetRollupExitLeavesByRoot provides a mock function with given fields: ctx, root, dbTx
 func (_m *bridgeServiceStorageMock) GetRollupExitLeavesByRoot(ctx context.Context, root common.Hash, dbTx pgx.Tx) ([]etherman.RollupExitLeaf, error) {
 	ret := _m.Called(ctx, root, dbTx)
