@@ -176,6 +176,9 @@ func TestGetPendingDepositsToClaim(t *testing.T) {
 	INSERT INTO sync.deposit
 	(leaf_type, network_id, orig_net, orig_addr, amount, dest_net, dest_addr, block_id, deposit_cnt, tx_hash, metadata, id, ready_for_claim)
 	VALUES(0, 0, 0, decode('0000000000000000000000000000000000000000','hex'), '90000000000000000', 1, decode('F39FD6E51AAD88F6F4CE6AB8827279CFFFB92266','hex'), 1, 1, decode('6282FACE883070640F802CE8A2C42593AA18D3A691C61BA006EC477D6E5FEE1F','hex'), decode('','hex'), 2, true);
+	INSERT INTO sync.deposit
+	(leaf_type, network_id, orig_net, orig_addr, amount, dest_net, dest_addr, block_id, deposit_cnt, tx_hash, metadata, id, ready_for_claim)
+	VALUES(0, 0, 0, decode('0000000000000000000000000000000000000000','hex'), '90000000000000000', 1, decode('F38FD6E51AAD88F6F4CE6AB8827279CFFFB92266','hex'), 1, 2, decode('6282FACE883070640F802CE8A2C42593AA18D3A691C61BA006EC477D6E5FEE1F','hex'), decode('','hex'), 3, true);
 	INSERT INTO sync.claim
 	(network_id, "index", orig_net, orig_addr, amount, dest_addr, block_id, tx_hash, rollup_index, mainnet_flag)
 	VALUES(1, 0, 0, decode('0000000000000000000000000000000000000000','hex'), '90000000000000000', decode('F39FD6E51AAD88F6F4CE6AB8827279CFFFB92266','hex'), 1, decode('BF2C816AB6F8A8F5F9DDA6EE97D433CC841E69B5669A5CDF499826FA4B99C179','hex'), 0, true);
@@ -190,9 +193,41 @@ func TestGetPendingDepositsToClaim(t *testing.T) {
 
 	_, err = store.Exec(ctx, data)
 	require.NoError(t, err)
-	deposits, err := store.GetPendingDepositsToClaim(ctx, 1, 0, 1, 0, nil)
+	deposits, depositCount, err := store.GetPendingDepositsToClaim(ctx, common.Address{}, 1, 0, 2, 0, nil)
+	require.NoError(t, err)
+	assert.Equal(t, 2, len(deposits))
+	assert.Equal(t, uint64(2), depositCount)
+	assert.Equal(t, uint8(0), deposits[0].LeafType)
+	assert.Equal(t, uint(0), deposits[0].NetworkID)
+	assert.Equal(t, uint(0), deposits[0].OriginalNetwork)
+	assert.Equal(t, common.Address{}, deposits[0].OriginalAddress)
+	assert.Equal(t, big.NewInt(90000000000000000), deposits[0].Amount)
+	assert.Equal(t, uint(1), deposits[0].DestinationNetwork)
+	assert.Equal(t, common.HexToAddress("0xF39FD6E51AAD88F6F4CE6AB8827279CFFFB92266"), deposits[0].DestinationAddress)
+	assert.Equal(t, uint64(1), deposits[0].BlockID)
+	assert.Equal(t, uint(1), deposits[0].DepositCount)
+	assert.Equal(t, common.HexToHash("0x6282FACE883070640F802CE8A2C42593AA18D3A691C61BA006EC477D6E5FEE1F"), deposits[0].TxHash)
+	assert.Equal(t, []byte{}, deposits[0].Metadata)
+	assert.Equal(t, uint64(2), deposits[0].Id)
+	assert.Equal(t, true, deposits[0].ReadyForClaim)
+	assert.Equal(t, uint8(0), deposits[1].LeafType)
+	assert.Equal(t, uint(0), deposits[1].NetworkID)
+	assert.Equal(t, uint(0), deposits[1].OriginalNetwork)
+	assert.Equal(t, common.Address{}, deposits[1].OriginalAddress)
+	assert.Equal(t, big.NewInt(90000000000000000), deposits[1].Amount)
+	assert.Equal(t, uint(1), deposits[1].DestinationNetwork)
+	assert.Equal(t, common.HexToAddress("0xF38FD6E51AAD88F6F4CE6AB8827279CFFFB92266"), deposits[1].DestinationAddress)
+	assert.Equal(t, uint64(1), deposits[1].BlockID)
+	assert.Equal(t, uint(2), deposits[1].DepositCount)
+	assert.Equal(t, common.HexToHash("0x6282FACE883070640F802CE8A2C42593AA18D3A691C61BA006EC477D6E5FEE1F"), deposits[1].TxHash)
+	assert.Equal(t, []byte{}, deposits[1].Metadata)
+	assert.Equal(t, uint64(3), deposits[1].Id)
+	assert.Equal(t, true, deposits[1].ReadyForClaim)
+
+	deposits, depositCount, err = store.GetPendingDepositsToClaim(ctx, common.HexToAddress("0xF39FD6E51AAD88F6F4CE6AB8827279CFFFB92266"), 1, 0, 2, 0, nil)
 	require.NoError(t, err)
 	assert.Equal(t, 1, len(deposits))
+	assert.Equal(t, uint64(1), depositCount)
 	assert.Equal(t, uint8(0), deposits[0].LeafType)
 	assert.Equal(t, uint(0), deposits[0].NetworkID)
 	assert.Equal(t, uint(0), deposits[0].OriginalNetwork)
