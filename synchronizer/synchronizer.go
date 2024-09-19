@@ -128,7 +128,14 @@ func (s *ClientSynchronizer) Sync() error {
 			if lastBlockSynced, err = s.syncBlocks(lastBlockSynced); err != nil {
 				log.Warnf("networkID: %d, error syncing blocks: %v", s.networkID, err)
 				lastBlockSynced, err = s.storage.GetLastBlock(s.ctx, s.networkID, nil)
-				if err != nil {
+				if errors.Is(err, gerror.ErrStorageNotFound) {
+					lastBlockSynced = &etherman.Block{
+						BlockNumber: s.genBlockNumber,
+						NetworkID:   s.networkID,
+					}
+					log.Warnf("networkID: %d, error getting the latest block. No data stored. Using genesis as initial block: %+v. Error: %s",
+						s.networkID, lastBlockSynced, err.Error())
+				} else if err != nil {
 					log.Fatalf("networkID: %d, error getting lastBlockSynced to resume the synchronization... Error: ", s.networkID, err)
 				}
 				if s.ctx.Err() != nil {
