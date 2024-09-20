@@ -1,0 +1,17 @@
+[Log]
+Level = "debug"
+Outputs = ["stdout"]
+
+[AutoClaim]
+PrivateKey = {Path = "./test/test.keystore", Password = "testonly"}
+AuthorizedClaimMessageAddresses = []
+AutoClaimInterval = "10m"
+GasOffset = 0
+DisableGroupClaims = false
+MaxNumberOfClaimsPerGroup = 10
+L2RPC = "http://localhost:8123"
+BridgeURL = "http://localhost:8080"
+
+[NetworkConfig]
+PolygonBridgeAddress = "0xFe12ABaa190Ef0c8638Ee0ba9F828BF41368Ca0E"
+ClaimCompressorAddress = "0x2279B7A0a67DB372996a5FaB50D91eAA73d2eBe6"
