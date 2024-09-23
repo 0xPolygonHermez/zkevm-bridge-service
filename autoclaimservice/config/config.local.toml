@@ -4,7 +4,7 @@ Outputs = ["stdout"]
 
 [AutoClaim]
 AuthorizedClaimMessageAddresses = []
-AutoClaimInterval = "10s"
+AutoClaimInterval = "10m"
 MaxNumberOfClaimsPerGroup = 10
 BridgeURL = "http://localhost:8080"
 

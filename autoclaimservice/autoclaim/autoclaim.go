@@ -137,56 +137,81 @@ func (ac *autoclaim) claimGrouped() error {
 		log.Error("error: bridges length and proofs length don't match in claimGrouped()")
 		return fmt.Errorf("error: bridges length and proofs length don't match in claimGrouped()")
 	}
-	var allClaimData []claimcompressor.ClaimCompressorCompressClaimCallData
-	for i := range bridges {
-		b := bridges[i]
-		p := proofs[i].Proof
-		globalIndex, _ := big.NewInt(0).SetString(b.GlobalIndex, 0)
-		amount, _ := new(big.Int).SetString(b.Amount, 0)
-		var smtProof, smtRollupProof [blockchainmanager.MtHeight][blockchainmanager.KeyLen]byte
-		for i := 0; i < len(p.MerkleProof); i++ {
-			smtProof[i] = common.HexToHash(p.MerkleProof[i])
-			smtRollupProof[i] = common.HexToHash(p.RollupMerkleProof[i])
-		}
-		metadata := common.FromHex(b.Metadata)
-		originalAddress := common.HexToAddress(b.OrigAddr)
-		destinationAddress := common.HexToAddress(b.DestAddr)
+	splittedBridges := arraySplitter(bridges, ac.cfg.MaxNumberOfClaimsPerGroup)
+	splittedProofs := arraySplitter(proofs, ac.cfg.MaxNumberOfClaimsPerGroup)
+	for j, sb := range splittedBridges {
+		var allClaimData []claimcompressor.ClaimCompressorCompressClaimCallData
+		for i := range sb {
+			b := sb[i]
+			p := splittedProofs[j][i].Proof
+			globalIndex, _ := big.NewInt(0).SetString(b.GlobalIndex, 0)
+			amount, _ := new(big.Int).SetString(b.Amount, 0)
+			var smtProof, smtRollupProof [blockchainmanager.MtHeight][blockchainmanager.KeyLen]byte
+			for i := 0; i < len(p.MerkleProof); i++ {
+				smtProof[i] = common.HexToHash(p.MerkleProof[i])
+				smtRollupProof[i] = common.HexToHash(p.RollupMerkleProof[i])
+			}
+			metadata := common.FromHex(b.Metadata)
+			originalAddress := common.HexToAddress(b.OrigAddr)
+			destinationAddress := common.HexToAddress(b.DestAddr)
 
-		log.Debugf("Estimating gas for bridge (depositCount: %d, networkID: %d)", b.DepositCnt, b.NetworkId)
-		// Estimate gas to see if it is claimable
-		_, err := ac.bm.EstimateGasClaim(metadata, amount, originalAddress, destinationAddress, b.OrigNet, b.DestNet, mainnetExitRoot, rollupExitRoot, b.LeafType, globalIndex, smtProof, smtRollupProof)
+			log.Debugf("Estimating gas for bridge (depositCount: %d, networkID: %d)", b.DepositCnt, b.NetworkId)
+			// Estimate gas to see if it is claimable
+			_, err := ac.bm.EstimateGasClaim(metadata, amount, originalAddress, destinationAddress, b.OrigNet, b.DestNet, mainnetExitRoot, rollupExitRoot, b.LeafType, globalIndex, smtProof, smtRollupProof)
+			if err != nil {
+				log.Infof("error estimating gas for deposit counter: %d from networkID: %d, Skipping... Error: %v", b.DepositCnt, b.NetworkId, err)
+				continue
+			}
+
+			claimData := claimcompressor.ClaimCompressorCompressClaimCallData {
+				SmtProofLocalExitRoot:  smtProof,
+				SmtProofRollupExitRoot: smtRollupProof,
+				GlobalIndex: globalIndex,
+				OriginNetwork: b.OrigNet,
+				OriginAddress: originalAddress,
+				DestinationAddress: destinationAddress,
+				Amount: amount,
+				Metadata: metadata,
+				IsMessage: b.LeafType == blockchainmanager.LeafTypeMessage,
+			}
+			allClaimData = append(allClaimData, claimData)
+		}
+		if len(allClaimData) == 0 {
+			log.Info("Nothing to compress and send")
+			return nil
+		}
+		log.Debug("Compressing data")
+		compressedTxData, err := ac.bm.CompressClaimCall(mainnetExitRoot, rollupExitRoot, allClaimData)
 		if err != nil {
-			log.Infof("error estimating gas for deposit counter: %d from networkID: %d, Skipping... Error: %v", b.DepositCnt, b.NetworkId, err)
-			continue
+			log.Errorf("error compressing claim data, Error: %v", err)
+			return err
+		}
+		log.Debug("Sending compressed claim tx")
+		tx, err := ac.bm.SendCompressedClaims(compressedTxData)
+		if err != nil {
+			log.Errorf("error sending compressed claims, Error: %v", err)
+			return err
+		}
+		log.Info("compressed claim sent. TxHash: ", tx.Hash())
+	}
+	return nil
+}
+
+func arraySplitter[T *pb.Deposit | *pb.GetProofResponse](arr []T, size int) [][]T {
+	var chunks [][]T
+	for {
+		if len(arr) == 0 {
+			break
+		}
+		if len(arr) < size {
+			size = len(arr)
 		}
 
-		claimData := claimcompressor.ClaimCompressorCompressClaimCallData {
-			SmtProofLocalExitRoot:  smtProof,
-			SmtProofRollupExitRoot: smtRollupProof,
-			GlobalIndex: globalIndex,
-			OriginNetwork: b.OrigNet,
-			OriginAddress: originalAddress,
-			DestinationAddress: destinationAddress,
-			Amount: amount,
-			Metadata: metadata,
-			IsMessage: b.LeafType == blockchainmanager.LeafTypeMessage,
-		}
-		allClaimData = append(allClaimData, claimData)
+		chunks = append(chunks, arr[0:size])
+		arr = arr[size:]
 	}
-	log.Debug("Compressing data")
-	compressedTxData, err := ac.bm.CompressClaimCall(mainnetExitRoot, rollupExitRoot, allClaimData)
-	if err != nil {
-		log.Errorf("error compressing claim data, Error: %v", err)
-		return err
-	}
-	log.Debug("Sending compressed claim tx")
-	tx, err := ac.bm.SendCompressedClaims(compressedTxData)
-	if err != nil {
-		log.Errorf("error sending compressed claims, Error: %v", err)
-		return err
-	}
-	log.Info("compressed claim sent. TxHash: ", tx.Hash())
-	return nil
+
+	return chunks
 }
 
 func hash(data ...[32]byte) [32]byte {
