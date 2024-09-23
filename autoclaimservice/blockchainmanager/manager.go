@@ -2,13 +2,18 @@ package blockchainmanager
 
 import(
 	"context"
+	"fmt"
 	"math/big"
+	"os"
+	"path/filepath"
 
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/log"
 	"github.com/0xPolygonHermez/zkevm-node/etherman/smartcontracts/polygonzkevmbridge"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman/smartcontracts/claimcompressor"
+	zkevmtypes "github.com/0xPolygonHermez/zkevm-node/config/types"
+	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/core/types"
 )
@@ -19,8 +24,8 @@ const (
 	// LeafTypeMessage represents a bridge message
 	LeafTypeMessage uint32 = 1
 
-	mtHeight = 32
-	keyLen   = 32
+	MtHeight = 32
+	KeyLen   = 32
 )
 
 // Client is a simple implementation of EtherMan.
@@ -29,29 +34,31 @@ type Client struct {
 	PolygonBridge              *polygonzkevmbridge.Polygonzkevmbridge
 	ClaimCompressor            *claimcompressor.Claimcompressor
 	NetworkID                  uint32
-	polygonBridgeAddr          common.Address
+	cfg                        *Config
 	logger                     *log.Logger
+	auth 					   *bind.TransactOpts
+	ctx                        context.Context
 }
 
 // NewClient creates a new etherman for L2.
-func NewClient(url string, polygonBridgeAddr, claimCompressorAddress common.Address) (*Client, error) {
+func NewClient(ctx context.Context, cfg *Config) (*Client, error) {
 	// Connect to ethereum node
-	ethClient, err := ethclient.Dial(url)
+	ethClient, err := ethclient.Dial(cfg.L2RPC)
 	if err != nil {
-		log.Errorf("error connecting to %s: %+v", url, err)
+		log.Errorf("error connecting to %s: %+v", cfg.L2RPC, err)
 		return nil, err
 	}
 	// Create smc clients
-	bridge, err := polygonzkevmbridge.NewPolygonzkevmbridge(polygonBridgeAddr, ethClient)
+	bridge, err := polygonzkevmbridge.NewPolygonzkevmbridge(cfg.PolygonBridgeAddress, ethClient)
 	if err != nil {
 		return nil, err
 	}
 	var claimCompressor *claimcompressor.Claimcompressor
-	if claimCompressorAddress == (common.Address{}) {
-		log.Warn("Claim compressor Address not configured")
+	if cfg.ClaimCompressorAddress == (common.Address{}) {
+		log.Info("Claim compressor Address not configured")
 	} else {
-		log.Infof("Grouping claims allowed, claimCompressor=%s", claimCompressorAddress.String())
-		claimCompressor, err = claimcompressor.NewClaimcompressor(claimCompressorAddress, ethClient)
+		log.Infof("Grouping claims configured, claimCompressor=%s", cfg.ClaimCompressorAddress.String())
+		claimCompressor, err = claimcompressor.NewClaimcompressor(cfg.ClaimCompressorAddress, ethClient)
 		if err != nil {
 			log.Errorf("error creating claimCompressor: %+v", err)
 			return nil, err
@@ -61,20 +68,44 @@ func NewClient(url string, polygonBridgeAddr, claimCompressorAddress common.Addr
 	if err != nil {
 		return nil, err
 	}
+	auth, err := GetSignerFromKeystore(ctx, ethClient, cfg.PrivateKey)
+	if err != nil {
+		log.Errorf("error creating signer. URL: %s. Error: %v", cfg.L2RPC, err)
+		return nil, err
+	}
 	logger := log.WithFields("networkID", networkID)
 
 	return &Client{
+		ctx:               ctx,
 		logger:            logger,
 		EtherClient:       ethClient,
 		PolygonBridge:     bridge,
 		ClaimCompressor:   claimCompressor,
-		polygonBridgeAddr: polygonBridgeAddr,
+		cfg:               cfg,
 		NetworkID:         networkID,
+		auth:              auth,
 	}, nil
 }
 
-func (bm *Client) SendCompressedClaims(auth *bind.TransactOpts, compressedTxData []byte) (*types.Transaction, error) {
-	claimTx, err := bm.ClaimCompressor.SendCompressedClaims(auth, compressedTxData)
+// GetSignerFromKeystore returns a transaction signer from the keystore file.
+func GetSignerFromKeystore(ctx context.Context, ethClient *ethclient.Client, ks zkevmtypes.KeystoreFileConfig) (*bind.TransactOpts, error) {
+	keystoreEncrypted, err := os.ReadFile(filepath.Clean(ks.Path))
+	if err != nil {
+		return nil, err
+	}
+	key, err := keystore.DecryptKey(keystoreEncrypted, ks.Password)
+	if err != nil {
+		return nil, err
+	}
+	chainID, err := ethClient.ChainID(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return bind.NewKeyedTransactorWithChainID(key.PrivateKey, chainID)
+}
+
+func (bm *Client) SendCompressedClaims(compressedTxData []byte) (*types.Transaction, error) {
+	claimTx, err := bm.ClaimCompressor.SendCompressedClaims(bm.auth, compressedTxData)
 	if err != nil {
 		bm.logger.Error("failed to call SMC SendCompressedClaims: %v", err)
 		return nil, err
@@ -92,8 +123,7 @@ func (bm *Client) CompressClaimCall(mainnetExitRoot, rollupExitRoot common.Hash,
 }
 
 // SendClaim sends a claim transaction.
-func (bm *Client) SendClaim(ctx context.Context,
-	leafType, origNet uint32,
+func (bm *Client) SendClaim(leafType, origNet uint32,
     origAddr      common.Address,
     amount        *big.Int,
     destNet       uint32,
@@ -101,24 +131,23 @@ func (bm *Client) SendClaim(ctx context.Context,
     networkId     uint32,
     metadata      []byte,
     globalIndex   *big.Int,
-	smtProof [mtHeight][keyLen]byte,
-	smtRollupProof [mtHeight][keyLen]byte,
+	smtProof [MtHeight][KeyLen]byte,
+	smtRollupProof [MtHeight][KeyLen]byte,
 	mainnetExitRoot, rollupExitRoot common.Hash,
-	auth *bind.TransactOpts,
-	) error {
+	) (*types.Transaction, error) {
 	var (
 		tx  *types.Transaction
 		err error
 	)
 	if leafType == LeafTypeAsset {
-		tx, err = bm.PolygonBridge.ClaimAsset(auth, smtProof, smtRollupProof, globalIndex, mainnetExitRoot, rollupExitRoot, origNet, origAddr, destNet, destAddr, amount, metadata)
+		tx, err = bm.PolygonBridge.ClaimAsset(bm.auth, smtProof, smtRollupProof, globalIndex, mainnetExitRoot, rollupExitRoot, origNet, origAddr, destNet, destAddr, amount, metadata)
 		if err != nil {
 			a, _ := polygonzkevmbridge.PolygonzkevmbridgeMetaData.GetAbi()
 			input, err3 := a.Pack("claimAsset", smtProof, smtRollupProof, globalIndex, mainnetExitRoot, rollupExitRoot, origNet, origAddr, destNet, destAddr, amount, metadata)
 			if err3 != nil {
-				log.Error("error packing call. Error: ", err3)
+				bm.logger.Error("error packing call. Error: ", err3)
 			}
-			log.Warnf(`Use the next command to debug it manually.
+			bm.logger.Warnf(`Use the next command to debug it manually.
 			curl --location --request POST 'http://localhost:8123' \
 			--header 'Content-Type: application/json' \
 			--data-raw '{
@@ -126,18 +155,32 @@ func (bm *Client) SendClaim(ctx context.Context,
 				"method": "eth_call",
 				"params": [{"from": "%s","to":"%s","data":"0x%s"},"latest"],
 				"id": 1
-			}'`, auth.From, bm.polygonBridgeAddr.String(), common.Bytes2Hex(input))
+			}'`, bm.auth.From, bm.cfg.PolygonBridgeAddress.String(), common.Bytes2Hex(input))
 		}
 	} else if leafType == LeafTypeMessage {
-		tx, err = bm.PolygonBridge.ClaimMessage(auth, smtProof, smtRollupProof, globalIndex, mainnetExitRoot, rollupExitRoot, origNet, origAddr, destNet, destAddr, amount, metadata)
+		tx, err = bm.PolygonBridge.ClaimMessage(bm.auth, smtProof, smtRollupProof, globalIndex, mainnetExitRoot, rollupExitRoot, origNet, origAddr, destNet, destAddr, amount, metadata)
 	}
 	if err != nil {
-		txHash := ""
-		if tx != nil {
-			txHash = tx.Hash().String()
-		}
-		log.Error("Error: ", err, ". Tx Hash: ", txHash)
-		return err
+		return nil, err
 	}
-	return nil
+	return tx, nil
+}
+
+func (bm *Client) EstimateGasClaim(metadata []byte, amount *big.Int, originalAddress, destinationAddress common.Address, originalNetwork, destinationNetwork uint32, mainnetExitRoot, rollupExitRoot common.Hash, leafType uint32, globalIndex *big.Int, smtProof [MtHeight][KeyLen]byte, smtRollupProof [MtHeight][KeyLen]byte) (*types.Transaction, error) {
+	opts := *bm.auth
+	opts.NoSend = true
+	var (
+		tx  *types.Transaction
+		err error
+	)
+	if leafType == LeafTypeAsset {
+		tx, err = bm.PolygonBridge.ClaimAsset(&opts, smtProof, smtRollupProof,
+			globalIndex, mainnetExitRoot, rollupExitRoot, originalNetwork, originalAddress, destinationNetwork, destinationAddress, amount, metadata)
+	} else if leafType == LeafTypeMessage {
+		tx, err = bm.PolygonBridge.ClaimMessage(&opts, smtProof, smtRollupProof, globalIndex, mainnetExitRoot, rollupExitRoot, originalNetwork, originalAddress, destinationNetwork, destinationAddress, amount, metadata)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("failed to estimate gas tx, err: %v", err)
+	}
+	return tx, nil
 }

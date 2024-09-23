@@ -1,10 +1,10 @@
 package config
 
 import (
-	"errors"
 	"path/filepath"
 	"strings"
 
+	"github.com/0xPolygonHermez/zkevm-bridge-service/autoclaimservice/blockchainmanager"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/autoclaimservice/autoclaim"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/log"
 	"github.com/mitchellh/mapstructure"
@@ -13,9 +13,9 @@ import (
 
 // Config struct
 type Config struct {
-	Log              log.Config
-	AutoClaim        autoclaim.Config
-	NetworkConfig    autoclaim.NetworkConfig
+	Log               log.Config
+	AutoClaim         autoclaim.Config
+	BlockchainManager blockchainmanager.Config
 }
 
 // Load loads the configuration
@@ -57,10 +57,6 @@ func Load(configFilePath string) (*Config, error) {
 	err = viper.Unmarshal(&cfg, decodeHooks...)
 	if err != nil {
 		return nil, err
-	}
-
-	if !viper.IsSet("NetworkConfig") {
-		return nil, errors.New("network details are not provided. Please configure the [NetworkConfig] section in your config file")
 	}
 
 	return cfg, nil

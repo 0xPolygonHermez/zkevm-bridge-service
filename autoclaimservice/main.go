@@ -8,6 +8,7 @@ import (
 	zkevmbridgeservice "github.com/0xPolygonHermez/zkevm-bridge-service"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/autoclaimservice/config"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/log"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/autoclaimservice/blockchainmanager"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/autoclaimservice/autoclaim"
 	"github.com/urfave/cli/v2"
 )
@@ -70,7 +71,11 @@ func run(ctx *cli.Context) error {
 		return err
 	}
 	log.Init(c.Log)
-	ac, err := autoclaim.NewAutoClaim(&c.AutoClaim)
+	bm, err := blockchainmanager.NewClient(ctx.Context, &c.BlockchainManager)
+	if err != nil {
+		return err
+	}
+	ac, err := autoclaim.NewAutoClaim(ctx.Context, &c.AutoClaim, bm)
 	if err != nil {
 		return err
 	}

@@ -14,14 +14,17 @@ Level = "debug"
 Outputs = ["stdout"]
 
 [AutoClaim]
-PrivateKey = {Path = "./test/test.keystore", Password = "testonly"}
 AuthorizedClaimMessageAddresses = []
 AutoClaimInterval = "10m"
-GasOffset = 0
-DisableGroupClaims = false
 MaxNumberOfClaimsPerGroup = 10
-L2RPC = "http://localhost:8123"
 BridgeURL = "http://localhost:8080"
+
+[BlockchainManager]
+PrivateKey = {Path = "./test/test.keystore", Password = "testonly"}
+L2RPC = "http://localhost:8123"
+PolygonBridgeAddress = "0xFe12ABaa190Ef0c8638Ee0ba9F828BF41368Ca0E"
+ClaimCompressorAddress = "0x0000000000000000000000000000000000000000"
+
 `
 
 // Default parses the default configuration values.
