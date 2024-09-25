@@ -9,13 +9,14 @@ import (
 	"time"
 
 	"github.com/0xPolygonHermez/zkevm-bridge-service/autoclaimservice/blockchainmanager"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/bridgectrl/pb"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman/smartcontracts/claimcompressor"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/log"
-	"google.golang.org/protobuf/encoding/protojson"
-	"github.com/0xPolygonHermez/zkevm-bridge-service/bridgectrl/pb"
 	"github.com/ethereum/go-ethereum/common"
 	"golang.org/x/crypto/sha3"
+	"google.golang.org/protobuf/encoding/protojson"
 )
+
 type autoclaim struct {
 	ctx context.Context
 	bm  *blockchainmanager.Client
@@ -29,7 +30,7 @@ func NewAutoClaim(ctx context.Context, c *Config, blockchainManager *blockchainm
 		log.Info("ClaimCompressor enabled")
 	}
 	return autoclaim{
-		bm: blockchainManager,
+		bm:  blockchainManager,
 		cfg: c,
 		ctx: ctx,
 	}, nil
@@ -63,6 +64,10 @@ func (ac *autoclaim) claimIndividually() error {
 	if err != nil {
 		log.Errorf("error getBridgesToClaim. Error: %v", err)
 		return err
+	}
+	if len(bridges) == 0 {
+		log.Info("No bridges to claim were found")
+		return nil
 	}
 	var proofs []*pb.GetProofResponse
 	for _, b := range bridges {
@@ -163,16 +168,16 @@ func (ac *autoclaim) claimGrouped() error {
 				continue
 			}
 
-			claimData := claimcompressor.ClaimCompressorCompressClaimCallData {
+			claimData := claimcompressor.ClaimCompressorCompressClaimCallData{
 				SmtProofLocalExitRoot:  smtProof,
 				SmtProofRollupExitRoot: smtRollupProof,
-				GlobalIndex: globalIndex,
-				OriginNetwork: b.OrigNet,
-				OriginAddress: originalAddress,
-				DestinationAddress: destinationAddress,
-				Amount: amount,
-				Metadata: metadata,
-				IsMessage: b.LeafType == blockchainmanager.LeafTypeMessage,
+				GlobalIndex:            globalIndex,
+				OriginNetwork:          b.OrigNet,
+				OriginAddress:          originalAddress,
+				DestinationAddress:     destinationAddress,
+				Amount:                 amount,
+				Metadata:               metadata,
+				IsMessage:              b.LeafType == blockchainmanager.LeafTypeMessage,
 			}
 			allClaimData = append(allClaimData, claimData)
 		}
@@ -226,12 +231,22 @@ func hash(data ...[32]byte) [32]byte {
 
 func (ac *autoclaim) getProof(bridge *pb.Deposit) (*pb.GetProofResponse, error) {
 	requestURL := fmt.Sprintf("%s/merkle-proof?net_id=%d&deposit_cnt=%d", ac.cfg.BridgeURL, bridge.NetworkId, bridge.DepositCnt)
-	res, err := http.Get(requestURL)
+	req, err := http.NewRequest(http.MethodGet, requestURL, nil)
 	if err != nil {
-		log.Errorf("error calling merkle-proof endpoint. Error: %v", err)
+		log.Errorf("error creating newRequest. merkle-proof endpoint. Error: %v", err)
 		return nil, err
 	}
-	defer res.Body.Close()
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		log.Errorf("error doing the request. merkle-proof endpoint. Error: %v", err)
+		return nil, err
+	}
+	defer func() {
+		err := res.Body.Close()
+		if err != nil {
+			log.Error("error closing response body in merkle-proof endpoint call")
+		}
+	}()
 
 	var bodyBytes []byte
 	if res.StatusCode == http.StatusOK {
@@ -253,12 +268,22 @@ func (ac *autoclaim) getProof(bridge *pb.Deposit) (*pb.GetProofResponse, error) 
 
 func (ac *autoclaim) getProofByGER(bridge *pb.Deposit, ger common.Hash) (*pb.GetProofResponse, error) {
 	requestURL := fmt.Sprintf("%s/merkle-proof-by-ger?net_id=%d&deposit_cnt=%d&ger=%s", ac.cfg.BridgeURL, bridge.NetworkId, bridge.DepositCnt, ger)
-	res, err := http.Get(requestURL)
+	req, err := http.NewRequest(http.MethodGet, requestURL, nil)
 	if err != nil {
-		log.Errorf("error calling merkle-proof-by-ger endpoint. Error: %v", err)
+		log.Errorf("error creating newRequest. merkle-proof-by-ger endpoint. Error: %v", err)
 		return nil, err
 	}
-	defer res.Body.Close()
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		log.Errorf("error doing the request. merkle-proof-by-ger endpoint. Error: %v", err)
+		return nil, err
+	}
+	defer func() {
+		err := res.Body.Close()
+		if err != nil {
+			log.Error("error closing response body in merkle-proof-by-ger endpoint call")
+		}
+	}()
 
 	var bodyBytes []byte
 	if res.StatusCode == http.StatusOK {
@@ -300,12 +325,22 @@ func (ac *autoclaim) getBridgesToClaim() ([]*pb.Deposit, error) {
 func (ac *autoclaim) getPendingBridges(leafType uint32, destAddress common.Address) ([]*pb.Deposit, uint64, error) {
 	destNetwork := ac.bm.NetworkID
 	requestURL := fmt.Sprintf("%s/pending-bridges?dest_net=%d&leaf_type=%d&dest_addr=%s", ac.cfg.BridgeURL, destNetwork, leafType, destAddress)
-	res, err := http.Get(requestURL)
+	req, err := http.NewRequest(http.MethodGet, requestURL, nil)
 	if err != nil {
-		log.Errorf("error calling pending-bridges endpoint. Error: %v", err)
+		log.Errorf("error creating newRequest. pending-bridges endpoint. Error: %v", err)
 		return nil, 0, err
 	}
-	defer res.Body.Close()
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		log.Errorf("error doing the request. pending-bridges endpoint. Error: %v", err)
+		return nil, 0, err
+	}
+	defer func() {
+		err := res.Body.Close()
+		if err != nil {
+			log.Error("error closing response body in pending-bridges endpoint call")
+		}
+	}()
 
 	var bodyBytes []byte
 	if res.StatusCode == http.StatusOK {

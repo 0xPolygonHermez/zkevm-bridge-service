@@ -1,9 +1,10 @@
 package autoclaim
 
-import(
+import (
 	"github.com/0xPolygonHermez/zkevm-node/config/types"
 	"github.com/ethereum/go-ethereum/common"
 )
+
 // Config represents the configuration of the AutoClaim package
 type Config struct {
 	// AuthorizedClaimMessageAddresses are the allowed address to bridge message with autoClaim

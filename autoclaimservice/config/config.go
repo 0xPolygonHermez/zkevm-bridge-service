@@ -4,8 +4,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/0xPolygonHermez/zkevm-bridge-service/autoclaimservice/blockchainmanager"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/autoclaimservice/autoclaim"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/autoclaimservice/blockchainmanager"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/log"
 	"github.com/mitchellh/mapstructure"
 	"github.com/spf13/viper"

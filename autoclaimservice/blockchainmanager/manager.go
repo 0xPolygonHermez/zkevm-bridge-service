@@ -1,21 +1,21 @@
 package blockchainmanager
 
-import(
+import (
 	"context"
 	"fmt"
 	"math/big"
 	"os"
 	"path/filepath"
 
-	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/0xPolygonHermez/zkevm-bridge-service/log"
-	"github.com/0xPolygonHermez/zkevm-node/etherman/smartcontracts/polygonzkevmbridge"
 	"github.com/0xPolygonHermez/zkevm-bridge-service/etherman/smartcontracts/claimcompressor"
+	"github.com/0xPolygonHermez/zkevm-bridge-service/log"
 	zkevmtypes "github.com/0xPolygonHermez/zkevm-node/config/types"
-	"github.com/ethereum/go-ethereum/accounts/keystore"
+	"github.com/0xPolygonHermez/zkevm-node/etherman/smartcontracts/polygonzkevmbridge"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/accounts/keystore"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/ethclient"
 )
 
 const (
@@ -30,14 +30,14 @@ const (
 
 // Client is a simple implementation of EtherMan.
 type Client struct {
-	EtherClient                *ethclient.Client
-	PolygonBridge              *polygonzkevmbridge.Polygonzkevmbridge
-	ClaimCompressor            *claimcompressor.Claimcompressor
-	NetworkID                  uint32
-	cfg                        *Config
-	logger                     *log.Logger
-	auth 					   *bind.TransactOpts
-	ctx                        context.Context
+	EtherClient     *ethclient.Client
+	PolygonBridge   *polygonzkevmbridge.Polygonzkevmbridge
+	ClaimCompressor *claimcompressor.Claimcompressor
+	NetworkID       uint32
+	cfg             *Config
+	logger          *log.Logger
+	auth            *bind.TransactOpts
+	ctx             context.Context
 }
 
 // NewClient creates a new etherman for L2.
@@ -76,14 +76,14 @@ func NewClient(ctx context.Context, cfg *Config) (*Client, error) {
 	logger := log.WithFields("networkID", networkID)
 
 	return &Client{
-		ctx:               ctx,
-		logger:            logger,
-		EtherClient:       ethClient,
-		PolygonBridge:     bridge,
-		ClaimCompressor:   claimCompressor,
-		cfg:               cfg,
-		NetworkID:         networkID,
-		auth:              auth,
+		ctx:             ctx,
+		logger:          logger,
+		EtherClient:     ethClient,
+		PolygonBridge:   bridge,
+		ClaimCompressor: claimCompressor,
+		cfg:             cfg,
+		NetworkID:       networkID,
+		auth:            auth,
 	}, nil
 }
 
@@ -124,17 +124,17 @@ func (bm *Client) CompressClaimCall(mainnetExitRoot, rollupExitRoot common.Hash,
 
 // SendClaim sends a claim transaction.
 func (bm *Client) SendClaim(leafType, origNet uint32,
-    origAddr      common.Address,
-    amount        *big.Int,
-    destNet       uint32,
-    destAddr      common.Address,
-    networkId     uint32,
-    metadata      []byte,
-    globalIndex   *big.Int,
+	origAddr common.Address,
+	amount *big.Int,
+	destNet uint32,
+	destAddr common.Address,
+	networkId uint32,
+	metadata []byte,
+	globalIndex *big.Int,
 	smtProof [MtHeight][KeyLen]byte,
 	smtRollupProof [MtHeight][KeyLen]byte,
 	mainnetExitRoot, rollupExitRoot common.Hash,
-	) (*types.Transaction, error) {
+) (*types.Transaction, error) {
 	var (
 		tx  *types.Transaction
 		err error
