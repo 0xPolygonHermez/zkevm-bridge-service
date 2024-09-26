@@ -42,6 +42,7 @@ func start(ctx *cli.Context) error {
 		return err
 	}
 	setupLog(c.Log)
+	logVersion()
 	err = db.RunMigrations(c.SyncDB)
 	if err != nil {
 		log.Error(err)
@@ -97,7 +98,6 @@ func start(ctx *cli.Context) error {
 
 	var chsExitRootEvent []chan *etherman.GlobalExitRoot
 	var chsSyncedL2 []chan uint
-	logVersion()
 	for i, l2EthermanClient := range l2Ethermans {
 		log.Debug("trusted sequencer URL ", c.Etherman.L2URLs[i])
 		zkEVMClient := client.NewClient(c.Etherman.L2URLs[i])
