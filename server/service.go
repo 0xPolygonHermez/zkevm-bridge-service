@@ -203,6 +203,23 @@ func (s *bridgeService) GetClaimProof(ctx context.Context, depositCnt, networkID
 	return globalExitRoot, merkleProof, rollupMerkleProof, nil
 }
 
+// checkDepositIncludedInRoot verifies that the deposit leaf was already part of the
+// exit tree when the given root was computed. Without this check, getProof can walk
+// one index past the last leaf of the tree (the frontier nodes persisted by addLeaf
+// have zero-hash right children) and return a valid proof of the EMPTY leaf instead
+// of failing, presenting it as a legitimate claim proof for a non-included deposit.
+func (s *bridgeService) checkDepositIncludedInRoot(ctx context.Context, depositCnt, networkID uint32, root common.Hash, dbTx interface{}) error {
+	lastDepositCnt, err := s.storage.GetDepositCountByRoot(ctx, root[:], networkID, dbTx)
+	if err != nil {
+		return fmt.Errorf("error getting deposit count for exit root: %s, network: %d. Err: %w", root.String(), networkID, err)
+	}
+	if depositCnt > lastDepositCnt {
+		return fmt.Errorf("deposit %d for network %d is not included in the exit root %s (last included deposit: %d)",
+			depositCnt, networkID, root.String(), lastDepositCnt)
+	}
+	return nil
+}
+
 // GetClaimProofbyGER returns the merkle proof to claim the given deposit.
 func (s *bridgeService) GetClaimProofbyGER(ctx context.Context, depositCnt, networkID uint32, GER common.Hash, dbTx interface{}) (*etherman.GlobalExitRoot, [][bridgectrl.KeyLen]byte, [][bridgectrl.KeyLen]byte, error) {
 	if dbTx == nil { // if the call comes from the rest API
@@ -230,6 +247,10 @@ func (s *bridgeService) GetClaimProofbyGER(ctx context.Context, depositCnt, netw
 		rollupLeaf        common.Hash
 	)
 	if networkID == 0 { // Mainnet
+		if err := s.checkDepositIncludedInRoot(ctx, depositCnt, networkID, globalExitRoot.ExitRoots[0], dbTx); err != nil {
+			log.Errorf("deposit not included in root. Error: %v", err)
+			return nil, nil, nil, err
+		}
 		merkleProof, err = s.getProof(ctx, depositCnt, globalExitRoot.ExitRoots[0], dbTx)
 		if err != nil {
 			log.Errorf("error getting merkleProof. Error: %w", err)
@@ -241,6 +262,10 @@ func (s *bridgeService) GetClaimProofbyGER(ctx context.Context, depositCnt, netw
 		if err != nil {
 			log.Errorf("error getting rollupProof. Error: %w", err)
 			return nil, nil, nil, fmt.Errorf("getting the rollupexit proof failed, error: %v, network: %d", err, networkID)
+		}
+		if err := s.checkDepositIncludedInRoot(ctx, depositCnt, networkID, rollupLeaf, dbTx); err != nil {
+			log.Errorf("deposit not included in root. Error: %v", err)
+			return nil, nil, nil, err
 		}
 		merkleProof, err = s.getProof(ctx, depositCnt, rollupLeaf, dbTx)
 		if err != nil {
@@ -276,6 +301,10 @@ func (s *bridgeService) GetClaimProofForCompressed(ctx context.Context, ger comm
 		rollupLeaf        common.Hash
 	)
 	if networkID == 0 { // Mainnet
+		if err := s.checkDepositIncludedInRoot(ctx, depositCnt, networkID, globalExitRoot.ExitRoots[0], dbTx); err != nil {
+			log.Errorf("deposit not included in root. Error: %v", err)
+			return nil, nil, nil, err
+		}
 		merkleProof, err = s.getProof(ctx, depositCnt, globalExitRoot.ExitRoots[0], dbTx)
 		if err != nil {
 			log.Error("error getting merkleProof. Error: ", err)
@@ -287,6 +316,10 @@ func (s *bridgeService) GetClaimProofForCompressed(ctx context.Context, ger comm
 		if err != nil {
 			log.Error("error getting rollupProof. Error: ", err)
 			return nil, nil, nil, fmt.Errorf("getting the rollup proof failed, error: %v, network: %d", err, networkID)
+		}
+		if err := s.checkDepositIncludedInRoot(ctx, depositCnt, networkID, rollupLeaf, dbTx); err != nil {
+			log.Errorf("deposit not included in root. Error: %v", err)
+			return nil, nil, nil, err
 		}
 		merkleProof, err = s.getProof(ctx, depositCnt, rollupLeaf, dbTx)
 		if err != nil {
@@ -473,7 +506,7 @@ func (s *bridgeService) GetProof(ctx context.Context, req *pb.GetProofRequest) (
 		proof       []string
 		rollupProof []string
 	)
-	if len(proof) != len(rollupProof) {
+	if len(merkleProof) != len(rollupMerkleProof) {
 		return nil, fmt.Errorf("proofs have different lengths. MerkleProof: %d. RollupMerkleProof: %d", len(merkleProof), len(rollupMerkleProof))
 	}
 	for i := 0; i < len(merkleProof); i++ {
@@ -575,7 +608,7 @@ func (s *bridgeService) GetProofByGER(ctx context.Context, req *pb.GetProofByGER
 		proof       []string
 		rollupProof []string
 	)
-	if len(proof) != len(rollupProof) {
+	if len(merkleProof) != len(rollupMerkleProof) {
 		return nil, fmt.Errorf("proofs have different lengths. MerkleProof: %d. RollupMerkleProof: %d", len(merkleProof), len(rollupMerkleProof))
 	}
 	for i := 0; i < len(merkleProof); i++ {
@@ -664,7 +697,7 @@ func (s *bridgeService) GetProofV2(ctx context.Context, req *pb.GetProofV2Reques
 		proof       []string
 		rollupProof []string
 	)
-	if len(proof) != len(rollupProof) {
+	if len(merkleProof) != len(rollupMerkleProof) {
 		return nil, fmt.Errorf("proofs have different lengths. MerkleProof: %d. RollupMerkleProof: %d", len(merkleProof), len(rollupMerkleProof))
 	}
 	for i := 0; i < len(merkleProof); i++ {
