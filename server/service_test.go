@@ -110,7 +110,7 @@ func computeRootFromProof(leaf [bridgectrl.KeyLen]byte, index uint32, proof [][b
 	return common.BytesToHash(node[:])
 }
 
-func newTestDeposit(depositCount uint32) *etherman.Deposit {
+func newTestDeposit(depositCount int) *etherman.Deposit {
 	return &etherman.Deposit{
 		LeafType:           0,
 		OriginalNetwork:    0,
@@ -118,7 +118,7 @@ func newTestDeposit(depositCount uint32) *etherman.Deposit {
 		Amount:             big.NewInt(1000000 + int64(depositCount)),
 		DestinationNetwork: 1,
 		DestinationAddress: common.HexToAddress("0x2222222222222222222222222222222222222222"),
-		DepositCount:       depositCount,
+		DepositCount:       uint32(depositCount), //nolint:gosec
 		NetworkID:          0,
 		Metadata:           []byte{},
 	}
@@ -203,7 +203,7 @@ func TestGetProofByGERRejectsDepositNotInTree(t *testing.T) {
 
 	deposits := make([]*etherman.Deposit, 5)
 	for i := range deposits {
-		deposits[i] = newTestDeposit(uint32(i))
+		deposits[i] = newTestDeposit(i)
 	}
 
 	// Freeze the exit tree with 3 leaves: deposits 0..2. Last leaf index = 2 (even),
@@ -258,7 +258,7 @@ func TestGetProofByGERRejectsDepositNotInTreeEvenLeafCount(t *testing.T) {
 
 	deposits := make([]*etherman.Deposit, 3)
 	for i := range deposits {
-		deposits[i] = newTestDeposit(uint32(i))
+		deposits[i] = newTestDeposit(i)
 	}
 
 	// Freeze the exit tree with 2 leaves: deposits 0..1. Last leaf index = 1 (odd).
@@ -284,7 +284,7 @@ func TestGetProofByGERRejectsDepositNotInTreeRollup(t *testing.T) {
 
 	deposits := make([]*etherman.Deposit, 5)
 	for i := range deposits {
-		deposits[i] = newTestDeposit(uint32(i))
+		deposits[i] = newTestDeposit(i)
 		deposits[i].NetworkID = networkID
 		deposits[i].DestinationNetwork = 0
 	}
