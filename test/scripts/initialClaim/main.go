@@ -221,10 +221,6 @@ func main() {
 
 // EncodeTransactions RLP encodes the given transactions
 func EncodeTransactions(txs []*types.Transaction, effectivePercentages []uint8, forkID uint64) ([]byte, error) {
-	if forkID >= FORKID_DRAGONFRUIT && len(effectivePercentages) < len(txs) {
-		return nil, fmt.Errorf("effective percentages (%d) fewer than transactions (%d)", len(effectivePercentages), len(txs))
-	}
-
 	var batchL2Data []byte
 
 	for i, tx := range txs {
@@ -235,6 +231,9 @@ func EncodeTransactions(txs []*types.Transaction, effectivePercentages []uint8, 
 		batchL2Data = append(batchL2Data, txData...)
 
 		if forkID >= FORKID_DRAGONFRUIT {
+			if i >= len(effectivePercentages) {
+				return nil, fmt.Errorf("missing effective percentage for transaction %d", i)
+			}
 			effectivePercentageAsHex, err := hex.DecodeHex(fmt.Sprintf("%x", effectivePercentages[i]))
 			if err != nil {
 				return nil, err
