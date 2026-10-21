@@ -11,14 +11,14 @@ jobs:
   test-e2e:
     strategy:
       matrix:
-        go-version: [ 1.25.x ]
+        go-version: [ 1.26.10 ]
         goarch: [ "amd64" ]
     runs-on: ubuntu-latest
     steps:
     - name: Checkout code
       uses: actions/checkout@v2
     - name: Install Go
-      uses: actions/setup-go@v1
+      uses: actions/setup-go@v5
       with:
         go-version: ${{ matrix.go-version }}
       env:

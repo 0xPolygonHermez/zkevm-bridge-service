@@ -231,6 +231,9 @@ func EncodeTransactions(txs []*types.Transaction, effectivePercentages []uint8, 
 		batchL2Data = append(batchL2Data, txData...)
 
 		if forkID >= FORKID_DRAGONFRUIT {
+			if i >= len(effectivePercentages) {
+				return nil, fmt.Errorf("missing effective percentage for transaction %d", i)
+			}
 			effectivePercentageAsHex, err := hex.DecodeHex(fmt.Sprintf("%x", effectivePercentages[i]))
 			if err != nil {
 				return nil, err
