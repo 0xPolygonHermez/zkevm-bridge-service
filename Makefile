@@ -124,7 +124,7 @@ test: ## Runs only short tests without checking race conditions
 
 .PHONY: install-linter
 install-linter: ## Installs the linter
-	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $$(go env GOPATH)/bin v2.4.0
+	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $$(go env GOPATH)/bin v2.9.0
 
 .PHONY: build-docker
 build-docker: ## Builds a docker image with the zkevm bridge binary
